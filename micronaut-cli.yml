@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: com.cogoport
+testFramework: junit
+sourceLanguage: kotlin
+buildTool: gradle_kotlin
+features: [annotation-api, app-name, gradle, h2, http-client, jackson-databind, jdbc-hikari, junit, kotlin, kotlin-application, kotlin-build, micronaut-build, netty-server, r2dbc, readme, shade, slf4j-simple, yaml]
