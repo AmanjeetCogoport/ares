@@ -9,7 +9,7 @@ create  table account_master
     acc_short_desc  VARCHAR(10) NOT NULL,
     acc_long_desc   VARCHAR(100),
     created_at  TIMESTAMP NOT NULL  default NOW(),
-    modified_at TIMESTAMP   default NOW(),
+    updated_at TIMESTAMP   default NOW(),
     is_active   BOOLEAN default true,
     is_deleted boolean default false
 );
@@ -19,7 +19,7 @@ create table account_country_mapping
     acc_code    INT,
     country_code VARCHAR(10)    ,
     created_at  timestamp   default now(),
-    modified_at timestamp   default now(),
+    updated_at timestamp   default now(),
     is_active   boolean default true,
     primary key(acc_code,country_code)
 );
@@ -34,7 +34,7 @@ create table bank_master
   account_no varchar(30) not null,
   swift_code varchar (40),
   created_at timestamp default now(),
-  modified_at timestamp default now(),
+  updated_at timestamp default now(),
   is_active boolean default true,
   is_deleted boolean default false
 );
@@ -45,7 +45,7 @@ create table acc_type_master
  type_code varchar(10) constraint type_code_UQ unique not null,
  description varchar (100),
  created_at timestamp default now(),
- modified_at timestamp default now()
+ updated_at timestamp default now()
 );
 
 
@@ -59,7 +59,7 @@ create table ar_payment_files
     is_deleted boolean not null default false,
     is_posted   BOOLEAN not null default false  ,
     created_at timestamp default now(),
-    modified_at timestamp default now()
+    updated_at timestamp default now()
 );
 
 create  table payments
@@ -88,7 +88,7 @@ create  table payments
   is_posted boolean not null default false,
   is_deleted boolean not null default false,
   created_at timestamp default now(),
-  modified_at timestamp default now()
+  updated_at timestamp default now()
 );
 
 create  table account_utilizations
@@ -112,5 +112,5 @@ create  table account_utilizations
   due_date date ,
   transaction_date date,
   created_at timestamp default now(),
-  modified_at timestamp default now()
+  updated_at timestamp default now()
 );
