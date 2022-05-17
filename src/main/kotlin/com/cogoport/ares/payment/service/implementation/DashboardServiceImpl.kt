@@ -4,7 +4,9 @@ import com.cogoport.ares.common.AresConstants
 import com.cogoport.ares.common.enum.Quarter
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.payment.model.CollectionTrend
+import com.cogoport.ares.payment.model.MonthlyOutstanding
 import com.cogoport.ares.payment.model.OutstandingByAge
+import com.cogoport.ares.payment.model.QuarterlyOutstanding
 import com.cogoport.ares.payment.repository.PaymentRepository
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import com.cogoport.ares.utils.code.AresError
@@ -29,8 +31,8 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var paymentConverter: PaymentToPaymentMapper
 
-    override suspend fun getOutstandingByAge(zone: String?, role: String?, quarter: String): OutstandingByAge? {
-        val searchKey = "Stats_"+generateDocKeysForQuarter(zone, role, quarter)
+    override suspend fun getOutstandingByAge(zone: String?, role: String?): OutstandingByAge? {
+        val searchKey = if (zone.isNullOrBlank()) "Stats_all" else "Stats_$zone"
         val response = search(
             Function { s: SearchRequest.Builder ->
                 s.index(AresConstants.SALES_DASHBOARD_INDEX)
@@ -82,7 +84,7 @@ class DashboardServiceImpl : DashboardService {
             onAccountPayment = 20000.toBigDecimal(),
             accountReceivables = 3000.toBigDecimal(),
             organizations = 100,
-            docKey = "Stats_1_2022_Q2"
+            docKey = AresConstants.STATS_PREFIX+"1"
         )
 
         val invoiceResponse2 = OutstandingByAge(
@@ -92,7 +94,7 @@ class DashboardServiceImpl : DashboardService {
             onAccountPayment = 10000.toBigDecimal(),
             accountReceivables = 2000.toBigDecimal(),
             organizations = 100,
-            docKey = "Stats_2_2022_Q2"
+            docKey = AresConstants.STATS_PREFIX+"2"
         )
 
         val invoiceResponse1 = OutstandingByAge(
@@ -102,7 +104,7 @@ class DashboardServiceImpl : DashboardService {
             onAccountPayment = 20000.toBigDecimal(),
             accountReceivables = 15000.toBigDecimal(),
             organizations = 200,
-            docKey = "Stats_all_2022_Q2"
+            docKey = AresConstants.STATS_PREFIX+"all"
         )
 
         val collectionTrend = CollectionTrend(
@@ -110,7 +112,7 @@ class DashboardServiceImpl : DashboardService {
             month1 = mapOf<String, BigDecimal>("receivables" to 4000.toBigDecimal(), "collections" to 1000.toBigDecimal()),
             month2 = mapOf<String, BigDecimal>("receivables" to 3000.toBigDecimal(), "collections" to 500.toBigDecimal()),
             month3 = mapOf<String, BigDecimal>("receivables" to 3000.toBigDecimal(), "collections" to 500.toBigDecimal()),
-            docKey = "coll_trend_1_2022_Q2"
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"1_2022_Q2"
         )
 
         val collectionTrend1 = CollectionTrend(
@@ -118,7 +120,7 @@ class DashboardServiceImpl : DashboardService {
             month1 = mapOf<String, BigDecimal>("receivables" to 6000.toBigDecimal(), "collections" to 1000.toBigDecimal()),
             month2 = mapOf<String, BigDecimal>("receivables" to 3000.toBigDecimal(), "collections" to 1000.toBigDecimal()),
             month3 = mapOf<String, BigDecimal>("receivables" to 3000.toBigDecimal(), "collections" to 1000.toBigDecimal()),
-            docKey = "coll_trend_all_2022_Q2"
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"all_2022_Q2"
         )
 
         val collectionTrend2 = CollectionTrend(
@@ -126,15 +128,52 @@ class DashboardServiceImpl : DashboardService {
             month1 = mapOf<String, BigDecimal>("receivables" to 1000.toBigDecimal(), "collections" to 500.toBigDecimal()),
             month2 = mapOf<String, BigDecimal>("receivables" to 500.toBigDecimal(), "collections" to 250.toBigDecimal()),
             month3 = mapOf<String, BigDecimal>("receivables" to 500.toBigDecimal(), "collections" to 250.toBigDecimal()),
-            docKey = "coll_trend_2_2022_Q2"
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"2_2022_Q2"
         )
-        
+
+        val monthlyOutstanding = MonthlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan" to 10000.toBigDecimal(), "Feb" to 2000.toBigDecimal(),"Mar" to 11000.toBigDecimal(), "Apr" to 12000.toBigDecimal()),
+            docKey = AresConstants.MONTHLY_TREND_PREFIX+"all"
+        )
+
+        val monthlyOutstanding1 = MonthlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan" to 8000.toBigDecimal(), "Feb" to 1000.toBigDecimal(),"Mar" to 7000.toBigDecimal(), "Apr" to 8000.toBigDecimal()),
+            docKey = AresConstants.MONTHLY_TREND_PREFIX+"1"
+        )
+
+        val monthlyOutstanding2 = MonthlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan" to 2000.toBigDecimal(), "Feb" to 1000.toBigDecimal(),"Mar" to 4000.toBigDecimal(), "Apr" to 4000.toBigDecimal()),
+            docKey = AresConstants.MONTHLY_TREND_PREFIX+"2"
+        )
+
+        val quarterlyOutstanding = QuarterlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan-Mar" to 10000.toBigDecimal(), "Apr-Jun" to 2000.toBigDecimal(),"Jul-Sep" to 11000.toBigDecimal(), "Sep-Dec" to 12000.toBigDecimal()),
+            docKey = AresConstants.QUARTERLY_TREND_PREFIX+"all"
+        )
+
+        val quarterlyOutstanding1 = QuarterlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan-Mar" to 8000.toBigDecimal(), "Apr-Jun" to 1000.toBigDecimal(),"Jul-Sep" to 7000.toBigDecimal(), "Sep-Dec" to 8000.toBigDecimal()),
+            docKey = AresConstants.QUARTERLY_TREND_PREFIX+"1"
+        )
+
+        val quarterlyOutstanding2 = QuarterlyOutstanding(
+            trend = mapOf<String, BigDecimal>("Jan-Mar" to 2000.toBigDecimal(), "Apr-Jun" to 1000.toBigDecimal(),"Jul-Sep" to 4000.toBigDecimal(), "Sep-Dec" to 4000.toBigDecimal()),
+            docKey = AresConstants.QUARTERLY_TREND_PREFIX+"2"
+        )
+
+
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse1)
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse2)
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse)
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionTrend)
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionTrend2)
         Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionTrend1)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyOutstanding)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyOutstanding2)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyOutstanding1)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyOutstanding)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyOutstanding2)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyOutstanding1)
     }
 
     override suspend fun deleteIndex(index: String) {
@@ -159,6 +198,48 @@ class DashboardServiceImpl : DashboardService {
             CollectionTrend::class.java
         )
         var outResp: CollectionTrend? = null
+        for (hts in response?.hits()?.hits()!!) {
+            outResp = hts.source()
+        }
+        return outResp
+    }
+
+    override suspend fun getMonthlyOutstanding(zone: String?, role: String?): MonthlyOutstanding? {
+        val searchKey = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX+"all" else AresConstants.MONTHLY_TREND_PREFIX+zone
+        val response = search(
+            Function { s: SearchRequest.Builder ->
+                s.index(AresConstants.SALES_DASHBOARD_INDEX)
+                    .query { q: Query.Builder ->
+                        q.match { t: MatchQuery.Builder ->
+                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
+                        }
+                    }
+            },
+            MonthlyOutstanding::class.java
+        )
+
+        var outResp: MonthlyOutstanding? = null
+        for (hts in response?.hits()?.hits()!!) {
+            outResp = hts.source()
+        }
+        return outResp
+    }
+
+    override suspend fun getQuarterlyOutstanding(zone: String?, role: String?): QuarterlyOutstanding? {
+        val searchKey = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX+"all" else AresConstants.QUARTERLY_TREND_PREFIX+zone
+        val response = search(
+            Function { s: SearchRequest.Builder ->
+                s.index(AresConstants.SALES_DASHBOARD_INDEX)
+                    .query { q: Query.Builder ->
+                        q.match { t: MatchQuery.Builder ->
+                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
+                        }
+                    }
+            },
+            QuarterlyOutstanding::class.java
+        )
+
+        var outResp: QuarterlyOutstanding? = null
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()
         }

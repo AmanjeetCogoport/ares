@@ -6,5 +6,10 @@ object AresConstants {
     const val OPEN_SEARCH_DOCUMENT_KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "ZoneHead"
+    const val MONTHLY_TREND_PREFIX= "Monthly_Outstanding_"
+    const val QUARTERLY_TREND_PREFIX= "Quarterly_Outstanding_"
+    const val COLLECTIONS_TREND_PREFIX= "Collections_Trend_"
+    const val STATS_PREFIX= "Stats_"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
+
 }
