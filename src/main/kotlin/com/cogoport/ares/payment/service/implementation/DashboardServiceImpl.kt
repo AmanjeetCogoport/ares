@@ -1,0 +1,142 @@
+package com.cogoport.ares.payment.service.implementation
+
+import com.cogoport.ares.common.AresConstants
+import com.cogoport.ares.common.enum.Quarter
+import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
+import com.cogoport.ares.payment.model.OutstandingByAge
+import com.cogoport.ares.payment.repository.PaymentRepository
+import com.cogoport.ares.payment.service.interfaces.DashboardService
+import com.cogoport.ares.utils.code.AresError
+import com.cogoport.ares.utils.exception.AresException
+import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.opensearch.Client.search
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
+import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
+import org.opensearch.client.opensearch._types.query_dsl.Query
+import org.opensearch.client.opensearch.core.SearchRequest
+import java.util.function.Function
+
+@Singleton
+class DashboardServiceImpl : DashboardService {
+
+    @Inject
+    lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var paymentConverter: PaymentToPaymentMapper
+
+    override suspend fun getOutstandingByAge(zone: String?, role: String?, quarter: String): OutstandingByAge? {
+        val searchKey = generateDocKeysForQuarter(zone, role, quarter)
+        val response = search(
+            Function { s: SearchRequest.Builder ->
+                s.index(AresConstants.SALES_DASHBOARD_INDEX)
+                    .query { q: Query.Builder ->
+                        q.match { t: MatchQuery.Builder ->
+                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
+                        }
+                    }
+            },
+            OutstandingByAge::class.java
+        )
+
+        var outResp: OutstandingByAge? = null
+        for (hts in response?.hits()?.hits()!!) {
+            outResp = hts.source()
+        }
+        return outResp
+    }
+
+    private fun generateDocKeysForMonth(zone: String?, role: String?, quarter: String): MutableList<String> {
+        var keys = mutableListOf<String>()
+        if (role.equals(AresConstants.ROLE_ZONE_HEAD)) {
+            for (month in extractMonthsFromQuarter(quarter)) {
+                keys.add(zone + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + extractYearFromQuarter(quarter) + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + month)
+            }
+        } else {
+            for (month in extractMonthsFromQuarter(quarter)) {
+                keys.add("all" + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + extractYearFromQuarter(quarter) + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + month)
+            }
+        }
+        return keys
+    }
+
+    private fun generateDocKeysForQuarter(zone: String?, role: String?, quarter: String): String {
+        var key: String
+        if (role.equals(AresConstants.ROLE_ZONE_HEAD)) {
+            key = zone + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + extractYearFromQuarter(quarter) + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0]
+        } else {
+            key = "all" + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + extractYearFromQuarter(quarter) + AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER + quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0]
+        }
+        return key
+    }
+
+    override suspend fun addMonthlyOutstandingTrend() {
+        val invoiceResponse = OutstandingByAge(
+            null,
+            openInvoiceCount = 23,
+            openInvoiceAmount = 23000.toBigDecimal(),
+            onAccountPayment = 20000.toBigDecimal(),
+            accountReceivables = 3000.toBigDecimal(),
+            organizations = 100,
+            docKey = "1_2022_Q2"
+        )
+
+        val invoiceResponse2 = OutstandingByAge(
+            null,
+            openInvoiceCount = 27,
+            openInvoiceAmount = 12000.toBigDecimal(),
+            onAccountPayment = 10000.toBigDecimal(),
+            accountReceivables = 2000.toBigDecimal(),
+            organizations = 100,
+            docKey = "2_2022_Q2"
+        )
+
+        val invoiceResponse1 = OutstandingByAge(
+            null,
+            openInvoiceCount = 55,
+            openInvoiceAmount = 35000.toBigDecimal(),
+            onAccountPayment = 20000.toBigDecimal(),
+            accountReceivables = 15000.toBigDecimal(),
+            organizations = 200,
+            docKey = "all_2022_Q2"
+        )
+
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse1)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse2)
+        Client.addDocument(AresConstants.SALES_DASHBOARD_INDEX, invoiceResponse)
+    }
+
+    override suspend fun deleteIndex(index: String) {
+        Client.deleteIndex(index)
+    }
+
+    override suspend fun createIndex(index: String) {
+        Client.createIndex(index)
+    }
+
+    /**
+     * Extract Months from Quarter
+     * @param quarter : QQ-YYYY
+     * @return MutableList : MMM,MMM,MMM
+     */
+    private fun extractMonthsFromQuarter(quarter: String): MutableList<String> {
+        var quar = quarter.split("-")[0]
+        return if (Quarter.Q1.quarter.equals(quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0])) {
+            Quarter.Q1.months
+        } else if (Quarter.Q2.quarter.equals(quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0])) {
+            Quarter.Q2.months
+        } else if (Quarter.Q3.quarter.equals(quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0])) {
+            Quarter.Q3.months
+        } else if (Quarter.Q4.quarter.equals(quarter.split("_")[0])) {
+            Quarter.Q4.months
+        } else {
+            throw AresException(AresError.ERR_1004, "")
+        }
+    }
+
+    private fun extractYearFromQuarter(quarter: String): String {
+        return quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[1]
+    }
+}

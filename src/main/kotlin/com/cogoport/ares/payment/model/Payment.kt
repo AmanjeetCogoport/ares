@@ -1,36 +1,32 @@
-package com.cogoport.ares.payment.entity
+package com.cogoport.ares.payment.model
 
-import com.cogoport.ares.payment.model.AccMode
-import com.cogoport.ares.payment.model.PayMode
-import io.micronaut.data.annotation.GeneratedValue
-import io.micronaut.data.annotation.Id
-import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
-@MappedEntity(value = "payments")
+@Introspected
 data class Payment(
-    @field:Id @GeneratedValue var id: Long?,
-    var entityCode: Int,
+    var id: Long?,
+    var entityType: Int,
     var entityId: UUID,
     var fileId: Long? = null,
     var orgSerialId: Long,
-    var organizationId: UUID,
-    var organizationName: String,
+    var customerId: UUID,
+    var customerName: String,
     var sageOrganizationId: String?,
     var accCode: Int,
     var accMode: AccMode,
     var signFlag: Int,
-    var currency: String,
+    var currencyType: String,
     var amount: BigDecimal,
     var ledCurrency: String,
     var ledAmount: BigDecimal,
     var payMode: PayMode?,
-    var narration: String? = null,
+    var remarks: String? = null,
     var bankId: Int?,
-    var transRefNumber: String?,
+    var utr: String?,
     var refPaymentId: Long?,
     var transactionDate: LocalDate?,
     var isPosted: Boolean,
