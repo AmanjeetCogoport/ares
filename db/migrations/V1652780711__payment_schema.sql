@@ -1,6 +1,6 @@
 CREATE TYPE ACCOUNT_MODE AS ENUM ('ar', 'ap');
-create type PAYMENT_MODE as ENUM('dd','cash','cheque','net_banking','upi','bank')
-create type ACCOUNT_TYPE as ENUM ('sinv','pinv','scn','sdn','pcn','pdn','rec','pay')
+create type PAYMENT_MODE as ENUM('dd','cash','cheque','net_banking','upi','bank');
+create type ACCOUNT_TYPE as ENUM ('sinv','pinv','scn','sdn','pcn','pdn','rec','pay');
 
 
 create  table account_master
@@ -12,7 +12,7 @@ create  table account_master
     modified_at TIMESTAMP   default NOW(),
     is_active   BOOLEAN default true,
     is_deleted boolean default false
-)
+);
 
 create table account_country_mapping
 (
@@ -22,7 +22,7 @@ create table account_country_mapping
     modified_at timestamp   default now(),
     is_active   boolean default true,
     primary key(acc_code,country_code)
-)
+);
 
 
 create table bank_master
@@ -37,19 +37,17 @@ create table bank_master
   modified_at timestamp default now(),
   is_active boolean default true,
   is_deleted boolean default false
-)
+);
 
-create drop table acc_type_master
+create table acc_type_master
 (
  id SERIAL constraint acc_type_master_id_PK primary key,
  type_code varchar(10) constraint type_code_UQ unique not null,
  description varchar (100),
  created_at timestamp default now(),
  modified_at timestamp default now()
-)
-insert into acc_type_master(type_code,description,sign_flag) values('SINV','sales invoice',1),
-                                                         ('SCN','sales credit note',-1),('SDN','sales debit note',1),('PINV','purchase invoice',-1),
-                                                         ('PCN','purchase credit note',1),('PDN','purchase debit note',1)
+);
+
 
 create table ar_payment_files
 (
@@ -62,7 +60,8 @@ create table ar_payment_files
     is_posted   BOOLEAN not null default false  ,
     created_at timestamp default now(),
     modified_at timestamp default now()
-)
+);
+
 create  table payments
 (
   id bigserial constraint payments_PK primary key,
@@ -90,7 +89,7 @@ create  table payments
   is_deleted boolean not null default false,
   created_at timestamp default now(),
   modified_at timestamp default now()
-)
+);
 
 create  table account_utilizations
 (
@@ -114,4 +113,4 @@ create  table account_utilizations
   transaction_date date,
   created_at timestamp default now(),
   modified_at timestamp default now()
-)
+);
