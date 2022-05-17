@@ -1,12 +1,14 @@
 micronaut:
   application:
-    name: cogoport
-datasources:
-  default:
-    url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
-    driverClassName: org.h2.Driver
-    username: sa
-    password: ''
+    name: ares
+  server:
+    port: 8087
+    context-path: /sales
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
 netty:
   default:
     allocator:
@@ -14,6 +16,10 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:h2:mem:///testdb;DB_CLOSE_ON_EXIT=FALSE
-      username: sa
-      password: ''
+      url: r2dbc:postgresql://localhost:5432/ares
+      username: cogoport
+      password: cogoport123
+      dialect: POSTGRES
+kafka.bootstrap.servers: localhost:9092
+jackson:
+  date-format: yyyy-MM-dd HH:mm:ss
