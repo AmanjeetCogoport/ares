@@ -1,5 +1,6 @@
 package com.cogoport.ares.payment.service.interfaces
 
+import com.cogoport.ares.payment.model.CollectionTrend
 import com.cogoport.ares.payment.model.OutstandingByAge
 
 interface DashboardService {
@@ -11,4 +12,6 @@ interface DashboardService {
     suspend fun deleteIndex(index: String)
 
     suspend fun createIndex(index: String)
+
+    suspend fun getCollectionTrend(zone: String?, role: String?, quarter: String): CollectionTrend?
 }

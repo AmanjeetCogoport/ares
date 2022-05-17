@@ -1,6 +1,7 @@
 package com.cogoport.ares.payment.controller
 
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.payment.model.CollectionTrend
 import com.cogoport.ares.payment.model.OutstandingByAge
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import io.micronaut.http.annotation.Controller
@@ -23,6 +24,15 @@ class DashboardController {
         @QueryValue("quarter") quarter: String
     ): OutstandingByAge? {
         return Response<OutstandingByAge?>().ok(dashboardService.getOutstandingByAge(zone, role, quarter))
+    }
+
+    @Get("/collection-trend")
+    suspend fun getCollectionTrend(
+        @QueryValue("zone") zone: String?,
+        @QueryValue("role") role: String?,
+        @QueryValue("quarter") quarter: String
+    ): CollectionTrend? {
+        return Response<CollectionTrend?>().ok(dashboardService.getCollectionTrend(zone, role, quarter))
     }
 
     @Get("/outstanding-by-age/add")
