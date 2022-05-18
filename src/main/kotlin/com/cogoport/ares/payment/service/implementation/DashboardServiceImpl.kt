@@ -32,7 +32,8 @@ class DashboardServiceImpl : DashboardService {
     lateinit var paymentConverter: PaymentToPaymentMapper
 
     override suspend fun getOutstandingByAge(zone: String?, role: String?): OutstandingByAge? {
-        val searchKey = if (zone.isNullOrBlank()) "Stats_all" else "Stats_$zone"
+        validateInput(zone, role)
+        val searchKey = if (zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
         val response = search(
             Function { s: SearchRequest.Builder ->
                 s.index(AresConstants.SALES_DASHBOARD_INDEX)
@@ -52,6 +53,11 @@ class DashboardServiceImpl : DashboardService {
         return outResp
     }
 
+    private fun validateInput(zone: String?, role: String?){
+        if(AresConstants.ROLE_ZONE_HEAD.equals(role) && zone.isNullOrBlank()){
+            throw AresException(AresError.ERR_1003, "zone")
+        }
+    }
     private fun generateDocKeysForMonth(zone: String?, role: String?, quarter: String): MutableList<String> {
         var keys = mutableListOf<String>()
         if (role.equals(AresConstants.ROLE_ZONE_HEAD)) {
@@ -185,7 +191,8 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(zone: String?, role: String?, quarter: String): CollectionTrend? {
-        val searchKey = "coll_trend_"+generateDocKeysForQuarter(zone, role, quarter)
+        validateInput(zone, role)
+        val searchKey = AresConstants.COLLECTIONS_TREND_PREFIX+generateDocKeysForQuarter(zone, role, quarter)
         val response = search(
             Function { s: SearchRequest.Builder ->
                 s.index(AresConstants.SALES_DASHBOARD_INDEX)
@@ -205,6 +212,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getMonthlyOutstanding(zone: String?, role: String?): MonthlyOutstanding? {
+        validateInput(zone, role)
         val searchKey = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX+"all" else AresConstants.MONTHLY_TREND_PREFIX+zone
         val response = search(
             Function { s: SearchRequest.Builder ->
@@ -226,6 +234,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getQuarterlyOutstanding(zone: String?, role: String?): QuarterlyOutstanding? {
+        validateInput(zone, role)
         val searchKey = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX+"all" else AresConstants.QUARTERLY_TREND_PREFIX+zone
         val response = search(
             Function { s: SearchRequest.Builder ->
