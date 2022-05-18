@@ -13,12 +13,14 @@ import com.cogoport.ares.utils.code.AresError
 import com.cogoport.ares.utils.exception.AresException
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Client.search
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
+import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.util.function.Function
 
@@ -46,13 +48,29 @@ class DashboardServiceImpl : DashboardService {
             OutstandingByAge::class.java
         )
 
+
         var outResp: OutstandingByAge? = null
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()
         }
+
         return outResp
     }
 
+    private fun<R> searchData(searchKey: String): SearchResponse<Any>?{
+        val response = search(
+            Function { s: SearchRequest.Builder ->
+                s.index(AresConstants.SALES_DASHBOARD_INDEX)
+                    .query { q: Query.Builder ->
+                        q.match { t: MatchQuery.Builder ->
+                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
+                        }
+                    }
+            },
+            Any::class.java
+        )
+        return response
+    }
     private fun validateInput(zone: String?, role: String?){
         if(AresConstants.ROLE_ZONE_HEAD.equals(role) && zone.isNullOrBlank()){
             throw AresException(AresError.ERR_1003, "zone")
