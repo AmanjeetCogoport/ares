@@ -450,7 +450,7 @@ insert into account_master(acc_code,acc_short_desc,acc_long_desc) values (223002
 
 --- ENTRY IN COUNTRY MAPPING FOR INDIA
 insert into account_country_mapping(acc_code,country_code)
-select acc_code,'IND' from account_master
+select acc_code,'IND' from account_master;
 
 --- ACCOUNT TYPE MASTER ENTRY
 insert into acc_type_master(type_code,description) values('SINV','Sales Invoice'),
