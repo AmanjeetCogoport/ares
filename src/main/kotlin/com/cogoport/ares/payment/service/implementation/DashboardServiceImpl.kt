@@ -5,7 +5,7 @@ import com.cogoport.ares.common.enum.Quarter
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.payment.model.CollectionTrend
 import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OutstandingByAge
+import com.cogoport.ares.payment.model.OverallOutstandingStats
 import com.cogoport.ares.payment.model.QuarterlyOutstanding
 import com.cogoport.ares.payment.repository.PaymentRepository
 import com.cogoport.ares.payment.service.interfaces.DashboardService
@@ -31,7 +31,7 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var paymentConverter: PaymentToPaymentMapper
 
-    override suspend fun getOutstandingByAge(zone: String?, role: String?): OutstandingByAge? {
+    override suspend fun getOverallOutstanding(zone: String?, role: String?): OverallOutstandingStats? {
         validateInput(zone, role)
         val searchKey = if (zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
         val response = search(
@@ -43,10 +43,10 @@ class DashboardServiceImpl : DashboardService {
                         }
                     }
             },
-            OutstandingByAge::class.java
+            OverallOutstandingStats::class.java
         )
 
-        var outResp: OutstandingByAge? = null
+        var outResp: OverallOutstandingStats? = null
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()
         }
@@ -83,7 +83,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun addMonthlyOutstandingTrend() {
-        val invoiceResponse = OutstandingByAge(
+        val invoiceResponse = OverallOutstandingStats(
             null,
             openInvoiceCount = 23,
             openInvoiceAmount = 23000.toBigDecimal(),
@@ -93,7 +93,7 @@ class DashboardServiceImpl : DashboardService {
             docKey = AresConstants.STATS_PREFIX+"1"
         )
 
-        val invoiceResponse2 = OutstandingByAge(
+        val invoiceResponse2 = OverallOutstandingStats(
             null,
             openInvoiceCount = 27,
             openInvoiceAmount = 12000.toBigDecimal(),
@@ -103,7 +103,7 @@ class DashboardServiceImpl : DashboardService {
             docKey = AresConstants.STATS_PREFIX+"2"
         )
 
-        val invoiceResponse1 = OutstandingByAge(
+        val invoiceResponse1 = OverallOutstandingStats(
             null,
             openInvoiceCount = 55,
             openInvoiceAmount = 35000.toBigDecimal(),

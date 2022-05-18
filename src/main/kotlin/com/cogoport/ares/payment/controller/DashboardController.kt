@@ -3,7 +3,7 @@ package com.cogoport.ares.payment.controller
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.payment.model.CollectionTrend
 import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OutstandingByAge
+import com.cogoport.ares.payment.model.OverallOutstandingStats
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -18,12 +18,12 @@ class DashboardController {
     @Inject
     lateinit var dashboardService: DashboardService
 
-    @Get("/outstanding-by-age")
-    suspend fun getOutstandingByAge(
+    @Get("/outstanding-stats")
+    suspend fun getOutstandingStats(
         @QueryValue("zone") zone: String?,
         @QueryValue("role") role: String?
-    ): OutstandingByAge? {
-        return Response<OutstandingByAge?>().ok(dashboardService.getOutstandingByAge(zone, role))
+    ): OverallOutstandingStats? {
+        return Response<OverallOutstandingStats?>().ok(dashboardService.getOverallOutstanding(zone, role))
     }
 
     @Get("/collection-trend")
@@ -59,4 +59,6 @@ class DashboardController {
 
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
+
+
 }

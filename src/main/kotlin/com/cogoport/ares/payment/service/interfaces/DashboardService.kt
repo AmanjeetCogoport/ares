@@ -2,12 +2,12 @@ package com.cogoport.ares.payment.service.interfaces
 
 import com.cogoport.ares.payment.model.CollectionTrend
 import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OutstandingByAge
+import com.cogoport.ares.payment.model.OverallOutstandingStats
 import com.cogoport.ares.payment.model.QuarterlyOutstanding
 
 interface DashboardService {
 
-    suspend fun getOutstandingByAge(zone: String?, role: String?): OutstandingByAge?
+    suspend fun getOverallOutstanding(zone: String?, role: String?): OverallOutstandingStats?
 
     suspend fun addMonthlyOutstandingTrend()
 
