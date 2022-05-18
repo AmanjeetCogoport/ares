@@ -3,7 +3,7 @@ package com.cogoport.ares.payment.model
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
-data class OutstandingByAge(
+data class OverallOutstandingStats(
     @JsonProperty("_id")
     var id: String?,
     @JsonProperty("openInvoiceCount")

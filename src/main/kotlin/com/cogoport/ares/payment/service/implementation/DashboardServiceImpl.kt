@@ -1,19 +1,16 @@
 package com.cogoport.ares.payment.service.implementation
 
 import com.cogoport.ares.common.AresConstants
+import com.cogoport.ares.common.classes.OpenSearch
 import com.cogoport.ares.common.enum.Quarter
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.payment.model.CollectionTrend
-import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OutstandingByAge
-import com.cogoport.ares.payment.model.QuarterlyOutstanding
+import com.cogoport.ares.payment.model.*
 import com.cogoport.ares.payment.repository.PaymentRepository
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import com.cogoport.ares.utils.code.AresError
 import com.cogoport.ares.utils.exception.AresException
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Client.search
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch._types.FieldValue
@@ -33,46 +30,23 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var paymentConverter: PaymentToPaymentMapper
 
-    override suspend fun getOutstandingByAge(zone: String?, role: String?): OutstandingByAge? {
+    override suspend fun getOverallOutstanding(zone: String?, role: String?): OverallOutstandingStats? {
         validateInput(zone, role)
-        val searchKey = if (zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
-        val response = search(
-            Function { s: SearchRequest.Builder ->
-                s.index(AresConstants.SALES_DASHBOARD_INDEX)
-                    .query { q: Query.Builder ->
-                        q.match { t: MatchQuery.Builder ->
-                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
-                        }
-                    }
-            },
-            OutstandingByAge::class.java
+        val searchKey = searchKeyOverallOutstanding(zone, role)
+
+        return OpenSearch().response<OverallOutstandingStats>(
+            searchKey= searchKey,
+            classType= OverallOutstandingStats ::class.java,
+            index= AresConstants.SALES_DASHBOARD_INDEX,
+            key= AresConstants.OPEN_SEARCH_DOCUMENT_KEY
         )
-
-
-        var outResp: OutstandingByAge? = null
-        for (hts in response?.hits()?.hits()!!) {
-            outResp = hts.source()
-        }
-
-        return outResp
+    }
+    private fun searchKeyOverallOutstanding(zone: String?, role: String?): String {
+        return if(zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
     }
 
-    private fun<R> searchData(searchKey: String): SearchResponse<Any>?{
-        val response = search(
-            Function { s: SearchRequest.Builder ->
-                s.index(AresConstants.SALES_DASHBOARD_INDEX)
-                    .query { q: Query.Builder ->
-                        q.match { t: MatchQuery.Builder ->
-                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
-                        }
-                    }
-            },
-            Any::class.java
-        )
-        return response
-    }
     private fun validateInput(zone: String?, role: String?){
-        if(AresConstants.ROLE_ZONE_HEAD.equals(role) && zone.isNullOrBlank()){
+        if(AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()){
             throw AresException(AresError.ERR_1003, "zone")
         }
     }
@@ -101,7 +75,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun addMonthlyOutstandingTrend() {
-        val invoiceResponse = OutstandingByAge(
+        val invoiceResponse = OverallOutstandingStats(
             null,
             openInvoiceCount = 23,
             openInvoiceAmount = 23000.toBigDecimal(),
@@ -111,7 +85,7 @@ class DashboardServiceImpl : DashboardService {
             docKey = AresConstants.STATS_PREFIX+"1"
         )
 
-        val invoiceResponse2 = OutstandingByAge(
+        val invoiceResponse2 = OverallOutstandingStats(
             null,
             openInvoiceCount = 27,
             openInvoiceAmount = 12000.toBigDecimal(),
@@ -121,7 +95,7 @@ class DashboardServiceImpl : DashboardService {
             docKey = AresConstants.STATS_PREFIX+"2"
         )
 
-        val invoiceResponse1 = OutstandingByAge(
+        val invoiceResponse1 = OverallOutstandingStats(
             null,
             openInvoiceCount = 55,
             openInvoiceAmount = 35000.toBigDecimal(),
