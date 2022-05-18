@@ -1,12 +1,10 @@
 package com.cogoport.ares.payment.service.implementation
 
 import com.cogoport.ares.common.AresConstants
+import com.cogoport.ares.common.classes.OpenSearch
 import com.cogoport.ares.common.enum.Quarter
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.payment.model.CollectionTrend
-import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OverallOutstandingStats
-import com.cogoport.ares.payment.model.QuarterlyOutstanding
+import com.cogoport.ares.payment.model.*
 import com.cogoport.ares.payment.repository.PaymentRepository
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import com.cogoport.ares.utils.code.AresError
@@ -19,9 +17,9 @@ import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
+import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.util.function.Function
-
 @Singleton
 class DashboardServiceImpl : DashboardService {
 
@@ -33,28 +31,21 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOverallOutstanding(zone: String?, role: String?): OverallOutstandingStats? {
         validateInput(zone, role)
-        val searchKey = if (zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
-        val response = search(
-            Function { s: SearchRequest.Builder ->
-                s.index(AresConstants.SALES_DASHBOARD_INDEX)
-                    .query { q: Query.Builder ->
-                        q.match { t: MatchQuery.Builder ->
-                            t.field(AresConstants.OPEN_SEARCH_DOCUMENT_KEY).query(FieldValue.of(searchKey))
-                        }
-                    }
-            },
-            OverallOutstandingStats::class.java
-        )
+        val searchKey = searchKeyOverallOutstanding(zone, role)
 
-        var outResp: OverallOutstandingStats? = null
-        for (hts in response?.hits()?.hits()!!) {
-            outResp = hts.source()
-        }
-        return outResp
+        return OpenSearch().response<OverallOutstandingStats>(
+            searchKey= searchKey,
+            classType= OverallOutstandingStats ::class.java,
+            index= AresConstants.SALES_DASHBOARD_INDEX,
+            key= AresConstants.OPEN_SEARCH_DOCUMENT_KEY
+        )
+    }
+    private fun searchKeyOverallOutstanding(zone: String?, role: String?): String {
+        return if(zone.isNullOrBlank()) AresConstants.STATS_PREFIX+"all" else AresConstants.STATS_PREFIX+zone
     }
 
     private fun validateInput(zone: String?, role: String?){
-        if(AresConstants.ROLE_ZONE_HEAD.equals(role) && zone.isNullOrBlank()){
+        if(AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()){
             throw AresException(AresError.ERR_1003, "zone")
         }
     }
@@ -254,6 +245,7 @@ class DashboardServiceImpl : DashboardService {
         }
         return outResp
     }
+
 
     /**
      * Extract Months from Quarter

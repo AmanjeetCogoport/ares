@@ -1,4 +1,9 @@
 package com.cogoport.ares.payment.model
 
-class SalesTrend {
-}
+import io.micronaut.data.annotation.MappedEntity
+
+@MappedEntity
+data class SalesTrend (
+        val month: String,
+        val salesOnCredit: Float
+        )

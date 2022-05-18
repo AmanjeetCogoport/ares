@@ -1,9 +1,6 @@
 package com.cogoport.ares.payment.service.interfaces
 
-import com.cogoport.ares.payment.model.CollectionTrend
-import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OverallOutstandingStats
-import com.cogoport.ares.payment.model.QuarterlyOutstanding
+import com.cogoport.ares.payment.model.*
 
 interface DashboardService {
 
@@ -20,5 +17,5 @@ interface DashboardService {
     suspend fun getMonthlyOutstanding(zone: String?, role: String?): MonthlyOutstanding?
 
     suspend fun getQuarterlyOutstanding(zone: String?, role: String?): QuarterlyOutstanding?
-
+//    suspend fun getSalesTrend(zone: String?, role: String?): List<SalesTrend>
 }
