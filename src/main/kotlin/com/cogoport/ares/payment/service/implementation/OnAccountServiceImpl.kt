@@ -10,7 +10,7 @@ import jakarta.inject.Singleton
 import java.time.LocalDateTime
 
 @Singleton
-class OnAccountServiceImpl: OnAccountService {
+class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var paymentRepository: PaymentRepository
 
