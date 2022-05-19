@@ -2,7 +2,7 @@ package com.cogoport.ares.payment.service.implementation
 
 import com.cogoport.ares.common.AresConstants
 import com.cogoport.ares.common.classes.OpenSearch
-import com.cogoport.ares.common.enum.Quarter
+import com.cogoport.ares.common.enums.Quarter
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.payment.model.*
 import com.cogoport.ares.payment.repository.PaymentRepository
@@ -17,7 +17,6 @@ import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
-import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.util.function.Function
 

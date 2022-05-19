@@ -1,5 +1,6 @@
 package com.cogoport.ares.payment.model
 
+import com.cogoport.ares.common.enums.AccMode
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.time.LocalDate

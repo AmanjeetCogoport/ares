@@ -1,4 +1,4 @@
-package com.cogoport.ares.common.enum
+package com.cogoport.ares.common.enums
 
 enum class Quarter(
     var quarter: String,
