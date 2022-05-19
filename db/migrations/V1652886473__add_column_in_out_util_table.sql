@@ -1,3 +1,5 @@
+  create type DOCUMENT_STATUS as ENUM ('final','cancelled');
+
   alter table account_utilizations
   add zone_code varchar(10) , add doc_status varchar(15);
 

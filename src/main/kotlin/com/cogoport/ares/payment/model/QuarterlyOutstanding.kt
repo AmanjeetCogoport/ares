@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class QuarterlyOutstanding(
-    @JsonProperty("trend")
-    var trend: Map<String, BigDecimal>,
+    @JsonProperty("response")
+    var response: MutableList<OutstandingResponse>,
     @JsonProperty("docKey")
     var docKey: String
 )

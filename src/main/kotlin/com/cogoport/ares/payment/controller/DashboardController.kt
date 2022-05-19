@@ -1,10 +1,10 @@
 package com.cogoport.ares.payment.controller
 
+import com.cogoport.ares.common.AresConstants
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.payment.model.CollectionTrend
-import com.cogoport.ares.payment.model.MonthlyOutstanding
-import com.cogoport.ares.payment.model.OverallOutstandingStats
-import com.cogoport.ares.payment.model.SalesTrend
+import com.cogoport.ares.exception.AresError
+import com.cogoport.ares.exception.AresException
+import com.cogoport.ares.payment.model.*
 import com.cogoport.ares.payment.service.interfaces.DashboardService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -19,41 +19,50 @@ class DashboardController {
     @Inject
     lateinit var dashboardService: DashboardService
 
-    @Get("/outstanding-stats")
-    suspend fun getOutstandingStats(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
-    ): OverallOutstandingStats? {
-        return Response<OverallOutstandingStats?>().ok(dashboardService.getOverallOutstanding(zone, role))
+    @Get("/overall-stats")
+    suspend fun getOverallStats(
+        @QueryValue(AresConstants.ROLE) zone: String?,
+        @QueryValue(AresConstants.ZONE) role: String?
+    ): OverallStats? {
+        return Response<OverallStats?>().ok(dashboardService.getOverallStats(zone, role))
+    }
+
+    @Get("/daily-sales-outstanding-widget")
+    suspend fun getDailySalesOutstandingWidget(
+        @QueryValue(AresConstants.ZONE) zone: String?,
+        @QueryValue(AresConstants.ROLE) role: String?,
+        @QueryValue(AresConstants.QUARTER) quarter: String
+    ): DailySalesOutstanding? {
+        return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(zone, role, quarter))
     }
 
     @Get("/collection-trend")
     suspend fun getCollectionTrend(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?,
-        @QueryValue("quarter") quarter: String
+        @QueryValue(AresConstants.ZONE) zone: String?,
+        @QueryValue(AresConstants.ROLE) role: String?,
+        @QueryValue(AresConstants.QUARTER) quarter: String
     ): CollectionTrend? {
         return Response<CollectionTrend?>().ok(dashboardService.getCollectionTrend(zone, role, quarter))
     }
 
     @Get("/monthly-outstanding")
     suspend fun getMonthlyOutstanding(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
+        @QueryValue(AresConstants.ZONE) zone: String?,
+        @QueryValue(AresConstants.ROLE) role: String?
     ): MonthlyOutstanding? {
         return Response<MonthlyOutstanding?>().ok(dashboardService.getMonthlyOutstanding(zone, role))
     }
 
     @Get("/quarterly-outstanding")
     suspend fun getQuarterlyOutstanding(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
-    ): MonthlyOutstanding? {
-        return Response<MonthlyOutstanding?>().ok(dashboardService.getMonthlyOutstanding(zone, role))
+        @QueryValue(AresConstants.ZONE) zone: String?,
+        @QueryValue(AresConstants.ROLE) role: String?
+    ): QuarterlyOutstanding? {
+        return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(zone, role))
     }
 
-    @Get("/outstanding-stats/add")
-    suspend fun getOutstandingByAge() { return dashboardService.addMonthlyOutstandingTrend() }
+    @Get("/open-search/add")
+    suspend fun getOutstandingByAge() { return dashboardService.pushDataToOpenSearch() }
 
     @Delete("/index")
     suspend fun deleteIndex(@QueryValue("name") name: String) { return dashboardService.deleteIndex(name) }
@@ -61,11 +70,24 @@ class DashboardController {
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
-//    @Get("/sales-trend")
-//    suspend fun getSalesTrend(
-//        @QueryValue("zone") zone: String?,
-//        @QueryValue("role") role: String?
-//    ): List<SalesTrend> {
-//        return Response<List<SalesTrend>>().ok(dashboardService.getSalesTrend(zone, role))
-//    }
+    @Get("/sales-trend")
+    suspend fun getSalesTrend(
+        @QueryValue(AresConstants.ZONE) zone: String?,
+        @QueryValue(AresConstants.ROLE) role: String?
+    ): SalesTrendResponse? {
+        return Response<SalesTrendResponse?>().ok(dashboardService.getSalesTrend(zone, role))
+    }
+
+    @Get("outstanding-by-age")
+    suspend fun getOutStandingByAge(): List<AgeingBucket>? {
+        return Response<List<AgeingBucket>?>().ok(dashboardService.getOutStandingByAge())
+    }
+
+    @Get("/receivables-by-age")
+    suspend fun getReceivablesByAge(
+        @QueryValue("zone") zone: String?,
+        @QueryValue("role") role: String?
+    ): ReceivableAgeingResponse {
+        return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(zone, role))
+    }
 }
