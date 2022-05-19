@@ -1,6 +1,6 @@
 package com.cogoport.ares.payment.entity
 
-import com.cogoport.ares.payment.model.AccMode
+import com.cogoport.ares.common.enums.AccMode
 import com.cogoport.ares.payment.model.PayMode
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
