@@ -4,9 +4,13 @@ import com.cogoport.ares.payment.model.AccountCollectionResponse
 import com.cogoport.ares.payment.model.Payment
 import com.cogoport.ares.payment.service.interfaces.OnAccountService
 import io.micronaut.context.annotation.Parameter
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
-import io.micronaut.http.annotation.*
+import io.micronaut.http.annotation.Body
+import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.PathVariable
+import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
@@ -36,5 +40,4 @@ class OnAccountController {
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment {
         return onAccountService.createReceivables(request)
     }
-
 }

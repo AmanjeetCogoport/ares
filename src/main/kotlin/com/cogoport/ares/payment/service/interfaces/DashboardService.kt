@@ -4,9 +4,9 @@ import com.cogoport.ares.payment.model.*
 
 interface DashboardService {
 
-    suspend fun getOverallOutstanding(zone: String?, role: String?): OverallOutstandingStats?
+    suspend fun getOverallStats(zone: String?, role: String?): OverallStats?
 
-    suspend fun addMonthlyOutstandingTrend()
+    suspend fun pushDataToOpenSearch()
 
     suspend fun deleteIndex(index: String)
 
@@ -17,5 +17,11 @@ interface DashboardService {
     suspend fun getMonthlyOutstanding(zone: String?, role: String?): MonthlyOutstanding?
 
     suspend fun getQuarterlyOutstanding(zone: String?, role: String?): QuarterlyOutstanding?
-//    suspend fun getSalesTrend(zone: String?, role: String?): List<SalesTrend>
+    suspend fun getSalesTrend(zone: String?, role: String?): SalesTrendResponse?
+
+    suspend fun getDailySalesOutstanding(zone: String?, role: String?, quarter: String): DailySalesOutstanding?
+
+    suspend fun getOutStandingByAge(): List<AgeingBucket>
+
+    suspend fun getReceivableByAge(zone: String?, role: String?): ReceivableAgeingResponse
 }

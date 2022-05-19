@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.MappedEntity
 
 @MappedEntity
-data class SalesTrend(
+data class Dso(
     @JsonProperty("month")
     val month: String,
-    @JsonProperty("salesOnCredit")
-    val salesOnCredit: Double
+    @JsonProperty("dsoForTheMonth")
+    val dsoForTheMonth: Double
 )
