@@ -14,7 +14,6 @@ import java.util.UUID
 data class Payment(
     @field:Id @GeneratedValue var id: Long?,
     var entityCode: Int,
-    var entityId: UUID,
     var fileId: Long? = null,
     var orgSerialId: Long,
     var organizationId: UUID,
@@ -29,12 +28,12 @@ data class Payment(
     var ledAmount: BigDecimal,
     var payMode: PayMode?,
     var narration: String? = null,
-    var bankId: Int?,
     var transRefNumber: String?,
     var refPaymentId: Long?,
     var transactionDate: LocalDate?,
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: LocalDateTime?,
-    var updatedAt: LocalDateTime
+    var updatedAt: LocalDateTime,
+    var accountNo:String
 )

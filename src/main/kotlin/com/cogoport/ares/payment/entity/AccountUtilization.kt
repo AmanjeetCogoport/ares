@@ -30,7 +30,8 @@ data class AccountUtilization (
     var dueDate:LocalDate,
     var transactionDate: LocalDate,
     var createdAt: LocalDateTime?,
-    var updatedAt: LocalDateTime,
+    var updatedAt: LocalDateTime?,
     var zoneCode:String,
-    var docStatus:String
+    var docStatus:String,
+    var docValue:String?
 )

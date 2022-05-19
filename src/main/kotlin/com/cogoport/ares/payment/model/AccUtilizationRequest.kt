@@ -18,5 +18,8 @@ data class AccUtilizationRequest (
     var currencyPayment:BigDecimal,
     var ledgerPayment:BigDecimal,
     var zoneCode:String,
-    var docStatus:String
+    var docStatus:String,
+    var docValue:String?,
+    var dueDate:String?,
+    var transactionDate:String?
 )
