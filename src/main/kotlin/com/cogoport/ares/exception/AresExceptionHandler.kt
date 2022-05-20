@@ -26,7 +26,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                 )
             }!!
             return getResponse(exception?.error?.httpStatus, errorMessage)
-        }else{
+        } else {
             var errorMessage = ErrorResponse(
                 AresError.ERR_1001.code,
                 exception?.message,
@@ -34,8 +34,6 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             )
             return getResponse(HttpStatus.SERVICE_UNAVAILABLE, errorMessage)
         }
-
-
     }
 
     /**

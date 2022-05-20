@@ -8,15 +8,15 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface AccountUtilizationRepository:CoroutineCrudRepository<AccountUtilization,Long> {
+interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
 
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType)")
-    suspend fun isDocumentNumberExists(documentNo:Long,accType:String): Boolean
+    suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
-    suspend fun deleteInvoiceUtils(documentNo: Long,accType: String):Int
+    suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
 
-   @Query(
+    @Query(
         """select case when due_date  >= now() then 'Not Due'
              when (now()::date - due_date ) between 1 and 30 then '1-30'
              when (now()::date - due_date ) between 31 and 60 then '31-60'

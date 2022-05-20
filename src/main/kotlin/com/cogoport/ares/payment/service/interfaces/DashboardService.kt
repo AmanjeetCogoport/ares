@@ -1,6 +1,13 @@
 package com.cogoport.ares.payment.service.interfaces
 
-import com.cogoport.ares.payment.model.*
+import com.cogoport.ares.payment.model.AgeingBucket
+import com.cogoport.ares.payment.model.CollectionTrend
+import com.cogoport.ares.payment.model.DailySalesOutstanding
+import com.cogoport.ares.payment.model.MonthlyOutstanding
+import com.cogoport.ares.payment.model.OverallStats
+import com.cogoport.ares.payment.model.QuarterlyOutstanding
+import com.cogoport.ares.payment.model.ReceivableAgeingResponse
+import com.cogoport.ares.payment.model.SalesTrendResponse
 
 interface DashboardService {
 

@@ -22,24 +22,25 @@ class InvoiceUtilizationImpl : InvoiceService {
 
     override suspend fun addInvoice(invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
 
-        var responseList =  mutableListOf<CreateInvoiceResponse>()
+        var responseList = mutableListOf<CreateInvoiceResponse>()
 
         for (invoiceItem in invoiceRequestList) {
 
             if (accUtilRepository.isDocumentNumberExists(invoiceItem.documentNo, invoiceItem.accType)) {
-               responseList.add(CreateInvoiceResponse(invoiceItem.documentNo,false,AresError.ERR_1201.message))
+                responseList.add(CreateInvoiceResponse(invoiceItem.documentNo, false, AresError.ERR_1201.message))
                 continue
             }
 
-            //TODO: More validations to come
-           if(!invoiceItem.accType.equals(AccountType.SINV.name,ignoreCase = true) &&
-               !invoiceItem.accType.equals(AccountType.PCN.name,ignoreCase = true) &&
-               !invoiceItem.accType.equals(AccountType.PDN.name,ignoreCase = true) &&
-                   !invoiceItem.accType.equals(AccountType.PINV.name,ignoreCase = true) &&
-                   !invoiceItem.accType.equals(AccountType.SCN.name,ignoreCase = true) &&
-                   !invoiceItem.accType.equals(AccountType.SDN.name,ignoreCase = true)){
-               throw AresException(AresError.ERR_1202,"accType")
-           }
+            // TODO: More validations to come
+            if (!invoiceItem.accType.equals(AccountType.SINV.name, ignoreCase = true) &&
+                !invoiceItem.accType.equals(AccountType.PCN.name, ignoreCase = true) &&
+                !invoiceItem.accType.equals(AccountType.PDN.name, ignoreCase = true) &&
+                !invoiceItem.accType.equals(AccountType.PINV.name, ignoreCase = true) &&
+                !invoiceItem.accType.equals(AccountType.SCN.name, ignoreCase = true) &&
+                !invoiceItem.accType.equals(AccountType.SDN.name, ignoreCase = true)
+            ) {
+                throw AresException(AresError.ERR_1202, "accType")
+            }
 
             val acUtilization = AccountUtilization(
                 null,
@@ -67,14 +68,13 @@ class InvoiceUtilizationImpl : InvoiceService {
             )
 
             val generatedId = accUtilRepository.save(acUtilization).id
-            responseList.add(CreateInvoiceResponse(invoiceItem.documentNo,true,Messages.SUCCESS_INVOICE_CREATION))
+            responseList.add(CreateInvoiceResponse(invoiceItem.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
     }
 
-
     override suspend fun deleteInvoice(docId: Long, accType: String): Boolean {
-        //TODO : validations before deletetion
+        // TODO : validations before deletetion
         accUtilRepository.deleteInvoiceUtils(docId, accType)
         return true
     }

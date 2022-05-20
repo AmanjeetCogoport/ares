@@ -25,7 +25,7 @@ class OpenSearchClient {
             classType
         )
         var outResp: T? = null
-        if(response?.hits()?.total()?.value() == 0.toLong())
+        if (response?.hits()?.total()?.value() == 0.toLong())
             throw AresException(AresError.ERR_1005, "")
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()

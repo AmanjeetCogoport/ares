@@ -35,5 +35,5 @@ data class Payment(
     var isDeleted: Boolean,
     var createdAt: LocalDateTime?,
     var updatedAt: LocalDateTime,
-    var accountNo:String
+    var accountNo: String
 )

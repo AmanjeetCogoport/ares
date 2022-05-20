@@ -5,5 +5,5 @@ enum class AccMode {
 }
 
 enum class AccType {
-    SINV,PINV,SCN,SDN,PCN,PDN,REC,PAY;
+    SINV, PINV, SCN, SDN, PCN, PDN, REC, PAY;
 }

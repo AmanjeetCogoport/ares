@@ -1,6 +1,5 @@
 package com.cogoport.ares.payment.entity
 
-
 import com.cogoport.ares.common.enums.AccMode
 import com.cogoport.ares.payment.model.AccountType
 import io.micronaut.data.annotation.GeneratedValue
@@ -32,7 +31,7 @@ data class AccountUtilization(
     var transactionDate: LocalDate,
     var createdAt: LocalDateTime? = LocalDateTime.now(),
     var updatedAt: LocalDateTime? = LocalDateTime.now(),
-    var zoneCode:String,
-    var docStatus:String,
-    var docValue:String?
+    var zoneCode: String,
+    var docStatus: String,
+    var docValue: String?
 )

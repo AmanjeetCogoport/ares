@@ -1,12 +1,23 @@
 package com.cogoport.ares.payment.service.implementation
-
 import com.cogoport.ares.common.AresConstants
 import com.cogoport.ares.common.enums.Quarter
 import com.cogoport.ares.exception.AresError
 import com.cogoport.ares.exception.AresException
 import com.cogoport.ares.gateway.OpenSearchClient
 import com.cogoport.ares.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.payment.model.*
+import com.cogoport.ares.payment.model.AgeingBucket
+import com.cogoport.ares.payment.model.CollectionTrend
+import com.cogoport.ares.payment.model.CollectionTrendResponse
+import com.cogoport.ares.payment.model.DailySalesOutstanding
+import com.cogoport.ares.payment.model.Dso
+import com.cogoport.ares.payment.model.MonthlyOutstanding
+import com.cogoport.ares.payment.model.OutstandingResponse
+import com.cogoport.ares.payment.model.OverallStats
+import com.cogoport.ares.payment.model.QuarterlyOutstanding
+import com.cogoport.ares.payment.model.ReceivableAgeingResponse
+import com.cogoport.ares.payment.model.ReceivableByAgeViaZone
+import com.cogoport.ares.payment.model.SalesTrend
+import com.cogoport.ares.payment.model.SalesTrendResponse
 import com.cogoport.ares.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.payment.repository.PaymentRepository
 import com.cogoport.ares.payment.service.interfaces.DashboardService
@@ -127,22 +138,22 @@ class DashboardServiceImpl : DashboardService {
         val collectionTrend = CollectionTrend(
             totalReceivableAmount = 1000.toFloat(),
             totalCollectedAmount = 2000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("jan", 10000.0F, 1000.0F),CollectionTrendResponse("feb", 300.0F, 200.0F)),
-            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"1_2022_Q2"
+            collectionTrend = listOf(CollectionTrendResponse("jan", 10000.0F, 1000.0F), CollectionTrendResponse("feb", 300.0F, 200.0F)),
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "1_2022_Q2"
         )
 
         val collectionTrend1 = CollectionTrend(
             totalReceivableAmount = 3000.toFloat(),
             totalCollectedAmount = 4000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("mar", 10000.0F, 1000.0F),CollectionTrendResponse("april", 40000.0F, 900.0F)),
-            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"all_2022_Q2"
+            collectionTrend = listOf(CollectionTrendResponse("mar", 10000.0F, 1000.0F), CollectionTrendResponse("april", 40000.0F, 900.0F)),
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "all_2022_Q2"
         )
 
         val collectionTrend2 = CollectionTrend(
             totalReceivableAmount = 5000.toFloat(),
             totalCollectedAmount = 6000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("may", 10000.0F, 1000.0F),CollectionTrendResponse("may", 50000.0F, 7000.0F)),
-            docKey = AresConstants.COLLECTIONS_TREND_PREFIX+"2_2022_Q2"
+            collectionTrend = listOf(CollectionTrendResponse("may", 10000.0F, 1000.0F), CollectionTrendResponse("may", 50000.0F, 7000.0F)),
+            docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "2_2022_Q2"
         )
 
         val monthlyOutstanding = MonthlyOutstanding(
