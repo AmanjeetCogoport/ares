@@ -1,5 +1,6 @@
 package com.cogoport.ares.payment.model
 import java.math.BigDecimal
+import java.util.*
 
 data class AccUtilizationRequest (
     var documentNo:Long,
@@ -7,12 +8,12 @@ data class AccUtilizationRequest (
     var entityId:String,
     var orgSerialId:Long,
     var sageOrganizationId:String?,
-    var organizationId:String?,
+    var organizationId:UUID?,
     var organizationName:String?,
     var accCode:Int,
     var accType:String,
     var accMode:String,
-    var signFlag:Short,
+    var signFlag:Int,
     var currencyAmount:BigDecimal,
     var ledgerAmount:BigDecimal,
     var currencyPayment:BigDecimal,

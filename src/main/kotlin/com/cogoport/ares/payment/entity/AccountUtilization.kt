@@ -15,7 +15,6 @@ import java.util.UUID
 data class AccountUtilization(
     @field:Id @GeneratedValue var id: Long?,
     var entityCode: Int,
-    var entityId: UUID,
     var documentNo: Long,
     var orgSerialId: Long,
     var organizationId: UUID,
@@ -30,11 +29,9 @@ data class AccountUtilization(
     var payCurr: BigDecimal = 0.toBigDecimal(),
     var payLoc: BigDecimal = 0.toBigDecimal(),
     var dueDate: LocalDate,
-    var zoneCode:String,
-    var docStatus:String,
     var transactionDate: LocalDate,
     var createdAt: LocalDateTime? = LocalDateTime.now(),
-    var updatedAt: LocalDateTime = LocalDateTime.now()
+    var updatedAt: LocalDateTime? = LocalDateTime.now(),
     var zoneCode:String,
     var docStatus:String,
     var docValue:String?
