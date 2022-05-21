@@ -1,0 +1,12 @@
+plugins {
+    id "common-conventions"
+
+    id "org.jetbrains.kotlin.plugin.allopen"
+
+    id "io.micronaut.application"
+    id "io.micronaut.aot"
+
+    id "com.github.johnrengelman.shadow"
+
+    id "org.flywaydb.flyway"
+}
