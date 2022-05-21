@@ -16,12 +16,12 @@ class MapperConfig {
     }
 
     @Bean
-    fun getDsoConverter(): DsoMapper{
+    fun getDsoConverter(): DsoMapper {
         return Mappers.getMapper(DsoMapper::class.java)
     }
 
     @Bean
-    fun getOutstandingConverter(): OutstandingMapper{
+    fun getOutstandingConverter(): OutstandingMapper {
         return Mappers.getMapper(OutstandingMapper::class.java)
     }
 }

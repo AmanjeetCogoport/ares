@@ -1,6 +1,12 @@
 package com.cogoport.ares.api.payment.repository
 
-import com.cogoport.ares.api.payment.entity.*
+import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.AgeingBucket
+import com.cogoport.ares.api.payment.entity.OverallOutstanding
+import com.cogoport.ares.api.payment.entity.AgeingBucketZone
+import com.cogoport.ares.api.payment.entity.Outstanding
+import com.cogoport.ares.api.payment.entity.Dso
+import com.cogoport.ares.api.payment.entity.CollectionTrendModel
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -143,7 +149,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         order by date_trunc('month', transaction_date) desc
         """
     )
-    suspend fun generateDailySalesOutstanding(zone: String?,quarter: Int?): List<Dso>
-
-
+    suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int?): List<Dso>
 }

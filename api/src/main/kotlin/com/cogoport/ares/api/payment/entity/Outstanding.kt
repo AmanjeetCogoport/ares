@@ -4,7 +4,7 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
 @MappedEntity
-data class Outstanding (
+data class Outstanding(
     var duration: String?,
     var amount: BigDecimal
 )

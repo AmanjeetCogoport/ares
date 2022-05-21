@@ -137,32 +137,34 @@ class DashboardServiceImpl : DashboardService {
         )
 
         val collectionTrend = CollectionTrend(
-            totalReceivableAmount = 1000.toFloat(),
-            totalCollectedAmount = 2000.toFloat(),
-            trend = listOf(
+            totalReceivableAmount = 1000.toBigDecimal(),
+            totalCollectedAmount = 2000.toBigDecimal(),
+            trend = mutableListOf(
                 CollectionTrendResponse(
-                duration = "jan",
-                receivableAmount = 10000.0F,
-                collectableAmount = 1000.0F),
+                    duration = "jan",
+                    receivableAmount = 10000.toBigDecimal(),
+                    collectableAmount = 1000.toBigDecimal(),
+                ),
                 CollectionTrendResponse(
                     duration = "feb",
-                    receivableAmount = 300.0F,
-                    collectableAmount = 200.0F)
+                    receivableAmount = 300.toBigDecimal(),
+                    collectableAmount = 200.toBigDecimal(),
+                )
             ),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "1_2022_Q2"
         )
 
         val collectionTrend1 = CollectionTrend(
-            totalReceivableAmount = 3000.toFloat(),
-            totalCollectedAmount = 4000.toFloat(),
-            trend = listOf(CollectionTrendResponse("mar", 10000.0F, 1000.0F), CollectionTrendResponse("april", 40000.0F, 900.0F)),
+            totalReceivableAmount = 3000.toBigDecimal(),
+            totalCollectedAmount = 4000.toBigDecimal(),
+            trend = mutableListOf(CollectionTrendResponse("mar", 10000.toBigDecimal(), 1000.toBigDecimal()), CollectionTrendResponse("april", 40000.toBigDecimal(), 900.toBigDecimal())),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "all_2022_Q2"
         )
 
         val collectionTrend2 = CollectionTrend(
-            totalReceivableAmount = 5000.toFloat(),
-            totalCollectedAmount = 6000.toFloat(),
-            trend = listOf(CollectionTrendResponse("may", 10000.0F, 1000.0F), CollectionTrendResponse("may", 50000.0F, 7000.0F)),
+            totalReceivableAmount = 5000.toBigDecimal(),
+            totalCollectedAmount = 6000.toBigDecimal(),
+            trend = mutableListOf(CollectionTrendResponse("may", 10000.toBigDecimal(), 1000.toBigDecimal()), CollectionTrendResponse("may", 50000.toBigDecimal(), 7000.toBigDecimal())),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "2_2022_Q2"
         )
 
