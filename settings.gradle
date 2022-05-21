@@ -1,2 +1,3 @@
 
 rootProject.name="ares"
+include('api', 'client', 'model')
