@@ -344,7 +344,7 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucket?): AgeingBucket {
+    private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): AgeingBucket {
         var receivableZoneBucket = mutableListOf<AgeingBucket>()
 
         return AgeingBucket(
