@@ -1,11 +1,8 @@
-package com.cogoport.ares.api.payment.entity
+package com.cogoport.ares.model.payment
 
-import com.cogoport.ares.api.payment.model.AgeingBucket
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
-@MappedEntity
 data class CustomerOutstanding(
     @JsonProperty("organizationName")
     var organizationName: String,

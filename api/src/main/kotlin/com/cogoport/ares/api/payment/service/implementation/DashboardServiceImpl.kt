@@ -5,17 +5,17 @@ import com.cogoport.ares.api.common.enums.Quarter
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
-import com.cogoport.ares.api.payment.entity.AgeingBucket
-import com.cogoport.ares.api.payment.entity.DailySalesOutstanding
-import com.cogoport.ares.api.payment.entity.ReceivableByAgeViaZone
-import com.cogoport.ares.api.payment.entity.Dso
-import com.cogoport.ares.api.payment.entity.SalesTrend
-import com.cogoport.ares.api.payment.entity.SalesTrendResponse
+import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.Dso
+import com.cogoport.ares.model.payment.SalesTrend
+import com.cogoport.ares.model.payment.SalesTrendResponse
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.api.payment.entity.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.OverallStats
 import com.cogoport.ares.model.payment.CollectionTrend
 import com.cogoport.ares.model.payment.MonthlyOutstanding
@@ -139,21 +139,30 @@ class DashboardServiceImpl : DashboardService {
         val collectionTrend = CollectionTrend(
             totalReceivableAmount = 1000.toFloat(),
             totalCollectedAmount = 2000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("jan", 10000.0F, 1000.0F), CollectionTrendResponse("feb", 300.0F, 200.0F)),
+            trend = listOf(
+                CollectionTrendResponse(
+                duration = "jan",
+                receivableAmount = 10000.0F,
+                collectableAmount = 1000.0F),
+                CollectionTrendResponse(
+                    duration = "feb",
+                    receivableAmount = 300.0F,
+                    collectableAmount = 200.0F)
+            ),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "1_2022_Q2"
         )
 
         val collectionTrend1 = CollectionTrend(
             totalReceivableAmount = 3000.toFloat(),
             totalCollectedAmount = 4000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("mar", 10000.0F, 1000.0F), CollectionTrendResponse("april", 40000.0F, 900.0F)),
+            trend = listOf(CollectionTrendResponse("mar", 10000.0F, 1000.0F), CollectionTrendResponse("april", 40000.0F, 900.0F)),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "all_2022_Q2"
         )
 
         val collectionTrend2 = CollectionTrend(
             totalReceivableAmount = 5000.toFloat(),
             totalCollectedAmount = 6000.toFloat(),
-            collectionTrend = listOf(CollectionTrendResponse("may", 10000.0F, 1000.0F), CollectionTrendResponse("may", 50000.0F, 7000.0F)),
+            trend = listOf(CollectionTrendResponse("may", 10000.0F, 1000.0F), CollectionTrendResponse("may", 50000.0F, 7000.0F)),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "2_2022_Q2"
         )
 
@@ -285,11 +294,11 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getReceivableByAge(zone: String?, role: String?): ReceivableAgeingResponse {
 
         var payment = accountUtilizationRepository.getReceivableByAge(zone)
-        var receivableNorthBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
-        var receivableSouthBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
-        var receivableEastBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
-        var receivableWestBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
-        var receivableZoneBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
+        var receivableNorthBucket = mutableListOf<AgeingBucket>()
+        var receivableSouthBucket = mutableListOf<AgeingBucket>()
+        var receivableEastBucket = mutableListOf<AgeingBucket>()
+        var receivableWestBucket = mutableListOf<AgeingBucket>()
+        var receivableZoneBucket = mutableListOf<AgeingBucket>()
         var receivableByAgeViaZone = mutableListOf<ReceivableByAgeViaZone>()
         var zoneData = listOf<String>()
 
@@ -335,13 +344,13 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun receivableBucketAllZone(response: AgeingBucket?): com.cogoport.ares.api.payment.model.AgeingBucket {
-        var receivableZoneBucket = mutableListOf<com.cogoport.ares.api.payment.model.AgeingBucket>()
+    private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucket?): AgeingBucket {
+        var receivableZoneBucket = mutableListOf<AgeingBucket>()
 
-        return com.cogoport.ares.api.payment.model.AgeingBucket(
+        return AgeingBucket(
             ageingDuration = response!!.ageingDuration,
             amount = response.amount,
-            ageingDurationKey = response!!.ageingDuration,
+            zone = null
         )
     }
 
