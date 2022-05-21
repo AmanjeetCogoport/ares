@@ -2,14 +2,14 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.api.payment.entity.AgeingBucket
+import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.CollectionTrend
-import com.cogoport.ares.api.payment.entity.DailySalesOutstanding
+import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OverallStats
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.api.payment.entity.ReceivableAgeingResponse
-import com.cogoport.ares.api.payment.entity.SalesTrendResponse
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.SalesTrendResponse
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete

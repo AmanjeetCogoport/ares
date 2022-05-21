@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class CollectionTrendResponse(
     @JsonProperty("duration")
     var duration: String,
-    @JsonProperty("receiveableAmount")
-    var receiveableAmount: Float,
+    @JsonProperty("receivableAmount")
+    var receivableAmount: Float,
     @JsonProperty("collectableAmount")
     var collectableAmount: Float,
 )
