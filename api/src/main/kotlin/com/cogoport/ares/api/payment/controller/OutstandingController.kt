@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.api.payment.entity.OutstandingList
+import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get

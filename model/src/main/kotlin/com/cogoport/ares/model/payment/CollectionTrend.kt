@@ -7,8 +7,8 @@ data class CollectionTrend(
     var totalReceivableAmount: Float,
     @JsonProperty("totalCollectedAmount")
     var totalCollectedAmount: Float,
-    @JsonProperty("collectionTrend")
-    var collectionTrend: List<CollectionTrendResponse>,
+    @JsonProperty("trend")
+    var trend: List<CollectionTrendResponse>,
     @JsonProperty("docKey")
     var docKey: String
 )

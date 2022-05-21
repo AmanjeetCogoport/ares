@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.payment.entity
+package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
