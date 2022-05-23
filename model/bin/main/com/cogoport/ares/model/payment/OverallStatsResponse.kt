@@ -1,14 +1,19 @@
-package com.cogoport.ares.api.payment.entity
+package com.cogoport.ares.model.payment
 
-import io.micronaut.data.annotation.MappedEntity
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
-@MappedEntity
-data class OverallOutstanding(
+data class OverallStatsResponse(
+    @JsonProperty
     val totalOutstandingAmount: BigDecimal,
+    @JsonProperty
     val openInvoicesCount: Int,
+    @JsonProperty
     val organizationCount: Int,
+    @JsonProperty
     val openInvoicesAmount: BigDecimal,
+    @JsonProperty
     val openOnAccountPaymentAmount: BigDecimal,
+    @JsonProperty
     var id: String?
 )

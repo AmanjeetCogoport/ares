@@ -2,7 +2,7 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class Dso(
+data class DsoResponse(
     @JsonProperty("month")
     val month: String,
     @JsonProperty("dsoForTheMonth")

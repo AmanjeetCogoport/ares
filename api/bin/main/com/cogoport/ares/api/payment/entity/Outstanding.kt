@@ -4,8 +4,7 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
 @MappedEntity
-data class CollectionTrendResponse(
+data class Outstanding(
     var duration: String?,
-    var receivableAmount: BigDecimal?,
-    var collectableAmount: BigDecimal?,
+    var amount: BigDecimal
 )
