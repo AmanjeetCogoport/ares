@@ -38,4 +38,9 @@ class MapperConfig {
     fun getOverallAgeingStats(): OverallAgeingMapper{
         return Mappers.getMapper(OverallAgeingMapper::class.java)
     }
+
+    @Bean
+    fun getInvoiceList(): InvoiceMapper{
+        return Mappers.getMapper(InvoiceMapper::class.java)
+    }
 }
