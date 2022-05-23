@@ -163,28 +163,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>
-
-    @Query(
-        """
-            select organization_id,
-            sum(case when due_date > now() then sign_flag * (amount_loc - pay_loc) end) as not_due_amount,
-            sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) end) as thirty_amount,
-            sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) end) as sixty_amount,
-            sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) end) as ninety_amount,
-            sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) end) as oneeighty_amount,
-            sum(case when (now()::date - due_date) between 180 and 365 then sign_flag * (amount_loc - pay_loc) end) as threesixfive_amount,
-            sum(case when (now()::date - due_date) > 365 then sign_flag * (amount_loc - pay_loc) end) as threesixfiveplus_amount,
-            sum(case when due_date > now() then 1 else 0 end) as not_due_count,
-            sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
-            sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
-            sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
-            sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end) as oneeighty_count,
-            sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
-            sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
-            from account_utilizations
-            where organization_id in ('0008882d-2cb3-4924-ac21-39b315859133','0008882d-2cb3-4923-ac21-39b315859133')
-            group by 1
-        """
-    )
-    suspend fun getOutstandingAgeing():
 }

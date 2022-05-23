@@ -15,7 +15,7 @@ class OutStandingServiceImpl : OutStandingService{
     @Inject
     lateinit var invoiceConverter: InvoiceMapper
     override suspend fun getOutstandingList(zone: String?, role: String?): OutstandingList? {
-        var ageingData = accountUtilizationRepository.getOutstandingAgeing()
+        TODO("Not yet implemented")
     }
 
     override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int , page_limit: Int): MutableList<CustomerInvoiceResponse> {
