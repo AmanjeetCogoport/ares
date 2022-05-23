@@ -2,16 +2,9 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.CollectionTrendResponse
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.SalesTrendResponse
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
+import com.cogoport.ares.model.payment.*
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
@@ -87,8 +80,8 @@ class DashboardController {
     }
 
     @Get("outstanding-by-age")
-    suspend fun getOutStandingByAge(): List<AgeingBucket>? {
-        return Response<List<AgeingBucket>?>().ok(dashboardService.getOutStandingByAge())
+    suspend fun getOutStandingByAge(@QueryValue("zone") zone: String?): MutableList<OverallAgeingStatsResponse>? {
+        return Response<MutableList<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(zone))
     }
 
     @Get("/receivables-by-age")

@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.config
 
+import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.mapper.*
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
@@ -31,5 +32,10 @@ class MapperConfig {
     @Bean
     fun getOverallStats(): OverallStatsMapper{
         return Mappers.getMapper(OverallStatsMapper::class.java)
+    }
+
+    @Bean
+    fun getOverallAgeingStats(): OverallAgeingMapper{
+        return Mappers.getMapper(OverallAgeingMapper::class.java)
     }
 }

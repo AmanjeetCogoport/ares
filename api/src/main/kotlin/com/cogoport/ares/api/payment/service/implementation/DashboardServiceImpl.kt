@@ -5,22 +5,12 @@ import com.cogoport.ares.api.common.enums.Quarter
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
-import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
-import com.cogoport.ares.model.payment.DsoResponse
-import com.cogoport.ares.model.payment.SalesTrend
-import com.cogoport.ares.model.payment.SalesTrendResponse
+import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.CollectionTrendResponse
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.OutstandingResponse
+import com.cogoport.ares.model.payment.*
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -36,6 +26,9 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var overallAgeingConverter: OverallAgeingMapper
 
     override suspend fun getOverallStats(zone: String?, role: String?): OverallStatsResponse? {
         validateInput(zone, role)
@@ -80,8 +73,15 @@ class DashboardServiceImpl : DashboardService {
         validateInput(zone, role)
     }
 
-    override suspend fun getOutStandingByAge(): List<AgeingBucket> {
-        return paymentRepository.getAgeingBucket()
+    override suspend fun getOutStandingByAge(zone: String?): MutableList<OverallAgeingStatsResponse> {
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(zone)
+        var outstandingData = mutableListOf<OverallAgeingStatsResponse>()
+        outstandingResponse.forEach { data ->
+            run {
+                outstandingData.add(overallAgeingConverter.convertToModel(data))
+            }
+        }
+        return outstandingData
     }
     private fun generateDocKeysForMonth(zone: String?, role: String?, quarter: String): MutableList<String> {
         var keys = mutableListOf<String>()

@@ -82,8 +82,7 @@ class PushToClientServiceImpl : PushToClientService {
                 collectionData.add(collectionTrendConverter.convertToModel(data))
             }
         }
-        val collectionId =
-            if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "all" + "_Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + "_Q$quarter"
+        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "all" + "_Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + "_Q$quarter"
         Client.updateDocument(
             AresConstants.SALES_DASHBOARD_INDEX,
             collectionId,
@@ -93,15 +92,13 @@ class PushToClientServiceImpl : PushToClientService {
 
     private fun updateOverallStats(zone: String?, data: OverallStats) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
-        val statsId =
-            if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "all" else AresConstants.OVERALL_STATS_PREFIX + zone
+        val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "all" else AresConstants.OVERALL_STATS_PREFIX + zone
         overallStatsData.id = statsId
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
     }
 
     private fun updateMonthlyTrend(zone: String?, outstandings: MutableList<Outstanding>?) {
-        val monthlyTrendId =
-            if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "all" else AresConstants.MONTHLY_TREND_PREFIX + zone
+        val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "all" else AresConstants.MONTHLY_TREND_PREFIX + zone
         var monthlyTrend = mutableListOf<OutstandingResponse>()
         outstandings?.forEach { outstanding ->
             monthlyTrend.add(outstandingConverter.convertToModel(outstanding))
@@ -114,8 +111,7 @@ class PushToClientServiceImpl : PushToClientService {
     }
 
     private fun updateQuarterlyTrend(zone: String?, outstandings: MutableList<Outstanding>?) {
-        val quarterlyTrendId =
-            if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "all" else AresConstants.QUARTERLY_TREND_PREFIX + zone
+        val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "all" else AresConstants.QUARTERLY_TREND_PREFIX + zone
         var quarterlyTrend = mutableListOf<OutstandingResponse>()
         outstandings?.forEach { outstanding ->
             quarterlyTrend.add(outstandingConverter.convertToModel(outstanding))
@@ -133,8 +129,7 @@ class PushToClientServiceImpl : PushToClientService {
                 dsoResponses.add(dsoConverter.convertToModel(data))
             }
         }
-        val dailySalesId =
-            if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "all" + "_Q$quarter" else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + "_Q$quarter"
+        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "all" + "_Q$quarter" else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + "_Q$quarter"
         Client.updateDocument(
             AresConstants.SALES_DASHBOARD_INDEX,
             dailySalesId,

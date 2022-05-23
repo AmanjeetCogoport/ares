@@ -1,12 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
-import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.AgeingBucket
-import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.Outstanding
-import com.cogoport.ares.api.payment.entity.Dso
-import com.cogoport.ares.api.payment.entity.CollectionTrend
+import com.cogoport.ares.api.payment.entity.*
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -52,14 +46,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             when (now()::date - due_date) between 31 and 60 then '31_60' 
             when (now()::date - due_date) between 61 and 90 then '61_90'
             when (now()::date - due_date) > 90 then '>90' 
-            end as ageing_duration_key
-             from account_utilizations
+            end as ageing_duration_key,
+            'INR' as currency
+            from account_utilizations
+            where :zone is null or zone_code = :zone
             group by ageing_duration, ageing_duration_key
             order by 1
         """
 
     )
-    suspend fun getAgeingBucket(): List<AgeingBucket>
+    suspend fun getAgeingBucket(zone: String?): MutableList<OverallAgeingStats>
 
 //    @Query(
 //        """
@@ -75,11 +71,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoices_amount,
-        sum(case when acc_type = 'sinv' then 1 else 0 end) as open_invoices_count,
-        abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)) as open_on_account_payment_amount,
-        sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount,
-        (select count(distinct organization_id) from account_utilizations where acc_type = 'sinv') as organization_count, null as id
+        coalesce(sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
+        coalesce(sum(case when acc_type = 'sinv' then 1 else 0 end),0) as open_invoices_count,
+        coalesce(abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
+        coalesce(sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
+        (select count(distinct organization_id) from account_utilizations where acc_type = 'sinv' and :zone is null or zone_code = :zone) as organization_count, null as id
         from account_utilizations
         where :zone is null or zone_code = :zone
     """
