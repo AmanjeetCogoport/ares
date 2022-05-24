@@ -8,6 +8,7 @@ import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
+import org.opensearch.client.opensearch.core.SearchResponse
 
 class OpenSearchClient {
 
@@ -31,5 +32,21 @@ class OpenSearchClient {
             outResp = hts.source()
         }
         return outResp
+    }
+    fun <T : Any>listApi(index: String, classType: Class<T>, key: String? = null, searchKey: String? = null, offset: Int? = null, limit: Int? = null): SearchResponse<T>?{
+        val response = Client.search(
+            { s ->
+                s.index(index)
+                    .query { q ->
+                        q.match { t ->
+                            t.field(key).query(FieldValue.of(searchKey))
+                        }
+                    }
+                    .from(offset)
+                    .size(limit)
+            },
+            classType
+        )
+        return response
     }
 }

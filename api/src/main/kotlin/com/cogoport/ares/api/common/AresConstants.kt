@@ -5,6 +5,7 @@ import java.time.temporal.IsoFields
 
 object AresConstants {
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
+    const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"
     const val OPEN_SEARCH_DOCUMENT_KEY = "docKey"
     const val OPEN_SEARCH_DOCUMENT_KEY_DELIMITER = "_"
 

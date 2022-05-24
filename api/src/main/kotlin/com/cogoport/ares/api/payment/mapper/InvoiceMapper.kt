@@ -9,5 +9,5 @@ import org.mapstruct.Mapper
 interface InvoiceMapper {
     fun convertToModel(customerInvoice: CustomerInvoice): CustomerInvoiceResponse
 
-    fun convertToEntity(dsoResponse: CustomerInvoiceResponse): CustomerInvoice
+    fun convertToEntity(customerInvoice: CustomerInvoiceResponse): CustomerInvoice
 }

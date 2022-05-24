@@ -1,12 +1,15 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.InvoiceMapper
+import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
-import com.cogoport.ares.model.payment.CustomerInvoiceResponse
-import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.*
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService{
@@ -14,17 +17,56 @@ class OutStandingServiceImpl : OutStandingService{
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
     @Inject
     lateinit var invoiceConverter: InvoiceMapper
+    @Inject
+    lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
     override suspend fun getOutstandingList(zone: String?, role: String?): OutstandingList? {
-        TODO("Not yet implemented")
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket()
+        val outstandings = mutableListOf<OutstandingAgeingResponse>()
+        queryResponse.forEach {outstanding ->
+            run { outstandings.add(outstandingAgeingConverter.convertToModel(outstanding)) }
+        }
+        val response = OpenSearchClient().listApi(
+            index= AresConstants.SALES_OUTSTANDING_INDEX, classType= CustomerOutstanding::class.java
+        )
+        val data: MutableList<CustomerOutstanding?> = mutableListOf()
+        for (hts in response?.hits()?.hits()!!) {
+            val output: CustomerOutstanding? = hts.source()
+            for (item in outstandings){
+                if(item.organization_id == output?.organizationId){
+                    val zero = assignAgeingBucket("Not Due",item.not_due_amount,item.not_due_count,"not_due")
+                    val thirty = assignAgeingBucket("1-30",item.thirty_amount,item.thirty_count,"1_30")
+                    val sixty = assignAgeingBucket("31-60",item.sixty_amount,item.sixty_count,"31_60")
+                    val ninety = assignAgeingBucket("61-90",item.ninety_amount,item.ninety_count,"61_90")
+                    val oneEighty = assignAgeingBucket("91-180",item.oneeighty_amount,item.oneeighty_count,"91_180")
+                    val threeSixtyFive = assignAgeingBucket("180-365",item.threesixfive_amount,item.threesixfive_count,"180_365")
+                    val year = assignAgeingBucket("365+",item.threesixfiveplus_amount,item.threesixfiveplus_count,"365+")
+                    output.ageingBucket = listOf(zero,thirty,sixty,ninety,oneEighty,threeSixtyFive,year)
+                }
+            }
+            data.add(output)
+        }
+        return OutstandingList(
+            organizationList = data,
+            totalPage = data.size,
+            totalRecords = 10,
+        )
     }
 
     override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int , page_limit: Int): MutableList<CustomerInvoiceResponse> {
-        var offset = (page_limit!! * page) - page_limit
-        var invoicesList = accountUtilizationRepository.fetchInvoice(zone,orgId, offset, page_limit)
-        var invoice = mutableListOf<CustomerInvoiceResponse>()
+        val offset = (page_limit!! * page) - page_limit
+        val invoicesList = accountUtilizationRepository.fetchInvoice(zone,orgId, offset, page_limit)
+        val invoice = mutableListOf<CustomerInvoiceResponse>()
         invoicesList.forEach { invoices ->
             run { invoice.add(invoiceConverter.convertToModel(invoices)) }
         }
         return invoice
+    }
+    private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
+        return AgeingBucket(
+            ageingDuration = ageDuration,
+            amount = amount,
+            count = count,
+            ageingDurationKey = key
+        )
     }
 }
