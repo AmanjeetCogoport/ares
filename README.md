@@ -10,12 +10,12 @@
 ### 3. Create ENV files
 
 ```
-  cp .env.example .env
+  cp ./api/.env.example ./api/.env
 ```
 ### 4. Run Docker compose
 ```
-  docker-compose -f docker-compose.dev.yml up
-```
+  docker-compose -f ./api/docker-compose.dev.yml up
+```   
 
 ## Working with IntellJ IDE
 
