@@ -141,13 +141,15 @@ class DashboardServiceImpl : DashboardService {
             totalCollectedAmount = 2000.toFloat(),
             trend = listOf(
                 CollectionTrendResponse(
-                duration = "jan",
-                receivableAmount = 10000.0F,
-                collectableAmount = 1000.0F),
+                    duration = "jan",
+                    receivableAmount = 10000.0F,
+                    collectableAmount = 1000.0F
+                ),
                 CollectionTrendResponse(
                     duration = "feb",
                     receivableAmount = 300.0F,
-                    collectableAmount = 200.0F)
+                    collectableAmount = 200.0F
+                )
             ),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "1_2022_Q2"
         )
@@ -317,6 +319,11 @@ class DashboardServiceImpl : DashboardService {
                     "WEST" -> receivableWestBucket.add(receivableBucketAllZone(it))
                 }
             }
+            val res = AgeingBucket(ageingDuration = "abcde", amount = 1000.toBigDecimal(), zone = "North")
+            receivableNorthBucket.add(res)
+            receivableSouthBucket.add(res)
+            receivableEastBucket.add(res)
+            receivableWestBucket.add(res)
 
             receivableByAgeViaZone[0].ageingBucket = receivableNorthBucket
             receivableByAgeViaZone[1].ageingBucket = receivableSouthBucket

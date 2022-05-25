@@ -18,6 +18,7 @@ version = "0.1.0"
 dependencies {
     // Use the model subproject
     implementation(project(":model"))
+    implementation(project(":api"))
 
     implementation("io.micronaut:micronaut-runtime:3.4.3")
     implementation("io.micronaut:micronaut-http-client-core:3.4.3")
