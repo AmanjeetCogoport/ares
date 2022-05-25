@@ -1,0 +1,25 @@
+micronaut:
+  application:
+    name: ares
+  server:
+    port: 8087
+    context-path: /payment
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+netty:
+  default:
+    allocator:
+      max-order: 3
+r2dbc:
+  datasources:
+    default:
+      url: r2dbc:postgresql://localhost:5432/ares
+      username: cogoport
+      password: cogoport123
+      dialect: POSTGRES
+kafka.bootstrap.servers: localhost:9092
+jackson:
+  date-format: yyyy-MM-dd HH:mm:ss
