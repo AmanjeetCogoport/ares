@@ -2,6 +2,10 @@ CREATE TYPE ACCOUNT_MODE AS ENUM ('ar', 'ap');
 create type PAYMENT_MODE as ENUM('dd','cash','cheque','net_banking','upi','bank');
 create type ACCOUNT_TYPE as ENUM ('sinv','pinv','scn','sdn','pcn','pdn','rec','pay');
 
+CREATE CAST (varchar AS ACCOUNT_MODE) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar AS PAYMENT_MODE) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar AS ACCOUNT_TYPE) WITH INOUT AS IMPLICIT;
+
 
 create  table account_master
 (
