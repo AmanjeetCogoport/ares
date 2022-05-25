@@ -126,19 +126,36 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         with X as (select 
             extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
+            sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
             abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
-            sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
-            sum(case when acc_type = 'sinv' and date_trunc('month',transaction_date) = date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
+            sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
+            sum(case when acc_type in ('sinv','sdn','scn') and date_trunc('month',transaction_date) = date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
             date_part('days',date_trunc('month',current_date::date) + '1 month'::interval - '1 day'::interval) as days
             from account_utilizations
         where :zone is null or zone_code = :zone)
         select X.month, X.open_invoice_amount, X.on_account_payment, X.outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((X.outstandings / X.total_sales) * X.days,0) as dso_value
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value
         from X
         """
     )
     suspend fun generateDailySalesOutstanding(zone: String?, date: String): DailyOutstanding
+    @Query(
+        """
+        with X as (select 
+            extract(month from date_trunc('month',(:date)::date)) as month,
+            sum(case when acc_type in ('pinv','pdn','pcn') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
+            abs(sum(case when acc_type = 'pay' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
+            sum(case when acc_type in ('pinv','pdn','pcn') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'pay' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
+            sum(case when acc_type in ('pinv','pdn','pcn') and date_trunc('month',transaction_date) = date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
+            date_part('days',date_trunc('month',current_date::date) + '1 month'::interval - '1 day'::interval) as days
+            from account_utilizations
+        where :zone is null or zone_code = :zone)
+        select X.month, X.open_invoice_amount, X.on_account_payment, X.outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value
+        from X
+        """
+    )
+    suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
 
     @Query(
         """

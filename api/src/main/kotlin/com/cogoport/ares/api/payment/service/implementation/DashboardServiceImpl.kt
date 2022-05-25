@@ -15,7 +15,6 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.temporal.IsoFields
 import java.util.*
@@ -291,30 +290,38 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getDailySalesOutstanding(zone: String?, role: String?, quarter: List<Int>, year: Int): DailySalesOutstanding? {
         validateInput(zone, role)
-        val searchKey = mutableListOf<String>()
+        val searchKeySales = mutableListOf<String>()
+        val searchKeyPayables = mutableListOf<String>()
         for (q in quarter){
-            searchKeyDailyOutstanding(zone, q, year).forEach { key -> searchKey.add(key) }
+            searchKeyDailyOutstanding(zone, q, year, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
+            searchKeyDailyOutstanding(zone, q, year, AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
         }
-//        val searchKey = searchKeyDailyOutstanding(zone, quarter, year)
-        val response = clientResponse(searchKey)
+        val salesResponse = clientResponse(searchKeySales)
         val dsoList = mutableListOf<DsoResponse>()
-        for (hts in response?.hits()?.hits()!!) {
+        for (hts in salesResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            dsoList.add(DsoResponse(data!!.month,data.dsoValue))
+            dsoList.add(DsoResponse(data!!.month,data.value))
         }
 
-        val currentKey = searchKeyDailyOutstanding(zone, currQuarter, currYear)
+        val payablesResponse = clientResponse(searchKeyPayables)
+        val dpoList = mutableListOf<DpoResponse>()
+        for (hts in payablesResponse?.hits()?.hits()!!) {
+            val data = hts.source()
+            dpoList.add(DpoResponse(data!!.month,data.value))
+        }
+
+        val currentKey = searchKeyDailyOutstanding(zone, currQuarter, currYear, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
         val currResponse = clientResponse(currentKey)
-        var averageDso = 0.toDouble()
-        var currentDso = 0.toDouble()
+        var averageDso = 0.toFloat()
+        var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!){
             val data = hts.source()
-            averageDso += data!!.dsoValue
+            averageDso += data!!.value
             if (data.month == currMonth.toString()){
-                currentDso = currResponse.hits()!!.hits()[0].source()!!.dsoValue
+                currentDso = currResponse.hits()!!.hits()[0].source()!!.value
             }
         }
-        return DailySalesOutstanding(currentDso, averageDso/3, dsoList.sortedBy { it.month })
+        return DailySalesOutstanding(currentDso, averageDso/3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
 
     }
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -331,31 +338,31 @@ class DashboardServiceImpl : DashboardService {
         return response
     }
 
-    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int): MutableList<String> {
+    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
         return when (quarter) {
             1 -> {
-                generateKeyByMonth(listOf("1","2","3"), zone, year)
+                generateKeyByMonth(listOf("1","2","3"), zone, year, index)
             }
             2 -> {
-                generateKeyByMonth(listOf("4","5","6"), zone, year)
+                generateKeyByMonth(listOf("4","5","6"), zone, year, index)
             }
             3 -> {
-                generateKeyByMonth(listOf("7","8","9"), zone, year)
+                generateKeyByMonth(listOf("7","8","9"), zone, year, index)
             }
             4 -> {
-                generateKeyByMonth(listOf("10","11","12"), zone, year)
+                generateKeyByMonth(listOf("10","11","12"), zone, year, index)
             }
             else -> {
                 throw AresException(AresError.ERR_1004, "")
             }
         }
     }
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int): MutableList<String>{
+    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String>{
         val keyList = mutableListOf<String>()
         for (item in monthList) {
             keyList.add(
-                if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "all" + "_" + item + "_" + year.toString()
-                else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + "_" + item + "_" + year.toString()
+                if (zone.isNullOrBlank()) index + "all" + "_" + item + "_" + year.toString()
+                else index + zone + "_" + item + "_" + year.toString()
             )
         }
         return keyList

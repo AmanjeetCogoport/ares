@@ -5,9 +5,9 @@ import java.math.BigDecimal
 
 data class CollectionResponse(
     @JsonProperty("totalReceivableAmount")
-    var totalReceivableAmount: BigDecimal?,
+    var totalReceivableAmount: Float?,
     @JsonProperty("totalCollectedAmount")
-    var totalCollectedAmount: BigDecimal?,
+    var totalCollectedAmount: Float?,
     @JsonProperty("trend")
     var trend: MutableList<CollectionTrendResponse>,
     @JsonProperty("docKey")

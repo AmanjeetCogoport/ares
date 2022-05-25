@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class DailySalesOutstanding(
     @JsonProperty("averageDsoForTheMonth")
-    val averageDsoForTheMonth: Double,
+    val averageDsoForTheMonth: Float,
     @JsonProperty("averageDsoLast3Months")
-    val averageDsoLast3Months: Double,
+    val averageDsoLast3Months: Float,
     @JsonProperty("dsoResponse")
-    val dsoResponse: List<DsoResponse>
+    val dsoResponse: List<DsoResponse>,
+    @JsonProperty("dpoResponse")
+    val dpoResponse: List<DpoResponse>
 )

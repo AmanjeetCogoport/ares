@@ -17,6 +17,7 @@ object AresConstants {
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
     const val SALES_TREND_PREFIX = "sales_trend_"
     const val DAILY_SALES_OUTSTANDING_PREFIX = "daily_sales_"
+    const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "daily_payables_"
 
     const val ZONE = "zone"
     const val ROLE = "role"

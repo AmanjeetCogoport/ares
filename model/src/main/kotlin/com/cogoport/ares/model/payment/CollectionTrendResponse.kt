@@ -7,7 +7,7 @@ data class CollectionTrendResponse(
     @JsonProperty("duration")
     var duration: String?,
     @JsonProperty("receivableAmount")
-    var receivableAmount: BigDecimal?,
+    var receivableAmount: Float,
     @JsonProperty("collectableAmount")
-    var collectableAmount: BigDecimal?
+    var collectableAmount: Float
 )

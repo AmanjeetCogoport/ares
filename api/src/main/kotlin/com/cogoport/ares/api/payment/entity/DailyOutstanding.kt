@@ -10,5 +10,5 @@ data class DailyOutstanding(
     var outstandings: BigDecimal?,
     var totalSales: BigDecimal?,
     var days: Int,
-    var dsoValue: Double
+    var value: Double
 )

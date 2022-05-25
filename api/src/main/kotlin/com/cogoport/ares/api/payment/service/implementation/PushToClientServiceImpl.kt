@@ -26,6 +26,9 @@ class PushToClientServiceImpl : PushToClientService {
     lateinit var dsoConverter: DailyOutstandingMapper
 
     @Inject
+    lateinit var dpoConverter: DailyOutstandingMapper
+
+    @Inject
     lateinit var collectionTrendConverter: CollectionTrendMapper
 
     @Inject
@@ -62,11 +65,17 @@ class PushToClientServiceImpl : PushToClientService {
         val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(zone)
         updateQuarterlyTrend(null, quarterlyTrendAllData)
 
-        /** Daily Sales Outstanding*/
+        /** Daily Sales Outstanding */
         val dailySalesZoneData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date)
         updateDailySalesOutstanding(zone, dailySalesZoneData)
         val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date)
         updateDailySalesOutstanding(null, dailySalesAllData)
+
+        /** Daily Payables Outstanding */
+        val dailyPayablesZoneData = accountUtilizationRepository.generateDailyPayablesOutstanding(zone, date)
+        updateDailyPayablesOutstanding(zone, dailyPayablesZoneData)
+        val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, date)
+        updateDailyPayablesOutstanding(null, dailyPayablesAllData)
 
 
 
@@ -141,11 +150,16 @@ class PushToClientServiceImpl : PushToClientService {
         val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "all_" +dsoResponse.month + "_" + year else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + "_" + dsoResponse.month + "_" + year
            Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
     }
+    private fun updateDailyPayablesOutstanding(zone: String?, data: DailyOutstanding) {
+        val dpoResponse = dpoConverter.convertToModel(data)
+        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "all_" +dpoResponse.month + "_" + year else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + "_" + dpoResponse.month + "_" + year
+        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
+    }
 
     private fun formatCollectionTrend(data: MutableList<CollectionTrendResponse>, id: String): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
-        var totalAmount: BigDecimal? = null
-        var totalCollected: BigDecimal? = null
+        var totalAmount: Float? = null
+        var totalCollected: Float? = null
         for (row in data) {
             if (row.duration != "Total") {
                 trendData.add(
