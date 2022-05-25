@@ -16,10 +16,10 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://localhost:5433/ares
+      url: r2dbc:postgresql://localhost:5432/ares
       username: cogoport
       password: cogoport123
       dialect: POSTGRES
-#kafka.bootstrap.servers: localhost:9092
+kafka.bootstrap.servers: localhost:9092
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
