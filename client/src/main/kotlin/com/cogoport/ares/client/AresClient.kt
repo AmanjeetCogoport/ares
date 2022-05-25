@@ -73,19 +73,19 @@ interface AresClient {
         @QueryValue("role") role: String?
     ): ReceivableAgeingResponse
 
-    @Get("/collections")
+    @Get("/receivables/collections")
     suspend fun getOnAccountCollections(
         @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
         @QueryValue("entityType") entityType: Int?,
         @QueryValue("currencyType") currencyType: String?
     ): AccountCollectionResponse
-    @Post("/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
+    @Post("/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
-    @Post("/collection/create")
+    @Post("/receivables/collection/create")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/overall")
+    @Get("/outstanding/overall")
     suspend fun getOutstandingList(
         @QueryValue("zone") zone: String?,
         @QueryValue("role") role: String?
