@@ -8,14 +8,14 @@ services:
       - "ares_data:/var/lib/postgresql/data"
     restart: on-failure
     env_file:
-      - '.env'
+      - '.env.local'
 
   kafka:
     image: bitnami/kafka:2.8.1
     ports:
-    - "29092:9092"
+    - "29092:29092"
     env_file:
-      - '.env'
+      - '.env.local'
     depends_on:
       - zookeeper
   
@@ -25,7 +25,7 @@ services:
     ports:
     - "2181:2181"
     env_file:
-      - '.env'
+      - '.env.local'
 
   kafdrop:
     image: obsidiandynamics/kafdrop:3.29.0
@@ -33,7 +33,7 @@ services:
     ports:
       - "9000:9000"
     env_file:
-      - '.env'
+      - '.env.local'
     depends_on:
       - "kafka"
 
