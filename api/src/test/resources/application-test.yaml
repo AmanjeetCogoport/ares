@@ -2,8 +2,12 @@ micronaut:
   application:
     name: AresTestService
   server:
-    port: 8087
-    context-path: /common
+    port: 8088
+    context-path: /payment
+  metrics:
+    binders:
+      kafka:
+        enabled: false
   netty:
     default:
       allocator:
@@ -11,7 +15,11 @@ micronaut:
   r2dbc:
     datasources:
       default:
-        url: r2dbc:postgresql://db/ares
+        url: r2dbc:postgresql://localhost:5432/ares
         username: cogoport
         password: cogoport123
         dialect: POSTGRES
+
+kafka:
+  bootstrap:
+    servers: localhost:29092

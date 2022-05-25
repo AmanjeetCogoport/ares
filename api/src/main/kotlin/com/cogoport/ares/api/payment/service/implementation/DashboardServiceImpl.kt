@@ -40,7 +40,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOverallStats(zone: String?, role: String?): OverallStats? {
         validateInput(zone, role)
-        val searchKey = searchKeyOverallStats(zone, role)
+        val searchKey = searchKeyOverallStats(zone)
 
         return OpenSearchClient().response<OverallStats>(
             searchKey = searchKey,
@@ -49,13 +49,13 @@ class DashboardServiceImpl : DashboardService {
             key = AresConstants.OPEN_SEARCH_DOCUMENT_KEY
         )
     }
-    private fun searchKeyOverallStats(zone: String?, role: String?): String {
+    private fun searchKeyOverallStats(zone: String?): String {
         return if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "all" else AresConstants.OVERALL_STATS_PREFIX + zone
     }
 
     override suspend fun getSalesTrend(zone: String?, role: String?): SalesTrendResponse? {
         validateInput(zone, role)
-        val searchKey = searchKeySalesTrend(zone, role)
+        val searchKey = searchKeySalesTrend(zone)
 
         return OpenSearchClient().response<SalesTrendResponse>(
             searchKey = searchKey,
@@ -64,7 +64,7 @@ class DashboardServiceImpl : DashboardService {
             key = AresConstants.OPEN_SEARCH_DOCUMENT_KEY
         )
     }
-    private fun searchKeySalesTrend(zone: String?, role: String?): String {
+    private fun searchKeySalesTrend(zone: String?): String {
         return if (zone.isNullOrBlank()) AresConstants.SALES_TREND_PREFIX + "all" else AresConstants.SALES_TREND_PREFIX + zone
     }
 
@@ -141,13 +141,15 @@ class DashboardServiceImpl : DashboardService {
             totalCollectedAmount = 2000.toFloat(),
             trend = listOf(
                 CollectionTrendResponse(
-                duration = "jan",
-                receivableAmount = 10000.0F,
-                collectableAmount = 1000.0F),
+                    duration = "jan",
+                    receivableAmount = 10000.0F,
+                    collectableAmount = 1000.0F
+                ),
                 CollectionTrendResponse(
                     duration = "feb",
                     receivableAmount = 300.0F,
-                    collectableAmount = 200.0F)
+                    collectableAmount = 200.0F
+                )
             ),
             docKey = AresConstants.COLLECTIONS_TREND_PREFIX + "1_2022_Q2"
         )
@@ -345,8 +347,6 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucket?): AgeingBucket {
-        var receivableZoneBucket = mutableListOf<AgeingBucket>()
-
         return AgeingBucket(
             ageingDuration = response!!.ageingDuration,
             amount = response.amount,
@@ -360,7 +360,6 @@ class DashboardServiceImpl : DashboardService {
      * @return MutableList : MMM,MMM,MMM
      */
     private fun extractMonthsFromQuarter(quarter: String): MutableList<String> {
-        var quar = quarter.split("-")[0]
         return if (Quarter.Q1.quarter.equals(quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0])) {
             Quarter.Q1.months
         } else if (Quarter.Q2.quarter.equals(quarter.split(AresConstants.OPEN_SEARCH_DOCUMENT_KEY_DELIMITER)[0])) {

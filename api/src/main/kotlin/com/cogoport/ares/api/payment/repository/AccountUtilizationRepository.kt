@@ -33,4 +33,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
           """
     )
     suspend fun getReceivableByAge(zone: String?): MutableList<AgeingBucket>
+
+    suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 }
