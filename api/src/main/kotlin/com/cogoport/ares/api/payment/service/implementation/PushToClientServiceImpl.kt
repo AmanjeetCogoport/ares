@@ -1,18 +1,29 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.payment.entity.*
-import com.cogoport.ares.api.payment.mapper.*
+import com.cogoport.ares.api.payment.entity.CollectionTrend
+import com.cogoport.ares.api.payment.entity.DailyOutstanding
+import com.cogoport.ares.api.payment.entity.OrgOutstanding
+import com.cogoport.ares.api.payment.entity.Outstanding
+import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.payment.mapper.CollectionTrendMapper
+import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
+import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
+import com.cogoport.ares.api.payment.mapper.OutstandingMapper
+import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
 import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.CollectionTrendResponse
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.OutstandingResponse
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.LocalDate
 import java.time.temporal.IsoFields
-import java.util.*
+import java.util.Calendar
 
 @Singleton
 class PushToClientServiceImpl : PushToClientService {
@@ -76,7 +87,6 @@ class PushToClientServiceImpl : PushToClientService {
         updateDailyPayablesOutstanding(zone, dailyPayablesZoneData)
         val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, date)
         updateDailyPayablesOutstanding(null, dailyPayablesAllData)
-
     }
     private fun updateCollectionTrend(zone: String?, quarter: Int?, data: MutableList<CollectionTrend>?) {
         val collectionData = mutableListOf<CollectionTrendResponse>()
@@ -85,17 +95,17 @@ class PushToClientServiceImpl : PushToClientService {
                 collectionData.add(collectionTrendConverter.convertToModel(collection))
             }
         }
-        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "all_" + currYear +"_Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + "_" + currYear + "_Q$quarter"
+        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX +"ALL" + AresConstants.KEY_DELIMITER + currYear + AresConstants.KEY_DELIMITER +"Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + currYear + AresConstants.KEY_DELIMITER + "Q$quarter"
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
     }
     private fun updateOverallStats(zone: String?, data: OverallStats) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
-        val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "all" else AresConstants.OVERALL_STATS_PREFIX + zone
+        val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
         overallStatsData.id = statsId
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
     }
     private fun updateMonthlyTrend(zone: String?, outstandings: MutableList<Outstanding>?) {
-        val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "all" else AresConstants.MONTHLY_TREND_PREFIX + zone
+        val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + zone
         val monthlyTrend = mutableListOf<OutstandingResponse>()
         outstandings?.forEach { outstanding ->
             monthlyTrend.add(outstandingConverter.convertToModel(outstanding))
@@ -103,25 +113,23 @@ class PushToClientServiceImpl : PushToClientService {
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
     private fun updateQuarterlyTrend(zone: String?, outstandings: MutableList<Outstanding>?) {
-        val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "all" else AresConstants.QUARTERLY_TREND_PREFIX + zone
+        val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + zone
         val quarterlyTrend = mutableListOf<OutstandingResponse>()
         outstandings?.forEach { outstanding ->
             quarterlyTrend.add(outstandingConverter.convertToModel(outstanding))
         }
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
-
     private fun updateDailySalesOutstanding(zone: String?, data: DailyOutstanding) {
         val dsoResponse = dsoConverter.convertToModel(data)
-        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "all_" +dsoResponse.month + "_" + currYear else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + "_" + dsoResponse.month + "_" + currYear
-           Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
+        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + currYear else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + currYear
+        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
     }
     private fun updateDailyPayablesOutstanding(zone: String?, data: DailyOutstanding) {
         val dpoResponse = dpoConverter.convertToModel(data)
-        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "all_" +dpoResponse.month + "_" + currYear else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + "_" + dpoResponse.month + "_" + currYear
+        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + currYear else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + currYear
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
     }
-
     private fun formatCollectionTrend(data: MutableList<CollectionTrendResponse>, id: String): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: Float? = null
@@ -151,7 +159,7 @@ class PushToClientServiceImpl : PushToClientService {
     }
     private fun updateOrgOutstanding(zone: String?, quarter: Int, orgId: String?, data: OrgOutstanding) {
         val orgOutstanding = orgOutstandingConverter.convertToModel(data)
-        val orgOutstandingId = if(zone.isNullOrBlank()) orgId + "_all" + "_Q$quarter" else orgId +"_"+ zone + "_Q$quarter"
+        val orgOutstandingId = if (zone.isNullOrBlank()) orgId +  AresConstants.KEY_DELIMITER +"ALL" + AresConstants.KEY_DELIMITER + "Q$quarter" else orgId + AresConstants.KEY_DELIMITER + zone + AresConstants.KEY_DELIMITER + "Q$quarter"
         Client.updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
     }
 }

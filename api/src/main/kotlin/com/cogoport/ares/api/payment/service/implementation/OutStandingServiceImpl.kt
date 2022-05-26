@@ -6,14 +6,17 @@ import com.cogoport.ares.api.payment.mapper.InvoiceMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
-import com.cogoport.ares.model.payment.*
-import com.cogoport.brahma.opensearch.Client
+import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.OutstandingAgeingResponse
+import com.cogoport.ares.model.payment.OutstandingList
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 
 @Singleton
-class OutStandingServiceImpl : OutStandingService{
+class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
     @Inject
@@ -24,32 +27,30 @@ class OutStandingServiceImpl : OutStandingService{
         val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(zone, page, page_limit)
         val outstandings = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
-        queryResponse.forEach {outstanding ->
-            orgId.add(if(zone.isNullOrBlank()) outstanding.organization_id + "_all" + "_Q$quarter" else outstanding.organization_id + "_" + zone + "_Q$quarter")
+        queryResponse.forEach { outstanding ->
+            orgId.add(if (zone.isNullOrBlank()) outstanding.organization_id + "_all" + "_Q$quarter" else outstanding.organization_id + "_" + zone + "_Q$quarter")
             run { outstandings.add(outstandingAgeingConverter.convertToModel(outstanding)) }
         }
         val response = OpenSearchClient().listApi(
-            index= AresConstants.SALES_OUTSTANDING_INDEX, classType= CustomerOutstanding::class.java, values = orgId
+            index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId
         )
         val data: MutableList<CustomerOutstanding?> = mutableListOf()
         for (hts in response?.hits()?.hits()!!) {
             val output: CustomerOutstanding? = hts.source()
-            for (item in outstandings){
-                if(item.organization_id == output?.organizationId){
-                    val zero = assignAgeingBucket("Not Due",item.not_due_amount,item.not_due_count,"not_due")
-                    val thirty = assignAgeingBucket("1-30",item.thirty_amount,item.thirty_count,"1_30")
-                    val sixty = assignAgeingBucket("31-60",item.sixty_amount,item.sixty_count,"31_60")
-                    val ninety = assignAgeingBucket("61-90",item.ninety_amount,item.ninety_count,"61_90")
-                    val oneEighty = assignAgeingBucket("91-180",item.oneeighty_amount,item.oneeighty_count,"91_180")
-                    val threeSixtyFive = assignAgeingBucket("180-365",item.threesixfive_amount,item.threesixfive_count,"180_365")
-                    val year = assignAgeingBucket("365+",item.threesixfiveplus_amount,item.threesixfiveplus_count,"365+")
-                    output.ageingBucket = listOf(zero,thirty,sixty,ninety,oneEighty,threeSixtyFive,year)
+            for (item in outstandings) {
+                if (item.organization_id == output?.organizationId) {
+                    val zero = assignAgeingBucket("Not Due", item.not_due_amount, item.not_due_count, "not_due")
+                    val thirty = assignAgeingBucket("1-30", item.thirty_amount, item.thirty_count, "1_30")
+                    val sixty = assignAgeingBucket("31-60", item.sixty_amount, item.sixty_count, "31_60")
+                    val ninety = assignAgeingBucket("61-90", item.ninety_amount, item.ninety_count, "61_90")
+                    val oneEighty = assignAgeingBucket("91-180", item.oneeighty_amount, item.oneeighty_count, "91_180")
+                    val threeSixtyFive = assignAgeingBucket("180-365", item.threesixfive_amount, item.threesixfive_count, "180_365")
+                    val year = assignAgeingBucket("365+", item.threesixfiveplus_amount, item.threesixfiveplus_count, "365+")
+                    output.ageingBucket = listOf(zero, thirty, sixty, ninety, oneEighty, threeSixtyFive, year)
                 }
             }
             data.add(output)
         }
-
-
 
         return OutstandingList(
             organizationList = data,
@@ -58,9 +59,9 @@ class OutStandingServiceImpl : OutStandingService{
         )
     }
 
-    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int , page_limit: Int): MutableList<CustomerInvoiceResponse> {
+    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int, page_limit: Int): MutableList<CustomerInvoiceResponse> {
         val offset = (page_limit * page) - page_limit
-        val invoicesList = accountUtilizationRepository.fetchInvoice(zone,orgId, offset, page_limit)
+        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, offset, page_limit)
         val invoice = mutableListOf<CustomerInvoiceResponse>()
         invoicesList.forEach { invoices ->
             run { invoice.add(invoiceConverter.convertToModel(invoices)) }

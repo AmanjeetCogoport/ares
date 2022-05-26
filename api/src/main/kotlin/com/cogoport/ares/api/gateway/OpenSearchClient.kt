@@ -4,8 +4,6 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.brahma.opensearch.Client
-import org.opensearch.client.opensearch._types.FieldValue
-import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -31,11 +29,12 @@ class OpenSearchClient {
         }
         return outResp
     }
-    fun <T : Any>listApi(index: String, classType: Class<T>, values: List<String>,offset: Int? = null, limit: Int? = null): SearchResponse<T>?{
+    fun <T : Any> listApi(index: String, classType: Class<T>, values: List<String>, offset: Int? = null, limit: Int? = null): SearchResponse<T>? {
         val response = Client.search(
             { s ->
                 s.index(index).query {
-                        q-> q.ids { i-> i.values(values) }
+                    q ->
+                    q.ids { i -> i.values(values) }
                 }.from(offset).size(limit)
             },
             classType

@@ -5,7 +5,7 @@ import com.cogoport.ares.model.payment.OutstandingAgeingResponse
 import org.mapstruct.Mapper
 
 @Mapper
-interface   OutstandingAgeingMapper {
+interface OutstandingAgeingMapper {
     fun convertToModel(outstandingAgeing: OutstandingAgeing): OutstandingAgeingResponse
 
     fun convertToEntity(outstandingAgeing: OutstandingAgeingResponse): OutstandingAgeing

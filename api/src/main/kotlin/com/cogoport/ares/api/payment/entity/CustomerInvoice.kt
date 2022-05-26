@@ -1,9 +1,8 @@
 package com.cogoport.ares.api.payment.entity
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
-import java.util.*
+import java.util.Date
 
 @MappedEntity
 data class CustomerInvoice(

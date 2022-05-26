@@ -2,7 +2,7 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
-import java.util.*
+import java.util.Date
 
 data class CustomerInvoiceResponse(
     @JsonProperty("invoiceNumber") val invoiceNumber: String?,

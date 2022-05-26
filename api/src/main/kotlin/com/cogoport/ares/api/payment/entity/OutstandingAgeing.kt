@@ -1,10 +1,9 @@
 package com.cogoport.ares.api.payment.entity
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 @MappedEntity
-data class OutstandingAgeing (
+data class OutstandingAgeing(
     val organization_id: String,
     val not_due_amount: BigDecimal?,
     val thirty_amount: BigDecimal?,

@@ -5,6 +5,13 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
+import com.cogoport.ares.api.payment.model.CollectionRequest
+import com.cogoport.ares.api.payment.model.DsoRequest
+import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
+import com.cogoport.ares.api.payment.model.OverallStatsRequest
+import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
@@ -26,7 +33,7 @@ import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.time.LocalDate
 import java.time.temporal.IsoFields
-import java.util.*
+import java.util.Calendar
 @Singleton
 class DashboardServiceImpl : DashboardService {
     private val currQuarter = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
@@ -38,31 +45,6 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var overallAgeingConverter: OverallAgeingMapper
-    override suspend fun getOverallStats(zone: String?, role: String?): OverallStatsResponse? {
-        validateInput(zone, role)
-        val searchKey = searchKeyOverallStats(zone)
-        return OpenSearchClient().response(
-            searchKey = searchKey,
-            classType = OverallStatsResponse ::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-    }
-    private fun searchKeyOverallStats(zone: String?): String {
-        return if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "all" else AresConstants.OVERALL_STATS_PREFIX + zone
-    }
-    override suspend fun getSalesTrend(zone: String?, role: String?): SalesTrendResponse? {
-        validateInput(zone, role)
-        val searchKey = searchKeySalesTrend(zone)
-
-        return OpenSearchClient().response(
-            searchKey = searchKey,
-            classType = SalesTrendResponse ::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-    }
-    private fun searchKeySalesTrend(zone: String?): String {
-        return if (zone.isNullOrBlank()) AresConstants.SALES_TREND_PREFIX + "all" else AresConstants.SALES_TREND_PREFIX + zone
-    }
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
@@ -74,9 +56,28 @@ class DashboardServiceImpl : DashboardService {
         }
         validateInput(zone, role)
     }
-    override suspend fun getOutStandingByAge(zone: String?, role: String?): MutableList<OverallAgeingStatsResponse> {
-        validateInput(zone, role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(zone)
+    override suspend fun deleteIndex(index: String) {
+        Client.deleteIndex(index)
+    }
+    override suspend fun createIndex(index: String) {
+        Client.createIndex(index)
+    }
+    override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
+        validateInput(request.zone, request.role)
+        val searchKey = searchKeyOverallStats(request.zone)
+        return OpenSearchClient().response(
+            searchKey = searchKey,
+            classType = OverallStatsResponse ::class.java,
+            index = AresConstants.SALES_DASHBOARD_INDEX
+        )
+    }
+    private fun searchKeyOverallStats(zone: String?): String {
+        return if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
+    }
+
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): MutableList<OverallAgeingStatsResponse> {
+        validateInput(request.zone, request.role)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
         val outstandingData = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.forEach { data ->
             run {
@@ -85,112 +86,107 @@ class DashboardServiceImpl : DashboardService {
         }
         return outstandingData
     }
-    override suspend fun deleteIndex(index: String) {
-        Client.deleteIndex(index)
-    }
-    override suspend fun createIndex(index: String) {
-        Client.createIndex(index)
-    }
-    override suspend fun getCollectionTrend(zone: String?, role: String?, quarter: Int, year: Int): CollectionResponse? {
-        validateInput(zone, role, quarter)
-        val searchKey = searchKeyCollectionTrend(zone, quarter, year)
+    override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
+        validateInput(request.zone, request.role, request.quarter ?: 0)
+        val searchKey = searchKeyCollectionTrend(request.zone, request.quarter ?: 0, request.year)
         return OpenSearchClient().response(
             searchKey = searchKey,
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
-    private fun searchKeyCollectionTrend(zone: String?, quarter: Int, year: Int): String{
-        return if(zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "all_" + year + "_Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + "_" + year + "_Q$quarter"
+    private fun searchKeyCollectionTrend(zone: String?, quarter: Int, year: Int): String {
+        return if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
     }
-    override suspend fun getMonthlyOutstanding(zone: String?, role: String?): MonthlyOutstanding? {
-        validateInput(zone, role)
-        val searchKey = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "all" else AresConstants.MONTHLY_TREND_PREFIX + zone
+    override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
+        validateInput(request.zone, request.role)
+        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
         return OpenSearchClient().response(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
-    override suspend fun getQuarterlyOutstanding(zone: String?, role: String?): QuarterlyOutstanding? {
-        validateInput(zone, role)
-        val searchKey = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "all" else AresConstants.QUARTERLY_TREND_PREFIX + zone
+    override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
+        validateInput(request.zone, request.role)
+        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
         return OpenSearchClient().response(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
-    override suspend fun getDailySalesOutstanding(zone: String?, role: String?, quarter: List<Int>, year: Int): DailySalesOutstanding {
-        validateInput(zone, role)
+    override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
+        validateInput(request.zone, request.role)
         val searchKeySales = mutableListOf<String>()
         val searchKeyPayables = mutableListOf<String>()
-        for (q in quarter){
-            searchKeyDailyOutstanding(zone, q, year, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
-            searchKeyDailyOutstanding(zone, q, year, AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
+        for (q in request.quarter) {
+            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
+            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
         }
         val salesResponse = clientResponse(searchKeySales)
         val dsoList = mutableListOf<DsoResponse>()
         for (hts in salesResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            dsoList.add(DsoResponse(data!!.month,data.value))
+            dsoList.add(DsoResponse(data!!.month, data.value))
         }
 
         val payablesResponse = clientResponse(searchKeyPayables)
         val dpoList = mutableListOf<DpoResponse>()
         for (hts in payablesResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            dpoList.add(DpoResponse(data!!.month,data.value))
+            dpoList.add(DpoResponse(data!!.month, data.value))
         }
 
-        val currentKey = searchKeyDailyOutstanding(zone, currQuarter, currYear, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+        val currentKey = searchKeyDailyOutstanding(request.zone, currQuarter, currYear, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
         var currentDso = 0.toFloat()
-        for (hts in currResponse?.hits()?.hits()!!){
+        for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             averageDso += data!!.value
-            if (data.month == currMonth.toString()){
+            if (data.month == currMonth.toString()) {
                 currentDso = currResponse.hits()!!.hits()[0].source()!!.value
             }
         }
-        return DailySalesOutstanding(currentDso, averageDso/3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
+        return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
     }
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
-        val response =  Client.search(
+        val response = Client.search(
             { s ->
                 s.index(AresConstants.SALES_DASHBOARD_INDEX).query {
-                        q-> q.ids { i-> i.values(key) }
+                    q ->
+                    q.ids { i -> i.values(key) }
                 }.from(0).size(10)
             },
             DailyOutstandingResponse::class.java
         )
-        if (response?.hits()?.total()?.value() == 0.toLong())
-            throw AresException(AresError.ERR_1005, "")
+//        if (response?.hits()?.total()?.value() == 0.toLong())
+//            throw AresException(AresError.ERR_1005, "")
         return response
     }
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
         return when (quarter) {
-            1 -> { generateKeyByMonth(listOf("1","2","3"), zone, year, index) }
-            2 -> { generateKeyByMonth(listOf("4","5","6"), zone, year, index) }
-            3 -> { generateKeyByMonth(listOf("7","8","9"), zone, year, index) }
-            4 -> { generateKeyByMonth(listOf("10","11","12"), zone, year, index) }
+            1 -> { generateKeyByMonth(listOf("1", "2", "3"), zone, year, index) }
+            2 -> { generateKeyByMonth(listOf("4", "5", "6"), zone, year, index) }
+            3 -> { generateKeyByMonth(listOf("7", "8", "9"), zone, year, index) }
+            4 -> { generateKeyByMonth(listOf("10", "11", "12"), zone, year, index) }
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
     }
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String>{
+    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
             keyList.add(
-                if (zone.isNullOrBlank()) index + "all" + "_" + item + "_" + year.toString()
-                else index + zone + "_" + item + "_" + year.toString()
+                if (zone.isNullOrBlank()) index + "ALL" + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
+                else index + zone + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
             )
         }
         return keyList
     }
-    override suspend fun getReceivableByAge(zone: String?, role: String?): ReceivableAgeingResponse {
+    override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
 
-        val payment = accountUtilizationRepository.getReceivableByAge(zone)
+        val payment = accountUtilizationRepository.getReceivableByAge(request.zone)
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
         val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
         val receivableEastBucket = mutableListOf<AgeingBucketZone>()
@@ -199,7 +195,7 @@ class DashboardServiceImpl : DashboardService {
         val receivableByAgeViaZone = mutableListOf<ReceivableByAgeViaZone>()
         var zoneData = listOf<String>()
 
-        if (zone.isNullOrBlank()) {
+        if (request.zone.isNullOrBlank()) {
             zoneData = zoneData + listOf("East", "West", "North", "South")
             receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "North", ageingBucket = receivableNorthBucket))
             receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "South", ageingBucket = receivableSouthBucket))
@@ -208,10 +204,10 @@ class DashboardServiceImpl : DashboardService {
 
             payment.forEach {
                 when (it.zone) {
-                    "north" -> receivableNorthBucket.add(receivableBucketAllZone(it))
-                    "south" -> receivableSouthBucket.add(receivableBucketAllZone(it))
-                    "east" -> receivableEastBucket.add(receivableBucketAllZone(it))
-                    "west" -> receivableWestBucket.add(receivableBucketAllZone(it))
+                    "NORTH" -> receivableNorthBucket.add(receivableBucketAllZone(it))
+                    "SOUTH" -> receivableSouthBucket.add(receivableBucketAllZone(it))
+                    "EAST" -> receivableEastBucket.add(receivableBucketAllZone(it))
+                    "WEST" -> receivableWestBucket.add(receivableBucketAllZone(it))
                 }
             }
 
@@ -220,15 +216,15 @@ class DashboardServiceImpl : DashboardService {
             receivableByAgeViaZone[2].ageingBucket = receivableEastBucket
             receivableByAgeViaZone[3].ageingBucket = receivableWestBucket
         } else {
-            zoneData = zoneData + listOf(zone.toString())
+            zoneData = zoneData + listOf(request.zone.toString())
             receivableByAgeViaZone.add(
                 ReceivableByAgeViaZone(
-                    zoneName = zone,
+                    zoneName = request.zone,
                     ageingBucket = receivableZoneBucket
                 )
             )
             payment.forEach {
-                if (it.zone == zone) {
+                if (it.zone == request.zone) {
                     receivableZoneBucket.add(receivableBucketAllZone(it))
                 }
             }
@@ -247,4 +243,5 @@ class DashboardServiceImpl : DashboardService {
             zone = null
         )
     }
+
 }

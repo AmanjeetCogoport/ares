@@ -12,4 +12,3 @@ data class CollectionResponse(
     @JsonProperty("id")
     var id: String
 )
-
