@@ -29,7 +29,7 @@ class OutStandingServiceImpl : OutStandingService{
             run { outstandings.add(outstandingAgeingConverter.convertToModel(outstanding)) }
         }
         val response = OpenSearchClient().listApi(
-            index= AresConstants.SALES_OUTSTANDING_INDEX, classType= CustomerOutstanding::class.java, orgId = orgId
+            index= AresConstants.SALES_OUTSTANDING_INDEX, classType= CustomerOutstanding::class.java, values = orgId
         )
         val data: MutableList<CustomerOutstanding?> = mutableListOf()
         for (hts in response?.hits()?.hits()!!) {

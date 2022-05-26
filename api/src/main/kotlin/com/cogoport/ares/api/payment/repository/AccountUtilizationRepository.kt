@@ -17,17 +17,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
 
     @Query(
-        """select case when due_date  >= now() then 'Not Due'
+        """
+            select case when due_date  >= now() then 'Not Due'
              when (now()::date - due_date ) between 1 and 30 then '1-30'
              when (now()::date - due_date ) between 31 and 60 then '31-60'
              when (now()::date - due_date ) between 61 and 90 then '61-90'
              when (now()::date - due_date ) between 91 and 180 then '91_180'
              when (now()::date - due_date ) between 181 and 365 then '181_365'
              end as ageing_duration,
-             zone,
+             zone_code as zone,
              sum( amount_loc) as amount
              from account_utilizations
-             where (zone = :zone OR :zone is null)
+             where (zone_code = :zone OR :zone is null)
              group by ageing_duration, zone
              order by 1
           """
@@ -50,9 +51,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             end as ageing_duration_key,
             'INR' as currency
             from account_utilizations
-            where :zone is null or zone_code = :zone
+            where (:zone is null or zone_code = :zone) and acc_type in ('sinv','sdn','scn','rec') and acc_mode = 'ar'
             group by ageing_duration, ageing_duration_key
-            order by 1
+            order by ageing_duration
         """
 
     )
@@ -61,13 +62,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
-        coalesce(sum(case when acc_type = 'sinv' then 1 else 0 end),0) as open_invoices_count,
+        coalesce(sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
+        coalesce(sum(case when acc_type in ('sinv','sdn','scn') then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
-        coalesce(sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
-        (select count(distinct organization_id) from account_utilizations where acc_type = 'sinv' and :zone is null or zone_code = :zone) as organization_count, null as id
+        coalesce(sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
+        (select count(distinct organization_id) from account_utilizations where acc_type in ('sinv','sdn','scn') and (:zone is null or zone_code = :zone)) as organization_count, null as id
         from account_utilizations
-        where :zone is null or zone_code = :zone
+        where (:zone is null or zone_code = :zone) and acc_mode = 'ar'
     """
     )
     suspend fun generateOverallStats(zone: String?): OverallStats
@@ -76,18 +77,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         (
             select 'Total' as duration,
-            sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
+            sum(case when acc_type in ('sinv','scn','sdn') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
             abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount
             from account_utilizations
-            where extract(quarter from transaction_date) = '2' and (null is null or zone_code = 'north')
+            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'ar'
         )
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
+            sum(case when acc_type in ('sinv','scn','sdn') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
             abs(sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount 
             from account_utilizations
-            where extract(quarter from transaction_date) = '2' and (null is null or zone_code = 'north')
+            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'ar'
             group by date_trunc('month',transaction_date)
             order by date_trunc('month',transaction_date)
         )
@@ -98,11 +99,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select to_char(date_trunc('month',transaction_date),'Month') as duration,
-        sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
+        sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
         from account_utilizations
-        where :zone is null or zone_code = :zone
+        where (:zone is null or zone_code = :zone) and acc_mode = 'ar' 
         group by date_trunc('month',transaction_date)
-        order by date_trunc('month',transaction_date) desc
+        order by date_trunc('month',transaction_date)
         limit 5
         """
     )
@@ -110,15 +111,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             with x as (select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-            sum(case when acc_type = 'sinv' then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount from account_utilizations
-            where :zone is null or zone_code = :zone
+            sum(case when acc_type in ('sinv','sdn','scn') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'rec' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
+            from account_utilizations
+            where acc_mode = 'ar' and (:zone is null or zone_code = :zone)
             group by date_trunc('quarter',transaction_date)
             order by date_trunc('quarter',transaction_date) desc)
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
-            x.total_outstanding_amount as amount from x
+            x.total_outstanding_amount as amount 
+            from x
         """
     )
     suspend fun generateQuarterlyOutstanding(zone: String?): MutableList<Outstanding>
@@ -177,11 +180,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>
-    @Query(
-        "select invoices.id, job_id, status, place_of_supply, currency, exchange_rate, credit_days, proforma_number, proforma_pdf_url, proforma_date, terms, invoice_type, discount_amount, sub_total, tax_total, grand_total, ledger_total, ledger_currency, invoice_number, invoice_pdf_url, invoice_date, invoices.created_by, invoices.updated_by, invoices.created_at, invoices.updated_at, organization_id " +
-                "from invoices join invoice_addresses on invoice_addresses.invoice_id = invoices.id"
-    )
-    suspend fun getInvoices(): List<Invoice>
     @Query(
         """
         select organization_id,organization_name,
