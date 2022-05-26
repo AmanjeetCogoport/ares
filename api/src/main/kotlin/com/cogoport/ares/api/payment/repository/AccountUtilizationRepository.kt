@@ -174,9 +174,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         due_date as invoice_due_date,
         case when due_date < now() then now()::date - due_date else 0 end as overdue_days,
         organization_name,
-        organization_id from account_utilizations
-        where acc_type in ('sinv','pinv') and (:zone is null or zone_code = :zone) and (:orgId is null or organization_id::varchar = :orgId)
-        limit :limit offset :offset
+        organization_id from account_utilizations;
         """
     )
     suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>

@@ -10,6 +10,7 @@ import com.cogoport.ares.model.payment.*
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 
 @Singleton
@@ -58,14 +59,36 @@ class OutStandingServiceImpl : OutStandingService{
         )
     }
 
-    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int , page_limit: Int): MutableList<CustomerInvoiceResponse> {
+    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int, page_limit: Int): MutableList<CustomerInvoiceResponse>? {
         val offset = (page_limit * page) - page_limit
-        val invoicesList = accountUtilizationRepository.fetchInvoice(zone,orgId, offset, page_limit)
-        val invoice = mutableListOf<CustomerInvoiceResponse>()
-        invoicesList.forEach { invoices ->
-            run { invoice.add(invoiceConverter.convertToModel(invoices)) }
+        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, page, page_limit)
+
+        invoicesList.forEach {
+            Client.updateDocument("customer_invoice_index", it.invoiceNumber.toString() ,it)
         }
-        return invoice
+
+        val response = mutableListOf<CustomerInvoiceResponse>()
+        if (orgId != null) {
+            val searchValues = mutableListOf<String>()
+            if (zone != null) {
+                searchValues.add(zone)
+            }
+
+            searchValues.add(orgId)
+
+             val list : SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().response(
+                searchKey = orgId,
+                classType = CustomerInvoiceResponse ::class.java,
+                index = "customer_invoice_index",
+                offset = page ,
+                limit = page_limit
+             )
+            list?.hits()?.hits()?.map {
+                it.source()?.let { it1 -> response.add(it1) }
+            }
+            return  response
+        }
+        return response
     }
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(
