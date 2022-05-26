@@ -35,4 +35,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getReceivableByAge(zone: String?): MutableList<AgeingBucket>
 
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
+
+    @Query(
+        """
+        select * from account_utilizations where document_no = :id limit 1
+    """
+    )
+    suspend fun findByPaymentId(id: Long?): AccountUtilization
 }

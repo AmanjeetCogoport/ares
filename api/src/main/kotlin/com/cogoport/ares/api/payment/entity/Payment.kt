@@ -15,10 +15,10 @@ data class Payment(
     @field:Id @GeneratedValue var id: Long?,
     var entityCode: Int,
     var fileId: Long? = null,
-    var orgSerialId: Long,
-    var organizationId: UUID,
-    var organizationName: String,
+    var orgSerialId: Long?,
     var sageOrganizationId: String?,
+    var organizationId: UUID?,
+    var organizationName: String?,
     var accCode: Int,
     var accMode: AccMode,
     var signFlag: Int,
@@ -28,12 +28,12 @@ data class Payment(
     var ledAmount: BigDecimal,
     var payMode: PayMode?,
     var narration: String? = null,
+    var bankId: Int,
     var transRefNumber: String?,
     var refPaymentId: Long?,
     var transactionDate: LocalDate?,
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: LocalDateTime?,
-    var updatedAt: LocalDateTime,
-    var accountNo: String
+    var modifiedAt: LocalDateTime?
 )

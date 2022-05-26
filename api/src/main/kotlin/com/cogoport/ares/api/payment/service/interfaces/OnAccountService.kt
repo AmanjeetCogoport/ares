@@ -6,8 +6,9 @@ import java.time.LocalDateTime
 
 interface OnAccountService {
     suspend fun getOnAccountCollections(uploadedDate: LocalDateTime?, entityType: Int?, currencyType: String?): AccountCollectionResponse
-
     suspend fun upload(): Boolean
-
-    suspend fun createReceivables(receivableRequest: Payment): Payment
+    suspend fun createPaymentEntry(receivableRequest: Payment): Payment
+    suspend fun updatePaymentEntry(receivableRequest: Payment): Payment?
+//    suspend fun updatePostOnPaymentEntry(paymentId: Long): Long?
+    suspend fun deletePaymentEntry(paymentId: Long): String?
 }

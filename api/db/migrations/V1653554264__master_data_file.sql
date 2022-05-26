@@ -452,12 +452,4 @@ insert into account_master(acc_code,acc_short_desc,acc_long_desc) values (223002
 insert into account_country_mapping(acc_code,country_code)
 select acc_code,'IND' from account_master;
 
---- ACCOUNT TYPE MASTER ENTRY
-insert into acc_type_master(type_code,description) values('SINV','Sales Invoice'),
-                ('SCN','Sales Credit Note'),
-                ('SDN','Sales Debit Note'),
-                ('PINV','Bills or purchase invoice'),
-                ('PDN','Bills or Purchase Debit note'),
-                ('PCN','Bills or Purchase Credit Note'),
-                ('REC','Payment received'),
-                ('PAY','Amount paid to someone');
+insert into bank_master(id,bank_name,ifsc_code,branch_name,account_no,swift_code) values (1956, 'State Bank of India', 'SBIN300126', 'Shanti Nagar', '36924871202','SWI443')

@@ -34,4 +34,5 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
     )
     suspend fun getAgeingBucket(): List<AgeingBucket>
+
 }
