@@ -12,15 +12,13 @@ import org.opensearch.client.opensearch.core.SearchResponse
 
 class OpenSearchClient {
 
-    fun <T : Any> response(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, key: String = AresConstants.OPEN_SEARCH_DOCUMENT_KEY): T? {
+    fun <T : Any> response(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX): T? {
 
         val response = Client.search(
             { s: SearchRequest.Builder ->
                 s.index(index)
                     .query { q: Query.Builder ->
-                        q.match { t: MatchQuery.Builder ->
-                            t.field(key).query(FieldValue.of(searchKey))
-                        }
+                        q.ids { i -> i.values(searchKey) }
                     }
             },
             classType
@@ -33,12 +31,12 @@ class OpenSearchClient {
         }
         return outResp
     }
-    fun <T : Any>listApi(index: String, classType: Class<T>, orgId: List<String>,offset: Int? = null, limit: Int? = null): SearchResponse<T>?{
+    fun <T : Any>listApi(index: String, classType: Class<T>, values: List<String>,offset: Int? = null, limit: Int? = null): SearchResponse<T>?{
         val response = Client.search(
             { s ->
                 s.index(index).query {
-                        q-> q.ids { i-> i.values(orgId) }
-                }.from(0).size(10)
+                        q-> q.ids { i-> i.values(values) }
+                }.from(offset).size(limit)
             },
             classType
         )

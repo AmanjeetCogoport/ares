@@ -1,26 +1,33 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.payment.entity.Invoice
+import com.cogoport.ares.api.payment.model.CollectionRequest
+import com.cogoport.ares.api.payment.model.DailyOutstandingRequest
+import com.cogoport.ares.api.payment.model.OverallStatsRequest
+import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.SalesTrendRequest
+import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
+import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
-import com.cogoport.ares.model.payment.*
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.SalesTrendResponse
+import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.OverallStatsResponse
 import com.cogoport.brahma.opensearch.Client
-import com.cogoport.brahma.opensearch.Configuration
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import org.opensearch.client.opensearch._types.FieldValue
-import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
-import org.opensearch.client.opensearch._types.query_dsl.Query
-import org.opensearch.client.opensearch.core.SearchRequest
-import java.util.Date
-
+import javax.validation.Valid
 @Validated
 @Controller("/dashboard")
 class DashboardController {
@@ -28,98 +35,61 @@ class DashboardController {
     lateinit var dashboardService: DashboardService
     @Inject
     lateinit var pushToClientService: PushToClientService
-    @Inject
-    lateinit var accountUtilizationRepository: AccountUtilizationRepository
-
-    @Get("/overall-stats")
-    suspend fun getOverallStats(
-        @QueryValue(AresConstants.ROLE) zone: String?,
-        @QueryValue(AresConstants.ZONE) role: String?
-    ): OverallStatsResponse? {
-        return Response<OverallStatsResponse?>().ok(dashboardService.getOverallStats(zone, role))
+    @Get("/overall-stats{?request*}")
+    suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse? {
+        return Response<OverallStatsResponse?>().ok(dashboardService.getOverallStats(request.zone, request.role))
     }
 
-    @Get("/daily-sales-outstanding-widget")
-    suspend fun getDailySalesOutstandingWidget(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?,
-        @QueryValue(AresConstants.QUARTER) quarter: List<Int>,
-        @QueryValue("year") year: Int
-    ): DailySalesOutstanding? {
-        return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(zone, role, quarter, year))
+    @Get("/daily-sales-outstanding{?request*}")
+    suspend fun getDailySalesOutstandingWidget(@Valid request: DailyOutstandingRequest): DailySalesOutstanding? {
+        return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request.zone, request.role, request.quarter, request.year))
     }
 
-    @Get("/collection-trend")
-    suspend fun getCollectionTrend(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?,
-        @QueryValue(AresConstants.QUARTER) quarter: String
-    ): CollectionTrendResponse? {
-        return Response<CollectionTrendResponse?>().ok(dashboardService.getCollectionTrend(zone, role, quarter))
+    @Get("/collection-trend{?request*}")
+    suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionResponse? {
+        return Response<CollectionResponse?>().ok(dashboardService.getCollectionTrend(request.zone, request.role, request.quarter, request.year))
     }
 
-    @Get("/monthly-outstanding")
-    suspend fun getMonthlyOutstanding(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
-    ): MonthlyOutstanding? {
-        return Response<MonthlyOutstanding?>().ok(dashboardService.getMonthlyOutstanding(zone, role))
+    @Get("/monthly-outstanding{?request*}")
+    suspend fun getMonthlyOutstanding(@Valid request: MonthlyOutstandingRequest): MonthlyOutstanding? {
+        return Response<MonthlyOutstanding?>().ok(dashboardService.getMonthlyOutstanding(request.zone, request.role))
     }
 
-    @Get("/quarterly-outstanding")
-    suspend fun getQuarterlyOutstanding(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
-    ): QuarterlyOutstanding? {
-        return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(zone, role))
+    @Get("/quarterly-outstanding{?request*}")
+    suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
+        return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(request.zone, request.role))
+    }
+    @Get("/sales-trend{?request*}")
+    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): SalesTrendResponse? {
+        return Response<SalesTrendResponse?>().ok(dashboardService.getSalesTrend(request.zone, request.role))
     }
 
+    @Get("outstanding-by-age{?request*}")
+    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): MutableList<OverallAgeingStatsResponse>? {
+        return Response<MutableList<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request.zone, request.role))
+    }
+
+    @Get("/receivables-by-age{?request*}")
+    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
+        return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request.zone, request.role))
+    }
+
+    /** To be Deleted */
+//    @Inject
+//    lateinit var accountUtilizationRepository: AccountUtilizationRepository
+//    @Get("/push-plutus")
+//    suspend fun pushPlutus(){
+//        val invoiceList = accountUtilizationRepository.getInvoices()
+//        for (invoice in invoiceList){
+//            Client.updateDocument("sale_invoice_index",invoice.id.toString(),invoice)
+//        }
+//    }
     @Get("/open-search/add")
-    suspend fun addToOpenSearch(@QueryValue("zone") zone: String?, @QueryValue("date") date: String) { return pushToClientService.pushDashboardData(zone, date) }
+    suspend fun addToOpenSearch(@QueryValue("zone") zone: String?, @QueryValue("date") date: String, @QueryValue("quarter") quarter: Int?) { return pushToClientService.pushDashboardData(zone, date, quarter) }
 
     @Delete("/index")
     suspend fun deleteIndex(@QueryValue("name") name: String) { return dashboardService.deleteIndex(name) }
 
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
-
-    @Get("/sales-trend")
-    suspend fun getSalesTrend(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
-    ): SalesTrendResponse? {
-        return Response<SalesTrendResponse?>().ok(dashboardService.getSalesTrend(zone, role))
-    }
-
-    @Get("outstanding-by-age")
-    suspend fun getOutStandingByAge(@QueryValue("zone") zone: String?): MutableList<OverallAgeingStatsResponse>? {
-        return Response<MutableList<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(zone))
-    }
-
-    @Get("/receivables-by-age")
-    suspend fun getReceivablesByAge(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
-    ): ReceivableAgeingResponse {
-        return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(zone, role))
-    }
-    @Get("/push-plutus")
-    suspend fun pushPlutus(){
-        var invoiceList = accountUtilizationRepository.getInvoices()
-        for (invoice in invoiceList){
-            Client.updateDocument("sale_invoice_index",invoice.id.toString(),invoice)
-        }
-    }
-    @Get("/testing")
-    suspend fun testing(){
-        val response = Client.search(
-            { s ->
-                s.index(AresConstants.SALES_DASHBOARD_INDEX).query {
-                        q-> q.ids { i-> i.values("daily_sales_east_may_2022","daily_sales_all_may_2022") }
-                }.from(0).size(10)
-            },
-            DailyOutstandingResponse::class.java
-        )
-    }
-
 }

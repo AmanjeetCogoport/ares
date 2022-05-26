@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class OverallStatsResponse(
-    @JsonProperty
+    @JsonProperty("totalOutstandingAmount")
     val totalOutstandingAmount: BigDecimal,
-    @JsonProperty
+    @JsonProperty("openInvoicesCount")
     val openInvoicesCount: Int,
-    @JsonProperty
+    @JsonProperty("organizationCount")
     val organizationCount: Int,
-    @JsonProperty
+    @JsonProperty("openInvoicesAmount")
     val openInvoicesAmount: BigDecimal,
-    @JsonProperty
+    @JsonProperty("openOnAccountPaymentAmount")
     val openOnAccountPaymentAmount: BigDecimal,
-    @JsonProperty
+    @JsonProperty("id")
     var id: String?
 )

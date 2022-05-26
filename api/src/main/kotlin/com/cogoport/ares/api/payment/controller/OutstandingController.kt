@@ -1,13 +1,11 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.payment.model.OutstandingListRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
 import com.cogoport.ares.model.payment.CustomerInvoiceResponse
-import com.cogoport.ares.model.payment.OrgOutstandingResponse
-import com.cogoport.brahma.opensearch.Client
-import io.micronaut.core.annotation.Nullable
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
