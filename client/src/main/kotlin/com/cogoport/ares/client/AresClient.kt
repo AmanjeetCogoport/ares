@@ -1,6 +1,6 @@
 package com.cogoport.ares.client
 
-import com.cogoport.ares.api.payment.controller.OutstandingListRequest
+import com.cogoport.ares.api.payment.model.OutstandingListRequest
 import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import io.micronaut.http.annotation.Get
