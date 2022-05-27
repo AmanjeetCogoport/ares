@@ -4,22 +4,20 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class OrgOutstandingResponse(
+    @JsonProperty("organizationId")
+    val organizationId: String?,
     @JsonProperty("organizationName")
     val organizationName: String?,
-    @JsonProperty("openInvoiceCount")
-    val openInvoiceCount: Int?,
-    @JsonProperty("invoiceAmountInr")
-    val invoiceAmountInr: BigDecimal?,
-    @JsonProperty("invoiceAmountUsd")
-    val invoiceAmountUsd: BigDecimal?,
-    @JsonProperty("onAccountPaymentCount")
-    val onAccountPaymentCount: Int?,
-    @JsonProperty("onAccountPaymentInr")
-    val onAccountPaymentInr: BigDecimal?,
-    @JsonProperty("onAccountPaymentUsd")
-    val onAccountPaymentUsd: BigDecimal?,
-    @JsonProperty("outstandingInr")
-    val outstandingInr: BigDecimal?,
-    @JsonProperty("outstandingUsd")
-    val outstandingUsd: BigDecimal?
+    @JsonProperty("currency")
+    val currency: String?,
+    @JsonProperty("openInvoicesCount")
+    val openInvoicesCount: Int?,
+    @JsonProperty("openInvoicesAmount")
+    val openInvoicesAmount: BigDecimal?,
+    @JsonProperty("paymentsCount")
+    val paymentsCount: Int?,
+    @JsonProperty("paymentsAmount")
+    val paymentsAmount: BigDecimal?,
+    @JsonProperty("outstandingAmount")
+    val outstandingAmount: BigDecimal?
 )

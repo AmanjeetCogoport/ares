@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class QuarterlyOutstanding(
     @JsonProperty("response")
-    var response: MutableList<OutstandingResponse>,
+    var response: List<OutstandingResponse>,
     @JsonProperty("id")
     var id: String
 )

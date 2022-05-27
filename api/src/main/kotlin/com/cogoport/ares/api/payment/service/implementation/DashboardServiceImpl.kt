@@ -16,7 +16,6 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.SalesTrendResponse
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding

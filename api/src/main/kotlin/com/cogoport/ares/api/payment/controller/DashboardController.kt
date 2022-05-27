@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.payment.model.PushToDashboardRequest
 import com.cogoport.ares.api.payment.model.CollectionRequest
 import com.cogoport.ares.api.payment.model.DsoRequest
 import com.cogoport.ares.api.payment.model.OverallStatsRequest
@@ -69,7 +69,7 @@ class DashboardController {
     /** To be Deleted */
 
     @Get("/open-search/add")
-    suspend fun addToOpenSearch(@QueryValue("zone") zone: String?, @QueryValue("date") date: String, @QueryValue("quarter") quarter: Int?) { return pushToClientService.pushDashboardData(zone?.uppercase(), date, quarter) }
+    suspend fun addToOpenSearch(request: PushToDashboardRequest) { return pushToClientService.pushDashboardData(request) }
 
     @Delete("/index")
     suspend fun deleteIndex(@QueryValue("name") name: String) { return dashboardService.deleteIndex(name) }

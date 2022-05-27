@@ -2,12 +2,11 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.gateway.OpenSearchClient
-import com.cogoport.ares.api.payment.mapper.InvoiceMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
+import com.cogoport.ares.api.payment.model.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -20,54 +19,41 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
     @Inject
-    lateinit var invoiceConverter: InvoiceMapper
-    @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
-    override suspend fun getOutstandingList(zone: String?, role: String?, quarter: Int?, page: Int, page_limit: Int): OutstandingList? {
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(zone, page, page_limit)
-        val outstandings = mutableListOf<OutstandingAgeingResponse>()
+    override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.page, request.page_limit)
+        val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
-        queryResponse.forEach { outstanding ->
-            orgId.add(if (zone.isNullOrBlank()) outstanding.organization_id + "_all" + "_Q$quarter" else outstanding.organization_id + "_" + zone + "_Q$quarter")
-            run { outstandings.add(outstandingAgeingConverter.convertToModel(outstanding)) }
+        queryResponse.forEach { ageing ->
+            orgId.add(if (request.zone.isNullOrBlank()) ageing.organization_id + AresConstants.KEY_DELIMITER + "ALL" else ageing.organization_id + AresConstants.KEY_DELIMITER + request.zone)
+            ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
-        val response = OpenSearchClient().listApi(
-            index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId
-        )
-        val data: MutableList<CustomerOutstanding?> = mutableListOf()
+        val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+        val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
         for (hts in response?.hits()?.hits()!!) {
             val output: CustomerOutstanding? = hts.source()
-            for (item in outstandings) {
-                if (item.organization_id == output?.organizationId) {
-                    val zero = assignAgeingBucket("Not Due", item.not_due_amount, item.not_due_count, "not_due")
-                    val thirty = assignAgeingBucket("1-30", item.thirty_amount, item.thirty_count, "1_30")
-                    val sixty = assignAgeingBucket("31-60", item.sixty_amount, item.sixty_count, "31_60")
-                    val ninety = assignAgeingBucket("61-90", item.ninety_amount, item.ninety_count, "61_90")
-                    val oneEighty = assignAgeingBucket("91-180", item.oneeighty_amount, item.oneeighty_count, "91_180")
-                    val threeSixtyFive = assignAgeingBucket("180-365", item.threesixfive_amount, item.threesixfive_count, "180_365")
-                    val year = assignAgeingBucket("365+", item.threesixfiveplus_amount, item.threesixfiveplus_count, "365+")
+            for (ageing in ageingBucket) {
+                if (ageing.organization_id == output?.organizationId) {
+                    val zero = assignAgeingBucket("Not Due", ageing.not_due_amount, ageing.not_due_count, "not_due")
+                    val thirty = assignAgeingBucket("1-30", ageing.thirty_amount, ageing.thirty_count, "1_30")
+                    val sixty = assignAgeingBucket("31-60", ageing.sixty_amount, ageing.sixty_count, "31_60")
+                    val ninety = assignAgeingBucket("61-90", ageing.ninety_amount, ageing.ninety_count, "61_90")
+                    val oneEighty = assignAgeingBucket("91-180", ageing.oneeighty_amount, ageing.oneeighty_count, "91_180")
+                    val threeSixtyFive = assignAgeingBucket("180-365", ageing.threesixfive_amount, ageing.threesixfive_count, "180_365")
+                    val year = assignAgeingBucket("365+", ageing.threesixfiveplus_amount, ageing.threesixfiveplus_count, "365+")
                     output.ageingBucket = listOf(zero, thirty, sixty, ninety, oneEighty, threeSixtyFive, year)
                 }
             }
-            data.add(output)
+            listOrganization.add(output)
         }
 
         return OutstandingList(
-            organizationList = data,
-            totalPage = data.size,
+            organizationList = listOrganization,
+            totalPage = listOrganization.size,
             totalRecords = 10,
         )
     }
 
-    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int, page_limit: Int): MutableList<CustomerInvoiceResponse> {
-        val offset = (page_limit * page) - page_limit
-        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, offset, page_limit)
-        val invoice = mutableListOf<CustomerInvoiceResponse>()
-        invoicesList.forEach { invoices ->
-            run { invoice.add(invoiceConverter.convertToModel(invoices)) }
-        }
-        return invoice
-    }
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(
             ageingDuration = ageDuration,

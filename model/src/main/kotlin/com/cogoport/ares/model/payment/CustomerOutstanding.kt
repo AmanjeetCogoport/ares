@@ -7,7 +7,7 @@ data class CustomerOutstanding(
     @JsonProperty("organizationId")
     var organizationId: String?,
     @JsonProperty("organizationName")
-    var organizationName: String,
+    var organizationName: String?,
     @JsonProperty("openInvoices")
     var openInvoices: InvoiceStats?,
     @JsonProperty("onAccountPayment")
@@ -20,14 +20,14 @@ data class CustomerOutstanding(
 
 data class InvoiceStats(
     @JsonProperty("invoicesCount")
-    var invoicesCount: Int,
+    var invoicesCount: Int?,
     @JsonProperty("amountDue")
-    var amountDue: MutableList<DueAmount>
+    var amountDue: List<DueAmount>?
 )
 
 data class DueAmount(
     @JsonProperty("currency")
-    var currency: String,
+    var currency: String?,
     @JsonProperty("amount")
-    var amount: BigDecimal
+    var amount: BigDecimal?
 )

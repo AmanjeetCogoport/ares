@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
-import com.cogoport.ares.api.payment.entity.CustomerInvoice
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
@@ -147,7 +146,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from account_utilizations
             where (:zone is null or zone_code = :zone) and doc_status = 'FINAL' and acc_mode = 'AR' and transaction_date <= :date::date
             )
-        select X.month, X.open_invoice_amount, X.on_account_payment, X.outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
+        select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
         coalesce((X.outstandings / X.total_sales) * X.days,0) as value
         from X
         """
@@ -166,33 +165,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and doc_status = 'FINAL' and transaction_date <= :date::date
         )
-        select X.month, X.open_invoice_amount, X.on_account_payment, X.outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
+        select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
         coalesce((X.outstandings / X.total_sales) * X.days,0) as value
         from X
         """
     )
     suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
-
-    @Query(
-        """
-        select document_no as invoice_number,
-        acc_type as invoice_type,
-        null as shipment_id,
-        null as shipment_type,
-        null as doc_type,
-        amount_loc as invoice_amount,
-        'INR' as currency,
-        amount_loc - pay_loc as balance_amount,
-        transaction_date as invoice_date,
-        due_date as invoice_due_date,
-        case when due_date < now() then now()::date - due_date else 0 end as overdue_days,
-        organization_name,
-        organization_id from account_utilizations
-        where acc_type in ('SINV','PINV') and (:zone is null or zone_code = :zone) and (:orgId is null or organization_id::varchar = :orgId)
-        limit :limit offset :offset
-        """
-    )
-    suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>
     @Query(
         """
         select organization_id,organization_name,
@@ -221,19 +199,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getOutstandingAgeingBucket(zone: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
-        select organization_name,
-        sum(case when acc_type = 'SINV' and amount_loc - pay_loc <> 0 then 1 else 0 end) as open_invoice_count,
-        sum(case when acc_type = 'SINV' and amount_curr = amount_loc then amount_loc else 0 end) as invoice_amount_inr,
-        sum(case when acc_type = 'SINV' and amount_curr <> amount_loc then amount_curr else 0 end) as invoice_amount_usd,
-        sum(case when acc_type = 'REC' then 1 else 0 end) as on_account_payment_count,
-        sum(case when acc_type = 'REC' and amount_curr = amount_loc then amount_loc else 0 end) as on_account_payment_inr,
-        sum(case when acc_type = 'REC' and amount_curr <> amount_loc then amount_curr else 0 end) as on_account_payment_usd,
-        sum(case when acc_type = 'SINV' and amount_curr = amount_loc then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and amount_curr = amount_loc then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_inr,
-        sum(case when acc_type = 'SINV' and amount_curr <> amount_loc then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and amount_curr <> amount_loc then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_usd
+        select organization_id::varchar,organization_name,currency,
+        sum(case when acc_type <> 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
+        sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+        sum(case when acc_type = 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+        sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
+        sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
         from account_utilizations
-        where organization_id::varchar = :orgId and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
-        group by organization_name
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and (:zone is null or zone_code = :zone)
+        group by organization_id,organization_name,currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String?): OrgOutstanding
+    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
 }
