@@ -68,27 +68,20 @@ class OutStandingServiceImpl : OutStandingService{
         }
 
         val response = mutableListOf<CustomerInvoiceResponse>()
-        if (orgId != null) {
-            val searchValues = mutableListOf<String>()
-            if (zone != null) {
-                searchValues.add(zone)
-            }
 
-            searchValues.add(orgId)
-
-             val list : SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().response(
-                searchKey = orgId,
-                classType = CustomerInvoiceResponse ::class.java,
-                index = "customer_invoice_index",
-                offset = page ,
-                limit = page_limit
-             )
-            list?.hits()?.hits()?.map {
-                it.source()?.let { it1 -> response.add(it1) }
-            }
-            return  response
+        val list : SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().response(
+            searchKey = orgId,
+            classType = CustomerInvoiceResponse ::class.java,
+            index = "customer_invoice_index",
+            offset = offset,
+            limit = page_limit
+        )
+        list?.hits()?.hits()?.map {
+            it.source()?.let { it1 -> response.add(it1) }
         }
-        return response
+        return  response
+
+
     }
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(

@@ -4,8 +4,6 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.brahma.opensearch.Client
-import org.opensearch.client.opensearch._types.FieldValue
-import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -32,13 +30,20 @@ class OpenSearchClient {
         return outResp
     }
 
-    fun <T : Any> response(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+    fun <T : Any> response(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
 
         val response: SearchResponse<T>? = Client.search(
-            { s: SearchRequest.Builder ->
+            { s ->
                 s.index(index)
-                    .query { q: Query.Builder ->
-                        q.match { i -> i.field("organizationId").query(FieldValue.of(searchKey)) }
+
+                    .query { q ->
+                        if(searchKey != "all"){
+                            q.matchPhrase { a-> a.field("organizationId").query(searchKey) }
+                        }
+                        else{
+                            q.matchAll{s-> s.queryName("")}
+                        }
+                       q
                     }.from(offset).size(limit)
             },
             classType

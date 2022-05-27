@@ -34,7 +34,7 @@ class OutstandingController {
         @QueryValue("page") page: Int? = 1, @QueryValue(value = "page_limit") page_limit: Int? = 20
     ): MutableList<CustomerInvoiceResponse>? {
         return Response<MutableList<CustomerInvoiceResponse>?>().ok(outStandingService.getInvoiceList(zone, orgId,
-            page ?: 0,page_limit ?:10))
+            page ?: 1,page_limit ?:10))
     }
 
     @Get("/open-search/add")
