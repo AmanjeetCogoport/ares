@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class DailyOutstandingResponse(
-    @JsonProperty("month") var month: String,
+    @JsonProperty("month") var month: Int,
     @JsonProperty("openInvoiceAmount") var openInvoiceAmount: BigDecimal?,
     @JsonProperty("onAccountPayment") var onAccountPayment: BigDecimal?,
     @JsonProperty("outstandings") var outstandings: BigDecimal?,

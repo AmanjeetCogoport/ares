@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class DsoResponse(
     @JsonProperty("month")
-    val month: String,
+    val month: Int,
     @JsonProperty("dsoForTheMonth")
     val dsoForTheMonth: Float
 )

@@ -138,7 +138,7 @@ class DashboardServiceImpl : DashboardService {
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             averageDso += data!!.value
-            if (data.month == currMonth.toString()) {
+            if (data.month == currMonth) {
                 currentDso = currResponse.hits()!!.hits()[0].source()!!.value
             }
         }

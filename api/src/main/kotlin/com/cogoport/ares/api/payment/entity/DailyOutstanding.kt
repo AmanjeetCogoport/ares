@@ -4,7 +4,7 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 @MappedEntity
 data class DailyOutstanding(
-    var month: String,
+    var month: Int,
     var openInvoiceAmount: BigDecimal?,
     var onAccountPayment: BigDecimal?,
     var outstandings: BigDecimal?,
