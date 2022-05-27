@@ -160,24 +160,24 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
 
-    @Query(
-        """
-        select document_no as invoice_number,
-        acc_type as invoice_type,
-        null as shipment_id,
-        null as shipment_type,
-        null as doc_type,
-        amount_loc as invoice_amount,
-        'INR' as currency,
-        amount_loc - pay_loc as balance_amount,
-        transaction_date as invoice_date,
-        due_date as invoice_due_date,
-        case when due_date < now() then now()::date - due_date else 0 end as overdue_days,
-        organization_name,
-        organization_id from account_utilizations;
-        """
-    )
-    suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>
+//    @Query(
+//        """
+//        select document_no as invoice_number,
+//        acc_type as invoice_type,
+//        null as shipment_id,
+//        null as shipment_type,
+//        null as doc_type,
+//        amount_loc as invoice_amount,
+//        'INR' as currency,
+//        amount_loc - pay_loc as balance_amount,
+//        transaction_date as invoice_date,
+//        due_date as invoice_due_date,
+//        case when due_date < now() then now()::date - due_date else 0 end as overdue_days,
+//        organization_name,
+//        organization_id from account_utilizations;
+//        """
+//    )
+//    suspend fun fetchInvoice(zone: String?, orgId: String?, offset: Int?, limit: Int): List<CustomerInvoice>
     @Query(
         """
         select organization_id,organization_name,

@@ -9,6 +9,7 @@ object AresConstants {
     val CURR_YEAR = Calendar.getInstance().get(Calendar.YEAR)
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"
+    const val INVOICE_OUTSTANDING_INDEX = "index_ares_invoice_outstanding"
     const val OPEN_SEARCH_DOCUMENT_KEY = "docKey"
     const val OPEN_SEARCH_DOCUMENT_KEY_DELIMITER = "_"
 

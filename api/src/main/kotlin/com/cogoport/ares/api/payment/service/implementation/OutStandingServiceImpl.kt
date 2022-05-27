@@ -61,18 +61,18 @@ class OutStandingServiceImpl : OutStandingService{
 
     override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int, page_limit: Int): MutableList<CustomerInvoiceResponse>? {
         val offset = (page_limit * page) - page_limit
-        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, page, page_limit)
+//        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, page, page_limit)
 
-        invoicesList.forEach {
-            Client.updateDocument("customer_invoice_index", it.invoiceNumber.toString() ,it)
-        }
+//        invoicesList.forEach {
+//            Client.updateDocument("index_ares_invoice_outstanding", it.invoiceNumber.toString() ,it)
+//        }
 
         val response = mutableListOf<CustomerInvoiceResponse>()
 
-        val list : SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().response(
+        val list : SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().responseList(
             searchKey = orgId,
             classType = CustomerInvoiceResponse ::class.java,
-            index = "customer_invoice_index",
+            index = AresConstants.INVOICE_OUTSTANDING_INDEX,
             offset = offset,
             limit = page_limit
         )
