@@ -150,7 +150,7 @@ class DashboardServiceImpl : DashboardService {
                 s.index(AresConstants.SALES_DASHBOARD_INDEX).query {
                     q ->
                     q.ids { i -> i.values(key) }
-                }.from(0).size(10)
+                }.from(0).size(12)
             },
             DailyOutstandingResponse::class.java
         )
