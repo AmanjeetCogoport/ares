@@ -22,7 +22,7 @@ interface DashboardService {
     suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding?
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
-    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): MutableList<OverallAgeingStatsResponse>
+    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
     suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)

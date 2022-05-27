@@ -63,39 +63,33 @@ class DashboardServiceImpl : DashboardService {
     }
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
-        val searchKey = searchKeyOverallStats(request.zone)
+        val searchKey = searchKeyOverallStats(request)
         return OpenSearchClient().response(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
-    private fun searchKeyOverallStats(zone: String?): String {
-        return if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
+    private fun searchKeyOverallStats(request: OverallStatsRequest): String {
+        return if (request.zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + request.zone
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): MutableList<OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
-        val outstandingData = mutableListOf<OverallAgeingStatsResponse>()
-        outstandingResponse.forEach { data ->
-            run {
-                outstandingData.add(overallAgeingConverter.convertToModel(data))
-            }
-        }
-        return outstandingData
+        return outstandingResponse.map { overallAgeingConverter.convertToModel(it) }
     }
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
         validateInput(request.zone, request.role, request.quarter ?: 0)
-        val searchKey = searchKeyCollectionTrend(request.zone, request.quarter ?: 0, request.year)
+        val searchKey = searchKeyCollectionTrend(request)
         return OpenSearchClient().response(
             searchKey = searchKey,
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
-    private fun searchKeyCollectionTrend(zone: String?, quarter: Int, year: Int): String {
-        return if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
+    private fun searchKeyCollectionTrend(request: CollectionRequest): String {
+        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter
     }
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
         validateInput(request.zone, request.role)
@@ -160,8 +154,6 @@ class DashboardServiceImpl : DashboardService {
             },
             DailyOutstandingResponse::class.java
         )
-//        if (response?.hits()?.total()?.value() == 0.toLong())
-//            throw AresException(AresError.ERR_1005, "")
         return response
     }
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {

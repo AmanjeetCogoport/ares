@@ -39,7 +39,7 @@ class DashboardController {
     }
 
     @Get("/daily-sales-outstanding{?request*}")
-    suspend fun getDailySalesOutstandingWidget(request: DsoRequest): DailySalesOutstanding? {
+    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding? {
         return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
     }
 
@@ -58,8 +58,8 @@ class DashboardController {
         return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(request))
     }
     @Get("outstanding-by-age{?request*}")
-    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): MutableList<OverallAgeingStatsResponse>? {
-        return Response<MutableList<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
+    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
+        return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
     }
     @Get("/receivables-by-age{?request*}")
     suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
@@ -68,8 +68,8 @@ class DashboardController {
 
     /** To be Deleted */
 
-    @Get("/open-search/add")
-    suspend fun addToOpenSearch(request: PushToDashboardRequest) { return pushToClientService.pushDashboardData(request) }
+    @Get("/open-search/add{?request*}")
+    suspend fun addToOpenSearch(@Valid request: PushToDashboardRequest) { return pushToClientService.pushDashboardData(request) }
 
     @Delete("/index")
     suspend fun deleteIndex(@QueryValue("name") name: String) { return dashboardService.deleteIndex(name) }

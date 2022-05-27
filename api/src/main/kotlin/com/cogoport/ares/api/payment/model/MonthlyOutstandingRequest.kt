@@ -6,6 +6,6 @@ import io.micronaut.http.annotation.QueryValue
 
 @Introspected
 data class MonthlyOutstandingRequest(
-    @QueryValue(AresConstants.ZONE) var zone: String?,
+    @QueryValue(AresConstants.ZONE) val zone: String?,
     @QueryValue(AresConstants.ROLE) val role: String?
 )
