@@ -3,7 +3,7 @@ plugins {
 }
 
 version = "0.1"
-group = "com.cogoport.ares.api"
+group = "com.cogoport.ares"
 
 repositories {
     mavenCentral()
@@ -42,6 +42,19 @@ dependencies {
     // Import model subproject
     implementation(project(":model"))
 
+    // AWS X-ray, Distributed tracing and logging
+    implementation("io.micronaut:micronaut-tracing:3.3.0-M1")
+    runtimeOnly("io.zipkin.brave:brave-instrumentation-http:5.13.9")
+    implementation("io.zipkin.aws:zipkin-reporter-xray-udp:0.23.4")
+    implementation("io.zipkin.aws:brave-propagation-aws:0.23.4")
+    implementation("io.opentracing.brave:brave-opentracing:1.0.0")
+    implementation("io.zipkin.brave:brave-context-slf4j:5.13.9")
+    implementation("ch.qos.logback:logback-classic:1.2.11")
+
+    //Service Discovery
+    implementation('software.amazon.awssdk:servicediscovery:2.17.191')
+    implementation("io.micronaut.aws:micronaut-aws-service-discovery:3.4.0")
+
     // For Flyway
     runtimeOnly("io.r2dbc:r2dbc-postgresql")
     runtimeOnly("org.postgresql:postgresql")
@@ -58,6 +71,9 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1")
 }
 
+tasks.named("optimizedDockerBuildNative") {
+    images = ["ghcr.io/cogoport/ares:latest"]
+}
 
 application {
     mainClass.set("com.cogoport.ares.api.ApplicationKt")
@@ -78,13 +94,5 @@ micronaut {
         cacheEnvironment = true
         optimizeClassLoading = true
         deduceEnvironment = true
-    }
-}
-
-graalvmNative {
-    binaries {
-        main {
-            buildArgs.add("-H:-UseServiceLoaderFeature")
-        }
     }
 }
