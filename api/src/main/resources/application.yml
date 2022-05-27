@@ -30,4 +30,4 @@ jackson:
 opensearch:
   host: ${OPENSEARCH_HOST:search.books.dev.cogoport.io}
   user: ${OPENSEARCH_USER:books_search_dev}
-  pass: ${OPENSEARCH_PASS:@F20guhTISeCQ93nRaD}
+  pass: ${OPENSEARCH_PASS:F20guhTISeCQ93nRaD@}
