@@ -7,6 +7,8 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.model.payment.AccountCollectionResponse
+import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.model.payment.*
@@ -18,7 +20,7 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 import java.io.FileReader
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -56,7 +58,7 @@ open class OnAccountServiceImpl : OnAccountService {
         return AccountCollectionResponse(payments = payments)
     }
 
-    // Need to make this trasactional
+    //Need to make this trasactional
     override suspend fun createPaymentEntry(receivableRequest: Payment): Payment {
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
@@ -104,10 +106,8 @@ open class OnAccountServiceImpl : OnAccountService {
         return updatePayment(receivableRequest, accountUtilization, payment)
     }
 
-    /**
-     *
-     */
-    private suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): Payment? {
+    @Transactional(rollbackOn = [Exception::class, AresException::class])
+    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): Payment? {
         paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
         accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
 //        return payment?.let { paymentConverter.convertToModel(it) }
@@ -132,6 +132,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun deletePaymentEntry(paymentId: Long): String? {
         try {
+
             var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
 
             if (payment.isDeleted)
@@ -168,6 +169,38 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.transactionDate = receivableRequest.transactionDate!!
         return accountUtilization
     }
+
+    suspend fun passedAllValidation(payment: Payment) : Boolean{
+        TODO("Not implemented")
+    }
+
+    suspend fun checkForNumeral(value: String) : Boolean{
+        var pattern = Regex("[+-]?[0-9]+(\\.[0-9]+)?([Ee][+-]?[0-9]+)?")
+        return pattern.matches(value.replace(",",""))
+    }
+    suspend fun checkForCurrency(value: String) : Boolean {
+        return AllCurrencyTypes.values().any{ it.name == value}
+    }
+
+    suspend fun checkForPayMode(value: String) : Boolean {
+        return PayMode.values().any{ it.name == value}
+    }
+
+    suspend fun checkForCustomerName(value: String) : Boolean {
+        var pattern = Regex("^[\\p{L} .'-]+$")
+        return pattern.matches(value)
+    }
+
+    suspend fun validateUTR(value: String) : Boolean {
+        var pattern = Regex("[a-zA-Z0-9]*")
+        return pattern.matches(value) && value.length > 10 && value.length < 20
+    }
+
+    suspend fun checkLocalDate(value: String) : Boolean {
+        var pattern = Regex("^(20[0-9]{2})-(1[0-2]|0[1-9])-(3[01]|[12][0-9]|0[1-9])$")
+        return pattern.matches(value)
+    }
+
 
     @Transactional
     override suspend fun createBulkOnAccountPayments(): Void? {
