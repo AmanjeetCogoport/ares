@@ -11,4 +11,5 @@ interface OnAccountService {
     suspend fun updatePaymentEntry(receivableRequest: Payment): Payment?
 //    suspend fun updatePostOnPaymentEntry(paymentId: Long): Long?
     suspend fun deletePaymentEntry(paymentId: Long): String?
+    suspend fun createBulkOnAccountPayments(): Void?
 }

@@ -6,6 +6,7 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -31,9 +32,9 @@ data class Payment(
     var bankId: Int,
     var transRefNumber: String?,
     var refPaymentId: Long?,
-    var transactionDate: LocalDate?,
+    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isPosted: Boolean,
     var isDeleted: Boolean,
-    var createdAt: LocalDateTime?,
-    var modifiedAt: LocalDateTime?
+    var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis())
 )

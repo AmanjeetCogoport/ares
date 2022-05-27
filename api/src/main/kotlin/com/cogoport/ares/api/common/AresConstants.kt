@@ -4,7 +4,7 @@ object AresConstants {
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val OPEN_SEARCH_DOCUMENT_KEY = "docKey"
     const val OPEN_SEARCH_DOCUMENT_KEY_DELIMITER = "_"
-
+    const val ON_ACCOUNT_PAYMENT_INDEX = "index_ares_payments"
     const val ROLE_ZONE_HEAD = "ZoneHead"
     const val MONTHLY_TREND_PREFIX = "monthly_outstanding_"
     const val QUARTERLY_TREND_PREFIX = "quarterly_outstanding_"

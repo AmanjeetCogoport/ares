@@ -1,21 +1,28 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.model.payment.AccountCollectionResponse
-import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
-import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.*
+import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.s3.client.S3Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
+import java.io.FileReader
 import java.time.LocalDateTime
+import java.util.*
+import javax.transaction.Transactional
 
 @Singleton
-class OnAccountServiceImpl : OnAccountService {
+open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var paymentRepository: PaymentRepository
 
@@ -25,6 +32,11 @@ class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
+    @Inject
+    lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
+
+    @Inject
+    private lateinit var s3Client: S3Client
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -44,7 +56,7 @@ class OnAccountServiceImpl : OnAccountService {
         return AccountCollectionResponse(payments = payments)
     }
 
-    //Need to make this trasactional
+    // Need to make this trasactional
     override suspend fun createPaymentEntry(receivableRequest: Payment): Payment {
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
@@ -53,14 +65,14 @@ class OnAccountServiceImpl : OnAccountService {
         var accountUtilization = AccountUtilization(
             id = null,
             documentNo = payment.id!!,
-                documentValue = "invoice",
-                zoneCode = "NORTH",
-                serviceType = "FCL_FREIGHT",
-                docStatus = "FINAL",
-                entityCode = payment.entityCode,
-                category = "asset",
+            documentValue = "invoice",
+            zoneCode = "NORTH",
+            serviceType = "FCL_FREIGHT",
+            docStatus = "FINAL",
+            entityCode = payment.entityCode,
+            category = "asset",
             orgSerialId = payment.orgSerialId!!,
-                sageOrganizationId = payment.sageOrganizationId,
+            sageOrganizationId = payment.sageOrganizationId,
             organizationId = payment.organizationId,
             organizationName = payment.organizationName,
             accCode = payment.accCode,
@@ -68,7 +80,7 @@ class OnAccountServiceImpl : OnAccountService {
             accMode = payment.accMode,
             signFlag = payment.signFlag,
             currency = payment.currency,
-                ledCurrency = payment.currency,
+            ledCurrency = payment.currency,
             amountCurr = payment.amount,
             amountLoc = payment.ledAmount,
             dueDate = payment.transactionDate!!,
@@ -155,5 +167,70 @@ class OnAccountServiceImpl : OnAccountService {
         accountUtilization.dueDate = receivableRequest.transactionDate!!
         accountUtilization.transactionDate = receivableRequest.transactionDate!!
         return accountUtilization
+    }
+
+    @Transactional
+    override suspend fun createBulkOnAccountPayments(): Void? {
+
+//        val file = File("/Users/mohitmogera/Documents/Projects/Kotlin/ares/build/resources/main/invoices1.csv")
+//        var s3Response =  s3Client.upload("business-finance-test", "invoices1.csv", file)
+        var docUrl =  s3Client.download("business-finance-test","invoices1.csv")
+        val bufferedReader = FileReader(docUrl)
+
+        val csvParser = CSVParser(
+            bufferedReader,
+            CSVFormat.DEFAULT
+                .withFirstRecordAsHeader()
+                .withIgnoreHeaderCase()
+                .withTrim()
+        )
+
+        // Validate excel List before passing it for insertion
+
+        var paymentModelList: MutableList<Payment> = convertRowToObject(csvParser)
+        var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
+        for (payment in paymentModelList) {
+
+            paymentEntityList.add(paymentConverter.convertToEntity(payment))
+            var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
+            var accUtilizationModel: AccUtilizationRequest =
+                accUtilizationToPaymentConverter.convertEntityToModel(savePayment)
+
+            var paymentModel = paymentConverter.convertToModel(savePayment)
+            Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX,savePayment.id.toString(),paymentModel)
+            accUtilizationModel.accType = "PAY"
+            accUtilizationModel.currencyPayment = 0.toBigDecimal()
+            accUtilizationModel.ledgerPayment = 0.toBigDecimal()
+            accUtilizationModel.ledgerAmount = 0.toBigDecimal()
+            accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+        }
+        return null
+    }
+
+    private fun convertRowToObject(csvParser: CSVParser): MutableList<Payment> {
+        var paymentList = mutableListOf<Payment>()
+        var recordCount = 1
+        for (csvRecord in csvParser) {
+            paymentList.add(
+                Payment(
+                    customerName = csvRecord.get(0),
+                    customerId = UUID.fromString(csvRecord.get(1)),
+                    entityType = csvRecord.get(2).toInt(),
+                    bankAccountNumber = csvRecord.get(4),
+                    amount = csvRecord.get(5).toBigDecimal(),
+                    currencyType = csvRecord.get(6),
+                    utr = csvRecord.get(9),
+                    remarks = csvRecord.get(10),
+                    accCode = csvRecord.get(11).toInt(),
+                    accMode = AccMode.AR,
+                    signFlag = -1,
+                    orgSerialId = 0
+                )
+            )
+            recordCount++
+        }
+
+
+        return paymentList
     }
 }

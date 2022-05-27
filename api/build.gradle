@@ -38,7 +38,8 @@ dependencies {
     implementation("com.cogoport.brahma.opensearch:client:0.1.2-beta")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
-
+    implementation("org.apache.commons:commons-csv:1.9.0")
+    implementation "com.cogoport.brahma.aws:s3:0.1.1"
     // Import model subproject
     implementation(project(":model"))
 
