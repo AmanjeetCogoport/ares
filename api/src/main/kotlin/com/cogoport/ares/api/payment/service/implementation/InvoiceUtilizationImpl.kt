@@ -12,6 +12,7 @@ import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.sql.Timestamp
 import java.time.LocalDate
 
 @Singleton
@@ -44,27 +45,25 @@ class InvoiceUtilizationImpl : InvoiceService {
 
             val acUtilization = AccountUtilization(
                 null,
-                invoiceItem.entityCode,
-                invoiceItem.documentNo,
-                invoiceItem.orgSerialId,
-                invoiceItem.organizationId!!,
-                invoiceItem.organizationName,
-                invoiceItem.sageOrganizationId,
-                invoiceItem.accCode,
-                AccountType.valueOf(invoiceItem.accType),
-                AccMode.valueOf(invoiceItem.accMode),
-                invoiceItem.signFlag,
-                invoiceItem.currencyAmount,
-                invoiceItem.ledgerAmount,
-                invoiceItem.currencyPayment,
-                invoiceItem.ledgerPayment,
-                LocalDate.parse(invoiceItem.dueDate),
-                LocalDate.parse(invoiceItem.transactionDate),
-                null,
-                null,
-                invoiceItem.zoneCode,
-                invoiceItem.docStatus,
-                invoiceItem.docValue
+                entityCode = invoiceItem.entityCode,
+                documentNo = invoiceItem.documentNo,
+                orgSerialId = invoiceItem.orgSerialId,
+                organizationId = invoiceItem.organizationId!!,
+                organizationName = invoiceItem.organizationName,
+                sageOrganizationId = invoiceItem.sageOrganizationId,
+                accCode = invoiceItem.accCode,
+                accType = AccountType.valueOf(invoiceItem.accType),
+                accMode = AccMode.valueOf(invoiceItem.accMode),
+                signFlag = invoiceItem.signFlag,
+                amountCurr = invoiceItem.currencyAmount,
+                amountLoc = invoiceItem.ledgerAmount,
+                payCurr = invoiceItem.currencyPayment,
+                payLoc = invoiceItem.ledgerPayment,
+                dueDate = Timestamp.valueOf(invoiceItem.dueDate),
+                transactionDate = Timestamp.valueOf(invoiceItem.transactionDate),
+                zoneCode = invoiceItem.zoneCode,
+                docStatus = invoiceItem.docStatus,
+                documentValue = invoiceItem.docValue
             )
 
             val generatedId = accUtilRepository.save(acUtilization).id
@@ -89,27 +88,25 @@ class InvoiceUtilizationImpl : InvoiceService {
 
         val acUtilization = AccountUtilization(
             null,
-            invoiceRequest.entityCode,
-            invoiceRequest.documentNo,
-            invoiceRequest.orgSerialId,
-            invoiceRequest.organizationId!!,
-            invoiceRequest.organizationName,
-            invoiceRequest.sageOrganizationId,
-            invoiceRequest.accCode,
-            AccountType.valueOf(invoiceRequest.accType),
-            AccMode.valueOf(invoiceRequest.accMode),
-            invoiceRequest.signFlag,
-            invoiceRequest.currencyAmount,
-            invoiceRequest.ledgerAmount,
-            invoiceRequest.currencyPayment,
-            invoiceRequest.ledgerPayment,
-            LocalDate.parse(invoiceRequest.dueDate),
-            LocalDate.parse(invoiceRequest.transactionDate),
-            null,
-            null,
-            invoiceRequest.zoneCode,
-            invoiceRequest.docStatus,
-            invoiceRequest.docValue
+            entityCode = invoiceRequest.entityCode,
+            documentNo = invoiceRequest.documentNo,
+            orgSerialId = invoiceRequest.orgSerialId,
+            organizationId = invoiceRequest.organizationId!!,
+            organizationName = invoiceRequest.organizationName,
+            sageOrganizationId = invoiceRequest.sageOrganizationId,
+            accCode = invoiceRequest.accCode,
+            accType = AccountType.valueOf(invoiceRequest.accType),
+            accMode = AccMode.valueOf(invoiceRequest.accMode),
+            signFlag = invoiceRequest.signFlag,
+            amountCurr = invoiceRequest.currencyAmount,
+            amountLoc = invoiceRequest.ledgerAmount,
+            payCurr = invoiceRequest.currencyPayment,
+            payLoc = invoiceRequest.ledgerPayment,
+            dueDate = Timestamp.valueOf(invoiceRequest.dueDate),
+            transactionDate = Timestamp.valueOf(invoiceRequest.transactionDate),
+            zoneCode = invoiceRequest.zoneCode,
+            docStatus = invoiceRequest.docStatus,
+            documentValue = invoiceRequest.docValue
         )
 
         accUtilRepository.save(acUtilization)
