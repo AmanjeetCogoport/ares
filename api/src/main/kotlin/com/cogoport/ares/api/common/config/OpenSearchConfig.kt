@@ -1,4 +1,4 @@
-package com.cogoport.loki.api.config
+package com.cogoport.ares.api.common.config
 
 import io.micronaut.context.annotation.ConfigurationProperties
 import javax.validation.constraints.NotBlank

@@ -1,6 +1,6 @@
-package com.cogoport.loki.api.config
+package com.cogoport.ares.api.common.config
 
-import com.cogoport.loki.api.utils.logger
+import com.cogoport.ares.api.utils.logger
 import io.micronaut.context.annotation.Factory
 import io.micronaut.discovery.DiscoveryClient
 import io.micronaut.discovery.ServiceInstance

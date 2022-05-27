@@ -1,4 +1,4 @@
-package com.cogoport.loki.api.config
+package com.cogoport.ares.api.common.config
 
 import brave.Tracing
 import brave.context.slf4j.MDCScopeDecorator

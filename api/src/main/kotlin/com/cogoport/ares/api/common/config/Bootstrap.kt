@@ -1,4 +1,4 @@
-package com.cogoport.loki.api.config
+package com.cogoport.ares.api.common.config
 
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
