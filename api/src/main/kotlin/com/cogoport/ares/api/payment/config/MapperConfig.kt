@@ -15,7 +15,6 @@ import org.mapstruct.factory.Mappers
 
 @Factory
 class MapperConfig {
-
     @Bean
     fun getPaymentConverter(): PaymentToPaymentMapper {
         return Mappers.getMapper(PaymentToPaymentMapper::class.java)
