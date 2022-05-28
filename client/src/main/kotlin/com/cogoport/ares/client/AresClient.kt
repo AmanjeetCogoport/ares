@@ -1,7 +1,16 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.model.payment.OverallStats
+import com.cogoport.ares.api.payment.entity.CollectionTrend
+import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.payment.model.CollectionRequest
+import com.cogoport.ares.api.payment.model.DsoRequest
+import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
+import com.cogoport.ares.api.payment.model.OutstandingListRequest
+import com.cogoport.ares.api.payment.model.OverallStatsRequest
+import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
+import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
@@ -11,7 +20,6 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.CollectionTrend
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -26,52 +34,33 @@ import java.time.LocalDateTime
 
 @Client("http://localhost:8087/payment")
 interface AresClient {
-    @Get("/dashboard/overall-stats")
-    public suspend fun getOverallStats(
-        @QueryValue(AresConstants.ROLE) zone: String?,
-        @QueryValue(AresConstants.ZONE) role: String?
-    ): OverallStats?
+    @Get("/dashboard/overall-stats{?request*}")
+    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStats?
 
-    @Get("/dashboard/daily-sales-outstanding-widget")
-    public suspend fun getDailySalesOutstandingWidget(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?,
-        @QueryValue(AresConstants.QUARTER) quarter: String
-    ): DailySalesOutstanding?
+    @Get("/dashboard/daily-sales-outstanding{?request*}")
+    public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
 
-    @Get("/dashboard/collection-trend")
-    public suspend fun getCollectionTrend(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?,
-        @QueryValue(AresConstants.QUARTER) quarter: String
-    ): CollectionTrend?
+    @Get("/dashboard/collection-trend{?request*}")
+    public suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionTrend?
 
-    @Get("/dashboard/monthly-outstanding")
-    public suspend fun getMonthlyOutstanding(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
-    ): MonthlyOutstanding?
+    @Get("/dashboard/monthly-outstanding{?request*}")
+    public suspend fun getMonthlyOutstanding(@Valid request: MonthlyOutstandingRequest): MonthlyOutstanding?
 
-    @Get("/dashboard/quarterly-outstanding")
-    public suspend fun getQuarterlyOutstanding(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
-    ): QuarterlyOutstanding?
+    @Get("/dashboard/quarterly-outstanding{?request*}")
+    public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
+    /** Sales trend need to be deleted */
     @Get("/dashboard/sales-trend")
     public suspend fun getSalesTrend(
         @QueryValue(AresConstants.ZONE) zone: String?,
         @QueryValue(AresConstants.ROLE) role: String?
     ): SalesTrendResponse?
 
-    @Get("/dashboard/outstanding-by-age")
-    public suspend fun getOutStandingByAge(): List<AgeingBucket>?
+    @Get("/dashboard/outstanding-by-age{?request*}")
+    public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<AgeingBucket>?
 
-    @Get("/dashboard/receivables-by-age")
-    public suspend fun getReceivablesByAge(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
-    ): ReceivableAgeingResponse
+    @Get("/dashboard/receivables-by-age{?request*}")
+    public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
 
     @Get("/receivables/collections")
     suspend fun getOnAccountCollections(
@@ -85,9 +74,6 @@ interface AresClient {
     @Post("/receivables/collection/create")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/outstanding/overall")
-    suspend fun getOutstandingList(
-        @QueryValue("zone") zone: String?,
-        @QueryValue("role") role: String?
-    ): OutstandingList?
+    @Get("/outstanding/overall{?request*}")
+    suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
 }

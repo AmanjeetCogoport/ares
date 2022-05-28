@@ -7,7 +7,6 @@ import io.micronaut.core.annotation.Introspected
 data class ReceivableByAgeViaZone(
     @JsonProperty("zoneName")
     var zoneName: String?,
-
     @JsonProperty("ageingBucket")
-    var ageingBucket: MutableList<AgeingBucket>
+    var ageingBucket: MutableList<AgeingBucketZone>
 )
