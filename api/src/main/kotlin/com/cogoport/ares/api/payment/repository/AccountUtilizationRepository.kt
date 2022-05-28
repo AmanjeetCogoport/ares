@@ -22,6 +22,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
+    suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 
     @Query(
         """
