@@ -23,7 +23,7 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.page, request.page_limit)
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%",request.page, request.page_limit)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->

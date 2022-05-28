@@ -7,6 +7,7 @@ import io.micronaut.http.annotation.QueryValue
 data class OutstandingListRequest(
     @QueryValue("zone") val zone: String? = null,
     @QueryValue("role") val role: String? = null,
+    @QueryValue("orgName") val orgName: String? = "",
     @QueryValue("page") val page: Int = 1,
     @QueryValue("page_limit") val page_limit: Int = 10,
 )

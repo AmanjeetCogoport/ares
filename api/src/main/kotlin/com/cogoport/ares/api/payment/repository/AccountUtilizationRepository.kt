@@ -208,14 +208,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where :zone is null or zone_code = :zone and acc_mode = 'AR' and doc_status = 'FINAL'
+        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
         group by organization_name,organization_id
         order by organization_name
         offset ((:pageLimit * :page) - :pageLimit)
         limit :pageLimit
         """
     )
-    suspend fun getOutstandingAgeingBucket(zone: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(zone: String?, orgName: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
         select organization_id::varchar,organization_name,currency,
