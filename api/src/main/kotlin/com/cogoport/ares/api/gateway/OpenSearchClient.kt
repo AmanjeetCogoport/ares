@@ -29,6 +29,26 @@ class OpenSearchClient {
         }
         return outResp
     }
+
+    fun <T : Any> responseList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+
+        val response: SearchResponse<T>? = Client.search(
+            { s ->
+                s.index(index)
+                    .query { q ->
+                        if (!searchKey.isNullOrBlank()) {
+                            q.matchPhrase { a -> a.field("organizationId").query(searchKey) }
+                        } else {
+                            q.matchAll { s -> s.queryName("") }
+                        }
+                        q
+                    }.from(offset).size(limit)
+            },
+            classType
+        )
+        return response
+    }
+
     fun <T : Any> listApi(index: String, classType: Class<T>, values: List<String>, offset: Int? = null, limit: Int? = null): SearchResponse<T>? {
         val response = Client.search(
             { s ->

@@ -9,7 +9,6 @@ import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
 import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.SalesTrendResponse
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding

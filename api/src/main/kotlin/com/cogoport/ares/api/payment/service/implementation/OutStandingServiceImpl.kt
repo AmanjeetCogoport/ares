@@ -7,11 +7,13 @@ import com.cogoport.ares.api.payment.model.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 
 @Singleton
@@ -54,6 +56,28 @@ class OutStandingServiceImpl : OutStandingService {
         )
     }
 
+    override suspend fun getInvoiceList(zone: String?, orgId: String?, page: Int, page_limit: Int): MutableList<CustomerInvoiceResponse>? {
+        val offset = (page_limit * page) - page_limit
+//        val invoicesList = accountUtilizationRepository.fetchInvoice(zone, orgId, page, page_limit)
+
+//        invoicesList.forEach {
+//            Client.updateDocument("index_ares_invoice_outstanding", it.invoiceNumber.toString() ,it)
+//        }
+
+        val response = mutableListOf<CustomerInvoiceResponse>()
+
+        val list: SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().responseList(
+            searchKey = orgId,
+            classType = CustomerInvoiceResponse ::class.java,
+            index = AresConstants.INVOICE_OUTSTANDING_INDEX,
+            offset = offset,
+            limit = page_limit
+        )
+        list?.hits()?.hits()?.map {
+            it.source()?.let { it1 -> response.add(it1) }
+        }
+        return response
+    }
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(
             ageingDuration = ageDuration,

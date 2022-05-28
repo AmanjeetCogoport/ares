@@ -93,7 +93,7 @@ class PushToClientServiceImpl : PushToClientService {
     private fun updateCollectionTrend(zone: String?, quarter: Int?, year: Int, data: MutableList<CollectionTrend>?) {
         if (data.isNullOrEmpty()) return
         val collectionData = data.map { collectionTrendConverter.convertToModel(it) }
-        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX +"ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER +"Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
+        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
     }
     private fun updateOverallStats(zone: String?, data: OverallStats) {
@@ -104,7 +104,7 @@ class PushToClientServiceImpl : PushToClientService {
     }
     private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?) {
         if (data.isNullOrEmpty()) return
-        val monthlyTrend = data.map{ outstandingConverter.convertToModel(it) }
+        val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
         val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + zone
         Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
@@ -148,13 +148,13 @@ class PushToClientServiceImpl : PushToClientService {
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-        val invoicesDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.openInvoicesAmount!! } }.map { DueAmount(it.key,it.value) }
-        val paymentsDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.paymentsAmount!! } }.map { DueAmount(it.key,it.value) }
-        val outstandingDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.outstandingAmount!! } }.map { DueAmount(it.key,it.value) }
+        val invoicesDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.openInvoicesAmount!! } }.map { DueAmount(it.key, it.value) }
+        val paymentsDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.paymentsAmount!! } }.map { DueAmount(it.key, it.value) }
+        val outstandingDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.outstandingAmount!! } }.map { DueAmount(it.key, it.value) }
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-        val orgOutstandingId = if (zone.isNullOrBlank()) orgId +  AresConstants.KEY_DELIMITER + "ALL" else orgId + AresConstants.KEY_DELIMITER + zone
-        val orgOutstanding: CustomerOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount,invoicesDues), InvoiceStats(paymentsCount,paymentsDues), InvoiceStats(0, outstandingDues), null)
+        val orgOutstandingId = if (zone.isNullOrBlank()) orgId + AresConstants.KEY_DELIMITER + "ALL" else orgId + AresConstants.KEY_DELIMITER + zone
+        val orgOutstanding: CustomerOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
         Client.updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
     }
 }

@@ -5,8 +5,8 @@ import io.micronaut.http.annotation.QueryValue
 
 @Introspected
 data class OutstandingListRequest(
-    @QueryValue("zone") val zone: String?,
-    @QueryValue("role") val role: String?,
+    @QueryValue("zone") val zone: String? = null,
+    @QueryValue("role") val role: String? = null,
     @QueryValue("page") val page: Int = 1,
     @QueryValue("page_limit") val page_limit: Int = 10,
 )
