@@ -12,6 +12,10 @@ plugins {
     id("maven-publish")
 }
 
+jar {
+    archivesBaseName = 'ares-model'
+}
+
 group = "com.cogoport.ares"
 version = "0.1.0"
 
