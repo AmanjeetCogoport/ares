@@ -13,8 +13,10 @@ import java.util.UUID
 @MappedEntity(value = "account_utilizations")
 data class AccountUtilization(
     @field:Id @GeneratedValue var id: Long?,
-    var entityCode: Int,
     var documentNo: Long,
+    var documentValue: String?,
+    var zoneCode: String,
+    var entityCode: Int,
     var orgSerialId: Long,
     var organizationId: UUID,
     var organizationName: String?,
@@ -31,7 +33,5 @@ data class AccountUtilization(
     var transactionDate: LocalDate,
     var createdAt: LocalDateTime? = LocalDateTime.now(),
     var updatedAt: LocalDateTime? = LocalDateTime.now(),
-    var zoneCode: String,
     var docStatus: String,
-    var docValue: String?
 )
