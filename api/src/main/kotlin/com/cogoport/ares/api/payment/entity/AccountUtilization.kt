@@ -8,15 +8,17 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalDateTime
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @MappedEntity(value = "account_utilizations")
 data class AccountUtilization(
     @field:Id @GeneratedValue var id: Long?,
-    var entityCode: Int,
     var documentNo: Long,
+    var documentValue: String?,
+    var zoneCode: String,
+    var entityCode: Int,
     var orgSerialId: Long,
     var organizationId: UUID,
     var organizationName: String?,
@@ -29,12 +31,11 @@ data class AccountUtilization(
     var amountLoc: BigDecimal,
     var payCurr: BigDecimal = 0.toBigDecimal(),
     var payLoc: BigDecimal = 0.toBigDecimal(),
-    var dueDate: LocalDate,
-    var transactionDate: LocalDate,
-    var createdAt: LocalDateTime? = LocalDateTime.now(),
-    var modifiedAt: LocalDateTime? = LocalDateTime.now(),
-    var zoneCode: String,
-    var docStatus: DocStatus,
+    var dueDate: Timestamp,
+    var transactionDate: Timestamp,
+    var createdAt: Timestamp? = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var docStatus: String,
     var docValue: String?,
     var serviceType: ServiceType,
     var currency: String,

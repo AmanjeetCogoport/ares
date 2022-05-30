@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.config
 
+import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.CollectionTrendMapper
 import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.InvoiceMapper
@@ -18,6 +19,11 @@ class MapperConfig {
     @Bean
     fun getPaymentConverter(): PaymentToPaymentMapper {
         return Mappers.getMapper(PaymentToPaymentMapper::class.java)
+    }
+
+    @Bean
+    fun getAccountUtilizationConverter(): AccountUtilizationMapper {
+        return Mappers.getMapper(AccountUtilizationMapper::class.java)
     }
 
     @Bean
