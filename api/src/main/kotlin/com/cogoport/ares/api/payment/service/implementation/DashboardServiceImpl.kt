@@ -203,10 +203,18 @@ class DashboardServiceImpl : DashboardService {
             }
 
             val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "")
-            receivableNorthBucket.add(res)
-            receivableSouthBucket.add(res)
-            receivableEastBucket.add(res)
-            receivableWestBucket.add(res)
+            if (receivableNorthBucket.isEmpty()) {
+                receivableNorthBucket.add(res)
+            }
+            if (receivableSouthBucket.isEmpty()) {
+                receivableSouthBucket.add(res)
+            }
+            if (receivableEastBucket.isEmpty()) {
+                receivableEastBucket.add(res)
+            }
+            if (receivableWestBucket.isEmpty()) {
+                receivableWestBucket.add(res)
+            }
 
             receivableByAgeViaZone[0].ageingBucket = receivableNorthBucket
             receivableByAgeViaZone[1].ageingBucket = receivableSouthBucket
