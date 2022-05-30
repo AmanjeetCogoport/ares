@@ -32,7 +32,7 @@ import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.time.LocalDateTime
 
-@Client("http://localhost:8087/payment")
+@Client(id = "ares-service")
 interface AresClient {
     @Get("/dashboard/overall-stats{?request*}")
     public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStats?
