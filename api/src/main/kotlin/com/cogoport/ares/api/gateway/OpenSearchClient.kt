@@ -53,8 +53,7 @@ class OpenSearchClient {
         val response = Client.search(
             { s ->
                 s.index(index).query {
-                    q ->
-                    q.ids { i -> i.values(values) }
+                    q -> q.ids { i -> i.values(values) }
                 }.from(offset).size(limit)
             },
             classType

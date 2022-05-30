@@ -145,16 +145,10 @@ class DashboardServiceImpl : DashboardService {
         return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
     }
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
-        val response = Client.search(
-            { s ->
-                s.index(AresConstants.SALES_DASHBOARD_INDEX).query {
-                    q ->
-                    q.ids { i -> i.values(key) }
-                }.from(0).size(12)
-            },
-            DailyOutstandingResponse::class.java
-        )
-        return response
+        return OpenSearchClient().listApi(
+            index = AresConstants.SALES_DASHBOARD_INDEX,
+            classType = DailyOutstandingResponse::class.java,
+            values = key)
     }
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
         return when (quarter) {
