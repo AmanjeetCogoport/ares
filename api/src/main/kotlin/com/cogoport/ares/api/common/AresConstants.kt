@@ -1,15 +1,18 @@
 package com.cogoport.ares.api.common
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.sql.Timestamp
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
 import java.util.Calendar
 
 object AresConstants {
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = Calendar.getInstance().get(Calendar.YEAR)
-    val CURR_DATE: LocalDateTime = LocalDateTime.now()
+    val CURR_DATE: Timestamp = Timestamp.from(Instant.now())
 
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"
