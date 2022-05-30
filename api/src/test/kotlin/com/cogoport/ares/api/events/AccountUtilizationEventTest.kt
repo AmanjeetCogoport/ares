@@ -16,13 +16,15 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @MicronautTest
 internal class AccountUtilizationEventTest {
 
     @Inject
-    lateinit var emitter: AccountUtilizationEmitter
+    lateinit var emitter: AresKafkaEmitter
 
     @Inject
     lateinit var invoiceService: InvoiceService
@@ -57,8 +59,8 @@ internal class AccountUtilizationEventTest {
                     zoneCode = "North",
                     docStatus = "Proforma",
                     docValue = "IDK",
-                    dueDate = "2022-01-01",
-                    transactionDate = null
+                    dueDate = Timestamp.from(Instant.now()),
+                    transactionDate = Timestamp.from(Instant.now())
                 )
             )
         )
