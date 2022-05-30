@@ -10,7 +10,7 @@ import org.opensearch.client.opensearch.core.SearchResponse
 
 class OpenSearchClient {
 
-    fun <T : Any> response(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX): T? {
+    fun <T : Any> search(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX): T? {
 
         val response = Client.search(
             { s: SearchRequest.Builder ->
@@ -30,7 +30,7 @@ class OpenSearchClient {
         return outResp
     }
 
-    fun <T : Any> responseList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
 
         val response: SearchResponse<T>? = Client.search(
             { s ->
@@ -60,5 +60,9 @@ class OpenSearchClient {
             classType
         )
         return response
+    }
+
+    fun <T> updateDocument(index: String, docId: String, docData: T){
+        Client.updateDocument(index, docId, docData)
     }
 }

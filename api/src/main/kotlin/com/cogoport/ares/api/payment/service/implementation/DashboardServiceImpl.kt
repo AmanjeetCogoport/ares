@@ -64,7 +64,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
-        return OpenSearchClient().response(
+        return OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
@@ -80,9 +80,9 @@ class DashboardServiceImpl : DashboardService {
         return outstandingResponse.map { overallAgeingConverter.convertToModel(it) }
     }
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
-        validateInput(request.zone, request.role, request.quarter ?: 0)
+        validateInput(request.zone, request.role, request.quarter)
         val searchKey = searchKeyCollectionTrend(request)
-        return OpenSearchClient().response(
+        return OpenSearchClient().search(
             searchKey = searchKey,
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
@@ -94,7 +94,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
-        return OpenSearchClient().response(
+        return OpenSearchClient().search(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
@@ -103,7 +103,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
-        return OpenSearchClient().response(
+        return OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX

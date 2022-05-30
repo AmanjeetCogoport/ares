@@ -4,34 +4,34 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class OutstandingAgeingResponse(
-    @JsonProperty("organization_id")
-    val organization_id: String,
-    @JsonProperty("not_due_amount")
-    val not_due_amount: BigDecimal?,
-    @JsonProperty("thirty_amount")
-    val thirty_amount: BigDecimal?,
-    @JsonProperty("sixty_amount")
-    val sixty_amount: BigDecimal?,
-    @JsonProperty("ninety_amount")
-    val ninety_amount: BigDecimal?,
-    @JsonProperty("oneeighty_amount")
-    val oneeighty_amount: BigDecimal?,
-    @JsonProperty("threesixfive_amount")
-    val threesixfive_amount: BigDecimal?,
-    @JsonProperty("threesixfiveplus_amount")
-    val threesixfiveplus_amount: BigDecimal?,
-    @JsonProperty("not_due_count")
-    val not_due_count: Int,
-    @JsonProperty("thirty_count")
-    val thirty_count: Int,
-    @JsonProperty("sixty_count")
-    val sixty_count: Int,
-    @JsonProperty("ninety_count")
-    val ninety_count: Int,
-    @JsonProperty("oneeighty_count")
-    val oneeighty_count: Int,
-    @JsonProperty("threesixfive_count")
-    val threesixfive_count: Int,
-    @JsonProperty("threesixfiveplus_count")
-    val threesixfiveplus_count: Int
+    @JsonProperty("organizationId")
+    val organizationId: String?,
+    @JsonProperty("notDueAmount")
+    val notDueAmount: BigDecimal?,
+    @JsonProperty("thirtyAmount")
+    val thirtyAmount: BigDecimal?,
+    @JsonProperty("sixtyAmount")
+    val sixtyAmount: BigDecimal?,
+    @JsonProperty("ninetyAmount")
+    val ninetyAmount: BigDecimal?,
+    @JsonProperty("oneeightyAmount")
+    val oneeightyAmount: BigDecimal?,
+    @JsonProperty("threesixfiveAmount")
+    val threesixfiveAmount: BigDecimal?,
+    @JsonProperty("threesixfiveplusAmount")
+    val threesixfiveplusAmount: BigDecimal?,
+    @JsonProperty("notDueCount")
+    val notDueCount: Int,
+    @JsonProperty("thirtyCount")
+    val thirtyCount: Int,
+    @JsonProperty("sixtyCount")
+    val sixtyCount: Int,
+    @JsonProperty("ninetyCount")
+    val ninetyCount: Int,
+    @JsonProperty("oneeightyCount")
+    val oneeightyCount: Int,
+    @JsonProperty("threesixfiveCount")
+    val threesixfiveCount: Int,
+    @JsonProperty("threesixfiveplusCount")
+    val threesixfiveplusCount: Int
 )

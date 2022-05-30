@@ -10,6 +10,8 @@ import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
+import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.ServiceType
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.LocalDate
@@ -22,7 +24,7 @@ class InvoiceUtilizationImpl : InvoiceService {
 
     override suspend fun addInvoice(invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
 
-        var responseList = mutableListOf<CreateInvoiceResponse>()
+        val responseList = mutableListOf<CreateInvoiceResponse>()
 
         for (invoiceItem in invoiceRequestList) {
 
@@ -63,8 +65,12 @@ class InvoiceUtilizationImpl : InvoiceService {
                 null,
                 null,
                 invoiceItem.zoneCode,
-                invoiceItem.docStatus,
-                invoiceItem.docValue
+                DocStatus.valueOf(invoiceItem.docStatus),
+                invoiceItem.docValue,
+                ServiceType.valueOf(invoiceItem.serviceType),
+                invoiceItem.currency,
+                invoiceItem.ledCurrency,
+                invoiceItem.category,
             )
 
             val generatedId = accUtilRepository.save(acUtilization).id
@@ -108,8 +114,12 @@ class InvoiceUtilizationImpl : InvoiceService {
             null,
             null,
             invoiceRequest.zoneCode,
-            invoiceRequest.docStatus,
-            invoiceRequest.docValue
+            DocStatus.valueOf(invoiceRequest.docStatus),
+            invoiceRequest.docValue,
+            ServiceType.valueOf(invoiceRequest.serviceType),
+            invoiceRequest.currency,
+            invoiceRequest.ledCurrency,
+            invoiceRequest.category
         )
 
         accUtilRepository.save(acUtilization)

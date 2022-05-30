@@ -2,6 +2,8 @@ package com.cogoport.ares.api.payment.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -30,8 +32,12 @@ data class AccountUtilization(
     var dueDate: LocalDate,
     var transactionDate: LocalDate,
     var createdAt: LocalDateTime? = LocalDateTime.now(),
-    var updatedAt: LocalDateTime? = LocalDateTime.now(),
+    var modifiedAt: LocalDateTime? = LocalDateTime.now(),
     var zoneCode: String,
-    var docStatus: String,
-    var docValue: String?
+    var docStatus: DocStatus,
+    var docValue: String?,
+    var serviceType: ServiceType,
+    var currency: String,
+    var ledCurrency: String,
+    var category: String
 )

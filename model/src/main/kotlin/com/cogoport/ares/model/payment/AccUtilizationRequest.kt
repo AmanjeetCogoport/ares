@@ -22,5 +22,9 @@ data class AccUtilizationRequest(
     var docStatus: String,
     var docValue: String?,
     var dueDate: String?,
-    var transactionDate: String?
+    var transactionDate: String?,
+    var serviceType: String,
+    var currency: String,
+    var ledCurrency: String,
+    var category: String
 )

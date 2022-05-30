@@ -4,7 +4,7 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 @MappedEntity
 data class OutstandingAgeing(
-    val organization_id: String,
+    val organization_id: String?,
     val not_due_amount: BigDecimal?,
     val thirty_amount: BigDecimal?,
     val sixty_amount: BigDecimal?,

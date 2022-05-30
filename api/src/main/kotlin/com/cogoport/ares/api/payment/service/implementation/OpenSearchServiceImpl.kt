@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -11,8 +14,8 @@ import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
-import com.cogoport.ares.api.payment.model.PushToDashboardRequest
-import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.CollectionTrendResponse
@@ -21,12 +24,11 @@ import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
-class PushToClientServiceImpl : PushToClientService {
+class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -49,7 +51,7 @@ class PushToClientServiceImpl : PushToClientService {
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
 
-    override suspend fun pushDashboardData(request: PushToDashboardRequest) {
+    override suspend fun pushDashboardData(request: OpenSearchRequest) {
         val zone = request.zone
         val quarter = request.quarter
         val date = request.date
@@ -94,35 +96,35 @@ class PushToClientServiceImpl : PushToClientService {
         if (data.isNullOrEmpty()) return
         val collectionData = data.map { collectionTrendConverter.convertToModel(it) }
         val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
     }
     private fun updateOverallStats(zone: String?, data: OverallStats) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
         val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
         overallStatsData.id = statsId
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
     }
     private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?) {
         if (data.isNullOrEmpty()) return
         val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
         val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + zone
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
     private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?) {
         if (data.isNullOrEmpty()) return
         val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + zone
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
     private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
         val dsoResponse = dsoConverter.convertToModel(data)
         val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
     }
     private fun updateDailyPayablesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
         val dpoResponse = dpoConverter.convertToModel(data)
         val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year
-        Client.updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
     }
     private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
@@ -139,11 +141,14 @@ class PushToClientServiceImpl : PushToClientService {
         return CollectionResponse(totalAmount, totalCollected, trendData, id)
     }
     /** Outstanding Data */
-    override suspend fun pushOutstandingData(zone: String?, orgId: String) {
-        val orgOutstandingAllData = accountUtilizationRepository.generateOrgOutstanding(orgId, null)
-        updateOrgOutstanding(null, orgId, orgOutstandingAllData)
-        val orgOutstandingZoneData = accountUtilizationRepository.generateOrgOutstanding(orgId, zone)
-        updateOrgOutstanding(zone, orgId, orgOutstandingZoneData)
+    override suspend fun pushOutstandingData(request: OpenSearchRequest) {
+        if(request.orgId.isEmpty()){
+            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        }
+        val orgOutstandingAllData = accountUtilizationRepository.generateOrgOutstanding(request.orgId, null)
+        updateOrgOutstanding(null, request.orgId, orgOutstandingAllData)
+        val orgOutstandingZoneData = accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone)
+        updateOrgOutstanding(request.zone, request.orgId, orgOutstandingZoneData)
     }
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
@@ -154,7 +159,7 @@ class PushToClientServiceImpl : PushToClientService {
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
         val orgOutstandingId = if (zone.isNullOrBlank()) orgId + AresConstants.KEY_DELIMITER + "ALL" else orgId + AresConstants.KEY_DELIMITER + zone
-        val orgOutstanding: CustomerOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
-        Client.updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
+        val orgOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
+        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
     }
 }

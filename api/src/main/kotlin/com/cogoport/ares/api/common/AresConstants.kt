@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.IsoFields
@@ -32,4 +33,8 @@ object AresConstants {
     const val QUARTER = "quarter"
     const val YEAR = "year"
     const val DATE = "date"
+    const val ORG_ID = "org_id"
+    const val ORG_NAME = "org_name"
+    const val PAGE = "page"
+    const val PAGE_LIMIT = "page_limit"
 }

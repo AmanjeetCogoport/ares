@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.payment.model.PushToDashboardRequest
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.CollectionRequest
 import com.cogoport.ares.api.payment.model.DsoRequest
 import com.cogoport.ares.api.payment.model.OverallStatsRequest
@@ -10,7 +10,7 @@ import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
 import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.api.payment.service.interfaces.PushToClientService
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
@@ -32,7 +32,7 @@ class DashboardController {
     @Inject
     lateinit var dashboardService: DashboardService
     @Inject
-    lateinit var pushToClientService: PushToClientService
+    lateinit var pushToClientService: OpenSearchService
     @Get("/overall-stats{?request*}")
     suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse? {
         return Response<OverallStatsResponse?>().ok(dashboardService.getOverallStats(request))
@@ -57,10 +57,12 @@ class DashboardController {
     suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
         return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(request))
     }
+
     @Get("outstanding-by-age{?request*}")
     suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
         return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
     }
+
     @Get("/receivables-by-age{?request*}")
     suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
         return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
@@ -69,7 +71,7 @@ class DashboardController {
     /** To be Deleted */
 
     @Get("/open-search/add{?request*}")
-    suspend fun addToOpenSearch(@Valid request: PushToDashboardRequest) { return pushToClientService.pushDashboardData(request) }
+    suspend fun addToOpenSearch(@Valid request: OpenSearchRequest) { return pushToClientService.pushDashboardData(request) }
 
     @Delete("/index")
     suspend fun deleteIndex(@QueryValue("name") name: String) { return dashboardService.deleteIndex(name) }
