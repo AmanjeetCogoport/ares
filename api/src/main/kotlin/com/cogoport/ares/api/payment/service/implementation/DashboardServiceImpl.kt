@@ -30,15 +30,9 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
-import java.time.LocalDate
-import java.time.temporal.IsoFields
-import java.util.Calendar
+
 @Singleton
 class DashboardServiceImpl : DashboardService {
-
-    private val currQuarter = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
-    private val currYear = Calendar.getInstance().get(Calendar.YEAR)
-    private val currMonth = Calendar.getInstance().get(Calendar.MONTH)
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -52,9 +46,12 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun validateInput(zone: String?, role: String?, quarter: Int) {
+    private fun validateInput(zone: String?, role: String?, quarter: Int, year: Int) {
         if (quarter > 4 || quarter < 1) {
             throw AresException(AresError.ERR_1004, "")
+        }
+        else if (year.toString().length != 4) {
+            throw AresException(AresError.ERR_1006, "")
         }
         validateInput(zone, role)
     }
@@ -88,7 +85,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
-        validateInput(request.zone, request.role, request.quarter)
+        validateInput(request.zone, request.role, request.quarter, request.year)
         val searchKey = searchKeyCollectionTrend(request)
         return OpenSearchClient().search(
             searchKey = searchKey,
@@ -143,14 +140,14 @@ class DashboardServiceImpl : DashboardService {
             dpoList.add(DpoResponse(data!!.month, data.value))
         }
 
-        val currentKey = searchKeyDailyOutstanding(request.zone, currQuarter, currYear, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
         var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             averageDso += data!!.value
-            if (data.month == currMonth) {
+            if (data.month == AresConstants.CURR_MONTH) {
                 currentDso = currResponse.hits()!!.hits()[0].source()!!.value
             }
         }

@@ -13,6 +13,7 @@ object AresConstants {
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = Calendar.getInstance().get(Calendar.YEAR)
     val CURR_DATE: Timestamp = Timestamp.from(Instant.now())
+    val CURR_MONTH = Calendar.getInstance().get(Calendar.MONTH)
 
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"
@@ -36,8 +37,8 @@ object AresConstants {
     const val QUARTER = "quarter"
     const val YEAR = "year"
     const val DATE = "date"
-    const val ORG_ID = "org_id"
-    const val ORG_NAME = "org_name"
+    const val ORG_ID = "orgId"
+    const val ORG_NAME = "orgName"
     const val PAGE = "page"
-    const val PAGE_LIMIT = "page_limit"
+    const val PAGE_LIMIT = "pageLimit"
 }

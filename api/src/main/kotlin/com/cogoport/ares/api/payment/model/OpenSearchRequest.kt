@@ -11,6 +11,5 @@ data class OpenSearchRequest(
     @QueryValue(AresConstants.DATE) val date: String = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
     @QueryValue(AresConstants.QUARTER) val quarter: Int = AresConstants.CURR_QUARTER,
     @QueryValue(AresConstants.YEAR) val year: Int = AresConstants.CURR_YEAR,
-    @JsonProperty(AresConstants.ORG_ID)
     @QueryValue(AresConstants.ORG_ID) val orgId: String = ""
 )

@@ -9,9 +9,7 @@ import io.micronaut.http.annotation.QueryValue
 data class OutstandingListRequest(
     @QueryValue(AresConstants.ZONE) val zone: String? = null,
     @QueryValue(AresConstants.ROLE) val role: String? = null,
-    @JsonProperty(AresConstants.ORG_NAME)
     @QueryValue(AresConstants.ORG_NAME) val orgName: String? = "",
     @QueryValue(AresConstants.PAGE) val page: Int = 1,
-    @JsonProperty(AresConstants.PAGE_LIMIT)
     @QueryValue(AresConstants.PAGE_LIMIT) val pageLimit: Int = 10
 )
