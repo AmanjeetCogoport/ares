@@ -21,8 +21,10 @@ import java.math.BigDecimal
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService {
+
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
@@ -31,6 +33,7 @@ class OutStandingServiceImpl : OutStandingService {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
     }
+
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request.zone, request.role)
         val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%", request.page, request.pageLimit)
@@ -81,6 +84,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
         return response
     }
+
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(
             ageingDuration = ageDuration,

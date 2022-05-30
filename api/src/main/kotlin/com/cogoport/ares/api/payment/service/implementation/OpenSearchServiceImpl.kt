@@ -56,6 +56,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val quarter = request.quarter
         val date = request.date
         val year = request.year
+
         /** Collection Trend */
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse)
@@ -92,40 +93,47 @@ class OpenSearchServiceImpl : OpenSearchService {
         val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, date)
         updateDailyPayablesOutstanding(null, year, dailyPayablesAllData)
     }
+
     private fun updateCollectionTrend(zone: String?, quarter: Int?, year: Int, data: MutableList<CollectionTrend>?) {
         if (data.isNullOrEmpty()) return
         val collectionData = data.map { collectionTrendConverter.convertToModel(it) }
         val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
     }
+
     private fun updateOverallStats(zone: String?, data: OverallStats) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
         val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
         overallStatsData.id = statsId
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
     }
+
     private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?) {
         if (data.isNullOrEmpty()) return
         val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
         val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + zone
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
+
     private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?) {
         if (data.isNullOrEmpty()) return
         val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + zone
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
+
     private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
         val dsoResponse = dsoConverter.convertToModel(data)
         val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
     }
+
     private fun updateDailyPayablesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
         val dpoResponse = dpoConverter.convertToModel(data)
         val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
     }
+
     private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: Float? = null
@@ -140,6 +148,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         return CollectionResponse(totalAmount, totalCollected, trendData, id)
     }
+
     /** Outstanding Data */
     override suspend fun pushOutstandingData(request: OpenSearchRequest) {
         if(request.orgId.isEmpty()){
@@ -150,6 +159,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val orgOutstandingZoneData = accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone)
         updateOrgOutstanding(request.zone, request.orgId, orgOutstandingZoneData)
     }
+
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }

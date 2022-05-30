@@ -35,6 +35,7 @@ import java.time.temporal.IsoFields
 import java.util.Calendar
 @Singleton
 class DashboardServiceImpl : DashboardService {
+
     private val currQuarter = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     private val currYear = Calendar.getInstance().get(Calendar.YEAR)
     private val currMonth = Calendar.getInstance().get(Calendar.MONTH)
@@ -44,23 +45,28 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var overallAgeingConverter: OverallAgeingMapper
+
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
     }
+
     private fun validateInput(zone: String?, role: String?, quarter: Int) {
         if (quarter > 4 || quarter < 1) {
             throw AresException(AresError.ERR_1004, "")
         }
         validateInput(zone, role)
     }
+
     override suspend fun deleteIndex(index: String) {
         Client.deleteIndex(index)
     }
+
     override suspend fun createIndex(index: String) {
         Client.createIndex(index)
     }
+
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
@@ -70,6 +76,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
+
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
         return if (request.zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + request.zone
     }
@@ -79,6 +86,7 @@ class DashboardServiceImpl : DashboardService {
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
         return outstandingResponse.map { overallAgeingConverter.convertToModel(it) }
     }
+
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
         validateInput(request.zone, request.role, request.quarter)
         val searchKey = searchKeyCollectionTrend(request)
@@ -88,9 +96,11 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
+
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
         return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter
     }
+
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
@@ -100,6 +110,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
+
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
@@ -109,6 +120,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
     }
+
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
         validateInput(request.zone, request.role)
         val searchKeySales = mutableListOf<String>()
@@ -144,12 +156,14 @@ class DashboardServiceImpl : DashboardService {
         }
         return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
     }
+
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
         return OpenSearchClient().listApi(
             index = AresConstants.SALES_DASHBOARD_INDEX,
             classType = DailyOutstandingResponse::class.java,
             values = key)
     }
+
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
         return when (quarter) {
             1 -> { generateKeyByMonth(listOf("1", "2", "3"), zone, year, index) }
@@ -159,6 +173,7 @@ class DashboardServiceImpl : DashboardService {
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
     }
+
     private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
@@ -169,8 +184,8 @@ class DashboardServiceImpl : DashboardService {
         }
         return keyList
     }
-    override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
 
+    override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
         val payment = accountUtilizationRepository.getReceivableByAge(request.zone)
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
         val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
@@ -235,6 +250,7 @@ class DashboardServiceImpl : DashboardService {
             receivableByAgeViaZone = receivableByAgeViaZone
         )
     }
+
     private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): AgeingBucketZone {
         return AgeingBucketZone(
             ageingDuration = response!!.ageingDuration,
