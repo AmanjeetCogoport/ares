@@ -34,7 +34,6 @@ import jakarta.inject.Singleton
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
-import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -265,47 +264,10 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
         validateInput(request.zone, request.role)
-        val totalSales = Client.search(
-            { s ->
-                s.index("index_invoices")
-                    .size(0)
-                    .aggregations("total_sales"){ a ->
-                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
-                            .aggregations("amount") { a ->
-                                a.sum { s -> s.field("invoiceAmount") }
-                            }
-                    }
-            },Void::class.java
-        )
-        val creditSales = Client.search(
-            { s ->
-                s.index("index_invoices")
-                    .query { q ->
-                        q.bool{ b ->
-                            if (request.zone.isNullOrBlank()) {
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
-                            }
-                            else {
-                                b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(request.zone)) } }
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
-                            }
-                        }
-                    }
-                    .size(0)
-
-                    .aggregations("credit_sales"){ a ->
-                        a.global { g -> g }
-                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
-                            .aggregations("amount") { a ->
-                                a.sum { s -> s.field("invoiceAmount") }
-                            }
-                    }
-            },Void::class.java
-        )
-        val totalSalesResponse = totalSales?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
-        val creditSalesResponse = creditSales?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales()?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
         val output = mutableListOf<SalesTrend>()
-        for(t in totalSalesResponse){
+        for( t in totalSalesResponse){
             creditSalesResponse.forEach {
                 if(it["key"] == t["key"]) {
                     output.add(
