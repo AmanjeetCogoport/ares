@@ -1,11 +1,8 @@
 package com.cogoport.ares.api.common
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
 import java.util.Calendar
 

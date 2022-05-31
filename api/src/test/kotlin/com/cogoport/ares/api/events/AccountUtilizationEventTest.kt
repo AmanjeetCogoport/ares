@@ -43,7 +43,6 @@ internal class AccountUtilizationEventTest {
                 accUtilizationRequest = AccUtilizationRequest(
                     documentNo = 123,
                     entityCode = 1,
-                    entityId = "123",
                     organizationId = UUID(10, 10),
                     orgSerialId = 10,
                     sageOrganizationId = "101",
@@ -60,7 +59,11 @@ internal class AccountUtilizationEventTest {
                     docStatus = "Proforma",
                     docValue = "IDK",
                     dueDate = Timestamp.from(Instant.now()),
-                    transactionDate = Timestamp.from(Instant.now())
+                    transactionDate = Timestamp.from(Instant.now()),
+                    serviceType = "FCL",
+                    category = "asset",
+                    currency = "INR",
+                    ledCurrency = "INR"
                 )
             )
         )

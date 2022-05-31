@@ -13,6 +13,7 @@ enum class AresError(
     ERR_1201("ERR_12101", "Document number already exists", HttpStatus.BAD_REQUEST),
     ERR_1004("ERR_1004", "Invalid Quarter : ", HttpStatus.BAD_REQUEST),
     ERR_1005("ERR_1005", "Data not found", HttpStatus.NO_CONTENT),
+    ERR_1203("ERR_1203", "Invalid date format", HttpStatus.BAD_REQUEST),
     ERR_1202("ERR_1202", "Invalid account type for invoice", HttpStatus.BAD_REQUEST),
     ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST);
 

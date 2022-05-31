@@ -15,7 +15,7 @@ class AresKafkaListener {
 
     @Topic("account-utilization")
     fun listenAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
-        invoiceService.accountUtilization(accountUtilizationEvent.accUtilizationRequest)
+        invoiceService.addInvoice(accountUtilizationEvent.accUtilizationRequest)
     }
 
     @Topic("receivables-dashboard-data")

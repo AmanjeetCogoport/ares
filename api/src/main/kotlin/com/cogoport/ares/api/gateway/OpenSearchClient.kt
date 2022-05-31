@@ -56,7 +56,8 @@ class OpenSearchClient {
         val response = Client.search(
             { s ->
                 s.index(index).query {
-                    q -> q.ids { i -> i.values(values) }
+                    q ->
+                    q.ids { i -> i.values(values) }
                 }.from(offset).size(limit)
             },
             classType
@@ -64,7 +65,7 @@ class OpenSearchClient {
         return response
     }
 
-    fun <T> updateDocument(index: String, docId: String, docData: T){
+    fun <T> updateDocument(index: String, docId: String, docData: T) {
         Client.updateDocument(index, docId, docData)
     }
 

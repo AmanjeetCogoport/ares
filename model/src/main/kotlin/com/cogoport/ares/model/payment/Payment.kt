@@ -2,8 +2,7 @@ package com.cogoport.ares.model.payment
 
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalDateTime
+import java.sql.Timestamp
 import java.util.UUID
 
 @Introspected
@@ -28,9 +27,9 @@ data class Payment(
     var bankId: Int?,
     var utr: String?,
     var refPaymentId: Long?,
-    var transactionDate: LocalDate?,
+    var transactionDate: Timestamp?,
     var isPosted: Boolean,
     var isDeleted: Boolean,
-    var createdAt: LocalDateTime?,
-    var updatedAt: LocalDateTime
+    var createdAt: Timestamp?,
+    var updatedAt: Timestamp?
 )
