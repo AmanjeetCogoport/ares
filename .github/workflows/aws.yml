@@ -1,0 +1,87 @@
+name: Deploy to Amazon ECS
+
+on:
+  push:
+    branches:
+      - staging
+
+env:
+  REGISTRY: ghcr.io
+  REPO_URL: ghcr.io/cogoport/ares     # set this to your GitHub package url
+  GH_CR_USER: cogoport-dev            # set this to your GitHub username
+  AWS_REGION: ap-south-1              # set this to your preferred AWS region, e.g. us-west-1
+  ECS_SERVICE: ares-service           # set this to your Amazon ECS service name
+  ECS_CLUSTER: cogoport               # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: ares-td        # set this to your task definition name
+  CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
+  MICRONAUT_ENVIRONMENTS: server
+  GITHUB_USERNAME: $GH_CR_USER
+  GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.GH_CR_USER }}
+          password: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: 'latest'
+          java-version: '17'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate docker image name
+        id: image_name
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Build and Push image to Github CR
+        id: build-image
+        env:
+          IMAGE_TAG: ${{ steps.image_name.outputs.sha_short }}
+        run: |
+          ./gradlew optimizedDockerBuildNative
+          echo $IMAGE_TAG          
+          docker push ${{ env.REPO_URL }}:latest
+          docker tag ${{ env.REPO_URL }}:latest ${{ env.REPO_URL }}:$IMAGE_TAG
+          docker push ${{ env.REPO_URL }}:$IMAGE_TAG
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ECS_DEPLOY_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.ECS_DEPLOY_AWS_SECRET_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download task definition json
+        run: |
+            aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --query taskDefinition | jq -r 'del(
+              .taskDefinitionArn,
+              .requiresAttributes,
+              .compatibilities,
+              .revision,
+              .status,
+              .registeredAt,
+              .registeredBy
+            )' > task-definition.json          
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

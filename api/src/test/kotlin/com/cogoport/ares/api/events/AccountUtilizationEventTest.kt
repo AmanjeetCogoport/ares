@@ -22,7 +22,7 @@ import java.util.UUID
 internal class AccountUtilizationEventTest {
 
     @Inject
-    lateinit var emitter: AccountUtilizationEmitter
+    lateinit var emitter: AresKafkaEmitter
 
     @Inject
     lateinit var invoiceService: InvoiceService
