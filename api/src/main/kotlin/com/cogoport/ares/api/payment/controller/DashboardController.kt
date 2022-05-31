@@ -18,12 +18,15 @@ import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.brahma.opensearch.Client
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.Time
 import javax.validation.Valid
 
 @Validated
@@ -78,4 +81,28 @@ class DashboardController {
 
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
+
+    @Get("/test")
+    suspend fun test(){
+        val response = Client.search(
+                { s ->
+                    s.index("index_invoices")
+                        .query { q ->
+                            q.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
+                        }
+                        .size(0)
+                        .aggregations("total_sales"){ a ->
+                            a.global()
+                                .aggregations("sales_per_month"){ a ->
+                                    a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                                        .aggregations("sales") { a ->
+                                            a.sum { s -> s.field("invoiceAmount") }
+                                        }
+                                }
+
+
+                        }
+                },Any::class.java
+            )
+    }
 }
