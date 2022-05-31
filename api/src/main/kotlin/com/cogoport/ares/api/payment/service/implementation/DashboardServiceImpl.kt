@@ -49,8 +49,7 @@ class DashboardServiceImpl : DashboardService {
     private fun validateInput(zone: String?, role: String?, quarter: Int, year: Int) {
         if (quarter > 4 || quarter < 1) {
             throw AresException(AresError.ERR_1004, "")
-        }
-        else if (year.toString().length != 4) {
+        } else if (year.toString().length != 4) {
             throw AresException(AresError.ERR_1006, "")
         }
         validateInput(zone, role)
@@ -158,7 +157,8 @@ class DashboardServiceImpl : DashboardService {
         return OpenSearchClient().listApi(
             index = AresConstants.SALES_DASHBOARD_INDEX,
             classType = DailyOutstandingResponse::class.java,
-            values = key)
+            values = key
+        )
     }
 
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {

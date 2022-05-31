@@ -5,7 +5,6 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
-import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
@@ -33,8 +32,8 @@ open class InvoiceUtilizationImpl : InvoiceService {
             var accType: AccountType
             try {
                 accType = AccountType.valueOf(invoiceItem.accType)
-            }catch (ex:IllegalArgumentException){
-                throw AresException(AresError.ERR_1202," accType")
+            } catch (ex: IllegalArgumentException) {
+                throw AresException(AresError.ERR_1202, " accType")
             }
 
             if (accUtilRepository.isDocumentNumberExists(invoiceItem.documentNo, accType.name)) {
@@ -51,9 +50,6 @@ open class InvoiceUtilizationImpl : InvoiceService {
             ) {
                 throw AresException(AresError.ERR_1202, " accType")
             }
-            val dueDate = Utilities.getTimeStampFromString(invoiceItem.dueDate!!)
-            val transactionDate = Utilities.getTimeStampFromString(invoiceItem.transactionDate!!)
-
             val acUtilization = AccountUtilization(
                 null,
                 invoiceItem.documentNo,
@@ -77,8 +73,8 @@ open class InvoiceUtilizationImpl : InvoiceService {
                 invoiceItem.ledgerAmount,
                 invoiceItem.currencyPayment,
                 invoiceItem.ledgerPayment,
-                dueDate,
-                transactionDate,
+                invoiceItem.dueDate!!,
+                invoiceItem.transactionDate!!,
                 Timestamp.valueOf(LocalDateTime.now()),
                 Timestamp.valueOf(LocalDateTime.now())
             )
@@ -93,8 +89,8 @@ open class InvoiceUtilizationImpl : InvoiceService {
         val accType: AccountType
         try {
             accType = AccountType.valueOf(invoiceRequest.accType)
-        }catch (ex:IllegalArgumentException){
-            throw AresException(AresError.ERR_1202," accType")
+        } catch (ex: IllegalArgumentException) {
+            throw AresException(AresError.ERR_1202, " accType")
         }
 
         if (accUtilRepository.isDocumentNumberExists(invoiceRequest.documentNo, accType.name)) {
@@ -109,9 +105,6 @@ open class InvoiceUtilizationImpl : InvoiceService {
         ) {
             throw AresException(AresError.ERR_1202, "accType")
         }
-
-        val dueDate = Utilities.getTimeStampFromString(invoiceRequest.dueDate!!)
-        val transactionDate = Utilities.getTimeStampFromString(invoiceRequest.transactionDate!!)
 
         val acUtilization = AccountUtilization(
             null,
@@ -136,8 +129,8 @@ open class InvoiceUtilizationImpl : InvoiceService {
             invoiceRequest.ledgerAmount,
             invoiceRequest.currencyPayment,
             invoiceRequest.ledgerPayment,
-            dueDate,
-            transactionDate,
+            invoiceRequest.dueDate!!,
+            invoiceRequest.transactionDate!!,
             Timestamp.valueOf(LocalDateTime.now()),
             Timestamp.valueOf(LocalDateTime.now())
         )

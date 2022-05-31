@@ -28,10 +28,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 
-    @Query(""""select id,document_no,document_value,entity_code,document_status  from account_utilizations 
+    @Query(
+        """"select id,document_no,document_value,entity_code,document_status  from account_utilizations 
                 where document_no =:documentNo and acc_type=:accType"
-            """")
-    suspend fun getAccountUtilization(documentNo: Long,accType: String)
+            """"
+    )
+    suspend fun getAccountUtilization(documentNo: Long, accType: String)
 
     @Query(
         """update account_utilizations set 

@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.model
 
 import com.cogoport.ares.api.common.AresConstants
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.http.annotation.QueryValue
 
 data class InvoiceListRequest(
