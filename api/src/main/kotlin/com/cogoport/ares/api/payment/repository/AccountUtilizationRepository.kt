@@ -6,15 +6,30 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import java.math.BigDecimal
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
 
-    @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType)")
+    @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
+
+    @Query("select id from account_utilizations where document_no=:documentNo and acc_type=:accType")
+    suspend fun getAccountUtilizationId(documentNo: Long, accType: String): Long
 
     @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
+
+    @Query(""""select id,document_no,document_value,entity_code,document_status  from account_utilizations 
+                where document_no =:documentNo and acc_type=:accType"
+            """")
+    suspend fun getAccountUtilization(documentNo: Long,accType: String)
+
+    @Query(
+        """update account_utilizations set 
+              pay_curr = :currencyPay , pay_loc =:ledgerPay , modified_at =now() where id=:id"""
+    )
+    suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
     @Query(
         """select case when due_date  >= now() then 'Not Due'
