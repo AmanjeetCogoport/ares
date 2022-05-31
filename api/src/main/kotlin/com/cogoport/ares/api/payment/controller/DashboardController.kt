@@ -27,6 +27,7 @@ import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.Time
+import org.opensearch.client.opensearch._types.aggregations.BucketsPath
 import javax.validation.Valid
 
 @Validated
@@ -84,25 +85,49 @@ class DashboardController {
 
     @Get("/test")
     suspend fun test(){
+//        val response = Client.search(
+//                { s ->
+//                    s.index("index_invoices")
+//                        .query { q ->
+//                            q.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
+//                        }
+//                        .size(0)
+//                        .aggregations("total_sales"){ a ->
+//                            a.global()
+//                                .aggregations("sales_per_month"){ a ->
+//                                    a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+//                                        .aggregations("sales") { a ->
+//                                            a.sum { s -> s.field("invoiceAmount") }
+//                                        }
+//                                }
+//
+//
+//                        }
+//                },Any::class.java
+//            )
+
         val response = Client.search(
-                { s ->
-                    s.index("index_invoices")
-                        .query { q ->
-                            q.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
-                        }
-                        .size(0)
-                        .aggregations("total_sales"){ a ->
-                            a.global()
-                                .aggregations("sales_per_month"){ a ->
-                                    a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
-                                        .aggregations("sales") { a ->
-                                            a.sum { s -> s.field("invoiceAmount") }
-                                        }
-                                }
-
-
-                        }
-                },Any::class.java
-            )
+            { s ->
+                s.index("index_invoices")
+                    .size(0)
+                    .aggregations("sales_per_month"){ a ->
+                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                            .aggregations("total_sales") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                            .aggregations("sales_on_credit") {
+                                    b-> b.filter {
+                                    q -> q.range {
+                                    r -> r.field("creditDays").gt(JsonData.of(0))
+                            }
+                            }.aggregations("credit_sales") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                            }.aggregations("sales-on-credit-percentage") {
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                    }
+            },Any::class.java
+        )
     }
 }
