@@ -2,13 +2,13 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class CollectionTrend(
+data class CollectionResponse(
     @JsonProperty("totalReceivableAmount")
-    var totalReceivableAmount: Float,
+    var totalReceivableAmount: Float?,
     @JsonProperty("totalCollectedAmount")
-    var totalCollectedAmount: Float,
+    var totalCollectedAmount: Float?,
     @JsonProperty("trend")
-    var trend: List<CollectionTrendResponse>,
-    @JsonProperty("docKey")
-    var docKey: String
+    var trend: MutableList<CollectionTrendResponse>,
+    @JsonProperty("id")
+    var id: String
 )
