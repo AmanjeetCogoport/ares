@@ -34,6 +34,9 @@ import jakarta.inject.Singleton
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.text.SimpleDateFormat
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -307,7 +310,7 @@ class DashboardServiceImpl : DashboardService {
                 if(it["key"] == t["key"]) {
                     output.add(
                         SalesTrend(
-                            month = it["key"].toString(),
+                            month = ZonedDateTime.parse(it["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
                             salesOnCredit = (it["value"].toString().toFloat() * 100) / t["value"].toString().toFloat()
                         ))
 

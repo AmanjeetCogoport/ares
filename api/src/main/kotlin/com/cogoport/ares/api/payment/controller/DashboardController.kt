@@ -28,13 +28,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import org.opensearch.client.json.JsonData
-import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Time
-import org.opensearch.client.opensearch._types.aggregations.GlobalAggregate
-import org.opensearch.client.opensearch.core.SearchRequest
-import java.math.BigDecimal
-import java.sql.Timestamp
-import java.time.format.DateTimeFormatter
 import javax.validation.Valid
 
 @Validated
@@ -79,6 +73,11 @@ class DashboardController {
         return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
     }
 
+    @Get("/sales-trend{?request*}")
+    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): MutableList<SalesTrend> {
+        return Response<MutableList<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
+    }
+
     /** To be Deleted */
 
     @Get("/open-search/add{?request*}")
@@ -90,10 +89,4 @@ class DashboardController {
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
-    @Get("/sales-trend{?request*}")
-    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): MutableList<SalesTrend> {
-        return Response<MutableList<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
-    }
 }
-
-
