@@ -16,8 +16,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
-import java.sql.Timestamp
-import java.time.Instant
 import java.util.UUID
 
 @MicronautTest
@@ -43,7 +41,6 @@ internal class AccountUtilizationEventTest {
                 accUtilizationRequest = AccUtilizationRequest(
                     documentNo = 123,
                     entityCode = 1,
-                    entityId = "123",
                     organizationId = UUID(10, 10),
                     orgSerialId = 10,
                     sageOrganizationId = "101",
@@ -59,8 +56,12 @@ internal class AccountUtilizationEventTest {
                     zoneCode = "North",
                     docStatus = "Proforma",
                     docValue = "IDK",
-                    dueDate = Timestamp.from(Instant.now()),
-                    transactionDate = Timestamp.from(Instant.now())
+                    dueDate = "2022-01-01",
+                    transactionDate = null,
+                    serviceType = "FCL",
+                    category = "asset",
+                    currency = "INR",
+                    ledCurrency = "INR"
                 )
             )
         )
