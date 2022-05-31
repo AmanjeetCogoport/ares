@@ -7,8 +7,8 @@ data class DailySalesOutstanding(
     val averageDsoForTheMonth: Float,
     @JsonProperty("averageDsoLast3Months")
     val averageDsoLast3Months: Float,
-    @JsonProperty("dso")
-    val dso: List<Dso>,
-    @JsonProperty("docKey")
-    val docKey: String
+    @JsonProperty("dsoResponse")
+    val dsoResponse: List<DsoResponse>,
+    @JsonProperty("dpoResponse")
+    val dpoResponse: List<DpoResponse>
 )

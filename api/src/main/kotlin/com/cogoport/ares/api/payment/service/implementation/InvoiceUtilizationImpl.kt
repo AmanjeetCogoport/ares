@@ -29,7 +29,7 @@ class InvoiceUtilizationImpl : InvoiceService {
 
     override suspend fun addInvoice(invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
 
-        var responseList = mutableListOf<CreateInvoiceResponse>()
+        val responseList = mutableListOf<CreateInvoiceResponse>()
 
         for (invoiceItem in invoiceRequestList) {
 

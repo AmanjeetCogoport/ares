@@ -1,120 +1,127 @@
-CREATE TYPE ACCOUNT_MODE AS ENUM ('ar', 'ap');
-create type PAYMENT_MODE as ENUM('dd','cash','cheque','net_banking','upi','bank');
-create type ACCOUNT_TYPE as ENUM ('sinv','pinv','scn','sdn','pcn','pdn','rec','pay');
+CREATE TYPE ACCOUNT_MODE AS ENUM ('AR', 'AP');
+CREATE TYPE PAYMENT_MODE as ENUM('DD','CASH','CHEQUE','NET_BANKING','UPI','BANK');
+CREATE TYPE ACCOUNT_TYPE as ENUM ('SINV','PINV','SCN','SDN','PCN','PDN','REC','PAY');
+create TYPE SERVICE_TYPE as ENUM ('FCL_FREIGHT','LCL_FREIGHT','AIR_FREIGHT','FTL_FREIGHT','LTL_FREIGHT','HAULAGE_FREIGHT','FCL_CUSTOMS','AIR_CUSTOMS','LCL_CUSTOMS');
+CREATE TYPE DOCUMENT_STATUS as ENUM ('FINAL','CANCELLED','PROFORMA');
 
 CREATE CAST (varchar AS ACCOUNT_MODE) WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS PAYMENT_MODE) WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS ACCOUNT_TYPE) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar as SERVICE_TYPE) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar as DOCUMENT_STATUS) WITH INOUT AS IMPLICIT;
 
-
-create  table account_master
-(
-    acc_code SERIAL constraint acc_master_code_pk primary key,
-    acc_short_desc  VARCHAR(10) NOT NULL,
-    acc_long_desc   VARCHAR(100),
-    created_at  TIMESTAMP NOT NULL  default NOW(),
-    updated_at TIMESTAMP   default NOW(),
-    is_active   BOOLEAN default true,
-    is_deleted boolean default false
-);
-
-create table account_country_mapping
-(
-    acc_code    INT,
-    country_code VARCHAR(10)    ,
-    created_at  timestamp   default now(),
-    updated_at timestamp   default now(),
-    is_active   boolean default true,
-    primary key(acc_code,country_code)
+CREATE  TABLE account_master (
+    acc_code serial NOT NULL,
+    acc_short_desc varchar(10) NOT NULL,
+    acc_long_desc varchar(100) NULL,
+    created_at timestamp NOT NULL DEFAULT now(),
+    modified_at timestamp NOT NULL DEFAULT now(),
+    is_active bool not NULL DEFAULT true,
+    is_deleted bool not NULL DEFAULT false,
+    CONSTRAINT acc_master_code_pk PRIMARY KEY (acc_code)
 );
 
 
-create table bank_master
-(
-  id SERIAL constraint bank_master_id_PK primary  key ,
-  bank_name VARCHAR(100) NOT NULL,
-  ifsc_code VARCHAR(15) null ,
-  branch_name varchar(50),
-  account_no varchar(30) not null,
-  swift_code varchar (40),
-  created_at timestamp default now(),
-  updated_at timestamp default now(),
-  is_active boolean default true,
-  is_deleted boolean default false
+CREATE  TABLE account_country_mapping (
+    acc_code int NOT NULL,
+    country_code varchar(10) NOT NULL,
+    created_at timestamp not NULL DEFAULT now(),
+    modified_at timestamp not NULL DEFAULT now(),
+    is_active bool not NULL DEFAULT true,
+    CONSTRAINT account_country_mapping_pkey PRIMARY KEY (acc_code, country_code)
 );
 
-create table acc_type_master
-(
- id SERIAL constraint acc_type_master_id_PK primary key,
- type_code varchar(10) constraint type_code_UQ unique not null,
- description varchar (100),
- created_at timestamp default now(),
- updated_at timestamp default now()
+CREATE TABLE bank_master (
+    id serial4 NOT NULL,
+    bank_name varchar(100) NOT NULL,
+    ifsc_code varchar(15) NULL,
+    branch_name varchar(50) NULL,
+    account_no varchar(30) NOT NULL,
+    swift_code varchar(40) NULL,
+    created_at timestamp NULL DEFAULT now(),
+    modified_at timestamp NULL DEFAULT now(),
+    is_active bool NULL DEFAULT true,
+    is_deleted bool NULL DEFAULT false,
+    CONSTRAINT bank_master_id_pk PRIMARY KEY (id)
 );
 
-
-create table ar_payment_files
-(
-    id  bigserial constraint ar_pay_file_PK primary key,
-    file_name   VARCHAR(50) NOT null,
-    file_url    VARCHAR(500)    NOT null,
-    bank_id INT references bank_master(id) null,
-    uploaded_by VARCHAR(50) NOT null,
-    is_deleted boolean not null default false,
-    is_posted   BOOLEAN not null default false  ,
-    created_at timestamp default now(),
-    updated_at timestamp default now()
+CREATE  TABLE payment_files (
+    id bigserial NOT NULL,
+    file_name varchar(50) NOT NULL,
+    file_url varchar(500) NOT NULL,
+    bank_id int  NULL,
+    uploaded_by varchar(50) NOT NULL,
+    is_deleted bool NOT NULL DEFAULT false,
+    is_posted bool NOT NULL DEFAULT false,
+    created_at timestamp NULL DEFAULT now(),
+    modified_at timestamp NULL DEFAULT now(),
+    CONSTRAINT ar_pay_file_pk PRIMARY KEY (id)
 );
+
+ALTER TABLE payment_files ADD CONSTRAINT ar_payment_files_bank_id_fkey FOREIGN KEY (bank_id) REFERENCES bank_master(id);
 
 create  table payments
 (
-  id bigserial constraint payments_PK primary key,
-  entity_code INT not null,
-  entity_id UUID not null,
-  file_id BIGINT,
-  org_serial_id BIGINT not null ,
-  sage_organization_id varchar (20),
-  organization_id uuid not null,
-  organization_name varchar(200),
-  acc_code INT references account_master(acc_code) not null,
-  acc_mode  ACCOUNT_MODE not null,
-  sign_flag smallint not null,
-  currency varchar (10) not null ,
-  amount decimal(13,4) not null default 0,
-  led_currency varchar (10) not null ,
-  led_amount decimal(13,4) not null default 0,
-  pay_mode PAYMENT_MODE,
-  narration varchar (200),
-  bank_id int references bank_master(id),
-  trans_ref_number varchar(50),
-  ref_payment_id bigint,
-  transaction_date date,
-  is_posted boolean not null default false,
-  is_deleted boolean not null default false,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+ id bigserial,
+ entity_code smallint not null,
+ file_id bigint  null,
+ org_serial_id int,
+ sage_organization_id varchar(20),
+ organization_id uuid,
+ organization_name varchar(200),
+ acc_code int  not null,
+ acc_mode account_mode not null,
+ sign_flag smallint not null,
+ currency varchar(10) NOT NULL,
+ amount numeric(13, 4) NOT NULL DEFAULT 0,
+ led_currency varchar(10) NOT NULL,
+ led_amount numeric(13, 4) NOT NULL DEFAULT 0,
+ pay_mode payment_mode NULL,
+ narration varchar(200) NULL,
+ bank_id int null,
+ trans_ref_number varchar(50) NULL,
+ ref_payment_id BIGINT NULL,
+ transaction_date date NULL,
+ is_posted bool NOT NULL DEFAULT false,
+ is_deleted bool NOT NULL DEFAULT false,
+ created_at timestamp NULL DEFAULT now(),
+ modified_at timestamp NULL DEFAULT now(),
+ CONSTRAINT payments_pk PRIMARY KEY (id)
 );
 
-create  table account_utilizations
-(
-  id bigserial constraint acc_utils_PK primary key,
-  document_no BIGINT not null ,
-  entity_code INT not null,
-  entity_id UUID not null,
-  org_serial_id BIGINT not null ,
-  sage_organization_id varchar (20),
-  organization_id uuid not null,
-  organization_name varchar(200),
-  acc_code INT references account_master(acc_code) not null,
-  acc_type ACCOUNT_TYPE not null,
-  acc_mode  ACCOUNT_MODE not null,
-  sign_flag smallint not null,
-  amount_curr   DECIMAL(13,4)   NOT null,
-  amount_loc    DECIMAL(13,4)   NOT null,
-  pay_curr  DECIMAL(13,4)   NOT null default 0,
-  pay_loc   DECIMAL(13,4)   NOT null default 0,
-  due_date date ,
-  transaction_date date,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+-- public.payments foreign keys
+ALTER TABLE payments ADD CONSTRAINT payments_acc_code_fkey FOREIGN KEY (acc_code) REFERENCES  account_master(acc_code);
+ALTER table payments ADD CONSTRAINT payments_bank_id_fkey FOREIGN KEY (bank_id) REFERENCES  bank_master(id);
+
+CREATE TABLE account_utilizations (
+    id bigserial NOT NULL,
+    document_no bigint  NOT NULL,
+    document_value varchar (25) null,
+    zone_code varchar(10) check(zone_code in ('NORTH','SOUTH','EAST','WEST')) not null,
+    service_type SERVICE_TYPE null,
+    doc_status DOCUMENT_STATUS not null,
+    entity_code int NOT NULL,
+    category varchar(20) check(category in('asset','non_asset')),
+    org_serial_id bigint NOT NULL,
+    sage_organization_id varchar(20) NULL,
+    organization_id uuid NULL,
+    organization_name varchar(200) NULL,
+    acc_code int NOT NULL,
+    acc_type account_type NOT NULL,
+    acc_mode account_mode NOT NULL,
+    sign_flag smallint NOT NULL,
+    currency varchar(10) not null,
+    led_currency varchar(10) not null,
+    amount_curr decimal(13, 4) NOT NULL,
+    amount_loc decimal(13, 4) NOT NULL,
+    pay_curr decimal(13, 4) NOT NULL DEFAULT 0,
+    pay_loc decimal(13, 4) NOT NULL DEFAULT 0,
+    due_date date NULL,
+    transaction_date date NULL,
+    created_at timestamp NULL DEFAULT now(),
+    modified_at timestamp NULL DEFAULT now(),
+    CONSTRAINT acc_utils_pk PRIMARY KEY (id)
 );
+
+-- public.account_utlizations foreign keys
+ALTER TABLE account_utilizations ADD CONSTRAINT account_utilizations_acc_code_fkey FOREIGN KEY (acc_code) REFERENCES account_master(acc_code)

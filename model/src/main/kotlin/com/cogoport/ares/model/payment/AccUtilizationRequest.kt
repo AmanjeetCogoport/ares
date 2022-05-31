@@ -22,6 +22,10 @@ data class AccUtilizationRequest(
     var ledgerAmount: BigDecimal,
     var currencyPayment: BigDecimal,
     var ledgerPayment: BigDecimal,
+    var serviceType: String,
+    var currency: String,
+    var ledCurrency: String,
+    var category: String,
     var dueDate: Timestamp,
     var transactionDate: Timestamp,
     var docStatus: String

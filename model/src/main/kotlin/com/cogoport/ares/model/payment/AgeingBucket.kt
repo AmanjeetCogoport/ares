@@ -1,9 +1,15 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class AgeingBucket(
-    val ageingDuration: String,
-    val amount: BigDecimal,
-    val zone: String?
+    @JsonProperty("ageingDuration")
+    var ageingDuration: String?,
+    @JsonProperty("amount")
+    var amount: BigDecimal?,
+    @JsonProperty("count")
+    var count: Int?,
+    @JsonProperty("ageingDurationKey")
+    var ageingDurationKey: String?
 )
