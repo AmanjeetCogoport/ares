@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
 import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
 import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
 import com.cogoport.ares.api.payment.model.ReceivableRequest
+import com.cogoport.ares.api.payment.model.SalesTrendRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -18,6 +19,7 @@ import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -26,7 +28,13 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Time
+import org.opensearch.client.opensearch._types.aggregations.GlobalAggregate
+import org.opensearch.client.opensearch.core.SearchRequest
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.format.DateTimeFormatter
 import javax.validation.Valid
 
 @Validated
@@ -82,27 +90,10 @@ class DashboardController {
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
-    @Get("/test")
-    suspend fun test(){
-        val response = Client.search(
-                { s ->
-                    s.index("index_invoices")
-                        .query { q ->
-                            q.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
-                        }
-                        .size(0)
-                        .aggregations("total_sales"){ a ->
-                            a.global()
-                                .aggregations("sales_per_month"){ a ->
-                                    a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
-                                        .aggregations("sales") { a ->
-                                            a.sum { s -> s.field("invoiceAmount") }
-                                        }
-                                }
-
-
-                        }
-                },Any::class.java
-            )
+    @Get("/sales-trend{?request*}")
+    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): MutableList<SalesTrend> {
+        return Response<MutableList<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
     }
 }
+
+

@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
 import com.cogoport.ares.api.payment.model.OverallStatsRequest
 import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
 import com.cogoport.ares.api.payment.model.ReceivableRequest
+import com.cogoport.ares.api.payment.model.SalesTrendRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
@@ -26,9 +27,12 @@ import com.cogoport.ares.model.payment.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
 
 @Singleton
@@ -254,5 +258,62 @@ class DashboardServiceImpl : DashboardService {
             amount = response.amount,
             zone = null
         )
+    }
+
+    override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
+        validateInput(request.zone, request.role)
+        val totalSales = Client.search(
+            { s ->
+                s.index("index_invoices")
+                    .size(0)
+                    .aggregations("total_sales"){ a ->
+                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                            .aggregations("amount") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                    }
+            },Void::class.java
+        )
+        val creditSales = Client.search(
+            { s ->
+                s.index("index_invoices")
+                    .query { q ->
+                        q.bool{ b ->
+                            if (request.zone.isNullOrBlank()) {
+                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            }
+                            else {
+                                b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(request.zone)) } }
+                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            }
+                        }
+                    }
+                    .size(0)
+
+                    .aggregations("credit_sales"){ a ->
+                        a.global { g -> g }
+                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                            .aggregations("amount") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                    }
+            },Void::class.java
+        )
+        val totalSalesResponse = totalSales?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val creditSalesResponse = creditSales?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val output = mutableListOf<SalesTrend>()
+        for(t in totalSalesResponse){
+            creditSalesResponse.forEach {
+                if(it["key"] == t["key"]) {
+                    output.add(
+                        SalesTrend(
+                            month = it["key"].toString(),
+                            salesOnCredit = (it["value"].toString().toFloat() * 100) / t["value"].toString().toFloat()
+                        ))
+
+                }
+            }
+        }
+        return if (output.size > 6) output.subList(output.size - 6,output.size) else output
     }
 }

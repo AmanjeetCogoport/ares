@@ -6,5 +6,5 @@ data class SalesTrend(
     @JsonProperty("month")
     val month: String,
     @JsonProperty("salesOnCredit")
-    val salesOnCredit: Double
+    val salesOnCredit: Float
 )
