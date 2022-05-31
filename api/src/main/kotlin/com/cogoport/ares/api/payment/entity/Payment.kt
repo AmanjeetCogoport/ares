@@ -6,8 +6,7 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalDateTime
+import java.sql.Timestamp
 import java.util.UUID
 
 @MappedEntity(value = "payments")
@@ -21,7 +20,7 @@ data class Payment(
     var sageOrganizationId: String?,
     var accCode: Int,
     var accMode: AccMode,
-    var signFlag: Int,
+    var signFlag: Short,
     var currency: String,
     var amount: BigDecimal,
     var ledCurrency: String,
@@ -30,10 +29,10 @@ data class Payment(
     var narration: String? = null,
     var transRefNumber: String?,
     var refPaymentId: Long?,
-    var transactionDate: LocalDate?,
+    var transactionDate: Timestamp?,
     var isPosted: Boolean,
     var isDeleted: Boolean,
-    var createdAt: LocalDateTime?,
-    var updatedAt: LocalDateTime,
-    var accountNo: String
+    var createdAt: Timestamp?,
+    var updatedAt: Timestamp?,
+    var accountNo: String?
 )

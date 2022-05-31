@@ -1,5 +1,5 @@
 package com.cogoport.ares.model.payment
 
 enum class AccountType(dbValue: String) {
-    SINV("sinv"), PINV("pinv"), SCN("scn"), SDN("sdn"), PCN("pcn"), PDN("pdn"), REC("rec"), PAY("pay");
+    SINV("SINV"), PINV("PINV"), SCN("SCN"), SDN("SDN"), PCN("PCN"), PDN("PDN"), REC("REC"), PAY("PAY");
 }

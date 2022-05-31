@@ -1,11 +1,12 @@
 package com.cogoport.ares.model.payment
+import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.util.UUID
 
+@Introspected
 data class AccUtilizationRequest(
     var documentNo: Long,
     var entityCode: Int,
-    var entityId: String,
     var orgSerialId: Long,
     var sageOrganizationId: String?,
     var organizationId: UUID?,
@@ -13,7 +14,9 @@ data class AccUtilizationRequest(
     var accCode: Int,
     var accType: String,
     var accMode: String,
-    var signFlag: Int,
+    var signFlag: Short,
+    var currency: String,
+    var ledCurrency: String,
     var currencyAmount: BigDecimal,
     var ledgerAmount: BigDecimal,
     var currencyPayment: BigDecimal,
@@ -22,5 +25,7 @@ data class AccUtilizationRequest(
     var docStatus: String,
     var docValue: String?,
     var dueDate: String?,
-    var transactionDate: String?
+    var transactionDate: String?,
+    var serviceType: String?,
+    var category: String?
 )
