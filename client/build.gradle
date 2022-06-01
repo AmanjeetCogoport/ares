@@ -18,7 +18,7 @@ jar {
 
 
 group = "com.cogoport.ares"
-version = "0.1.0"
+version = "0.1.1"
 
 dependencies {
     // Use the model subproject
@@ -40,6 +40,7 @@ publishing {
     }
     publications {
         gpr(MavenPublication) {
+            artifactId 'ares-client'
             from(components.java)
         }
     }
