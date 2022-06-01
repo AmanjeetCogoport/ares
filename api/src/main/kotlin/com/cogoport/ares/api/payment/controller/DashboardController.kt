@@ -1,13 +1,13 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.api.payment.model.CollectionRequest
-import com.cogoport.ares.api.payment.model.DsoRequest
-import com.cogoport.ares.api.payment.model.OverallStatsRequest
-import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
-import com.cogoport.ares.api.payment.model.ReceivableRequest
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.ReceivableRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService

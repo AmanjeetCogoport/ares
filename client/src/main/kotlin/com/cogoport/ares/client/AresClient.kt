@@ -1,16 +1,16 @@
 package com.cogoport.ares.client
 
-import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.payment.entity.CollectionTrend
-import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.payment.model.CollectionRequest
-import com.cogoport.ares.api.payment.model.DsoRequest
-import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
-import com.cogoport.ares.api.payment.model.OutstandingListRequest
-import com.cogoport.ares.api.payment.model.OverallStatsRequest
-import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.ReceivableRequest
+import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.CollectionTrend
+import com.cogoport.ares.model.payment.OverallStats
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.ReceivableRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
@@ -52,8 +52,8 @@ interface AresClient {
     /** Sales trend need to be deleted */
     @Get("/dashboard/sales-trend")
     public suspend fun getSalesTrend(
-        @QueryValue(AresConstants.ZONE) zone: String?,
-        @QueryValue(AresConstants.ROLE) role: String?
+        @QueryValue(AresModelConstants.ZONE) zone: String?,
+        @QueryValue(AresModelConstants.ROLE) role: String?
     ): SalesTrendResponse?
 
     @Get("/dashboard/outstanding-by-age{?request*}")
