@@ -1,20 +1,19 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import com.cogoport.ares.common.models.Messages
-import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentStatus
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.sql.Timestamp
-import java.time.LocalDateTime
+import java.text.DateFormat
 import javax.transaction.Transactional
 
 @Singleton
@@ -23,121 +22,53 @@ open class InvoiceUtilizationImpl : InvoiceService {
     @Inject
     lateinit var accUtilRepository: AccountUtilizationRepository
 
+    @Inject
+    lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var dateFormatter: DateFormat
+
+    @Inject
+    lateinit var accountUtilizationConverter: AccountUtilizationMapper
+
+    /**
+     * @param accUtilizationRequestList
+     * @return mutableListOf CreateInvoiceResponse
+     */
     @Transactional(Transactional.TxType.REQUIRES_NEW)
-    override suspend fun addInvoice(invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
-
+    override suspend fun addInvoice(accUtilizationRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
         val responseList = mutableListOf<CreateInvoiceResponse>()
-
-        for (invoiceItem in invoiceRequestList) {
-            var accType: AccountType
-            try {
-                accType = AccountType.valueOf(invoiceItem.accType)
-            } catch (ex: IllegalArgumentException) {
-                throw AresException(AresError.ERR_1202, " accType")
-            }
-
-            if (accUtilRepository.isDocumentNumberExists(invoiceItem.documentNo, accType.name)) {
-                responseList.add(CreateInvoiceResponse(0L, invoiceItem.documentNo, false, AresError.ERR_1201.message))
+        for (accUtilizationRequest in accUtilizationRequestList) {
+            if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType.name)) {
+                responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message))
                 continue
             }
-
-            if (!invoiceItem.accType.equals(AccountType.SINV.name, ignoreCase = true) &&
-                !invoiceItem.accType.equals(AccountType.PCN.name, ignoreCase = true) &&
-                !invoiceItem.accType.equals(AccountType.PDN.name, ignoreCase = true) &&
-                !invoiceItem.accType.equals(AccountType.PINV.name, ignoreCase = true) &&
-                !invoiceItem.accType.equals(AccountType.SCN.name, ignoreCase = true) &&
-                !invoiceItem.accType.equals(AccountType.SDN.name, ignoreCase = true)
-            ) {
-                throw AresException(AresError.ERR_1202, " accType")
-            }
-            val acUtilization = AccountUtilization(
-                null,
-                invoiceItem.documentNo,
-                invoiceItem.docValue,
-                invoiceItem.zoneCode,
-                invoiceItem.serviceType!!,
-                DocumentStatus.valueOf(invoiceItem.docStatus),
-                invoiceItem.entityCode,
-                invoiceItem.category!!,
-                invoiceItem.orgSerialId,
-                invoiceItem.sageOrganizationId,
-                invoiceItem.organizationId!!,
-                invoiceItem.organizationName,
-                invoiceItem.accCode,
-                accType,
-                AccMode.valueOf(invoiceItem.accMode),
-                invoiceItem.signFlag,
-                invoiceItem.currency,
-                invoiceItem.ledCurrency,
-                invoiceItem.currencyAmount,
-                invoiceItem.ledgerAmount,
-                invoiceItem.currencyPayment,
-                invoiceItem.ledgerPayment,
-                invoiceItem.dueDate!!,
-                invoiceItem.transactionDate!!,
-                Timestamp.valueOf(LocalDateTime.now()),
-                Timestamp.valueOf(LocalDateTime.now())
-            )
+            val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
             val generatedId = accUtilRepository.save(acUtilization).id
-            responseList.add(CreateInvoiceResponse(generatedId!!, invoiceItem.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
+            emitDashboardEvent(accUtilizationRequest)
+            responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
     }
 
-    override suspend fun addInvoice(invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
-
-        val accType: AccountType
-        try {
-            accType = AccountType.valueOf(invoiceRequest.accType)
-        } catch (ex: IllegalArgumentException) {
-            throw AresException(AresError.ERR_1202, " accType")
+    /**
+     * Add account utilization
+     * @param accUtilizationRequest
+     * @return CreateInvoiceResponse
+     */
+    override suspend fun addAccountUtilization(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
+        if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType.name)) {
+            return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message)
         }
-
-        if (accUtilRepository.isDocumentNumberExists(invoiceRequest.documentNo, accType.name)) {
-            return CreateInvoiceResponse(0L, invoiceRequest.documentNo, false, AresError.ERR_1201.message)
-        }
-        if (!invoiceRequest.accType.equals(AccountType.SINV.name, ignoreCase = true) &&
-            !invoiceRequest.accType.equals(AccountType.PCN.name, ignoreCase = true) &&
-            !invoiceRequest.accType.equals(AccountType.PDN.name, ignoreCase = true) &&
-            !invoiceRequest.accType.equals(AccountType.PINV.name, ignoreCase = true) &&
-            !invoiceRequest.accType.equals(AccountType.SCN.name, ignoreCase = true) &&
-            !invoiceRequest.accType.equals(AccountType.SDN.name, ignoreCase = true)
-        ) {
-            throw AresException(AresError.ERR_1202, "accType")
-        }
-
-        val acUtilization = AccountUtilization(
-            null,
-            invoiceRequest.documentNo,
-            invoiceRequest.docValue,
-            invoiceRequest.zoneCode,
-            invoiceRequest.serviceType!!,
-            DocumentStatus.valueOf(invoiceRequest.docStatus),
-            invoiceRequest.entityCode,
-            invoiceRequest.category!!,
-            invoiceRequest.orgSerialId,
-            invoiceRequest.sageOrganizationId,
-            invoiceRequest.organizationId!!,
-            invoiceRequest.organizationName,
-            invoiceRequest.accCode,
-            accType,
-            AccMode.valueOf(invoiceRequest.accMode),
-            invoiceRequest.signFlag,
-            invoiceRequest.currency,
-            invoiceRequest.ledCurrency,
-            invoiceRequest.currencyAmount,
-            invoiceRequest.ledgerAmount,
-            invoiceRequest.currencyPayment,
-            invoiceRequest.ledgerPayment,
-            invoiceRequest.dueDate!!,
-            invoiceRequest.transactionDate!!,
-            Timestamp.valueOf(LocalDateTime.now()),
-            Timestamp.valueOf(LocalDateTime.now())
-        )
+        val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
         val generatedId = accUtilRepository.save(acUtilization).id
-        return CreateInvoiceResponse(generatedId!!, invoiceRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
+        emitDashboardEvent(accUtilizationRequest)
+        return CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
     }
 
+    /**
+     *
+     */
     override suspend fun deleteInvoice(docNumber: Long, accType: String): Boolean {
         accUtilRepository.deleteInvoiceUtils(docNumber, accType)
         return true
@@ -145,5 +76,22 @@ open class InvoiceUtilizationImpl : InvoiceService {
 
     override suspend fun findByDocumentNo(docNumber: Long): AccountUtilization {
         return accUtilRepository.findByDocumentNo(docNumber)
+    }
+
+    /**
+     * Emit message to Kafka topic receivables-dashboard-data
+     * @param accUtilizationRequest
+     */
+    private fun emitDashboardEvent(accUtilizationRequest: AccUtilizationRequest) {
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    date = dateFormatter.format(accUtilizationRequest.dueDate),
+                    quarter = (accUtilizationRequest.dueDate!!.month / 3) + 1,
+                    year = accUtilizationRequest.dueDate!!.year
+                )
+            )
+        )
     }
 }

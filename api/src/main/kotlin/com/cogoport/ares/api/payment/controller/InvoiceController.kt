@@ -24,6 +24,6 @@ class InvoiceController {
 
     @Post
     suspend fun addInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
-        return invoiceService.addInvoice(invoiceRequest)
+        return invoiceService.addAccountUtilization(invoiceRequest)
     }
 }

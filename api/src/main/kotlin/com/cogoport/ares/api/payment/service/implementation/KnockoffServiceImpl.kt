@@ -41,10 +41,9 @@ open class KnockoffServiceImpl : KnockoffService {
             var accMode = AccMode.valueOf(knockOffRecord.accMode)
             var paymentMode = PayMode.valueOf(knockOffRecord.paymentMode!!)
             var accType = AccountType.valueOf(knockOffRecord.accType)
-            var accountUtilizationId = 0L
 
             /*1.Check if invoice exists for that record in account_utilizations table*/
-            accountUtilizationId = accountUtilizationRepository.getAccountUtilizationId(knockOffRecord.documentNo, knockOffRecord.accType)
+            var accountUtilizationId = accountUtilizationRepository.getAccountUtilizationId(knockOffRecord.documentNo, knockOffRecord.accType)
 
             if (accountUtilizationId.equals(0)) {
                 // Add error that this invoice cannot be processed due to invoice does not exists
