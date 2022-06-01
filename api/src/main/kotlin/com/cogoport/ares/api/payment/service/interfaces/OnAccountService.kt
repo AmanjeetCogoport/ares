@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.model.payment.AccountCollectionResponse
+import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.Payment
 import java.time.LocalDateTime
 
@@ -11,5 +12,5 @@ interface OnAccountService {
     suspend fun updatePaymentEntry(receivableRequest: Payment): Payment?
 //    suspend fun updatePostOnPaymentEntry(paymentId: Long): Long?
     suspend fun deletePaymentEntry(paymentId: Long): String?
-    suspend fun createBulkOnAccountPayments(): Void?
+    suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse
 }
