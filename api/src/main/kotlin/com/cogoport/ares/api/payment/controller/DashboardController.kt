@@ -1,14 +1,14 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.api.payment.model.CollectionRequest
-import com.cogoport.ares.api.payment.model.DsoRequest
-import com.cogoport.ares.api.payment.model.OverallStatsRequest
-import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
-import com.cogoport.ares.api.payment.model.ReceivableRequest
 import com.cogoport.ares.api.payment.model.SalesTrendRequest
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.ReceivableRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -20,15 +20,12 @@ import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OverallStatsResponse
 import com.cogoport.ares.model.payment.SalesTrend
-import com.cogoport.brahma.opensearch.Client
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import org.opensearch.client.json.JsonData
-import org.opensearch.client.opensearch._types.Time
 import javax.validation.Valid
 
 @Validated

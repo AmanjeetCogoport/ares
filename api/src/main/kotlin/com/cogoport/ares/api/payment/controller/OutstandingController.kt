@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.model.InvoiceListRequest
-import com.cogoport.ares.api.payment.model.OutstandingListRequest
+import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.OutstandingList
