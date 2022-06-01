@@ -1,15 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-<<<<<<< HEAD
-import com.cogoport.ares.api.payment.model.CollectionRequest
-import com.cogoport.ares.api.payment.model.DsoRequest
-import com.cogoport.ares.api.payment.model.MonthlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.OutstandingAgeingRequest
-import com.cogoport.ares.api.payment.model.OverallStatsRequest
-import com.cogoport.ares.api.payment.model.QuarterlyOutstandingRequest
-import com.cogoport.ares.api.payment.model.ReceivableRequest
-import com.cogoport.ares.api.payment.model.SalesTrendRequest
-=======
+import com.cogoport.ares.model.payment.SalesTrendRequest
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -17,7 +8,6 @@ import com.cogoport.ares.model.payment.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.OverallStatsRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableRequest
->>>>>>> ee7d438822e355c42e058b932636170492132656
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsResponse
 import com.cogoport.ares.model.payment.CollectionResponse
