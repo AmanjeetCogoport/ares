@@ -7,8 +7,6 @@ import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.sql.Timestamp
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.util.UUID
 
 @MappedEntity(value = "payments")

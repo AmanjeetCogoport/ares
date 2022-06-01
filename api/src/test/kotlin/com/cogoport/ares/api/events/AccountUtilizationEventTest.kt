@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.sql.Timestamp
 import java.util.UUID
 
 @MicronautTest
@@ -57,7 +58,7 @@ internal class AccountUtilizationEventTest {
                     zoneCode = "North",
                     docStatus = "Proforma",
                     docValue = "IDK",
-                    dueDate = "2022-01-01",
+                    dueDate = Timestamp.valueOf("2022-01-01"),
                     transactionDate = null
                 )
             )

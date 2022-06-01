@@ -12,8 +12,6 @@ import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.sql.Timestamp
-import java.time.LocalDate
 
 @Singleton
 class InvoiceUtilizationImpl : InvoiceService {
@@ -59,8 +57,8 @@ class InvoiceUtilizationImpl : InvoiceService {
                 amountLoc = invoiceItem.ledgerAmount,
                 payCurr = invoiceItem.currencyPayment,
                 payLoc = invoiceItem.ledgerPayment,
-                dueDate = Timestamp.valueOf(invoiceItem.dueDate),
-                transactionDate = Timestamp.valueOf(invoiceItem.transactionDate),
+                dueDate = invoiceItem.dueDate,
+                transactionDate = invoiceItem.transactionDate,
                 zoneCode = invoiceItem.zoneCode,
                 docStatus = invoiceItem.docStatus,
                 documentValue = invoiceItem.docValue
@@ -102,8 +100,8 @@ class InvoiceUtilizationImpl : InvoiceService {
             amountLoc = invoiceRequest.ledgerAmount,
             payCurr = invoiceRequest.currencyPayment,
             payLoc = invoiceRequest.ledgerPayment,
-            dueDate = Timestamp.valueOf(invoiceRequest.dueDate),
-            transactionDate = Timestamp.valueOf(invoiceRequest.transactionDate),
+            dueDate = invoiceRequest.dueDate,
+            transactionDate = invoiceRequest.transactionDate,
             zoneCode = invoiceRequest.zoneCode,
             docStatus = invoiceRequest.docStatus,
             documentValue = invoiceRequest.docValue

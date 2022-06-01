@@ -28,5 +28,4 @@ class S3ClientProvider {
             }
         ).build()
     }
-
 }

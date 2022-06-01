@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.util.UUID
 
 data class AccUtilizationRequest(
@@ -21,6 +22,6 @@ data class AccUtilizationRequest(
     var zoneCode: String,
     var docStatus: String,
     var docValue: String?,
-    var dueDate: String?,
-    var transactionDate: String?
+    var dueDate: Timestamp?,
+    var transactionDate: Timestamp?
 )
