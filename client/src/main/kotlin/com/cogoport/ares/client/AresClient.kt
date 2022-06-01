@@ -1,8 +1,6 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.CollectionTrend
-import com.cogoport.ares.model.payment.OverallStats
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -19,7 +17,9 @@ import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.OverallStatsResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -35,13 +35,13 @@ import java.time.LocalDateTime
 @Client(id = "ares-service")
 interface AresClient {
     @Get("/dashboard/overall-stats{?request*}")
-    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStats?
+    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?
 
     @Get("/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
 
     @Get("/dashboard/collection-trend{?request*}")
-    public suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionTrend?
+    public suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionResponse?
 
     @Get("/dashboard/monthly-outstanding{?request*}")
     public suspend fun getMonthlyOutstanding(@Valid request: MonthlyOutstandingRequest): MonthlyOutstanding?
@@ -57,7 +57,7 @@ interface AresClient {
     ): SalesTrendResponse?
 
     @Get("/dashboard/outstanding-by-age{?request*}")
-    public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<AgeingBucket>?
+    public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
     @Get("/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
