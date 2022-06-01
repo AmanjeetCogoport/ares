@@ -12,5 +12,5 @@ interface AresKafkaEmitter {
     fun emitAccountUtilizationEvent(accountUtilizationEvent: AccountUtilizationEvent)
 
     @Topic("receivables-dashboard-data")
-    fun emitDashboardData(accountUtilizationEvent: AccountUtilizationEvent)
+    fun emitDashboardData(openSearchEvent: OpenSearchEvent)
 }
