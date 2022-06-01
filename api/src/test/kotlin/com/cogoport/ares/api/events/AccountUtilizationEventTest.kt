@@ -2,8 +2,10 @@ package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.runtime.EmbeddedApplication
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
@@ -48,15 +50,15 @@ internal class AccountUtilizationEventTest {
                     sageOrganizationId = "101",
                     organizationName = "Test",
                     accCode = 1,
-                    accType = AccountType.PINV.toString(),
-                    accMode = "ar",
+                    accType = AccountType.PINV,
+                    accMode = AccMode.AP,
                     signFlag = 1,
                     currencyAmount = 100.toBigDecimal(),
                     ledgerAmount = 100.toBigDecimal(),
                     currencyPayment = 100.toBigDecimal(),
                     ledgerPayment = 100.toBigDecimal(),
                     zoneCode = "North",
-                    docStatus = "Proforma",
+                    docStatus = DocumentStatus.FINAL,
                     docValue = "IDK",
                     dueDate = Timestamp.from(Instant.now()),
                     transactionDate = Timestamp.from(Instant.now()),

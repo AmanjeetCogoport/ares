@@ -16,7 +16,6 @@ import jakarta.inject.Singleton
 import java.text.DateFormat
 import javax.transaction.Transactional
 
-
 @Singleton
 open class InvoiceUtilizationImpl : InvoiceService {
 
@@ -83,12 +82,16 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardEvent(accUtilizationRequest: AccUtilizationRequest){
-        aresKafkaEmitter.emitDashboardData(OpenSearchEvent(OpenSearchRequest(
-            zone = accUtilizationRequest.zoneCode,
-            date = dateFormatter.format(accUtilizationRequest.dueDate),
-            quarter = (accUtilizationRequest.dueDate!!.month/3)+1,
-            year = accUtilizationRequest.dueDate!!.year
-        )))
+    private fun emitDashboardEvent(accUtilizationRequest: AccUtilizationRequest) {
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    date = dateFormatter.format(accUtilizationRequest.dueDate),
+                    quarter = (accUtilizationRequest.dueDate!!.month / 3) + 1,
+                    year = accUtilizationRequest.dueDate!!.year
+                )
+            )
+        )
     }
 }
