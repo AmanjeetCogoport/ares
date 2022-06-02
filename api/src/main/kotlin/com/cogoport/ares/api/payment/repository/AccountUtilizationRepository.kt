@@ -21,19 +21,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
-    @Query("select id from account_utilizations where document_no=:documentNo and acc_type=:accType")
-    suspend fun getAccountUtilizationId(documentNo: Long, accType: String): Long
+    @Query(
+        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
+            category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
+            sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
+            updated_at from account_utilizations where document_no = :documentNo and acc_type= :accType"""
+    )
+    suspend fun findRecord(documentNo: Long, accType: String): AccountUtilization
 
     @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
-
-    @Query(
-        """"select id,document_no,document_value,entity_code,document_status  from account_utilizations 
-                where document_no =:documentNo and acc_type=:accType"
-            """"
-    )
-    suspend fun getAccountUtilization(documentNo: Long, accType: String)
 
     @Query(
         """update account_utilizations set 
