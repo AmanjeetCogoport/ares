@@ -154,10 +154,12 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        val orgOutstandingAllData = accountUtilizationRepository.generateOrgOutstanding(request.orgId, null)
-        updateOrgOutstanding(null, request.orgId, orgOutstandingAllData)
-        val orgOutstandingZoneData = accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone)
-        updateOrgOutstanding(request.zone, request.orgId, orgOutstandingZoneData)
+        else if(request.zone.isNullOrBlank()) {
+            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        }
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
+            updateOrgOutstanding(request.zone, request.orgId, it)
+        }
     }
 
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
@@ -168,7 +170,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val outstandingDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.outstandingAmount!! } }.map { DueAmount(it.key, it.value) }
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-        val orgOutstandingId = if (zone.isNullOrBlank()) orgId + AresConstants.KEY_DELIMITER + "ALL" else orgId + AresConstants.KEY_DELIMITER + zone
+        val orgOutstandingId = orgId + AresConstants.KEY_DELIMITER + zone
         val orgOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
     }
