@@ -9,6 +9,7 @@ import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
@@ -150,6 +151,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
+            payment.accMode = AccMode.AR
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =
@@ -158,6 +160,8 @@ open class OnAccountServiceImpl : OnAccountService {
             var paymentModel = paymentConverter.convertToModel(savePayment)
             Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savePayment.id.toString(), paymentModel)
 
+            accUtilizationModel.zoneCode = payment.zone
+            accUtilizationModel.serviceType = payment.serviceType
             accUtilizationModel.accType = AccountType.PAY
             accUtilizationModel.currencyPayment = 0.toBigDecimal()
             accUtilizationModel.ledgerPayment = 0.toBigDecimal()

@@ -38,9 +38,9 @@ data class Payment(
     var isPosted: Boolean = false,
     var isDeleted: Boolean = false,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
     var zone: String? = "",
-    var serviceType: ServiceType
+    var serviceType: String? = ""
 )
