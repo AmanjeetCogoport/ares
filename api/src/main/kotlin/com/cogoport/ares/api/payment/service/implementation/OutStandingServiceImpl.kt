@@ -5,7 +5,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
-import com.cogoport.ares.api.payment.model.InvoiceListRequest
+import com.cogoport.ares.model.payment.InvoiceListRequest
 import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
