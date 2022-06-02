@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.model.payment.SalesTrendRequest
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.OverallStatsRequest
@@ -18,6 +19,7 @@ import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.SalesTrend
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
@@ -66,6 +68,11 @@ class DashboardController {
     @Get("/receivables-by-age{?request*}")
     suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
         return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
+    }
+
+    @Get("/sales-trend{?request*}")
+    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): MutableList<SalesTrend> {
+        return Response<MutableList<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
     }
 
     /** To be Deleted */

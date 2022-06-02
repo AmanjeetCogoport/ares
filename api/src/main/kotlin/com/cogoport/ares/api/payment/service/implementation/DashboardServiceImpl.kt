@@ -5,6 +5,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
+import com.cogoport.ares.model.payment.SalesTrendRequest
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -26,10 +27,13 @@ import com.cogoport.ares.model.payment.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -254,5 +258,25 @@ class DashboardServiceImpl : DashboardService {
             amount = response.amount,
             zone = null
         )
+    }
+
+    override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
+        validateInput(request.zone, request.role)
+        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val output = mutableListOf<SalesTrend>()
+        for (t in totalSalesResponse) {
+            creditSalesResponse.forEach {
+                if (it["key"] == t["key"]) {
+                    output.add(
+                        SalesTrend(
+                            month = ZonedDateTime.parse(it["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
+                            salesOnCredit = (it["value"].toString().toDouble() * 100) / t["value"].toString().toDouble()
+                        )
+                    )
+                }
+            }
+        }
+        return if (output.size > 6) output.subList(output.size - 6, output.size) else output
     }
 }

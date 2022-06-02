@@ -3,7 +3,10 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
+import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -64,5 +67,53 @@ class OpenSearchClient {
 
     fun <T> updateDocument(index: String, docId: String, docData: T) {
         Client.updateDocument(index, docId, docData)
+    }
+
+    fun salesTrendTotalSales(zone: String?): SearchResponse<SalesTrend>? {
+        return Client.search(
+            { s ->
+                s.index("index_invoices")
+                    .query { q ->
+                        if (!zone.isNullOrBlank()) {
+                            q.matchPhrase { m -> m.field("zone").query(zone) }
+                        } else {
+                            q.matchAll { s -> s.queryName("") }
+                        }
+                    }
+                    .size(0)
+                    .aggregations("total_sales") { a ->
+                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
+                            .aggregations("amount") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                    }
+            }, SalesTrend::class.java
+        )
+    }
+
+    fun salesTrendCreditSales(zone: String?): SearchResponse<SalesTrend>? {
+        return Client.search(
+            { s ->
+                s.index("index_invoices")
+                    .query { q ->
+                        q.bool { b ->
+                            if (zone.isNullOrBlank()) {
+                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            } else {
+                                b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(zone)) } }
+                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            }
+                        }
+                    }
+                    .size(0)
+                    .aggregations("credit_sales") { a ->
+                        a.global { g -> g }
+                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
+                            .aggregations("amount") { a ->
+                                a.sum { s -> s.field("invoiceAmount") }
+                            }
+                    }
+            }, SalesTrend::class.java
+        )
     }
 }
