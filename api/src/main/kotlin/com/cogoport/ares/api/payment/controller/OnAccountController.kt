@@ -4,17 +4,13 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.model.payment.BulkPaymentResponse
-import io.micronaut.context.annotation.Parameter
-import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.QueryValue
-import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Put
-import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.time.LocalDateTime

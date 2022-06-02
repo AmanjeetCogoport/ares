@@ -103,26 +103,25 @@ open class OnAccountServiceImpl : OnAccountService {
         return payment?.let { paymentConverter.convertToModel(it) }
     }
 
-
     override suspend fun deletePaymentEntry(paymentId: Long): String? {
 
-            var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
-            if (payment.id == null) throw AresException(AresError.ERR_1002, "")
-            if (payment.isDeleted)
-                throw AresException(AresError.ERR_1007, "")
-            payment.isDeleted = true
-            var paymentResponse = paymentRepository.update(payment)
-            Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentResponse)
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        if (payment.id == null) throw AresException(AresError.ERR_1002, "")
+        if (payment.isDeleted)
+            throw AresException(AresError.ERR_1007, "")
+        payment.isDeleted = true
+        var paymentResponse = paymentRepository.update(payment)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentResponse)
 
-            var accountUtilization = accountUtilizationRepository.findByPaymentId(payment.id)
-            val paymentModel = paymentConverter.convertToModel(payment)
+        var accountUtilization = accountUtilizationRepository.findByPaymentId(payment.id)
+        val paymentModel = paymentConverter.convertToModel(payment)
 
-            var accModel = updateAccountUtilizationEntry(accountUtilization, paymentModel)
-            accModel.documentStatus = DocumentStatus.CANCELLED
-            var accUtilRes = accountUtilizationRepository.update(accModel)
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+        var accModel = updateAccountUtilizationEntry(accountUtilization, paymentModel)
+        accModel.documentStatus = DocumentStatus.CANCELLED
+        var accUtilRes = accountUtilizationRepository.update(accModel)
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-            return "Successfully Deleted!"
+        return "Successfully Deleted!"
     }
 
     // Will be removed via Mapper
@@ -131,7 +130,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.documentStatus = DocumentStatus.FINAL
         accountUtilization.serviceType = receivableRequest.serviceType.toString()
         accountUtilization.entityCode = receivableRequest.entityType
-       // accountUtilization.category = "non_asset"
+        // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
         accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
