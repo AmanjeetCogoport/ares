@@ -205,7 +205,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL' and (:orgId is null or organization_id::varchar = :orgId)
+        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
         group by organization_id,zone_code,organization_name
         order by organization_name
         offset ((:pageLimit * :page) - :pageLimit)
@@ -222,7 +222,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
         sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and zone_code = :zone
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id = :orgId::uuid and zone_code = :zone
         group by organization_id,organization_name,currency
         """
     )
