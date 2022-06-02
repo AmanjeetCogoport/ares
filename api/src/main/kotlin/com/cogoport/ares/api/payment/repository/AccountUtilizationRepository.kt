@@ -191,7 +191,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
     @Query(
         """
-        select organization_id,organization_name,
+        select organization_id,zone_code,
         sum(case when due_date > now() then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
         sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
         sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
@@ -208,7 +208,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
         where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
-        group by organization_name,organization_id
+        group by organization_id,zone_code,organization_name
         order by organization_name
         offset ((:pageLimit * :page) - :pageLimit)
         limit :pageLimit
@@ -224,9 +224,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
         sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and (:zone is null or zone_code = :zone)
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and zone_code = :zone
         group by organization_id,organization_name,currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String, zone: String): List<OrgOutstanding>
 }
