@@ -74,13 +74,13 @@ class OpenSearchClient {
             { s ->
                 s.index("index_invoices")
                     .size(0)
-                    .aggregations("total_sales"){ a ->
-                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                    .aggregations("total_sales") { a ->
+                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
                             .aggregations("amount") { a ->
                                 a.sum { s -> s.field("invoiceAmount") }
                             }
                     }
-            },SalesTrend::class.java
+            }, SalesTrend::class.java
         )
     }
 
@@ -89,26 +89,24 @@ class OpenSearchClient {
             { s ->
                 s.index("index_invoices")
                     .query { q ->
-                        q.bool{ b ->
+                        q.bool { b ->
                             if (zone.isNullOrBlank()) {
                                 b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
-                            }
-                            else {
+                            } else {
                                 b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(zone)) } }
                                 b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
                             }
                         }
                     }
                     .size(0)
-
-                    .aggregations("credit_sales"){ a ->
+                    .aggregations("credit_sales") { a ->
                         a.global { g -> g }
-                        a.dateHistogram { d -> d.field("invoiceDate").interval{ i -> i.time("month") } }
+                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
                             .aggregations("amount") { a ->
                                 a.sum { s -> s.field("invoiceAmount") }
                             }
                     }
-            },SalesTrend::class.java
+            }, SalesTrend::class.java
         )
     }
 }

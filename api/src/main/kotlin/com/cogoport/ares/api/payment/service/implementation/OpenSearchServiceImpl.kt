@@ -153,8 +153,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun pushOutstandingData(request: OpenSearchRequest) {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
-        }
-        else if(request.zone.isNullOrBlank()) {
+        } else if (request.zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
         accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
