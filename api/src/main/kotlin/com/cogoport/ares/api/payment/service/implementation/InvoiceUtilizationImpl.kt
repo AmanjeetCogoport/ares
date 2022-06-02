@@ -59,14 +59,8 @@ open class InvoiceUtilizationImpl : InvoiceService {
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
 
-            var generatedId = 0L
-            try {
-                accUtilRepository.save(acUtilization)
-            } catch (sx: SQLException) {
-                sx.printStackTrace()
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-            }
+            val generatedId= accUtilRepository.save(acUtilization).id!!
+
             emitDashboardEvent(accUtilizationRequest)
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
@@ -87,8 +81,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message)
         }
         val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
-        val generatedId = 0L
-        accUtilRepository.save(acUtilization)
+        val generatedId = accUtilRepository.save(acUtilization).id
         // emitDashboardEvent(accUtilizationRequest)
         return CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
     }
