@@ -23,7 +23,7 @@ class OnAccountController {
     @Inject
     lateinit var onAccountService: OnAccountService
 
-    @Get()
+    @Get
     suspend fun getOnAccountCollections(
         @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
         @QueryValue("entityType") entityType: Int?,
@@ -32,7 +32,7 @@ class OnAccountController {
         return onAccountService.getOnAccountCollections(LocalDateTime.now(), entityType, currencyType)
     }
 
-    @Post()
+    @Post
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment {
         return onAccountService.createPaymentEntry(request)
     }
@@ -42,7 +42,7 @@ class OnAccountController {
         return onAccountService.updatePaymentEntry(request)
     }
 
-    @Delete()
+    @Delete
     suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String? {
         return onAccountService.deletePaymentEntry(paymentId)
     }
