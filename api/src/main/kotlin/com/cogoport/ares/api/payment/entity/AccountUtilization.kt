@@ -38,5 +38,5 @@ data class AccountUtilization(
     var dueDate: Timestamp,
     var transactionDate: Timestamp,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-    var modifiedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
 )
