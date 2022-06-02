@@ -10,5 +10,6 @@ data class OutstandingListRequest(
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
     @QueryValue(AresModelConstants.ORG_NAME) val orgName: String? = "",
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
-    @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10
+    @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
+    @QueryValue(AresModelConstants.ORG_ID) val orgId: String? = null
 )
