@@ -15,7 +15,8 @@ enum class AresError(
     ERR_1005("ERR_1005", "Data not found", HttpStatus.NO_CONTENT),
     ERR_1203("ERR_1203", "Invalid date format", HttpStatus.BAD_REQUEST),
     ERR_1202("ERR_1202", "Invalid account type for invoice", HttpStatus.BAD_REQUEST),
-    ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST);
+    ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST),
+    ERR_1007("ERR_1007","Record already deleted",HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

@@ -35,10 +35,7 @@ class OnAccountController {
     ): AccountCollectionResponse {
         return onAccountService.getOnAccountCollections(LocalDateTime.now(), entityType, currencyType)
     }
-    @Post("/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
-    suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean {
-        return onAccountService.upload()
-    }
+
     @Post()
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment {
         return onAccountService.createPaymentEntry(request)

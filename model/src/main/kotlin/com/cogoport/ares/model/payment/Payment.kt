@@ -40,5 +40,7 @@ data class Payment(
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
-    var bankAccountNumber: String? = ""
+    var bankAccountNumber: String? = "",
+    var zone: String? = "",
+    var serviceType: ServiceType
 )
