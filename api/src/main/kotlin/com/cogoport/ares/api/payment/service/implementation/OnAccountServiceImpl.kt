@@ -68,7 +68,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentModel = paymentConverter.convertToModel(payment)
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentModel)
 
-        accUtilizationModel.accType = AccountType.PAY
+        accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerAmount = 0.toBigDecimal()
