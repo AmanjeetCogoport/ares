@@ -69,10 +69,17 @@ class OpenSearchClient {
         Client.updateDocument(index, docId, docData)
     }
 
-    fun salesTrendTotalSales(): SearchResponse<SalesTrend>? {
+    fun salesTrendTotalSales(zone: String?): SearchResponse<SalesTrend>? {
         return Client.search(
             { s ->
                 s.index("index_invoices")
+                    .query { q ->
+                        if (!zone.isNullOrBlank()) {
+                            q.matchPhrase { m -> m.field("zone").query(zone) }
+                        } else {
+                            q.matchAll { s -> s.queryName("") }
+                        }
+                    }
                     .size(0)
                     .aggregations("total_sales") { a ->
                         a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }

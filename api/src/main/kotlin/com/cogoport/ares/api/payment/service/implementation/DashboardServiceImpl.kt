@@ -262,7 +262,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
         validateInput(request.zone, request.role)
-        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales()?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
         val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
         val output = mutableListOf<SalesTrend>()
         for (t in totalSalesResponse) {
