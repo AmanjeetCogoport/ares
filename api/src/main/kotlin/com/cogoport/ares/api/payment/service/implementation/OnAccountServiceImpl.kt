@@ -17,7 +17,6 @@ import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.brahma.opensearch.Client
-import com.cogoport.brahma.s3.client.S3Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.LocalDateTime
@@ -37,8 +36,6 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
 
-    @Inject
-    private lateinit var s3Client: S3Client
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
