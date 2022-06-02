@@ -67,11 +67,11 @@ class MapperConfig {
     }
 
     @Bean
-    fun getPayableFileToPayment(): PayableFileToPaymentMapper {
+    fun payableFileToPayment(): PayableFileToPaymentMapper {
         return Mappers.getMapper(PayableFileToPaymentMapper::class.java)
     }
     @Bean
-    fun getPayableFileToAccountUtilization(): PayableFileToAccountUtilMapper {
+    fun payableFileToAccountUtilization(): PayableFileToAccountUtilMapper {
         return Mappers.getMapper(PayableFileToAccountUtilMapper::class.java)
     }
 }
