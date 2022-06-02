@@ -36,7 +36,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request.zone, request.role)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%", request.page, request.pageLimit)
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%", request.orgId, request.page, request.pageLimit)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
