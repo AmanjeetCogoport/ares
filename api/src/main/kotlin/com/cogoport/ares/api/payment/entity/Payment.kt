@@ -20,19 +20,19 @@ data class Payment(
     var organizationName: String?,
     var accCode: Int,
     var accMode: AccMode,
-    var signFlag: Int,
+    var signFlag: Short,
     var currency: String,
     var amount: BigDecimal,
     var ledCurrency: String,
     var ledAmount: BigDecimal,
     var payMode: PayMode?,
     var narration: String? = null,
-    var bankId: Int,
     var transRefNumber: String?,
     var refPaymentId: Long?,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis())
+    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var accountNo: String?
 )

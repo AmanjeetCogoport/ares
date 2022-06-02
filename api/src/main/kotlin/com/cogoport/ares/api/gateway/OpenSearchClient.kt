@@ -4,22 +4,19 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.brahma.opensearch.Client
-import org.opensearch.client.opensearch._types.FieldValue
-import org.opensearch.client.opensearch._types.query_dsl.MatchQuery
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
+import org.opensearch.client.opensearch.core.SearchResponse
 
 class OpenSearchClient {
 
-    fun <T : Any> response(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, key: String = AresConstants.OPEN_SEARCH_DOCUMENT_KEY): T? {
+    fun <T : Any> search(searchKey: String, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX): T? {
 
         val response = Client.search(
             { s: SearchRequest.Builder ->
                 s.index(index)
                     .query { q: Query.Builder ->
-                        q.match { t: MatchQuery.Builder ->
-                            t.field(key).query(FieldValue.of(searchKey))
-                        }
+                        q.ids { i -> i.values(searchKey) }
                     }
             },
             classType
@@ -31,5 +28,41 @@ class OpenSearchClient {
             outResp = hts.source()
         }
         return outResp
+    }
+
+    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+
+        val response: SearchResponse<T>? = Client.search(
+            { s ->
+                s.index(index)
+                    .query { q ->
+                        if (!searchKey.isNullOrBlank()) {
+                            q.matchPhrase { a -> a.field("organizationId").query(searchKey) }
+                        } else {
+                            q.matchAll { s -> s.queryName("") }
+                        }
+                        q
+                    }.from(offset).size(limit)
+            },
+            classType
+        )
+        return response
+    }
+
+    fun <T : Any> listApi(index: String, classType: Class<T>, values: List<String>, offset: Int? = null, limit: Int? = null): SearchResponse<T>? {
+        val response = Client.search(
+            { s ->
+                s.index(index).query {
+                    q ->
+                    q.ids { i -> i.values(values) }
+                }.from(offset).size(limit)
+            },
+            classType
+        )
+        return response
+    }
+
+    fun <T> updateDocument(index: String, docId: String, docData: T) {
+        Client.updateDocument(index, docId, docData)
     }
 }

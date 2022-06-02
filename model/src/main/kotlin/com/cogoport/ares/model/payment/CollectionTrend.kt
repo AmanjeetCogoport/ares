@@ -1,14 +1,9 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import java.math.BigDecimal
 
 data class CollectionTrend(
-    @JsonProperty("totalReceivableAmount")
-    var totalReceivableAmount: Float,
-    @JsonProperty("totalCollectedAmount")
-    var totalCollectedAmount: Float,
-    @JsonProperty("trend")
-    var trend: List<CollectionTrendResponse>,
-    @JsonProperty("docKey")
-    var docKey: String
+    var duration: String?,
+    var receivableAmount: BigDecimal?,
+    var collectableAmount: BigDecimal?
 )

@@ -16,7 +16,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
     @Error(global = true, exception = Exception::class)
     override fun handle(request: HttpRequest<*>?, exception: Exception?): HttpResponse<ErrorResponse> {
         logger.error(request.toString(), exception)
-        var errorMessage = getErrorResponse()
+        var errorMessage: ErrorResponse
         if (exception is AresException) {
             errorMessage = exception?.error?.let {
                 ErrorResponse(
@@ -27,7 +27,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             }!!
             return getResponse(exception?.error?.httpStatus, errorMessage)
         } else {
-            var errorMessage = ErrorResponse(
+            errorMessage = ErrorResponse(
                 AresError.ERR_1001.code,
                 exception?.message,
                 HttpStatus.SERVICE_UNAVAILABLE

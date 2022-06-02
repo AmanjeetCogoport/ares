@@ -4,7 +4,6 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Controller
@@ -18,9 +17,6 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVParser
-import java.io.FileReader
 import java.time.LocalDateTime
 import javax.validation.Valid
 
@@ -54,13 +50,12 @@ class OnAccountController {
     }
 
     @Delete()
-    suspend fun deleteOnAccountReceivables( @QueryValue("paymentId") paymentId: Long): String? {
+    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String? {
         return onAccountService.deletePaymentEntry(paymentId)
     }
 
     @Post("/bulk-create")
-    suspend fun createBulkOnAccountPayment(@Valid @Body  request : MutableList<Payment>): BulkPaymentResponse {
-      return onAccountService.createBulkPayments(request)
+    suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse {
+        return onAccountService.createBulkPayments(request)
     }
-
 }

@@ -2,8 +2,10 @@ package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.runtime.EmbeddedApplication
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
@@ -17,13 +19,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @MicronautTest
 internal class AccountUtilizationEventTest {
 
     @Inject
-    lateinit var emitter: AccountUtilizationEmitter
+    lateinit var emitter: AresKafkaEmitter
 
     @Inject
     lateinit var invoiceService: InvoiceService
@@ -42,24 +45,27 @@ internal class AccountUtilizationEventTest {
                 accUtilizationRequest = AccUtilizationRequest(
                     documentNo = 123,
                     entityCode = 1,
-                    entityId = "123",
                     organizationId = UUID(10, 10),
                     orgSerialId = 10,
                     sageOrganizationId = "101",
                     organizationName = "Test",
                     accCode = 1,
-                    accType = AccountType.PINV.toString(),
-                    accMode = "ar",
+                    accType = AccountType.PINV,
+                    accMode = AccMode.AP,
                     signFlag = 1,
                     currencyAmount = 100.toBigDecimal(),
                     ledgerAmount = 100.toBigDecimal(),
                     currencyPayment = 100.toBigDecimal(),
                     ledgerPayment = 100.toBigDecimal(),
                     zoneCode = "North",
-                    docStatus = "Proforma",
+                    docStatus = DocumentStatus.FINAL,
                     docValue = "IDK",
-                    dueDate = Timestamp.valueOf("2022-01-01"),
-                    transactionDate = null
+                    dueDate = Timestamp.from(Instant.now()),
+                    transactionDate = Timestamp.from(Instant.now()),
+                    serviceType = "FCL",
+                    category = "asset",
+                    currency = "INR",
+                    ledCurrency = "INR"
                 )
             )
         )

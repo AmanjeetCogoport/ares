@@ -21,7 +21,7 @@ data class Payment(
     var accCode: Int = 0,
     @field:NotNull(message = "Account Mode is required")
     var accMode: AccMode? = null,
-    var signFlag: Int = 1,
+    var signFlag: Short = 1,
     @field:NotNull(message = "Currency Type is required")
     var currencyType: String = "",
     @field:NotNull(message = "Amount is required")

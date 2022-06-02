@@ -1,19 +1,12 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class OverallStats(
-    @JsonProperty("openInvoiceCount")
-    var openInvoiceCount: Int,
-    @JsonProperty("openInvoiceAmount")
-    var openInvoiceAmount: BigDecimal,
-    @JsonProperty("onAccountPayment")
-    var onAccountPayment: BigDecimal,
-    @JsonProperty("accountReceivables")
-    var accountReceivables: BigDecimal,
-    @JsonProperty("organizations")
-    var organizations: Int,
-    @JsonProperty("docKey")
-    var docKey: String
+    val totalOutstandingAmount: BigDecimal?,
+    val openInvoicesCount: Int?,
+    val organizationCount: Int?,
+    val openInvoicesAmount: BigDecimal?,
+    val openOnAccountPaymentAmount: BigDecimal?,
+    var id: String?
 )

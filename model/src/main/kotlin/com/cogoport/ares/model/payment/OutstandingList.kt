@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class OutstandingList(
     @JsonProperty("organizationList")
-    val organizationList: List<CustomerOutstanding>,
+    val organizationList: MutableList<CustomerOutstanding?>,
     @JsonProperty("totalPage")
     val totalPage: Int,
     @JsonProperty("totalRecords")

@@ -4,33 +4,30 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 
 data class CustomerOutstanding(
+    @JsonProperty("organizationId")
+    var organizationId: String?,
     @JsonProperty("organizationName")
-    var organizationName: String,
+    var organizationName: String?,
     @JsonProperty("openInvoices")
-    var openInvoices: InvoiceStats,
+    var openInvoices: InvoiceStats?,
     @JsonProperty("onAccountPayment")
-    var onAccountPayment: InvoiceStats,
+    var onAccountPayment: InvoiceStats?,
     @JsonProperty("totalOutstanding")
-    var totalOutstanding: InvoiceStats,
+    var totalOutstanding: InvoiceStats?,
     @JsonProperty("ageingBucket")
-    var ageingBucket: MutableList<AgeingBucket>
+    var ageingBucket: List<AgeingBucket>?
 )
 
 data class InvoiceStats(
     @JsonProperty("invoicesCount")
-    var invoicesCount: Int,
+    var invoicesCount: Int?,
     @JsonProperty("amountDue")
-    var amountDue: MutableList<DueAmount>
+    var amountDue: List<DueAmount>?
 )
 
 data class DueAmount(
     @JsonProperty("currency")
-    var currency: String,
+    var currency: String?,
     @JsonProperty("amount")
-    var amount: BigDecimal
-) {
-    init {
-        currency = "INR"
-        amount = 0.toBigDecimal()
-    }
-}
+    var amount: BigDecimal?
+)
