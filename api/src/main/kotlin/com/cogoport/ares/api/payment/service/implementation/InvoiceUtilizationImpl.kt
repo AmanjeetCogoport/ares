@@ -59,7 +59,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
 
-            val generatedId= accUtilRepository.save(acUtilization).id!!
+            val generatedId = accUtilRepository.save(acUtilization).id!!
 
             emitDashboardEvent(accUtilizationRequest)
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))

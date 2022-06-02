@@ -15,13 +15,13 @@ internal class DashboardControllerTest {
     lateinit var dashboardController: DashboardController
 
     @Test
-    fun getOverallStats() = runTest  {
+    fun getOverallStats() = runTest {
         var overallStatsResponse = dashboardController.getOverallStats(OverallStatsRequest(null, null))
         assert(Objects.nonNull(overallStatsResponse))
     }
 
     @Test
-    fun getCollectionTrend() = runTest   {
+    fun getCollectionTrend() = runTest {
         var collectionTrend = dashboardController.getCollectionTrend(CollectionRequest(null, null, 1, 2022))
         assert(Objects.nonNull(collectionTrend))
     }
