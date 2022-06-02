@@ -53,7 +53,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and doc_status = 'FINAL'
+             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
              group by ageing_duration, zone
              order by 1
           """
@@ -76,7 +76,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             end as ageing_duration_key,
             'INR' as currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and doc_status = 'FINAL'
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
             group by ageing_duration, ageing_duration_key
             order by ageing_duration
         """
