@@ -11,3 +11,7 @@ enum class ServiceType {
 enum class ZoneCode {
     NORTH, SOUTH, EAST, WEST
 }
+
+enum class AllCurrencyTypes {
+    GBP, EUR, USD, INR;
+}

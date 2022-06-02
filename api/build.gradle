@@ -32,6 +32,10 @@ dependencies {
     implementation("org.mapstruct:mapstruct:1.5.0.RC1")
     implementation("com.cogoport.brahma.opensearch:client:0.1.2-beta")
 
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
+    implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
+    implementation("org.apache.commons:commons-csv:1.9.0")
+    implementation "com.cogoport.brahma.aws:s3:0.1.1"
     // Import model subproject
     implementation(project(":model"))
 
@@ -54,7 +58,11 @@ dependencies {
     implementation('software.amazon.awssdk:servicediscovery:2.17.191')
     implementation("io.micronaut.aws:micronaut-aws-service-discovery:3.4.0")
 
-    implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
+
+    runtimeOnly("org.slf4j:slf4j-simple")
+    //Service Discovery
+    implementation('software.amazon.awssdk:servicediscovery:2.17.191')
+    implementation("io.micronaut.aws:micronaut-aws-service-discovery:3.4.0")
 
     runtimeOnly("org.slf4j:slf4j-simple")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
