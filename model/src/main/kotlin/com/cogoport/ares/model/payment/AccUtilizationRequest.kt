@@ -1,7 +1,7 @@
 package com.cogoport.ares.model.payment
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @Introspected
@@ -25,8 +25,8 @@ data class AccUtilizationRequest(
     var zoneCode: String,
     var docStatus: DocumentStatus,
     var docValue: String?,
-    var dueDate: Timestamp?,
-    var transactionDate: Timestamp?,
+    var dueDate: Date?,
+    var transactionDate: Date?,
     var serviceType: String?,
     var category: String?
 )
