@@ -271,7 +271,7 @@ class DashboardServiceImpl : DashboardService {
                     output.add(
                         SalesTrend(
                             month = ZonedDateTime.parse(it["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
-                            salesOnCredit = (it["value"].toString().toFloat() * 100) / t["value"].toString().toFloat()
+                            salesOnCredit = (it["value"].toString().toDouble() * 100) / t["value"].toString().toDouble()
                         ))
 
                 }
