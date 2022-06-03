@@ -21,6 +21,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.CustomerOutstanding
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -77,6 +78,9 @@ interface AresClient {
 
     @Get("/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+
+    @Get("/outstanding/{orgId}")
+    suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
 
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
