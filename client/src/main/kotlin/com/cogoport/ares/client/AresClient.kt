@@ -1,6 +1,7 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -76,4 +77,7 @@ interface AresClient {
 
     @Get("/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+
+    @Post("/accounts/bulk-create")
+    suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
 }

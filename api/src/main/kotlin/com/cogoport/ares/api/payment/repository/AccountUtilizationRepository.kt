@@ -224,5 +224,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by organization_id, organization_name, currency, zone_code
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+
+    @Query(
+        """
+        select * from account_utilizations where document_no = :id limit 1
+    """
+    )
+    suspend fun findByPaymentId(id: Long?): AccountUtilization
 }

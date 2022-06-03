@@ -47,11 +47,11 @@ open class InvoiceUtilizationImpl : InvoiceService {
         val responseList = mutableListOf<CreateInvoiceResponse>()
         for (accUtilizationRequest in accUtilizationRequestList) {
 
-            if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType)) {
+            if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
                 responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1202.message))
                 continue
             }
-            if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType.name)) {
+            if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType!!.name)) {
                 responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message))
                 continue
             }
@@ -74,10 +74,10 @@ open class InvoiceUtilizationImpl : InvoiceService {
      */
     override suspend fun addAccountUtilization(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
 
-        if (Utilities.isInvoiceAccountType(accUtilizationRequest.accType)) {
+        if (Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1202.message)
         }
-        if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType.name)) {
+        if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType!!.name)) {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message)
         }
         val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
