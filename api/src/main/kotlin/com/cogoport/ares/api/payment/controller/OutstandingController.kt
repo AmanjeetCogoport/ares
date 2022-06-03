@@ -7,6 +7,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.model.payment.CustomerInvoiceList
 import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import io.micronaut.http.annotation.Controller
@@ -30,8 +31,8 @@ class OutstandingController {
     }
 
     @Get("/invoice-list{?request*}")
-    suspend fun getInvoiceList(@Valid request: InvoiceListRequest): MutableList<CustomerInvoiceResponse>? {
-        return Response<MutableList<CustomerInvoiceResponse>?>().ok(outStandingService.getInvoiceList(request))
+    suspend fun getInvoiceList(@Valid request: InvoiceListRequest): CustomerInvoiceList? {
+        return Response<CustomerInvoiceList?>().ok(outStandingService.getInvoiceList(request))
     }
 
     @Get("/open-search/add{?request*}")
