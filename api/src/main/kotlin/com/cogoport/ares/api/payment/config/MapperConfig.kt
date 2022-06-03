@@ -9,6 +9,8 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
+import com.cogoport.ares.api.payment.mapper.PayableFileToAccountUtilMapper
+import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import io.micronaut.context.annotation.Bean
@@ -17,7 +19,6 @@ import org.mapstruct.factory.Mappers
 
 @Factory
 class MapperConfig {
-
     @Bean
     fun getPaymentConverter(): PaymentToPaymentMapper {
         return Mappers.getMapper(PaymentToPaymentMapper::class.java)
@@ -64,6 +65,15 @@ class MapperConfig {
     @Bean
     fun getOrgOutstanding(): OrgOutstandingMapper {
         return Mappers.getMapper(OrgOutstandingMapper::class.java)
+    }
+
+    @Bean
+    fun payableFileToPayment(): PayableFileToPaymentMapper {
+        return Mappers.getMapper(PayableFileToPaymentMapper::class.java)
+    }
+    @Bean
+    fun payableFileToAccountUtilization(): PayableFileToAccountUtilMapper {
+        return Mappers.getMapper(PayableFileToAccountUtilMapper::class.java)
     }
 
     @Bean

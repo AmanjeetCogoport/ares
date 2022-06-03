@@ -13,7 +13,6 @@ import java.util.UUID
 data class Payment(
     @field:Id @GeneratedValue var id: Long?,
     var entityCode: Int,
-    var fileId: Long? = null,
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
     var organizationId: UUID?,
@@ -33,6 +32,6 @@ data class Payment(
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var accountNo: String?
+    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var cogoAccountNo: String?
 )

@@ -14,4 +14,9 @@ object AresModelConstants {
     const val ORG_NAME = "orgName"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
+    const val ORG_ID = "orgId"
+    const val START_DATE = "startDate"
+    const val END_DATE = "endDate"
+    const val ENTITY_TYPE = "entityType"
+    const val CURRENCY_TYPE = "currencyType"
 }

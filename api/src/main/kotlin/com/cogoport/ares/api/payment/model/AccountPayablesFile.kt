@@ -1,9 +1,13 @@
 package com.cogoport.ares.api.payment.model
 
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
+import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
+@Introspected
 data class AccountPayablesFile(
     var entityCode: Int,
     var orgSerialId: Long,
@@ -13,7 +17,7 @@ data class AccountPayablesFile(
     var documentNo: Long,
     var documentValue: String,
     var zoneCode: String, // TODO : Create enum for zone , NORTH , SOUTH ,EAST , WEST
-    var serviceType: String, // TODO : Create enum for service type - FCL, LCL
+    var serviceType: ServiceType,
     var category: String, // TODO : Create enum for Category , ASSET , NON_ASSET
     var accCode: Int,
     var accMode: String,
@@ -29,5 +33,5 @@ data class AccountPayablesFile(
     var transRefNumber: String,
     var transactionDate: Timestamp,
     var isPosted: Boolean,
-    var documentStatus: String // final,proforma,cancelled
+    var documentStatus: DocumentStatus // final,proforma,cancelled
 )

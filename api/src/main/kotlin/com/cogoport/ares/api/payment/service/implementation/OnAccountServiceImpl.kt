@@ -10,6 +10,7 @@ import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
@@ -18,7 +19,6 @@ import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.brahma.opensearch.Client
-import com.cogoport.brahma.s3.client.S3Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import javax.transaction.Transactional
@@ -38,33 +38,33 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
 
-    @Inject
-    private lateinit var s3Client: S3Client
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
      * @return : AccountCollectionResponse
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
-        val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)?: throw AresException(AresError.ERR_1005, "")
+        val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
-        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil( total.toDouble()/request.pageLimit.toDouble()).toInt())
+        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt())
     }
 
-    // Need to make this trasactional
+    @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): Payment {
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, receivableRequest.id.toString(), receivableRequest)
         val payment = paymentConverter.convertToEntity(receivableRequest)
         paymentRepository.save(payment)
-        val accUtilizationModel: AccUtilizationRequest =
-            accUtilizationToPaymentConverter.convertEntityToModel(payment)
+        val paymentModel = paymentConverter.convertToModel(payment)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentModel.id.toString(), paymentModel)
 
+        val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
+        accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerAmount = 0.toBigDecimal()
-        accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
-        return paymentConverter.convertToModel(payment)
+        val accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+        return paymentModel
     }
 
     /**
@@ -74,48 +74,53 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): Payment? {
         var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
         var accountUtilization = accountUtilizationRepository.findByPaymentId(receivableRequest.id)
+        if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment != null && payment.isPosted && accountUtilization != null)
             throw AresException(AresError.ERR_1006, "")
-
         return updatePayment(receivableRequest, accountUtilization, payment)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): Payment? {
-        paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
-        accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
-//        return payment?.let { paymentConverter.convertToModel(it) }
+
+        var paymentDetails = paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), receivableRequest)
+
+        var accUtilRes = accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+
         var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
         return payment?.let { paymentConverter.convertToModel(it) }
     }
 
-
     override suspend fun deletePaymentEntry(paymentId: Long): String? {
-        try {
 
-            var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        if (payment.id == null) throw AresException(AresError.ERR_1002, "")
+        if (payment.isDeleted)
+            throw AresException(AresError.ERR_1007, "")
+        payment.isDeleted = true
+        var paymentResponse = paymentRepository.update(payment)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentResponse)
 
-            if (payment.isDeleted)
-                throw AresException(AresError.ERR_1001, "")
+        var accountUtilization = accountUtilizationRepository.findByPaymentId(payment.id)
+        val paymentModel = paymentConverter.convertToModel(payment)
 
-            payment.isDeleted = true
-            paymentRepository.update(payment)
-            return "Successfully Deleted!"
-        } catch (e: Exception) {
-            throw e
-        }
+        var accModel = updateAccountUtilizationEntry(accountUtilization, paymentModel)
+        accModel.documentStatus = DocumentStatus.CANCELLED
+        var accUtilRes = accountUtilizationRepository.update(accModel)
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+
+        return "Successfully Deleted!"
     }
 
-    override suspend fun upload(): Boolean {
-        TODO("Not yet implemented")
-    }
-
+    // Will be removed via Mapper
     fun updateAccountUtilizationEntry(accountUtilization: AccountUtilization, receivableRequest: Payment): AccountUtilization {
-        accountUtilization.zoneCode = "NORTH"
+        accountUtilization.zoneCode = receivableRequest.zone.toString()
         accountUtilization.documentStatus = DocumentStatus.FINAL
-        accountUtilization.serviceType = "FCL_FREIGHT"
+        accountUtilization.serviceType = receivableRequest.serviceType.toString()
         accountUtilization.entityCode = receivableRequest.entityType
-        accountUtilization.category = "non_asset"
+        // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
         accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
@@ -135,6 +140,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
+            payment.accMode = AccMode.AR
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =
@@ -142,11 +148,16 @@ open class OnAccountServiceImpl : OnAccountService {
 
             var paymentModel = paymentConverter.convertToModel(savePayment)
             Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savePayment.id.toString(), paymentModel)
+
+            accUtilizationModel.zoneCode = payment.zone
+            accUtilizationModel.serviceType = payment.serviceType
             accUtilizationModel.accType = AccountType.PAY
             accUtilizationModel.currencyPayment = 0.toBigDecimal()
             accUtilizationModel.ledgerPayment = 0.toBigDecimal()
             accUtilizationModel.ledgerAmount = 0.toBigDecimal()
-            accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+            accUtilizationModel.docStatus = DocumentStatus.FINAL
+            var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
         }
 
         return BulkPaymentResponse(recordsInserted = bulkPayment.size)

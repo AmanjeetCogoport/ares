@@ -20,5 +20,6 @@ interface AccountUtilizationMapper {
     @Mapping(source = "ledgerAmount", target = "amountLoc")
     @Mapping(source = "currencyPayment", target = "payCurr")
     @Mapping(source = "ledgerPayment", target = "payLoc")
+    @Mapping(source = "docStatus", target = "documentStatus")
     fun convertToEntity(accountUtilizationRequest: AccUtilizationRequest): AccountUtilization
 }

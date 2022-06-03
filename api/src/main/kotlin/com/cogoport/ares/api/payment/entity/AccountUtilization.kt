@@ -10,6 +10,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import java.util.Date
 
 @MappedEntity(value = "account_utilizations")
 data class AccountUtilization(
@@ -20,7 +21,7 @@ data class AccountUtilization(
     var serviceType: String,
     var documentStatus: DocumentStatus,
     var entityCode: Int,
-    var category: String,
+    var category: String?,
     var orgSerialId: Long,
     var sageOrganizationId: String?,
     var organizationId: UUID,
@@ -35,8 +36,8 @@ data class AccountUtilization(
     var amountLoc: BigDecimal,
     var payCurr: BigDecimal = 0.toBigDecimal(),
     var payLoc: BigDecimal = 0.toBigDecimal(),
-    var dueDate: Timestamp,
-    var transactionDate: Timestamp,
-    var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-    var modifiedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var dueDate: Date?,
+    var transactionDate: Date?,
+    var createdAt: Timestamp = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp = Timestamp.from(Instant.now()),
 )

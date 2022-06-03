@@ -5,7 +5,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
-import com.cogoport.ares.api.payment.model.InvoiceListRequest
+import com.cogoport.ares.model.payment.InvoiceListRequest
 import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -36,11 +36,11 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request.zone, request.role)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%", request.page, request.pageLimit)
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.orgName + "%", request.orgId, request.page, request.pageLimit)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            orgId.add(if (request.zone.isNullOrBlank()) ageing.organizationId + AresConstants.KEY_DELIMITER + "ALL" else ageing.organizationId + AresConstants.KEY_DELIMITER + request.zone)
+            orgId.add(ageing.organizationId + AresConstants.KEY_DELIMITER + ageing.zoneCode)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
         val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)

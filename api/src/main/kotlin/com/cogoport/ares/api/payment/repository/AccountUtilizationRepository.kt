@@ -21,19 +21,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
-    @Query("select id from account_utilizations where document_no=:documentNo and acc_type=:accType")
-    suspend fun getAccountUtilizationId(documentNo: Long, accType: String): Long
+    @Query(
+        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
+            category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
+            sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
+            updated_at from account_utilizations where document_no = :documentNo and acc_type= :accType"""
+    )
+    suspend fun findRecord(documentNo: Long, accType: String): AccountUtilization
 
     @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
     suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
-
-    @Query(
-        """"select id,document_no,document_value,entity_code,document_status  from account_utilizations 
-                where document_no =:documentNo and acc_type=:accType"
-            """"
-    )
-    suspend fun getAccountUtilization(documentNo: Long, accType: String)
 
     @Query(
         """update account_utilizations set 
@@ -53,7 +51,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and doc_status = 'FINAL'
+             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
              group by ageing_duration, zone
              order by 1
           """
@@ -76,7 +74,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             end as ageing_duration_key,
             'INR' as currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and doc_status = 'FINAL'
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
             group by ageing_duration, ageing_duration_key
             order by ageing_duration
         """
@@ -191,7 +189,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
     @Query(
         """
-        select organization_id,organization_name,
+        select organization_id,zone_code,
         sum(case when due_date > now() then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
         sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
         sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
@@ -207,14 +205,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
-        group by organization_name,organization_id
+        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
+        group by organization_id,zone_code,organization_name
         order by organization_name
         offset ((:pageLimit * :page) - :pageLimit)
         limit :pageLimit
         """
     )
-    suspend fun getOutstandingAgeingBucket(zone: String?, orgName: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(zone: String?, orgName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
         select organization_id::varchar,organization_name,currency,
@@ -224,7 +222,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
         sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and (:zone is null or zone_code = :zone)
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and zone_code = :zone
         group by organization_id,organization_name,currency
         """
     )
