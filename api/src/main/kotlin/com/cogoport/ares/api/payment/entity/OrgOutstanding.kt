@@ -12,4 +12,5 @@ data class OrgOutstanding(
     val paymentsCount: Int?,
     val paymentsAmount: Float?,
     val outstandingAmount: Float?,
+    val zoneCode: String?
 )
