@@ -61,14 +61,14 @@ open class InvoiceUtilizationImpl : InvoiceService {
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
 
-            acUtilization.accCode =AresModelConstants.AP_ACCOUNT_CODE
-            if(accUtilizationRequest.accMode==AccMode.AR){
-                acUtilization.accCode=AresModelConstants.AR_ACCOUNT_CODE
+            acUtilization.accCode = AresModelConstants.AP_ACCOUNT_CODE
+            if (accUtilizationRequest.accMode == AccMode.AR) {
+                acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
             }
 
             val generatedId = accUtilRepository.save(acUtilization).id!!
 
-            //emitDashboardEvent(accUtilizationRequest)
+            // emitDashboardEvent(accUtilizationRequest)
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -91,9 +91,9 @@ open class InvoiceUtilizationImpl : InvoiceService {
         acUtilization.createdAt = Timestamp.from(Instant.now())
         acUtilization.updatedAt = Timestamp.from(Instant.now())
 
-        acUtilization.accCode =AresModelConstants.AP_ACCOUNT_CODE
-        if(accUtilizationRequest.accMode==AccMode.AR){
-            acUtilization.accCode=AresModelConstants.AR_ACCOUNT_CODE
+        acUtilization.accCode = AresModelConstants.AP_ACCOUNT_CODE
+        if (accUtilizationRequest.accMode == AccMode.AR) {
+            acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
         }
 
         val generatedId = accUtilRepository.save(acUtilization).id

@@ -43,5 +43,5 @@ data class Payment(
     var bankAccountNumber: String? = "",
     var zone: String? = "",
     var serviceType: String? = "",
-    var paymentCode:PaymentCode?
+    var paymentCode: PaymentCode?
 )

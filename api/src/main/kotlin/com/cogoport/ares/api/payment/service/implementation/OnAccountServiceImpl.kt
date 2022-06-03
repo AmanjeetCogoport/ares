@@ -151,7 +151,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
             payment.accMode = AccMode.AR
-            payment.paymentCode= PaymentCode.REC
+            payment.paymentCode = PaymentCode.REC
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =

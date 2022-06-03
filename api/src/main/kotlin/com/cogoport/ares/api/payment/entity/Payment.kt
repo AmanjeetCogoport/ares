@@ -36,6 +36,6 @@ data class Payment(
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var cogoAccountNo: String?,
     var refAccountNo: String?,
-    var paymentCode:PaymentCode?,
+    var paymentCode: PaymentCode?,
     var bankName: String?
 )

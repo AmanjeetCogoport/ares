@@ -16,8 +16,8 @@ object AresModelConstants {
     const val PAGE_LIMIT = "pageLimit"
     const val ORG_ID = "orgId"
 
-    const val AR_ACCOUNT_CODE =223000
+    const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000
-    const val TDS_AR_ACCOUNT_CODE=240000
+    const val TDS_AR_ACCOUNT_CODE = 240000
     const val TDS_AP_ACCOUNT_CODE = 324001
 }

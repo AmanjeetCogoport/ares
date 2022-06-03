@@ -12,17 +12,12 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
-import io.micronaut.data.annotation.GeneratedValue
-import io.micronaut.data.annotation.Id
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.*
 import javax.transaction.Transactional
 
 open class KnockoffServiceImpl : KnockoffService {
@@ -54,9 +49,9 @@ open class KnockoffServiceImpl : KnockoffService {
             if (accountUtilization == null) {
                 // Add error that this invoice cannot be processed due to invoice does not exists
                 uploadBillResponseList.add(
-                        AccountPayableFileResponse(
-                                knockOffRecord.documentNo, knockOffRecord.documentValue, false, Messages.NO_DOCUMENT_EXISTS
-                        )
+                    AccountPayableFileResponse(
+                        knockOffRecord.documentNo, knockOffRecord.documentValue, false, Messages.NO_DOCUMENT_EXISTS
+                    )
                 )
                 continue
             }
@@ -74,21 +69,23 @@ open class KnockoffServiceImpl : KnockoffService {
             val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
             accountUtilizationRepository.updateInvoicePayment(
-                    accountUtilization.id!!,
-                    currTotalAmtPaid,
-                    ledTotalAmtPaid
+                accountUtilization.id!!,
+                currTotalAmtPaid,
+                ledTotalAmtPaid
             )
 
             /*4. Insert the account utilization record for payments*/
-            var accountUtilEntity = AccountUtilization(id = null, documentNo = paymentId!!, documentValue = paymentId.toString(),
-                    zoneCode = knockOffRecord.zoneCode, serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
-                    entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
-                    organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
-                    accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
-                    signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
-                    amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid, payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
-                    dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
-                    updatedAt = Timestamp.from(Instant.now()), orgSerialId = 0)
+            var accountUtilEntity = AccountUtilization(
+                id = null, documentNo = paymentId!!, documentValue = paymentId.toString(),
+                zoneCode = knockOffRecord.zoneCode, serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
+                entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
+                organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
+                accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
+                signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
+                amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid, payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
+                dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
+                updatedAt = Timestamp.from(Instant.now()), orgSerialId = 0
+            )
 
             accountUtilizationRepository.save(accountUtilEntity)
 
@@ -105,10 +102,10 @@ open class KnockoffServiceImpl : KnockoffService {
             }
             // Add success in the return response
             uploadBillResponseList.add(
-                    AccountPayableFileResponse(
-                            knockOffRecord.documentNo, knockOffRecord.documentValue,
-                            true, null
-                    )
+                AccountPayableFileResponse(
+                    knockOffRecord.documentNo, knockOffRecord.documentValue,
+                    true, null
+                )
             )
         }
         return uploadBillResponseList
