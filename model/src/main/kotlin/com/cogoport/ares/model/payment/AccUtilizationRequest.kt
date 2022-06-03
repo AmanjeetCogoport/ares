@@ -14,7 +14,6 @@ data class AccUtilizationRequest(
     var sageOrganizationId: String?,
     var organizationId: UUID?,
     var organizationName: String?,
-    var accCode: Int,
     var accType: AccountType?,
     var accMode: AccMode,
     var signFlag: Short,
@@ -32,5 +31,5 @@ data class AccUtilizationRequest(
     var serviceType: String?,
     var category: String?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-    var updatedAt: Timestamp = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now())
 )

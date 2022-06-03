@@ -3,6 +3,7 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -33,7 +34,7 @@ class OpenSearchClient {
         return outResp
     }
 
-    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String, offset: Int, limit: Int): SearchResponse<T>? {
 
         val response: SearchResponse<T>? = Client.search(
             { s ->
@@ -115,5 +116,19 @@ class OpenSearchClient {
                     }
             }, SalesTrend::class.java
         )
+    }
+
+    fun listCustomerSaleOutstanding(index: String, classType: Class<CustomerOutstanding>, values: String): SearchResponse<CustomerOutstanding>? {
+        val response = Client.search(
+            { s ->
+                s.index(index)
+                    .query {
+                        q ->
+                        q.matchPhrase { a -> a.field("organizationId").query(values) }
+                    }
+            },
+            classType
+        )
+        return response
     }
 }

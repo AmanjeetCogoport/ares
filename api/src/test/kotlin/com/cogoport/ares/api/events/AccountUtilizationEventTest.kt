@@ -49,7 +49,6 @@ internal class AccountUtilizationEventTest {
                     orgSerialId = 10,
                     sageOrganizationId = "101",
                     organizationName = "Test",
-                    accCode = 1,
                     accType = AccountType.PINV,
                     accMode = AccMode.AP,
                     signFlag = 1,
