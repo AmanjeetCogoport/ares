@@ -34,7 +34,7 @@ class OpenSearchClient {
         return outResp
     }
 
-    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String = AresConstants.SALES_DASHBOARD_INDEX, offset: Int, limit: Int): SearchResponse<T>? {
+    fun <T : Any> searchList(searchKey: String?, classType: Class<T>, index: String, offset: Int, limit: Int): SearchResponse<T>? {
 
         val response: SearchResponse<T>? = Client.search(
             { s ->
