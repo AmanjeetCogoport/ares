@@ -33,6 +33,6 @@ data class Payment(
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var accountNo: String?
 )

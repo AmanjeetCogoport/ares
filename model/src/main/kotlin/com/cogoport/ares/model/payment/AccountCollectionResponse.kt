@@ -1,5 +1,7 @@
 package com.cogoport.ares.model.payment
 
 data class AccountCollectionResponse(
-    var payments: MutableList<Payment>
+    val payments: List<Payment?>,
+    val totalRecords: Int,
+    val totalPage: Int
 )

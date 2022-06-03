@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.controller
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
@@ -17,7 +18,6 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.multipart.StreamingFileUpload
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.time.LocalDateTime
 import javax.validation.Valid
 
 @Validated
@@ -27,13 +27,9 @@ class OnAccountController {
     @Inject
     lateinit var onAccountService: OnAccountService
 
-    @Get()
-    suspend fun getOnAccountCollections(
-        @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
-        @QueryValue("entityType") entityType: Int?,
-        @QueryValue("currencyType") currencyType: String?
-    ): AccountCollectionResponse {
-        return onAccountService.getOnAccountCollections(LocalDateTime.now(), entityType, currencyType)
+    @Get("{?request*}")
+    suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
+        return onAccountService.getOnAccountCollections(request)
     }
     @Post("/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean {
