@@ -169,8 +169,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val outstandingDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.outstandingAmount!! } }.map { DueAmount(it.key, it.value) }
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-        val orgOutstandingId = orgId + AresConstants.KEY_DELIMITER + zone
-        val orgOutstanding = CustomerOutstanding(null, data[0].organizationName, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
-        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgOutstandingId, orgOutstanding)
+        val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
+        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
     }
 }

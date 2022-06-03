@@ -18,6 +18,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import kotlin.math.ceil
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService {
@@ -40,12 +41,13 @@ class OutStandingServiceImpl : OutStandingService {
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            orgId.add(ageing.organizationId + AresConstants.KEY_DELIMITER + ageing.zoneCode)
+            orgId.add(ageing.organizationId!!)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
-        val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+        val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId, offset = (request.page - 1) * request.pageLimit, limit = request.pageLimit)
         val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
-        for (hts in response?.hits()?.hits()!!) {
+        val total = response?.hits()?.total()?.value()!!.toDouble()
+        for (hts in response.hits()?.hits()!!) {
             val output: CustomerOutstanding? = hts.source()
             for (ageing in ageingBucket) {
                 if (ageing.organizationId == output?.organizationId) {
@@ -64,8 +66,8 @@ class OutStandingServiceImpl : OutStandingService {
 
         return OutstandingList(
             organizationList = listOrganization,
-            totalPage = listOrganization.size,
-            totalRecords = 10,
+            totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
+            totalRecords = total.toInt(),
         )
     }
 
