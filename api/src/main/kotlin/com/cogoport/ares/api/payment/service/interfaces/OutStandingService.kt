@@ -8,12 +8,9 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.OutstandingList
 
 interface OutStandingService {
-<<<<<<< Updated upstream
-    suspend fun getInvoiceList(request: InvoiceListRequest): MutableList<CustomerInvoiceResponse>?
 
-=======
     suspend fun getInvoiceList(request: InvoiceListRequest): CustomerInvoiceList?
->>>>>>> Stashed changes
+
     suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList?
 
     suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?>
