@@ -2,7 +2,7 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class CustomerInvoiceList (
+data class CustomerInvoiceList(
     @JsonProperty("list")
     val list: MutableList<CustomerInvoiceResponse?>,
     @JsonProperty("page")
