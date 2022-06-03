@@ -1,43 +1,45 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.BulkPaymentResponse
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.ReceivableRequest
+import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.SalesTrendResponse
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.AccountCollectionResponse
+import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.CustomerOutstanding
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Body
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.time.LocalDateTime
-import com.cogoport.ares.model.payment.OverallStatsRequest
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.CollectionRequest
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.SalesTrendResponse
-import com.cogoport.ares.model.payment.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.AccountCollectionResponse
-import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.OutstandingListRequest
-import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
-import io.micronaut.http.annotation.Delete
+
 
 @Client(id = "ares-service")
 interface AresClient {
@@ -69,7 +71,13 @@ interface AresClient {
     @Get("/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
 
-    @Get("/receivables/collections")
+    @Get("/outstanding/overall{?request*}")
+    suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+
+    @Get("/outstanding/{orgId}")
+    suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
+
+    @Get("/accounts")
     suspend fun getOnAccountCollections(
         @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
         @QueryValue("entityType") entityType: Int?,
@@ -78,14 +86,14 @@ interface AresClient {
     @Post("/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
-    @Post("/receivables/collection/create")
+    @Post("/accounts")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/outstanding/overall{?request*}")
-    suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+    @Put("/accounts")
+    suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/outstanding/{orgId}")
-    suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
+    @Delete("/accounts")
+    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String
 
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
