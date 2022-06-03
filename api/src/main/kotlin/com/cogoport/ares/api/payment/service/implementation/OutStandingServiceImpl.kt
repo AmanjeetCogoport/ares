@@ -69,6 +69,7 @@ class OutStandingServiceImpl : OutStandingService {
             list = listOrganization,
             totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
             totalRecords = total.toInt(),
+            page = request.page
         )
     }
 
@@ -92,7 +93,7 @@ class OutStandingServiceImpl : OutStandingService {
             list = response,
             page = request.page,
             totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
-            totalRecords = total.toInt(),
+            totalRecords = total.toInt()
         )
     }
 

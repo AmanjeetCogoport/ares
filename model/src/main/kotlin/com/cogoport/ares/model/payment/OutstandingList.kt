@@ -8,5 +8,7 @@ data class OutstandingList(
     @JsonProperty("totalPage")
     val totalPage: Int,
     @JsonProperty("totalRecords")
-    val totalRecords: Int
+    val totalRecords: Int,
+    @JsonProperty("page")
+    val page: Int
 )
