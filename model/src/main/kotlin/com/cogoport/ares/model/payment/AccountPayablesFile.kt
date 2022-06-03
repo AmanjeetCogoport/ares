@@ -1,10 +1,5 @@
-package com.cogoport.ares.api.payment.model
+package com.cogoport.ares.model.payment
 
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.PayMode
-import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.ZoneCode
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.sql.Timestamp

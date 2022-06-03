@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.payment.model
+package com.cogoport.ares.model.payment
 
 data class AccountPayableFileResponse(
     var documentNo: Long,

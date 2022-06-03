@@ -5,13 +5,13 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.PayableFileToAccountUtilMapper
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
-import com.cogoport.ares.api.payment.model.AccountPayableFileResponse
-import com.cogoport.ares.api.payment.model.AccountPayablesFile
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.AccountPayableFileResponse
+import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import jakarta.inject.Inject
