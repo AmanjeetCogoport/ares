@@ -84,7 +84,18 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
-        return outstandingResponse.map { overallAgeingConverter.convertToModel(it) }
+        val data = mutableListOf<OverallAgeingStatsResponse>()
+        outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
+        val durationKey = listOf("1-30","31-60","61-90",">90","Not Due")
+        val key = data.map { it.ageingDuration }
+        durationKey.forEach {
+            if(!key.contains(it)){
+                data.add(
+                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR")
+                )
+            }
+        }
+        return data.sortedBy { it.ageingDuration }
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
@@ -239,9 +250,7 @@ class DashboardServiceImpl : DashboardService {
                 )
             )
             payment.forEach {
-                if (it.zone == request.zone) {
-                    receivableZoneBucket.add(receivableBucketAllZone(it))
-                }
+                if (it.zone == request.zone) { receivableZoneBucket.add(receivableBucketAllZone(it)) }
             }
             receivableByAgeViaZone[0].ageingBucket = receivableZoneBucket
         }

@@ -45,8 +45,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) between 1 and 30 then '1-30'
              when (now()::date - due_date ) between 31 and 60 then '31-60'
              when (now()::date - due_date ) between 61 and 90 then '61-90'
-             when (now()::date - due_date ) between 91 and 180 then '91_180'
-             when (now()::date - due_date ) between 181 and 365 then '181_365'
+             when (now()::date - due_date ) between 91 and 180 then '91-180'
+             when (now()::date - due_date ) between 181 and 365 then '181-365'
              end as ageing_duration,
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
@@ -66,16 +66,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             when (now()::date - due_date) > 90 then '>90' 
             end as ageing_duration, 
             sum(sign_flag * (amount_loc - pay_loc)) as amount,
-            case when due_date > now() then 'not_due'
-            when (now()::date - due_date) between 1 and 30 then '1_30'
-            when (now()::date - due_date) between 31 and 60 then '31_60' 
-            when (now()::date - due_date) between 61 and 90 then '61_90'
-            when (now()::date - due_date) > 90 then '>90' 
-            end as ageing_duration_key,
             'INR' as currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
-            group by ageing_duration, ageing_duration_key
+            group by ageing_duration
             order by ageing_duration
         """
 
