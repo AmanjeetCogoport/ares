@@ -26,8 +26,10 @@ import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Body
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
@@ -64,7 +66,13 @@ interface AresClient {
     @Get("/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
 
-    @Get("/receivables/collections")
+    @Get("/outstanding/overall{?request*}")
+    suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+
+    @Get("/outstanding/{orgId}")
+    suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
+
+    @Get("/accounts")
     suspend fun getOnAccountCollections(
         @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
         @QueryValue("entityType") entityType: Int?,
@@ -73,15 +81,16 @@ interface AresClient {
     @Post("/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
-    @Post("/receivables/collection/create")
+    @Post("/accounts")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/outstanding/overall{?request*}")
-    suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
+    @Put("/accounts")
+    suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): Payment
 
-    @Get("/outstanding/{orgId}")
-    suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
+    @Delete("/accounts")
+    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String
 
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
+
 }

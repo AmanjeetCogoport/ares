@@ -36,7 +36,6 @@ data class Payment(
     var refPaymentId: Long? = 0,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isPosted: Boolean = false,
-    var isDeleted: Boolean = false,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
