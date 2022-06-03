@@ -39,7 +39,7 @@ class OutstandingController {
         return pushToClientService.pushOutstandingData(request)
     }
 
-    @Get("/customer-outstanding/{orgId}")
+    @Get("/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
     }

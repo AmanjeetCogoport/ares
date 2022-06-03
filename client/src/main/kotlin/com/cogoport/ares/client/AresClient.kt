@@ -79,7 +79,7 @@ interface AresClient {
     @Get("/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
 
-    @Get("/outstanding/customer-outstanding/{orgId}")
+    @Get("/outstanding/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
 
     @Post("/accounts/bulk-create")
