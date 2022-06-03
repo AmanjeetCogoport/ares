@@ -123,7 +123,7 @@ class OpenSearchClient {
             { s ->
                 s.index(index)
                     .query {
-                            q ->
+                        q ->
                         q.matchPhrase { a -> a.field("organizationId").query(values) }
                     }
             },
@@ -131,5 +131,4 @@ class OpenSearchClient {
         )
         return response
     }
-
 }
