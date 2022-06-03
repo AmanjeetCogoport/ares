@@ -86,10 +86,10 @@ class DashboardServiceImpl : DashboardService {
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
         val data = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
-        val durationKey = listOf("1-30","31-60","61-90",">90","Not Due")
+        val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
         val key = data.map { it.ageingDuration }
         durationKey.forEach {
-            if(!key.contains(it)){
+            if (!key.contains(it)) {
                 data.add(
                     OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR")
                 )

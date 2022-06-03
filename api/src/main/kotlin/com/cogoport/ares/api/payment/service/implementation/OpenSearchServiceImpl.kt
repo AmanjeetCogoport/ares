@@ -164,9 +164,9 @@ class OpenSearchServiceImpl : OpenSearchService {
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-        val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key,it.value.sumOf { it.openInvoicesAmount!! }, it.value.sumOf { it.openInvoicesCount!! }) }
-        val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key,it.value.sumOf { it.paymentsAmount!! }, it.value.sumOf { it.paymentsCount!! }) }
-        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key,it.value.sumOf { it.outstandingAmount!! }, 0) }
+        val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount!! }, it.value.sumOf { it.openInvoicesCount!! }) }
+        val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount!! }, it.value.sumOf { it.paymentsCount!! }) }
+        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount!! }, 0) }
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
         val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)

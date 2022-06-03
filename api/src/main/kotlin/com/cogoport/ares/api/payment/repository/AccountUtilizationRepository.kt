@@ -83,10 +83,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
-        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and (:zone is null or zone_code = :zone) and doc_status = 'FINAL' and acc_mode = 'AR' ) as organization_count, 
+        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' ) as organization_count, 
         null as id
         from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
+        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
     """
     )
     suspend fun generateOverallStats(zone: String?): OverallStats
@@ -98,7 +98,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
             abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount
             from account_utilizations
-            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
+            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
         )
         union all
         (
@@ -106,7 +106,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
             abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount 
             from account_utilizations
-            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
+            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
             group by date_trunc('month',transaction_date)
             order by date_trunc('month',transaction_date)
         )
@@ -119,7 +119,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select to_char(date_trunc('month',transaction_date),'Month') as duration,
         sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
         from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL'
+        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
         group by date_trunc('month',transaction_date)
         order by date_trunc('month',transaction_date)
         limit 5
@@ -131,7 +131,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             with x as (select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
             sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
             from account_utilizations
-            where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and doc_status = 'FINAL'
+            where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL'
             group by date_trunc('quarter',transaction_date)
             order by date_trunc('quarter',transaction_date) desc)
             select case when x.quarter = 1 then 'Jan - Mar'
@@ -154,7 +154,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('SINV','SDN','SCN') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
             date_part('days',(:date)::date) as days
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and doc_status = 'FINAL' and acc_mode = 'AR' and transaction_date <= :date::date
+            where (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' and transaction_date <= :date::date
             )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
         coalesce((X.outstandings / X.total_sales) * X.days,0) as value
@@ -173,7 +173,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('PINV','PDN','PCN') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_loc end) as total_sales,
             date_part('days',(:date)::date) as days
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and doc_status = 'FINAL' and transaction_date <= :date::date
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status = 'FINAL' and transaction_date <= :date::date
         )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
         coalesce((X.outstandings / X.total_sales) * X.days,0) as value
