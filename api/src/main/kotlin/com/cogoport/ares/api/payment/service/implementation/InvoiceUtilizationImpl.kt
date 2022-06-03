@@ -11,6 +11,8 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.common.models.Messages
+import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -59,9 +61,14 @@ open class InvoiceUtilizationImpl : InvoiceService {
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
 
+            acUtilization.accCode =AresModelConstants.AP_ACCOUNT_CODE
+            if(accUtilizationRequest.accMode==AccMode.AR){
+                acUtilization.accCode=AresModelConstants.AR_ACCOUNT_CODE
+            }
+
             val generatedId = accUtilRepository.save(acUtilization).id!!
 
-            emitDashboardEvent(accUtilizationRequest)
+            //emitDashboardEvent(accUtilizationRequest)
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -74,13 +81,21 @@ open class InvoiceUtilizationImpl : InvoiceService {
      */
     override suspend fun addAccountUtilization(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
 
-        if (Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
+        if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1202.message)
         }
         if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType!!.name)) {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message)
         }
         val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
+        acUtilization.createdAt = Timestamp.from(Instant.now())
+        acUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        acUtilization.accCode =AresModelConstants.AP_ACCOUNT_CODE
+        if(accUtilizationRequest.accMode==AccMode.AR){
+            acUtilization.accCode=AresModelConstants.AR_ACCOUNT_CODE
+        }
+
         val generatedId = accUtilRepository.save(acUtilization).id
         // emitDashboardEvent(accUtilizationRequest)
         return CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
@@ -102,7 +117,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
             throw AresException(AresError.ERR_1204, docNumber.toString())
         }
-        accUtilRepository.deleteInvoiceUtils(docNumber, accType)
+        accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
         return true
     }
 

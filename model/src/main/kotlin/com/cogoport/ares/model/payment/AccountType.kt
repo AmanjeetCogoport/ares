@@ -12,3 +12,7 @@ enum class AccountType(dbValue: String) {
         return false
     }
 }
+
+enum class PaymentCode{
+    PAY,REC,CTDS,VTDS
+}
