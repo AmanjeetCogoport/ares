@@ -10,6 +10,7 @@ import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.OutstandingAgeingResponse
@@ -71,9 +72,9 @@ class OutStandingServiceImpl : OutStandingService {
         )
     }
 
-    override suspend fun getInvoiceList(request: InvoiceListRequest): MutableList<CustomerInvoiceResponse> {
+    override suspend fun getInvoiceList(request: InvoiceListRequest): ListInvoiceResponse {
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        val response = mutableListOf<CustomerInvoiceResponse>()
+        val response = mutableListOf<CustomerInvoiceResponse?>()
         val list: SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().searchList(
             searchKey = request.orgId,
             classType = CustomerInvoiceResponse ::class.java,
@@ -84,7 +85,15 @@ class OutStandingServiceImpl : OutStandingService {
         list?.hits()?.hits()?.map {
             it.source()?.let { it1 -> response.add(it1) }
         }
-        return response
+
+        val total = list?.hits()?.total()?.value()!!.toDouble()
+
+        return ListInvoiceResponse(
+            list = response,
+            page = request.page,
+            totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
+            totalRecords = total.toInt(),
+        )
     }
 
     private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {

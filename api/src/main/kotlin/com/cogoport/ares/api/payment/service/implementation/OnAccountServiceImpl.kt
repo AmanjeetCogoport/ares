@@ -16,6 +16,8 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.ZoneCode
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -126,7 +128,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     // Will be removed via Mapper
     fun updateAccountUtilizationEntry(accountUtilization: AccountUtilization, receivableRequest: Payment): AccountUtilization {
-        accountUtilization.zoneCode = receivableRequest.zone.toString()
+        accountUtilization.zoneCode = ZoneCode.valueOf(receivableRequest.zone!!)
         accountUtilization.documentStatus = DocumentStatus.FINAL
         accountUtilization.serviceType = receivableRequest.serviceType.toString()
         accountUtilization.entityCode = receivableRequest.entityType
@@ -151,6 +153,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
             payment.accMode = AccMode.AR
+            payment.paymentCode = PaymentCode.REC
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =

@@ -41,5 +41,6 @@ data class Payment(
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
     var zone: String? = "",
-    var serviceType: String? = ""
+    var serviceType: String? = "",
+    var paymentCode: PaymentCode?
 )

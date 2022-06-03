@@ -4,6 +4,8 @@ micronaut:
   server:
     port: 8086
     context-path: /payment
+    cors:
+      enabled: true
   router:
     static-resources:
       swagger:

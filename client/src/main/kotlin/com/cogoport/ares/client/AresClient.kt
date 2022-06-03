@@ -35,6 +35,11 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.time.LocalDateTime
+import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.AccountPayableFileResponse
+import com.cogoport.ares.model.payment.AccountPayablesFile
+
 
 @Client(id = "ares-service")
 interface AresClient {
@@ -93,4 +98,15 @@ interface AresClient {
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
 
+    @Post("/invoice/add-bulk")
+    suspend fun createBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse>
+
+    @Post("/invoice")
+    suspend fun createInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse
+
+    @Delete("/invoice")
+    suspend fun deleteInvoice(@QueryValue("docNumber") docNumber: Long, @QueryValue("accType") accType: String): Boolean
+
+    @Post("/knockoff/payables")
+    suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 }
