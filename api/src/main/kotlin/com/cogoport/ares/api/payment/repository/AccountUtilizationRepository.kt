@@ -25,19 +25,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
             category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
             sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
-            updated_at from account_utilizations where document_no = :documentNo and acc_type= :accType"""
+            updated_at from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type)"""
     )
-    suspend fun findRecord(documentNo: Long, accType: String): AccountUtilization
+    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization
 
-    @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
-    suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
+    @Query("delete from account_utilizations where id=:id")
+    suspend fun deleteInvoiceUtils(id: Long): Int
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 
     @Query(
         """update account_utilizations set 
-              pay_curr = :currencyPay , pay_loc =:ledgerPay , modified_at =now() where id=:id"""
+              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id"""
     )
-    suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+    suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
     @Query(
         """

@@ -1,27 +1,6 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.CollectionRequest
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
-import com.cogoport.ares.model.payment.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.OutstandingListRequest
-import com.cogoport.ares.model.payment.OverallStatsRequest
-import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.SalesTrendResponse
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.AccountCollectionResponse
-import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.CustomerOutstanding
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -33,6 +12,32 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.time.LocalDateTime
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.SalesTrendResponse
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.ReceivableRequest
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.AccountCollectionResponse
+import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.BulkPaymentResponse
+import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.AccountPayableFileResponse
+import com.cogoport.ares.model.payment.AccountPayablesFile
+import io.micronaut.http.annotation.Delete
 
 @Client(id = "ares-service")
 interface AresClient {
@@ -84,4 +89,16 @@ interface AresClient {
 
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
+
+    @Post("/invoice/add-bulk")
+    suspend fun createBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse>
+
+    @Post("/invoice")
+    suspend fun createInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse
+
+    @Delete("/invoice")
+    suspend fun deleteInvoice(@QueryValue("docNumber") docNumber: Long, @QueryValue("accType") accType: String): Boolean
+
+    @Post("/knockoff/payables")
+    suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 }

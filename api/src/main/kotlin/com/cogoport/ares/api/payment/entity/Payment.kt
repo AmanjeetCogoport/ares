@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PayMode
+import com.cogoport.ares.model.payment.PaymentCode
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -33,5 +34,8 @@ data class Payment(
     var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var cogoAccountNo: String?
+    var cogoAccountNo: String?,
+    var refAccountNo: String?,
+    var paymentCode: PaymentCode?,
+    var bankName: String?
 )
