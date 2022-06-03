@@ -3,6 +3,7 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -116,4 +117,19 @@ class OpenSearchClient {
             }, SalesTrend::class.java
         )
     }
+
+    fun listCustomerSaleOutstanding(index: String, classType: Class<CustomerOutstanding>, values: String): SearchResponse<CustomerOutstanding>? {
+        val response = Client.search(
+            { s ->
+                s.index(index)
+                    .query {
+                            q ->
+                        q.matchPhrase { a -> a.field("organizationId").query(values) }
+                    }
+            },
+            classType
+        )
+        return response
+    }
+
 }

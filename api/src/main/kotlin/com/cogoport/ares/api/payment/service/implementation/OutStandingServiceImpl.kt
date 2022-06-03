@@ -93,4 +93,14 @@ class OutStandingServiceImpl : OutStandingService {
             ageingDurationKey = key
         )
     }
+
+    override suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?> {
+        val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
+        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+
+        customerOutstanding?.hits()?.hits()?.map { it.source()?.let {
+                it1 -> listOrganization.add(it1)
+        } }
+        return listOrganization
+    }
 }
