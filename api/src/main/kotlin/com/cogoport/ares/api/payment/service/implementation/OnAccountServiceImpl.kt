@@ -66,10 +66,13 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentModel = paymentConverter.convertToModel(payment)
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentModel)
 
+        accUtilizationModel.zoneCode = receivableRequest.zone
+        accUtilizationModel.serviceType = receivableRequest.serviceType
         accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerAmount = 0.toBigDecimal()
+        accUtilizationModel.docStatus = DocumentStatus.FINAL
         var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
         return paymentModel
