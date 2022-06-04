@@ -47,7 +47,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
-        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt())
+        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
