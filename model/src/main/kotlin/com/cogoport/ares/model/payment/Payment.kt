@@ -20,7 +20,7 @@ data class Payment(
     @field:NotNull(message = "Account Code is required")
     var accCode: Int = 0,
     @field:NotNull(message = "Account Mode is required")
-    var accMode: AccMode? = null,
+    var accMode: AccMode? = AccMode.AR,
     var signFlag: Short = 1,
     @field:NotNull(message = "Currency Type is required")
     var currencyType: String = "",
@@ -36,7 +36,6 @@ data class Payment(
     var refPaymentId: Long? = 0,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isPosted: Boolean = false,
-    var isDeleted: Boolean = false,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
