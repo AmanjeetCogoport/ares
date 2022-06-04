@@ -26,7 +26,7 @@ data class Payment(
     @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
     var accCode: Int = 0,
     @JsonProperty("accMode") @field:NotNull(message = "Account Mode is required")
-    var accMode: AccMode? = null,
+    var accMode: AccMode? = AccMode.AR,
     @JsonProperty("signFlag")
     var signFlag: Short = 1,
     @JsonProperty("currencyType") @field:NotNull(message = "Currency Type is required")
@@ -53,12 +53,14 @@ data class Payment(
     var isDeleted: Boolean = false,
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    @JsonProperty("modifiedAt")
+    @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
     @JsonProperty("zone")
     var zone: String? = "",
     @JsonProperty("serviceType")
-    var serviceType: String? = ""
+    var serviceType: String? = "",
+    @JsonProperty("paymentCode")
+    var paymentCode: PaymentCode? = PaymentCode.REC
 )

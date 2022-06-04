@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.controller
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import io.micronaut.http.annotation.Controller
@@ -25,26 +26,26 @@ class OnAccountController {
 
     @Get("{?request*}")
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
-        return onAccountService.getOnAccountCollections(request)
+        return Response<AccountCollectionResponse>().ok(onAccountService.getOnAccountCollections(request))
     }
 
     @Post
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment {
-        return onAccountService.createPaymentEntry(request)
+        return Response<Payment>().ok(onAccountService.createPaymentEntry(request))
     }
 
     @Put()
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): Payment? {
-        return onAccountService.updatePaymentEntry(request)
+        return Response<Payment?>().ok(onAccountService.updatePaymentEntry(request))
     }
 
     @Delete
     suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String? {
-        return onAccountService.deletePaymentEntry(paymentId)
+        return Response<String?>().ok(onAccountService.deletePaymentEntry(paymentId))
     }
 
     @Post("/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse {
-        return onAccountService.createBulkPayments(request)
+        return Response<BulkPaymentResponse>().ok(onAccountService.createBulkPayments(request))
     }
 }

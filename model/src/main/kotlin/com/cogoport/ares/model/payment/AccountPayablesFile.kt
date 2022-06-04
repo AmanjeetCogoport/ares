@@ -1,37 +1,39 @@
-package com.cogoport.ares.api.payment.model
+package com.cogoport.ares.model.payment
 
-import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.ServiceType
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
 @Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class AccountPayablesFile(
     var entityCode: Int,
-    var orgSerialId: Long,
-    var sageOrganizationId: String?,
     var organizationId: UUID?,
     var organizationName: String?,
     var documentNo: Long,
     var documentValue: String,
-    var zoneCode: String, // TODO : Create enum for zone , NORTH , SOUTH ,EAST , WEST
+    var zoneCode: ZoneCode,
     var serviceType: ServiceType,
     var category: String, // TODO : Create enum for Category , ASSET , NON_ASSET
-    var accCode: Int,
-    var accMode: String,
-    var accType: String,
+    var accMode: AccMode,
+    var accType: AccountType,
     var signFlag: Short,
     var currency: String, // Currency of amount paid against invoice
     var currencyAmount: BigDecimal, // Amount paid in that currency
     var ledgerCurrency: String, // Ledger currency if amount paid against invoice
     var ledgerAmount: BigDecimal, // Amount paid in ledger currency
-    var paymentMode: String?,
+    var currTdsAmount: BigDecimal, // TDS Amount against payment pay currency
+    var ledTdsAmount: BigDecimal, // TDS Amount against payment ledger currency
+    var paymentMode: PayMode,
     var narration: String?,
-    var accountNo: String?,
+    var cogoAccountNo: String?,
+    var refAccountNo: String?,
     var transRefNumber: String,
     var transactionDate: Timestamp,
-    var isPosted: Boolean,
-    var documentStatus: DocumentStatus // final,proforma,cancelled
+    var bankName: String?,
+    var isPosted: Boolean
 )

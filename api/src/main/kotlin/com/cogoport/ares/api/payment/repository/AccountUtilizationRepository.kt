@@ -25,19 +25,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
             category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
             sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
-            updated_at from account_utilizations where document_no = :documentNo and acc_type= :accType"""
+            updated_at from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type)"""
     )
-    suspend fun findRecord(documentNo: Long, accType: String): AccountUtilization
+    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization
 
-    @Query("delete from account_utilizations where document_no=:documentNo and acc_type=:accType")
-    suspend fun deleteInvoiceUtils(documentNo: Long, accType: String): Int
+    @Query("delete from account_utilizations where id=:id")
+    suspend fun deleteInvoiceUtils(id: Long): Int
     suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 
     @Query(
         """update account_utilizations set 
-              pay_curr = :currencyPay , pay_loc =:ledgerPay , modified_at =now() where id=:id"""
+              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id"""
     )
-    suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+    suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
     @Query(
         """
@@ -205,25 +205,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and doc_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
+        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
         group by organization_id,zone_code,organization_name
         order by organization_name
-        offset ((:pageLimit * :page) - :pageLimit)
-        limit :pageLimit
         """
     )
     suspend fun getOutstandingAgeingBucket(zone: String?, orgName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
-        select organization_id::varchar,organization_name,currency,
+        select organization_id::varchar,organization_name,currency,zone_code,
         sum(case when acc_type <> 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
         sum(case when acc_type = 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
         sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
         sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and doc_status = 'FINAL' and organization_id::varchar = :orgId and zone_code = :zone
-        group by organization_id,organization_name,currency
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status = 'FINAL' and organization_id = :orgId::uuid and zone_code = :zone
+        group by organization_id, organization_name, currency, zone_code
         """
     )
     suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
@@ -233,5 +231,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select * from account_utilizations where document_no = :id limit 1
     """
     )
-    suspend fun findByPaymentId(id: Long?): AccountUtilization
+    suspend fun findByDocumentNo(id: Long?): AccountUtilization
 }
