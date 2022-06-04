@@ -40,7 +40,6 @@ import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 
-
 @Client(id = "ares-service")
 interface AresClient {
     @Get("/dashboard/overall-stats{?request*}")
