@@ -55,7 +55,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val payment = paymentConverter.convertToEntity(receivableRequest)
         paymentRepository.save(payment)
         val paymentModel = paymentConverter.convertToModel(payment)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentModel.id.toString(), paymentModel)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentModel.id.toString(), receivableRequest)
 
         val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
         accUtilizationModel.accType = AccountType.REC

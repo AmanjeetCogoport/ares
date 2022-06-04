@@ -54,9 +54,11 @@ data class Payment(
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("modifiedAt")
-    var modifiedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
+    @JsonProperty("zone")
     var zone: String? = "",
+    @JsonProperty("serviceType")
     var serviceType: String? = ""
 )
