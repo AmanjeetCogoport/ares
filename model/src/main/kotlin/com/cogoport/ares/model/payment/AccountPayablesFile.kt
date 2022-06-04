@@ -13,6 +13,7 @@ import java.util.UUID
 data class AccountPayablesFile(
     var entityCode: Int,
     var organizationId: UUID?,
+    var orgSerialId: Long?,
     var organizationName: String?,
     var documentNo: Long,
     var documentValue: String,

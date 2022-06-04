@@ -84,7 +84,7 @@ open class KnockoffServiceImpl : KnockoffService {
                 signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
                 amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid, payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
                 dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
-                updatedAt = Timestamp.from(Instant.now()), orgSerialId = 0
+                updatedAt = Timestamp.from(Instant.now()), orgSerialId = knockOffRecord.orgSerialId
             )
 
             accountUtilizationRepository.save(accountUtilEntity)
