@@ -18,9 +18,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://localhost:5432/ares
-      username: cogoport
-      password: cogoport123
+      url: r2dbc:postgresql://cogo-book.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares
+      username: postgres
+      password: postgres123
       dialect: POSTGRES
 
 kafka:
