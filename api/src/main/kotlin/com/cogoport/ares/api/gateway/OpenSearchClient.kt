@@ -3,6 +3,7 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
@@ -11,6 +12,7 @@ import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.sql.Timestamp
 
 class OpenSearchClient {
 
@@ -56,8 +58,7 @@ class OpenSearchClient {
     fun <T : Any> listApi(index: String, classType: Class<T>, values: List<String>, offset: Int? = null, limit: Int? = null): SearchResponse<T>? {
         val response = Client.search(
             { s ->
-                s.index(index).query {
-                    q ->
+                s.index(index).query { q ->
                     q.ids { i -> i.values(values) }
                 }.from(offset).size(limit)
             },
@@ -126,6 +127,52 @@ class OpenSearchClient {
                         q ->
                         q.matchPhrase { a -> a.field("organizationId").query(values) }
                     }
+            },
+            classType
+        )
+        return response
+    }
+
+    fun <T : Any> onAccountSearch(request: AccountCollectionRequest, classType: Class<T>): SearchResponse<T>? {
+        val response = Client.search(
+            { s ->
+                s.index("index_ares_on_account_payment")
+                    .query { q ->
+                        q.bool { b ->
+                            if (request.currencyType != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("currencyType").query(FieldValue.of(request.currencyType))
+                                    }
+                                }
+                            }
+                            if (request.entityType != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("entityType").query(FieldValue.of(request.entityType.toString()))
+                                    }
+                                }
+                            }
+                            if (request.startDate != null && request.endDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("transactionDate")
+                                            .gte(JsonData.of(Timestamp.valueOf(request.startDate))).lte(
+                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                            )
+                                    }
+                                }
+                            }
+                            if (request.searchString != null) {
+                                b.must { m ->
+                                    m.queryString { q -> q.query("*" + request.searchString + "*").fields("customerName", "utr") }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .from((request.page - 1) * request.pageLimit)
+                    .size(request.pageLimit)
             },
             classType
         )

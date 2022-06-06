@@ -1,14 +1,19 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
 @Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class AccountPayablesFile(
     var entityCode: Int,
     var organizationId: UUID?,
+    var orgSerialId: Long?,
     var organizationName: String?,
     var documentNo: Long,
     var documentValue: String,

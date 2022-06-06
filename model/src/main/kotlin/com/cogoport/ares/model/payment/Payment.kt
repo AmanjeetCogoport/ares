@@ -9,39 +9,58 @@ import java.util.UUID
 
 @Introspected
 data class Payment(
+    @JsonProperty("id")
     var id: Long? = 0,
-    @field:NotNull(message = "Entity Type is required")
+    @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
     var entityType: Int = 0,
+    @JsonProperty("fileId")
     var fileId: Long? = null,
+    @JsonProperty("orgSerialId")
     var orgSerialId: Long? = null,
+    @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
+    @JsonProperty("customerId")
     var customerId: UUID? = null,
+    @JsonProperty("customerName")
     var customerName: String? = "",
-    @field:NotNull(message = "Account Code is required")
+    @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
     var accCode: Int = 0,
-    @field:NotNull(message = "Account Mode is required")
-    var accMode: AccMode? = null,
+    @JsonProperty("accMode") @field:NotNull(message = "Account Mode is required")
+    var accMode: AccMode? = AccMode.AR,
+    @JsonProperty("signFlag")
     var signFlag: Short = 1,
-    @field:NotNull(message = "Currency Type is required")
+    @JsonProperty("currencyType") @field:NotNull(message = "Currency Type is required")
     var currencyType: String = "",
-    @field:NotNull(message = "Amount is required")
+    @JsonProperty("amount") @field:NotNull(message = "Amount is required")
     var amount: BigDecimal = 0.toBigDecimal(),
-    @field:NotNull(message = "Ledger Currency is required")
+    @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger Currency is required")
     var ledCurrency: String = "INR",
-    @field:NotNull(message = "Ledger Amount is required")
+    @JsonProperty("ledAmount") @field:NotNull(message = "Ledger Amount is required")
     var ledAmount: BigDecimal = 0.toBigDecimal(),
+    @JsonProperty("payMode")
     var payMode: PayMode? = null,
+    @JsonProperty("remarks")
     var remarks: String? = null,
+    @JsonProperty("utr")
     var utr: String? = "",
+    @JsonProperty("refPaymentId")
     var refPaymentId: Long? = 0,
+    @JsonProperty("transactionDate")
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+    @JsonProperty("isPosted")
     var isPosted: Boolean = false,
+    @JsonProperty("isDeleted")
     var isDeleted: Boolean = false,
+    @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
+    @JsonProperty("zone")
     var zone: String? = "",
+    @JsonProperty("serviceType")
     var serviceType: String? = "",
-    var paymentCode: PaymentCode?
+    @JsonProperty("paymentCode")
+    var paymentCode: PaymentCode? = PaymentCode.REC
 )

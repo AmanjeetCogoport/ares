@@ -225,5 +225,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select * from account_utilizations where document_no = :id limit 1
     """
     )
-    suspend fun findByPaymentId(id: Long?): AccountUtilization
+    suspend fun findByDocumentNo(id: Long?): AccountUtilization
 }
