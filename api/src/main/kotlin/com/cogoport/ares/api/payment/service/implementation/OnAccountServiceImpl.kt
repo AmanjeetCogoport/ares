@@ -60,9 +60,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
-        payment.accCode= AresModelConstants.AR_ACCOUNT_CODE
-        if(receivableRequest.accMode==AccMode.AP){
-            payment.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        if (receivableRequest.accMode == AccMode.AP) {
+            payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
         paymentRepository.save(payment)
@@ -83,13 +83,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
-        accUtilEntity.accCode= AresModelConstants.AR_ACCOUNT_CODE
-        if(receivableRequest.accMode==AccMode.AP){
-            accUtilEntity.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        if (receivableRequest.accMode == AccMode.AP) {
+            accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-
 
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
