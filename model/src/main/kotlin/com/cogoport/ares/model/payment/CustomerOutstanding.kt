@@ -31,5 +31,7 @@ data class DueAmount(
     @JsonProperty("currency")
     var currency: String?,
     @JsonProperty("amount")
-    var amount: BigDecimal?
+    var amount: BigDecimal?,
+    @JsonProperty("invoiceCount")
+    var invoicesCount: Int?
 )
