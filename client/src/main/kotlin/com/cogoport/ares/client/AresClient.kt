@@ -1,27 +1,7 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.CollectionRequest
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
-import com.cogoport.ares.model.payment.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.OutstandingListRequest
-import com.cogoport.ares.model.payment.OverallStatsRequest
-import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.SalesTrendResponse
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.AccountCollectionResponse
-import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.*
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -35,10 +15,6 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.time.LocalDateTime
-import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.CreateInvoiceResponse
-import com.cogoport.ares.model.payment.AccountPayableFileResponse
-import com.cogoport.ares.model.payment.AccountPayablesFile
 
 @Client(id = "ares-service")
 interface AresClient {
@@ -86,13 +62,13 @@ interface AresClient {
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
     @Post("/accounts")
-    suspend fun createOnAccountReceivables(@Valid @Body request: Payment): Payment
+    suspend fun createOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
     @Put("/accounts")
-    suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): Payment
+    suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
     @Delete("/accounts")
-    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): String
+    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse
 
     @Post("/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
