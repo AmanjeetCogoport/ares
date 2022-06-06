@@ -9,12 +9,14 @@ import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ZoneCode
@@ -58,7 +60,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    override suspend fun createPaymentEntry(receivableRequest: Payment): Payment {
+    override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
         paymentRepository.save(payment)
@@ -77,14 +79,15 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.docStatus = DocumentStatus.FINAL
         var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-        return paymentModel
+
+        return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
     /**
      * @param Payment
      * @return Payment
      */
-    override suspend fun updatePaymentEntry(receivableRequest: Payment): Payment? {
+    override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
         var accountUtilization = accountUtilizationRepository.findByDocumentNo(receivableRequest.id)
         if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
@@ -94,7 +97,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): Payment? {
+    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): OnAccountApiCommonResponse {
 
         var paymentDetails = paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), paymentDetails)
@@ -103,10 +106,12 @@ open class OnAccountServiceImpl : OnAccountService {
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
-        return payment?.let { paymentConverter.convertToModel(it) }
+
+        return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
+        //   return payment?.let { paymentConverter.convertToModel(it) }
     }
 
-    override suspend fun deletePaymentEntry(paymentId: Long): String? {
+    override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
         var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
         if (payment.id == null) throw AresException(AresError.ERR_1002, "")
@@ -123,7 +128,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        return "Successfully Deleted!"
+        return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
     // Will be removed via Mapper

@@ -68,7 +68,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
 
             val generatedId = accUtilRepository.save(acUtilization).id!!
 
-            // emitDashboardEvent(accUtilizationRequest)
+            emitDashboardEvent(accUtilizationRequest)
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -97,7 +97,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
         }
 
         val generatedId = accUtilRepository.save(acUtilization).id
-        // emitDashboardEvent(accUtilizationRequest)
+        emitDashboardEvent(accUtilizationRequest)
         return CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
     }
 
