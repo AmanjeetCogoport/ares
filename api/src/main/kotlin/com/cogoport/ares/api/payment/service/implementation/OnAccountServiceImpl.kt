@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
@@ -11,6 +12,7 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
@@ -21,8 +23,8 @@ import com.cogoport.ares.model.payment.ZoneCode
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.time.LocalDateTime
 import javax.transaction.Transactional
+import kotlin.math.ceil
 
 @Singleton
 open class OnAccountServiceImpl : OnAccountService {
@@ -43,18 +45,11 @@ open class OnAccountServiceImpl : OnAccountService {
      * @param : updatedDate, entityType, currencyType
      * @return : AccountCollectionResponse
      */
-    override suspend fun getOnAccountCollections(
-        uploadedDate: LocalDateTime?,
-        entityType: Int?,
-        currencyType: String?
-    ): AccountCollectionResponse {
-        var payments = mutableListOf<Payment>()
-        var data = paymentRepository.listOrderByCreatedAtDesc()
-        data.forEach {
-            val payment = paymentConverter.convertToModel(it)
-            payments.add(payment)
-        }
-        return AccountCollectionResponse(payments = payments)
+    override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
+        val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
+        val payments = data.hits().hits().map { it.source() }
+        val total = data.hits().total().value().toInt()
+        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
