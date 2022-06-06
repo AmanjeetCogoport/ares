@@ -164,12 +164,22 @@ class OpenSearchServiceImpl : OpenSearchService {
     private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-        val invoicesDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.openInvoicesAmount!! } }.map { DueAmount(it.key, it.value) }
-        val paymentsDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.paymentsAmount!! } }.map { DueAmount(it.key, it.value) }
-        val outstandingDues = dataModel.groupBy { it.currency }.mapValues { it.value.sumOf { v -> v.outstandingAmount!! } }.map { DueAmount(it.key, it.value) }
+        val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount!! }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
+        val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount!! }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
+        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount!! }, 0) }.toMutableList()
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
+        validateDueAmount(invoicesDues)
+        validateDueAmount(paymentsDues)
+        validateDueAmount(outstandingDues)
         val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
+    }
+    private fun validateDueAmount(data: MutableList<DueAmount>) {
+        listOf("INR", "USD").forEach { curr ->
+            if (curr !in data.groupBy { it.currency }) {
+                data.add(DueAmount(curr, 0.toBigDecimal(), 0))
+            }
+        }
     }
 }
