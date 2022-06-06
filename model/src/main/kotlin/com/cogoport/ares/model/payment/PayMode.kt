@@ -1,5 +1,5 @@
 package com.cogoport.ares.model.payment
 
 enum class PayMode(dbValue: String) {
-    DD("IMPS"), CASH("CASH"), CHEQUE("CHQ"), NET_BANKING("NEFT"), UPI("RTGS"), BANK("BANK")
+    IMPS("IMPS"), CASH("CASH"), CHQ("CHQ"), NEFT("NEFT"), RTGS("RTGS"), BANK("BANK")
 }
