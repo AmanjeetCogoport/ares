@@ -11,6 +11,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.common.models.Messages
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountCollectionRequest
@@ -58,6 +59,12 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
+
+        payment.accCode= AresModelConstants.AR_ACCOUNT_CODE
+        if(receivableRequest.accMode==AccMode.AP){
+            payment.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        }
+
         paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
@@ -71,8 +78,17 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerAmount = 0.toBigDecimal()
+
         accUtilizationModel.docStatus = DocumentStatus.FINAL
-        var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+
+        var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
+
+        var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        accUtilRes.accCode= AresModelConstants.AR_ACCOUNT_CODE
+        if(receivableRequest.accMode==AccMode.AP){
+            accUtilRes.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        }
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
