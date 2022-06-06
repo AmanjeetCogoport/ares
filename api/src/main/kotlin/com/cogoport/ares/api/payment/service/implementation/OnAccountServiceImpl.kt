@@ -83,12 +83,14 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
+        accUtilEntity.accCode= AresModelConstants.AR_ACCOUNT_CODE
+        if(receivableRequest.accMode==AccMode.AP){
+            accUtilEntity.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        }
+
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        accUtilRes.accCode= AresModelConstants.AR_ACCOUNT_CODE
-        if(receivableRequest.accMode==AccMode.AP){
-            accUtilRes.accCode= AresModelConstants.AP_ACCOUNT_CODE
-        }
+
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)

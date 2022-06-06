@@ -43,70 +43,70 @@ import java.time.LocalDateTime
 
 @Client(id = "ares-service")
 interface AresClient {
-    @Get("/dashboard/overall-stats{?request*}")
+    @Get("/payment/dashboard/overall-stats{?request*}")
     public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?
 
-    @Get("/dashboard/daily-sales-outstanding{?request*}")
+    @Get("/payment/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
 
-    @Get("/dashboard/collection-trend{?request*}")
+    @Get("/payment/dashboard/collection-trend{?request*}")
     public suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionResponse?
 
-    @Get("/dashboard/monthly-outstanding{?request*}")
+    @Get("/payment/dashboard/monthly-outstanding{?request*}")
     public suspend fun getMonthlyOutstanding(@Valid request: MonthlyOutstandingRequest): MonthlyOutstanding?
 
-    @Get("/dashboard/quarterly-outstanding{?request*}")
+    @Get("/payment/dashboard/quarterly-outstanding{?request*}")
     public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
     /** Sales trend need to be deleted */
-    @Get("/dashboard/sales-trend")
+    @Get("/payment/dashboard/sales-trend")
     public suspend fun getSalesTrend(
         @QueryValue(AresModelConstants.ZONE) zone: String?,
         @QueryValue(AresModelConstants.ROLE) role: String?
     ): SalesTrendResponse?
 
-    @Get("/dashboard/outstanding-by-age{?request*}")
+    @Get("/payment/dashboard/outstanding-by-age{?request*}")
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
-    @Get("/dashboard/receivables-by-age{?request*}")
+    @Get("/payment/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
 
-    @Get("/outstanding/overall{?request*}")
+    @Get("/payment/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
 
-    @Get("/outstanding/{orgId}")
+    @Get("/payment/outstanding/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
 
-    @Get("/accounts")
+    @Get("/payment/accounts")
     suspend fun getOnAccountCollections(
         @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
         @QueryValue("entityType") entityType: Int?,
         @QueryValue("currencyType") currencyType: String?
     ): AccountCollectionResponse
-    @Post("/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
+    @Post("/payment/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
-    @Post("/accounts")
+    @Post("/payment/accounts")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
-    @Put("/accounts")
+    @Put("/payment/accounts")
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
-    @Delete("/accounts")
+    @Delete("/payment/accounts")
     suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse
 
-    @Post("/accounts/bulk-create")
+    @Post("/payment/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
 
-    @Post("/invoice/add-bulk")
+    @Post("/payment/invoice/add-bulk")
     suspend fun createBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse>
 
-    @Post("/invoice")
+    @Post("/payment/invoice")
     suspend fun createInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse
 
-    @Delete("/invoice")
+    @Delete("/payment/invoice")
     suspend fun deleteInvoice(@QueryValue("docNumber") docNumber: Long, @QueryValue("accType") accType: String): Boolean
 
-    @Post("/knockoff/payables")
+    @Post("/payment/knockoff/payables")
     suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 }
