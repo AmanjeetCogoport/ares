@@ -43,7 +43,7 @@ jobs:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_TOKEN }}
           ec2-image-id: ami-0149b9535aebdbc4b
-          ec2-instance-type: t3.xlarge
+          ec2-instance-type: t3.2xlarge
           subnet-id: subnet-05f1c897b9994c200
           security-group-id: sg-01bf1ea2e2b45a7cf
   deploy:
