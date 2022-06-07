@@ -5,10 +5,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class AccountPayableFileResponse(
-    var documentNo: Long,
-    var documentValue: String,
-    var isSuccess: Boolean,
-    var paymentStatus: String?,
-    var failureReason: String?
+data class PayableKnockOffProduceEvent(
+    var accountPayableFileResponseList: MutableList<AccountPayableFileResponse>
 )

@@ -1,21 +1,24 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.mapper.PayableFileToAccountUtilMapper
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.PaymentCode
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
 import javax.transaction.Transactional
@@ -32,9 +35,9 @@ open class KnockoffServiceImpl : KnockoffService {
     lateinit var payableFileToPaymentMapper: PayableFileToPaymentMapper
 
     @Inject
-    lateinit var payableFileToAccountUtilMapper: PayableFileToAccountUtilMapper
+    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    @Transactional(rollbackOn = [SQLException::class, RuntimeException::class, Throwable::class, Exception::class])
     override suspend fun uploadBillPayment(knockOffList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse> {
 
         var uploadBillResponseList = mutableListOf<AccountPayableFileResponse>()
@@ -50,7 +53,7 @@ open class KnockoffServiceImpl : KnockoffService {
                 // Add error that this invoice cannot be processed due to invoice does not exists
                 uploadBillResponseList.add(
                     AccountPayableFileResponse(
-                        knockOffRecord.documentNo, knockOffRecord.documentValue, false, Messages.NO_DOCUMENT_EXISTS
+                        knockOffRecord.documentNo, knockOffRecord.documentValue, false, "UNPAID", Messages.NO_DOCUMENT_EXISTS
                     )
                 )
                 continue
@@ -100,14 +103,21 @@ open class KnockoffServiceImpl : KnockoffService {
                 payTdsEntity.updatedAt = Timestamp.from(Instant.now())
                 paymentRepository.save(payTdsEntity)
             }
-            // Add success in the return response
-            uploadBillResponseList.add(
-                AccountPayableFileResponse(
-                    knockOffRecord.documentNo, knockOffRecord.documentValue,
-                    true, null
-                )
+            var paymentStatus = accountUtilizationRepository.findDocumentStatus(knockOffRecord.documentNo, AccMode.AP.name)
+            var accPayResponse = AccountPayableFileResponse(
+                knockOffRecord.documentNo, knockOffRecord.documentValue,
+                true, paymentStatus, null
             )
+            // Add success in the return response
+            uploadBillResponseList.add(accPayResponse)
         }
+        // Emit kafka to the kuber service
+        emitPaymentStatus(uploadBillResponseList)
         return uploadBillResponseList
+    }
+
+    private fun emitPaymentStatus(accPayResponseList: MutableList<AccountPayableFileResponse>) {
+        var event = PayableKnockOffProduceEvent(accPayResponseList)
+        aresKafkaEmitter.emitBillPaymentStatus(event)
     }
 }
