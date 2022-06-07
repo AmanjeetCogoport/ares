@@ -47,11 +47,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) between 61 and 90 then '61-90'
              when (now()::date - due_date ) between 91 and 180 then '91-180'
              when (now()::date - due_date ) between 181 and 365 then '181-365'
+             when (now()::date - due_date ) > 365 then '365+'
              end as ageing_duration,
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
+             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status = 'FINAL'
              group by ageing_duration, zone
              order by 1
           """
@@ -68,7 +69,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(sign_flag * (amount_loc - pay_loc)) as amount,
             'INR' as currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status = 'FINAL'
             group by ageing_duration
             order by ageing_duration
         """
@@ -199,7 +200,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
+        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and due_date is not null and document_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
         group by organization_id,zone_code,organization_name
         order by organization_name
         """
