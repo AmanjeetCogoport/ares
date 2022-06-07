@@ -8,7 +8,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class DsoResponse(
     @JsonProperty("month")
-    val month: Int,
+    val month: String,
     @JsonProperty("dsoForTheMonth")
     val dsoForTheMonth: Float
 )

@@ -33,6 +33,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.time.LocalDate
+import java.time.Month
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -145,14 +146,14 @@ class DashboardServiceImpl : DashboardService {
         val dsoList = mutableListOf<DsoResponse>()
         for (hts in salesResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            dsoList.add(DsoResponse(data!!.month, data.value))
+            dsoList.add(DsoResponse(data!!.month.toString(), data.value))
         }
 
         val payablesResponse = clientResponse(searchKeyPayables)
         val dpoList = mutableListOf<DpoResponse>()
         for (hts in payablesResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            dpoList.add(DpoResponse(data!!.month, data.value))
+            dpoList.add(DpoResponse(data!!.month.toString(), data.value))
         }
 
         val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
@@ -166,7 +167,7 @@ class DashboardServiceImpl : DashboardService {
                 currentDso = currResponse.hits()!!.hits()[0].source()!!.value
             }
         }
-        return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
+        return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }.map { DsoResponse(Month.of(it.month.toInt()).toString(),it.dsoForTheMonth) },  dpoList.sortedBy { it.month }.map { DpoResponse(Month.of(it.month.toInt()).toString(),it.dpoForTheMonth) })
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
