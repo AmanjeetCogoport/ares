@@ -99,7 +99,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
-        validateInput(request.zone, request.role, request.quarter, request.year)
+        validateInput(request.zone, request.role, request.quarterYear.split("_")[0][1].toString().toInt(), request.quarterYear.split("_")[1].toInt())
         val searchKey = searchKeyCollectionTrend(request)
         return OpenSearchClient().search(
             searchKey = searchKey,
@@ -109,7 +109,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter
+        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0] else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
