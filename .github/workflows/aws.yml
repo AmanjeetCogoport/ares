@@ -75,13 +75,16 @@ jobs:
         id: image_name
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
+      - name: Build jar file
+        run: ./gradlew build
+
       - name: Build and Push image to Github CR
         id: build-image
         env:
           IMAGE_TAG: ${{ steps.image_name.outputs.sha_short }}
-        run: |
-          ./gradlew optimizedDockerBuildNative
-          echo $IMAGE_TAG          
+        run: |          
+          echo $IMAGE_TAG 
+          docker build -t ${{ env.REPO_URL }}:latest .
           docker push ${{ env.REPO_URL }}:latest
           docker tag ${{ env.REPO_URL }}:latest ${{ env.REPO_URL }}:$IMAGE_TAG
           docker push ${{ env.REPO_URL }}:$IMAGE_TAG
