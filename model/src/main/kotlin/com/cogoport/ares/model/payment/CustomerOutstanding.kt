@@ -8,6 +8,8 @@ data class CustomerOutstanding(
     var organizationId: String?,
     @JsonProperty("organizationName")
     var organizationName: String?,
+    @JsonProperty("zoneCode")
+    var zoneCode: String?,
     @JsonProperty("openInvoices")
     var openInvoices: InvoiceStats?,
     @JsonProperty("onAccountPayment")
@@ -29,5 +31,7 @@ data class DueAmount(
     @JsonProperty("currency")
     var currency: String?,
     @JsonProperty("amount")
-    var amount: BigDecimal?
+    var amount: BigDecimal?,
+    @JsonProperty("invoiceCount")
+    var invoicesCount: Int?
 )

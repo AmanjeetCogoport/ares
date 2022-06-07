@@ -15,6 +15,8 @@ object AresConstants {
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"
     const val INVOICE_OUTSTANDING_INDEX = "index_ares_invoice_outstanding"
+    const val ON_ACCOUNT_PAYMENT_INDEX = "index_ares_on_account_payment"
+    const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
     const val OPEN_SEARCH_DOCUMENT_KEY = "id"
     const val KEY_DELIMITER = "_"
 

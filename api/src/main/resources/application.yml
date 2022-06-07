@@ -4,6 +4,8 @@ micronaut:
   server:
     port: 8086
     context-path: /payment
+    cors:
+      enabled: true
   router:
     static-resources:
       swagger:
@@ -16,14 +18,24 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://localhost:5432/ares
-      username: cogoport
-      password: cogoport123
+      url: r2dbc:postgresql://cogo-book.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares
+      username: postgres
+      password: postgres123
       dialect: POSTGRES
 
 kafka:
   bootstrap:
-    servers: localhost:29092
+    servers: b-1.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098,b-2.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098
+  security:
+    protocol: SASL_SSL
+  sasl:
+    mechanism: AWS_MSK_IAM
+    jaas:
+      config: software.amazon.msk.auth.iam.IAMLoginModule required;
+    client:
+      callback:
+        handler:
+          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss

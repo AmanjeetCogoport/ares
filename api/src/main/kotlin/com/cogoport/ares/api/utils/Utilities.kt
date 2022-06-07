@@ -2,6 +2,7 @@ package com.cogoport.ares.api.utils
 
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.model.payment.AccountType
 import java.sql.Timestamp
 
 class Utilities {
@@ -19,6 +20,22 @@ class Utilities {
                 ex.printStackTrace() // log write
                 throw AresException(AresError.ERR_1003, "date") // Invalid date format
             }
+        }
+
+        fun isInvoiceAccountType(accType: AccountType): Boolean {
+            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN || accType == AccountType.PCN ||
+                accType == AccountType.PINV || accType == AccountType.PDN
+            ) {
+                return true
+            }
+            return false
+        }
+
+        fun isPayAccountType(accType: AccountType): Boolean {
+            if (accType == AccountType.REC || accType == AccountType.PAY) {
+                return true
+            }
+            return false
         }
     }
 }
