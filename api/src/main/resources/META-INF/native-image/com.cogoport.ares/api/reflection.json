@@ -27,6 +27,15 @@
     "allPublicClasses": true
   },
   {
+    "name": "software.amazon.msk.auth.iam.internals.AuthenticationResponse",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  },
+  {
     "name": "software.amazon.msk.auth.iam.internals.IAMSaslClient$IAMSaslClientFactory",
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
