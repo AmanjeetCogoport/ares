@@ -8,9 +8,9 @@ import java.util.Calendar
 
 object AresConstants {
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
-    val CURR_YEAR = Calendar.getInstance().get(Calendar.YEAR)
+    val CURR_YEAR = LocalDate.now().year
     val CURR_DATE: Timestamp = Timestamp.from(Instant.now())
-    val CURR_MONTH = Calendar.getInstance().get(Calendar.MONTH)
+    val CURR_MONTH = LocalDate.now().monthValue
 
     const val SALES_DASHBOARD_INDEX = "index_ares_sales_dashboard"
     const val SALES_OUTSTANDING_INDEX = "index_ares_sales_outstanding"

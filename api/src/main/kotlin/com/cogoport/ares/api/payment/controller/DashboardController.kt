@@ -71,8 +71,8 @@ class DashboardController {
     }
 
     @Get("/sales-trend{?request*}")
-    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): MutableList<SalesTrend> {
-        return Response<MutableList<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
+    suspend fun getSalesTrend(@Valid request: SalesTrendRequest): List<SalesTrend> {
+        return Response<List<SalesTrend>>().ok(dashboardService.getSalesTrend(request))
     }
 
     /** To be Deleted */

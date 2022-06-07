@@ -32,6 +32,7 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -269,14 +270,17 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
+    override suspend fun getSalesTrend(request: SalesTrendRequest): List<SalesTrend> {
         validateInput(request.zone, request.role)
-        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
-        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
-        val output = mutableListOf<SalesTrend>()
+        val startDate = LocalDate.now().minusMonths(6).atStartOfDay()
+        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone, startDate)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone, startDate)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        var output = mutableListOf<SalesTrend>()
         for (t in totalSalesResponse) {
+            var add = true
             creditSalesResponse.forEach {
                 if (it["key"] == t["key"]) {
+                    add = false
                     output.add(
                         SalesTrend(
                             month = ZonedDateTime.parse(it["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
@@ -285,7 +289,16 @@ class DashboardServiceImpl : DashboardService {
                     )
                 }
             }
+            if (add){
+                output.add(
+                    SalesTrend(
+                        month = ZonedDateTime.parse(t["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
+                        salesOnCredit = 0.toDouble()
+                    )
+                )
+            }
         }
-        return if (output.size > 6) output.subList(output.size - 6, output.size) else output
+        output =  if (output.size > 6) output.subList(0, 6) else output
+        return output.map { if(it.salesOnCredit.isNaN()) SalesTrend(it.month, 0.toDouble()) else SalesTrend(it.month, it.salesOnCredit)  }
     }
 }
