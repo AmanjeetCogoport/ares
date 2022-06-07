@@ -136,9 +136,9 @@ class DashboardServiceImpl : DashboardService {
         validateInput(request.zone, request.role)
         val searchKeySales = mutableListOf<String>()
         val searchKeyPayables = mutableListOf<String>()
-        for (q in request.quarter) {
-            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
-            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
+        for (q in request.quarterYear) {
+            searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
+            searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
         }
         val salesResponse = clientResponse(searchKeySales)
         val dsoList = mutableListOf<DsoResponse>()

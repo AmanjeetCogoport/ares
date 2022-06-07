@@ -163,9 +163,9 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            if (request.searchString != null) {
+                            if (request.queryName != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.searchString + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.queryName + "*").fields("customerName", "utr") }
                                 }
                             }
                             b

@@ -11,7 +11,6 @@ object AresModelConstants {
     const val ROLE = "role"
     const val QUARTER = "quarter"
     const val YEAR = "year"
-    const val ORG_NAME = "orgName"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
     const val ORG_ID = "orgId"
@@ -19,7 +18,8 @@ object AresModelConstants {
     const val END_DATE = "endDate"
     const val ENTITY_TYPE = "entityType"
     const val CURRENCY_TYPE = "currencyType"
-    const val SEARCH_STRING = "searchString"
+    const val QUERY_NAME = "queryName"
+    const val QUARTER_YEAR = "quarterYear"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000
