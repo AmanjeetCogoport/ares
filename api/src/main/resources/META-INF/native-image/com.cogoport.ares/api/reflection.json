@@ -178,7 +178,98 @@
     "allDeclaredClasses": true
   },
   {
-    "name": "com.cogoport.ares.api.payment.config.MapperConfigImpl",
+    "name": "com.cogoport.ares.api.payment.mapper.AccountUtilizationMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.AccountUtilizationMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.DailyOutstandingMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.OutstandingMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.CollectionTrendMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.OverallStatsMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.OverallAgeingMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.InvoiceMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.OrgOutstandingMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.PayableFileToAccountUtilMapperImpl",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
+  },
+  {
+    "name": "com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapperImpl",
     "allDeclaredFields": true,
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true,
