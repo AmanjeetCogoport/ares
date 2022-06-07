@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
 
@@ -13,4 +14,7 @@ interface AresKafkaEmitter {
 
     @Topic("receivables-dashboard-data")
     fun emitDashboardData(openSearchEvent: OpenSearchEvent)
+
+    @Topic("payables-bill-status")
+    fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
 }
