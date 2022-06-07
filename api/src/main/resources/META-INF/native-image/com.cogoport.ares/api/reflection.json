@@ -310,5 +310,12 @@
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true,
     "allDeclaredClasses": true
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.deser.std.DateDeserializers$TimestampDeserializer",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredClasses": true
   }
 ]
