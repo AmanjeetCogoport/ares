@@ -78,6 +78,10 @@ tasks.named("optimizedDockerBuildNative") {
     images = ["ghcr.io/cogoport/ares:latest"]
 }
 
+tasks.named("jar") {
+    archiveFileName.set("app.jar")
+}
+
 application {
     mainClass.set("com.cogoport.ares.api.ApplicationKt")
 }
