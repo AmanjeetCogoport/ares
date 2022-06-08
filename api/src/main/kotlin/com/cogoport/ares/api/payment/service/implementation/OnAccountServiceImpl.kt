@@ -33,8 +33,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.transaction.Transactional
 import kotlin.math.ceil
-import kotlin.reflect.typeOf
-
 
 @Singleton
 open class OnAccountServiceImpl : OnAccountService {
@@ -61,7 +59,6 @@ open class OnAccountServiceImpl : OnAccountService {
         val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
-
         return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
@@ -76,10 +73,12 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.organizationId = UUID.fromString("1fe59e4a-25d9-4c00-a263-b64938e9d835")
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
+
         payment.accCode= AresModelConstants.AR_ACCOUNT_CODE
         if(receivableRequest.accMode==AccMode.AP){
             payment.accCode= AresModelConstants.AP_ACCOUNT_CODE
         }
+
         paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
@@ -163,6 +162,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.entityCode = receivableRequest.entityType
         // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
+        //accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
         accountUtilization.sageOrganizationId = receivableRequest.sageOrganizationId
         accountUtilization.accCode = receivableRequest.accCode
@@ -180,11 +180,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-            val filterDateFromTs = Timestamp(dateFormat.parse(payment.paymentDate).time)
-            payment.transactionDate =  filterDateFromTs
-            payment.zone = ZoneCode.EAST.toString()
-            payment.serviceType = ServiceType.AIR_CUSTOMS.toString()
             payment.accMode = AccMode.AR
             payment.paymentCode = PaymentCode.REC
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
