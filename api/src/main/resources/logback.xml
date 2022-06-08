@@ -3,10 +3,11 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <withJansi>false</withJansi>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [ares, %X{traceId}, %X{spanId}] [%X{SessionInfo}] [%X{RequestInfo}] --- [%15.15t] %-40.40logger{39} : %msg%n
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [ares, %X{traceId}, %X{spanId}] [%X{SessionInfo}] [%X{RequestInfo}] --- [%15.15t] %-40.40logger{39} : %msg %n
             </pattern>
         </encoder>
     </appender>
+    <logger name="io.micronaut.http.client" level="DEBUG" />
     <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>

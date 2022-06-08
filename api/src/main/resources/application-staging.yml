@@ -1,0 +1,44 @@
+application:
+  name: ares
+server:
+  port: 8086
+  context-path: /payment
+router:
+  static-resources:
+    swagger:
+      paths: classpath:META-INF/swagger
+      mapping: /swagger/**
+netty:
+  default:
+    allocator:
+      max-order: 3
+
+jackson:
+  date-format: yyyy-MM-dd HH:mm:ss
+
+r2dbc:
+  datasources:
+    default:
+      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      username: ${DB_USER}
+      password: ${DB_PASSWORD}
+      dialect: POSTGRES
+
+kafka:
+  bootstrap:
+    servers: ${KAFKA_SERVERS}
+  security:
+    protocol: SASL_SSL
+  sasl:
+    mechanism: AWS_MSK_IAM
+    jaas:
+      config: software.amazon.msk.auth.iam.IAMLoginModule required;
+    client:
+      callback:
+        handler:
+          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
+
+opensearch:
+  host: ${OPENSEARCH_HOST}
+  user: ${OPENSEARCH_USER}
+  pass: ${OPENSEARCH_PASS}

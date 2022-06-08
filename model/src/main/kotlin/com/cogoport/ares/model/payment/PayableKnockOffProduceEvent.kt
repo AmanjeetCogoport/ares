@@ -7,6 +7,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class KnockOffUtilizationEvent(
-    val knockOffUtilizationRequest: List<AccountPayablesFile>
+data class PayableKnockOffProduceEvent(
+    var accountPayableFileResponseList: MutableList<AccountPayableFileResponse>
 )

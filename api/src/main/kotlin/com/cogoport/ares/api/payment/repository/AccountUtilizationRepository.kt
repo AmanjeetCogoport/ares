@@ -236,4 +236,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun findByDocumentNo(id: Long?): AccountUtilization
+
+    @Query(
+        """
+             select case when (amount_loc-pay_loc)=0 then 'FULL'
+             when (amount_loc-pay_loc)<>0 then 'PARTIAL'
+			else 'UNPAID' end as payment_status 
+            from account_utilizations au where document_no =:documentNo and acc_mode =accMode::account_mode
+            """
+    )
+    suspend fun findDocumentStatus(documentNo: Long, accMode: String): String
 }

@@ -5,6 +5,9 @@ import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.KnockOffUtilizationEvent
+import com.cogoport.ares.model.payment.event.CreateInvoiceEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.Topic
@@ -21,8 +24,9 @@ class AresKafkaListener {
 
     @Inject
     lateinit var knockoffService: KnockoffService
-    @Topic("account-utilization")
-    fun listenAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
+
+    @Topic("create-account-utilization")
+    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
         invoiceService.addAccountUtilization(accountUtilizationEvent.accUtilizationRequest)
     }
 
@@ -34,5 +38,20 @@ class AresKafkaListener {
     @Topic("knockoff-payables")
     fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)
+    }
+
+    @Topic("update-invoice")
+    fun listenUpdateInvoice(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
+        invoiceService.updateInvoice(updateInvoiceEvent.updateInvoiceRequest)
+    }
+
+    @Topic("update-invoice-status")
+    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
+        invoiceService.updateInvoiceStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
+    }
+
+    @Topic("delete-create-invoice")
+    fun listenDeleteCreateInvoice(createInvoiceEvent: CreateInvoiceEvent) = runBlocking {
+        invoiceService.deleteCreateInvoice(createInvoiceEvent.createInvoiceRequest)
     }
 }

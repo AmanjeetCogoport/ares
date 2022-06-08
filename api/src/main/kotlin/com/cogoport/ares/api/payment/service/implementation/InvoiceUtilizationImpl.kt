@@ -10,14 +10,19 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.event.CreateInvoiceRequest
+import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
+import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.apache.kafka.common.KafkaException
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.DateFormat
@@ -43,7 +48,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * @param accUtilizationRequestList
      * @return mutableListOf CreateInvoiceResponse
      */
-    @Transactional(rollbackOn = [SQLException::class, RuntimeException::class, Throwable::class, Exception::class])
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
     override suspend fun addInvoice(accUtilizationRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
 
         val responseList = mutableListOf<CreateInvoiceResponse>()
@@ -68,7 +73,13 @@ open class InvoiceUtilizationImpl : InvoiceService {
 
             val generatedId = accUtilRepository.save(acUtilization).id!!
 
-            emitDashboardEvent(accUtilizationRequest)
+            try {
+                emitDashboardEvent(accUtilizationRequest)
+            } catch (k: KafkaException) {
+                logger().error(k.stackTraceToString())
+            } catch (e: Exception) {
+                logger().error(e.stackTraceToString())
+            }
             responseList.add(CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -97,7 +108,14 @@ open class InvoiceUtilizationImpl : InvoiceService {
         }
 
         val generatedId = accUtilRepository.save(acUtilization).id
-        emitDashboardEvent(accUtilizationRequest)
+
+        try {
+            emitDashboardEvent(accUtilizationRequest)
+        } catch (k: KafkaException) {
+            logger().error(k.stackTraceToString())
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
         return CreateInvoiceResponse(generatedId!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
     }
 
@@ -123,6 +141,28 @@ open class InvoiceUtilizationImpl : InvoiceService {
 
     override suspend fun findByDocumentNo(docNumber: Long): AccountUtilization {
         return accUtilRepository.findByDocumentNo(docNumber)
+    }
+
+    /**
+     * Updates Invoice in account utilization
+     * @param UpdateInvoiceRequest
+     */
+    @Transactional
+    override suspend fun updateInvoice(updateInvoiceRequest: UpdateInvoiceRequest) {
+        TODO()
+    }
+
+    override suspend fun updateInvoiceStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Updates Invoice in account utilization
+     * @param UpdateInvoiceRequest
+     */
+    @Transactional
+    override suspend fun deleteCreateInvoice(createInvoiceRequest: CreateInvoiceRequest) {
+        TODO()
     }
 
     /**

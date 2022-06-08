@@ -1,13 +1,17 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
 @Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class Payment(
     @JsonProperty("id")
     var id: Long? = 0,
