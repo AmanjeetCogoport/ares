@@ -48,11 +48,6 @@ jobs:
           ec2-instance-type: t3.2xlarge
           subnet-id: subnet-05f1c897b9994c200
           security-group-id: sg-01bf1ea2e2b45a7cf
-      - name: Set paths
-        run: |
-          ls
-          export PATH=graalvm-ce-java17-22.1.0/bin:$PATH
-          export JAVA_HOME=graalvm-ce-java17-22.1.0
 
   deploy:
     name: Start deployment
