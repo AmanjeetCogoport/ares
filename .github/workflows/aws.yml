@@ -17,7 +17,6 @@ env:
   MICRONAUT_ENVIRONMENTS: staging
   GITHUB_USERNAME: $GH_CR_USER
   GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
-  JAVA_HOME: graalvm-ce-java17-22.1.0
 
 permissions:
   contents: read
@@ -70,12 +69,12 @@ jobs:
         id: image_name
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
-#      - uses: graalvm/setup-graalvm@v1
-#        with:
-#          version: 'latest'
-#          java-version: '17'
-#          components: 'native-image'
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: 'latest'
+          java-version: '17'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build jar file
         run: ./gradlew build
