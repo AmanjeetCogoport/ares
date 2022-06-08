@@ -78,7 +78,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
         receivableRequest.id = savedPayment.id
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), receivableRequest)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
         accUtilizationModel.accType = AccountType.REC
@@ -97,7 +97,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
+        return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
     /**
@@ -136,7 +136,8 @@ open class OnAccountServiceImpl : OnAccountService {
             throw AresException(AresError.ERR_1007, "")
         payment.isDeleted = true
         var paymentResponse = paymentRepository.update(payment)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentResponse)
+        val openSearchpaymentModel = paymentConverter.convertToModel(paymentResponse)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchpaymentModel)
 
         var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment.id)
         val paymentModel = paymentConverter.convertToModel(payment)
