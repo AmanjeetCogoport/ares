@@ -17,7 +17,6 @@ env:
   MICRONAUT_ENVIRONMENTS: staging
   GITHUB_USERNAME: $GH_CR_USER
   GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
-  PATH: graalvm-ce-java17-22.1.0/bin:$PATH
   JAVA_HOME: graalvm-ce-java17-22.1.0
 
 permissions:
