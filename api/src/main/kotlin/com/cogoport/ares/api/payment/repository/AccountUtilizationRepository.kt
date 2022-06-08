@@ -47,11 +47,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) between 61 and 90 then '61-90'
              when (now()::date - due_date ) between 91 and 180 then '91-180'
              when (now()::date - due_date ) between 181 and 365 then '181-365'
+             when (now()::date - due_date ) > 365 then '365+'
              end as ageing_duration,
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (zone_code = :zone OR :zone is null) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
+             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status = 'FINAL'
              group by ageing_duration, zone
              order by 1
           """
@@ -68,7 +69,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(sign_flag * (amount_loc - pay_loc)) as amount,
             'INR' as currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN','REC') and document_status = 'FINAL'
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status = 'FINAL'
             group by ageing_duration
             order by ageing_duration
         """
@@ -103,7 +104,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
+            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end) as receivable_amount,
             abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount 
             from account_utilizations
             where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
@@ -116,30 +117,39 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        select to_char(date_trunc('month',transaction_date),'Month') as duration,
-        sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
-        from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
-        group by date_trunc('month',transaction_date)
-        order by date_trunc('month',transaction_date)
-        limit 5
+        with x as (
+	        select to_char(generate_series(CURRENT_DATE - '4 month'::interval, CURRENT_DATE, '1 month'), 'Mon') as month
+        ),
+        y as (
+            select to_char(date_trunc('month',transaction_date),'Mon') as month,
+            sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
+            from account_utilizations
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL' and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
+            group by date_trunc('month',transaction_date)
+        )
+        select x.month duration, coalesce(y.amount, 0::double precision) as amount from x left join y on y.month = x.month
         """
     )
     suspend fun generateMonthlyOutstanding(zone: String?): MutableList<Outstanding>
     @Query(
         """
-            with x as (select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-            sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
-            from account_utilizations
-            where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL'
-            group by date_trunc('quarter',transaction_date)
-            order by date_trunc('quarter',transaction_date) desc)
+            with x as (
+                select extract(quarter from generate_series(CURRENT_DATE - '11 month'::interval, CURRENT_DATE, '3 month')) as quarter
+            ),
+            y as (
+                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
+                sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
+                from account_utilizations
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL' and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                group by date_trunc('quarter',transaction_date)
+            )
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
-            x.total_outstanding_amount as amount 
+            coalesce(y.total_outstanding_amount, 0) as amount 
             from x
+            left join y on x.quarter = y.quarter
         """
     )
     suspend fun generateQuarterlyOutstanding(zone: String?): MutableList<Outstanding>
@@ -199,12 +209,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :orgName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
+        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and due_date is not null and document_status = 'FINAL' and (:orgId is null or organization_id = :orgId::uuid)
         group by organization_id,zone_code,organization_name
         order by organization_name
         """
     )
-    suspend fun getOutstandingAgeingBucket(zone: String?, orgName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
         select organization_id::varchar,organization_name,currency,zone_code,

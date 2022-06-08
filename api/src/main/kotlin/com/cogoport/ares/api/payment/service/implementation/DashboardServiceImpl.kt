@@ -5,33 +5,35 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
-import com.cogoport.ares.model.payment.SalesTrendRequest
-import com.cogoport.ares.model.payment.CollectionRequest
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
-import com.cogoport.ares.model.payment.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.OverallStatsRequest
-import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.ReceivableRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.OverallStatsResponse
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.DsoResponse
-import com.cogoport.ares.model.payment.DpoResponse
-import com.cogoport.ares.model.payment.DailyOutstandingResponse
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.AgeingBucketZone
+import com.cogoport.ares.model.payment.CollectionRequest
+import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.model.payment.DailyOutstandingResponse
+import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.DpoResponse
+import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.DsoResponse
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.ReceivableRequest
+import com.cogoport.ares.model.payment.SalesTrendRequest
 import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.time.LocalDate
+import java.time.Month
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -99,17 +101,18 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
-        validateInput(request.zone, request.role, request.quarter, request.year)
+        validateInput(request.zone, request.role, request.quarterYear.split("_")[0][1].toString().toInt(), request.quarterYear.split("_")[1].toInt())
         val searchKey = searchKeyCollectionTrend(request)
-        return OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        return data ?: CollectionResponse(id = searchKey)
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.year + AresConstants.KEY_DELIMITER + "Q" + request.quarter
+        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0] else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
@@ -134,38 +137,52 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
         validateInput(request.zone, request.role)
-        val searchKeySales = mutableListOf<String>()
-        val searchKeyPayables = mutableListOf<String>()
-        for (q in request.quarter) {
-            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX).forEach { key -> searchKeySales.add(key) }
-            searchKeyDailyOutstanding(request.zone, q, request.year, AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX).forEach { key -> searchKeyPayables.add(key) }
-        }
-        val salesResponse = clientResponse(searchKeySales)
         val dsoList = mutableListOf<DsoResponse>()
-        for (hts in salesResponse?.hits()?.hits()!!) {
-            val data = hts.source()
-            dsoList.add(DsoResponse(data!!.month, data.value))
-        }
-
-        val payablesResponse = clientResponse(searchKeyPayables)
         val dpoList = mutableListOf<DpoResponse>()
-        for (hts in payablesResponse?.hits()?.hits()!!) {
-            val data = hts.source()
-            dpoList.add(DpoResponse(data!!.month, data.value))
-        }
+        val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
+        for (q in sortQuarterList) {
+            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+            val salesResponse = clientResponse(salesResponseKey)
+            val dso = mutableListOf<DsoResponse>()
+            for (hts in salesResponse?.hits()?.hits()!!) {
+                val data = hts.source()
+                dso.add(DsoResponse(data!!.month.toString(), data.value))
+            }
+            val monthListDso = dso.map { it.month }
+            getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
+                if (!monthListDso.contains(it)) {
+                    dso.add(DsoResponse(it, 0.toBigDecimal()))
+                }
+            }
+            dso.sortedBy { it.month }.forEach { dsoList.add(it) }
 
+            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX)
+            val payablesResponse = clientResponse(payablesResponseKey)
+            val dpo = mutableListOf<DpoResponse>()
+            for (hts in payablesResponse?.hits()?.hits()!!) {
+                val data = hts.source()
+                dpo.add(DpoResponse(data!!.month.toString(), data.value))
+            }
+            val monthListDpo = dpo.map { it.month }
+            getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
+                if (!monthListDpo.contains(it)) {
+                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
+                }
+            }
+            dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
+        }
         val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
         var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            averageDso += data!!.value
+            averageDso += data!!.value.toFloat()
             if (data.month == AresConstants.CURR_MONTH) {
-                currentDso = currResponse.hits()!!.hits()[0].source()!!.value
+                currentDso = hts.source()!!.value.toFloat()
             }
         }
-        return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }, dpoList.sortedBy { it.month })
+        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString(), it.dsoForTheMonth) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString(), it.dpoForTheMonth) })
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -177,11 +194,15 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index)
+    }
+
+    private fun getMonthFromQuarter(quarter: Int): List<String> {
         return when (quarter) {
-            1 -> { generateKeyByMonth(listOf("1", "2", "3"), zone, year, index) }
-            2 -> { generateKeyByMonth(listOf("4", "5", "6"), zone, year, index) }
-            3 -> { generateKeyByMonth(listOf("7", "8", "9"), zone, year, index) }
-            4 -> { generateKeyByMonth(listOf("10", "11", "12"), zone, year, index) }
+            1 -> { listOf("1", "2", "3") }
+            2 -> { listOf("4", "5", "6") }
+            3 -> { listOf("7", "8", "9") }
+            4 -> { listOf("10", "11", "12") }
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
     }
@@ -269,14 +290,17 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend> {
+    override suspend fun getSalesTrend(request: SalesTrendRequest): List<SalesTrend> {
         validateInput(request.zone, request.role)
-        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
-        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
-        val output = mutableListOf<SalesTrend>()
+        val startDate = LocalDate.now().minusMonths(6).atStartOfDay()
+        val totalSalesResponse = OpenSearchClient().salesTrendTotalSales(request.zone, startDate)?.aggregations()?.get("total_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        val creditSalesResponse = OpenSearchClient().salesTrendCreditSales(request.zone, startDate)?.aggregations()?.get("credit_sales")?.dateHistogram()?.buckets()?.array()!!.map { mapOf("key" to it.keyAsString(), "value" to it.aggregations()["amount"]?.sum()?.value()!!) }
+        var output = mutableListOf<SalesTrend>()
         for (t in totalSalesResponse) {
+            var add = true
             creditSalesResponse.forEach {
                 if (it["key"] == t["key"]) {
+                    add = false
                     output.add(
                         SalesTrend(
                             month = ZonedDateTime.parse(it["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
@@ -285,7 +309,16 @@ class DashboardServiceImpl : DashboardService {
                     )
                 }
             }
+            if (add) {
+                output.add(
+                    SalesTrend(
+                        month = ZonedDateTime.parse(t["key"].toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).month.toString(),
+                        salesOnCredit = 0.toDouble()
+                    )
+                )
+            }
         }
-        return if (output.size > 6) output.subList(output.size - 6, output.size) else output
+        output = if (output.size > 6) output.subList(0, 6) else output
+        return output.map { if (it.salesOnCredit.isNaN()) SalesTrend(it.month, 0.toDouble()) else SalesTrend(it.month, it.salesOnCredit) }
     }
 }

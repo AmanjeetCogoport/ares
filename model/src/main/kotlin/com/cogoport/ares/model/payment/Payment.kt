@@ -1,15 +1,18 @@
 package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
-import java.util.UUID
 
 @JsonInclude
 @Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class Payment(
     @JsonProperty("id")
     var id: Long? = 0,
@@ -21,8 +24,8 @@ data class Payment(
     var orgSerialId: Long? = null,
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
-    @JsonProperty("organizationId")
-    var organizationId: UUID? = null,
+    @JsonProperty("customerId")
+    var customerId: String? = null,
     @JsonProperty("customerName")
     var customerName: String? = "",
     @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
@@ -32,7 +35,7 @@ data class Payment(
     @JsonProperty("signFlag")
     var signFlag: Short = 1,
     @JsonProperty("currencyType") @field:NotNull(message = "Currency Type is required")
-    var currencyType: String? = "",
+    var currencyType: String = "",
     @JsonProperty("amount") @field:NotNull(message = "Amount is required")
     var amount: BigDecimal = 0.toBigDecimal(),
     @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger Currency is required")
@@ -73,6 +76,4 @@ data class Payment(
     var uploadedBy: String? = "",
     @JsonProperty("bankName")
     var bankName: String? = "",
-    @JsonProperty("customerId")
-    var customerId: String? = ""
 )
