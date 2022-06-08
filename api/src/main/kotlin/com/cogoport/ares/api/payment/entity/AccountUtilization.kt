@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.entity
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.ZoneCode
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -25,7 +24,7 @@ data class AccountUtilization(
     var category: String?,
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
-    var organizationId: UUID,
+    var organizationId: UUID?,
     var organizationName: String?,
     var accCode: Int,
     var accType: AccountType,

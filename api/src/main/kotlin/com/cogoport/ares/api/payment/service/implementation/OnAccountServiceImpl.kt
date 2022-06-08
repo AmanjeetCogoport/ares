@@ -6,7 +6,6 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
-import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -24,13 +23,12 @@ import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.ZoneCode
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -48,8 +46,6 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
 
-    @Inject
-    lateinit var accUtilizationMapper : AccountUtilizationMapper
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -67,24 +63,21 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
-        receivableRequest.transactionDate =  filterDateFromTs
+        receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.zone = null
         receivableRequest.serviceType = ServiceType.NA.toString()
-        val orgDetails = OpenSearchClient().orgDetailSearch(receivableRequest.orgSerialId!!)
-        val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String,Any>).map { it.value}.get(0)
-        receivableRequest.organizationId = UUID.fromString(orgId.toString())
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
-        payment.accCode= AresModelConstants.AR_ACCOUNT_CODE
-        if(receivableRequest.accMode==AccMode.AP){
-            payment.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        if (receivableRequest.accMode == AccMode.AP) {
+            payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
-        paymentRepository.save(payment)
+        val savedPayment =  paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
-
+        receivableRequest.id = savedPayment.id
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), receivableRequest)
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
@@ -96,9 +89,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
-        accUtilEntity.accCode= AresModelConstants.AR_ACCOUNT_CODE
-        if(receivableRequest.accMode==AccMode.AP){
-            accUtilEntity.accCode= AresModelConstants.AP_ACCOUNT_CODE
+        accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        if (receivableRequest.accMode == AccMode.AP) {
+            accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
@@ -112,7 +105,7 @@ open class OnAccountServiceImpl : OnAccountService {
      * @return Payment
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
+        var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
         var accountUtilization = accountUtilizationRepository.findByDocumentNo(receivableRequest.id)
         if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment != null && payment.isPosted && accountUtilization != null)
@@ -129,7 +122,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilRes = accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        var payment = receivableRequest.id?.let { paymentRepository.findById(it) }
+        var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
         //   return payment?.let { paymentConverter.convertToModel(it) }
@@ -137,7 +130,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
-        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findById(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
         if (payment.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
             throw AresException(AresError.ERR_1007, "")
@@ -163,7 +156,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.entityCode = receivableRequest.entityType
         // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
-        //accountUtilization.organizationId = receivableRequest.customerId!!
+        // accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
         accountUtilization.sageOrganizationId = receivableRequest.sageOrganizationId
         accountUtilization.accCode = receivableRequest.accCode
@@ -186,7 +179,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.zone = null
             payment.serviceType = ServiceType.NA.toString()
             val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
-            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String,Any>).map { it.value}.get(0)
+            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
             payment.organizationId = UUID.fromString(orgId.toString())
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))

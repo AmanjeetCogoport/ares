@@ -174,8 +174,8 @@ class OpenSearchClient {
                     }
                     .from((request.page - 1) * request.pageLimit)
                     .size(request.pageLimit)
-                    .sort{t ->
-                        t.field{f -> f.field("transactionDate").order(SortOrder.Desc) }
+                    .sort { t ->
+                        t.field { f -> f.field("transactionDate").order(SortOrder.Desc) }
                     }
             },
             classType
@@ -186,13 +186,12 @@ class OpenSearchClient {
     fun orgDetailSearch(orgSerialId: Long): SearchResponse<Any>? {
         val index = "organization_details"
         val searchResponse = Client.search({ s ->
-                    s.index(index)
-                        .source{ a-> a.filter{ f -> f.includes("organizationId")} }
-                    .query { q ->
-                        q.match {  m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
+            s.index(index)
+                .source { a -> a.filter { f -> f.includes("organizationId") } }
+                .query { q ->
+                    q.match { m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
                 }
         }, Any::class.java)
         return searchResponse
     }
-
 }
