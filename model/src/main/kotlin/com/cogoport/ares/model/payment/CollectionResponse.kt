@@ -14,7 +14,7 @@ data class CollectionResponse(
     @JsonProperty("totalCollectedAmount")
     var totalCollectedAmount: Float? = 0F,
     @JsonProperty("trend")
-    var trend: MutableList<CollectionTrendResponse>? = null,
+    var trend: List<CollectionTrendResponse>? = null,
     @JsonProperty("id")
     var id: String
 )

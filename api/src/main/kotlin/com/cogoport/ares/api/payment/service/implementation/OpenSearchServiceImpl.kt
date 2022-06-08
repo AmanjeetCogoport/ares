@@ -26,6 +26,7 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.time.Month
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -94,11 +95,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateDailyPayablesOutstanding(null, year, dailyPayablesAllData)
     }
 
-    private fun updateCollectionTrend(zone: String?, quarter: Int?, year: Int, data: MutableList<CollectionTrend>?) {
+    private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?) {
         if (data.isNullOrEmpty()) return
         val collectionData = data.map { collectionTrendConverter.convertToModel(it) }
         val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
-        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId))
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter))
     }
 
     private fun updateOverallStats(zone: String?, data: OverallStats) {
@@ -134,19 +135,36 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
     }
 
-    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String): CollectionResponse {
+    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: Float? = null
         var totalCollected: Float? = null
+        val monthList = mutableListOf<String?>()
         for (row in data) {
             if (row.duration != "Total") {
                 trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount))
+                monthList.add(row.duration)
             } else {
                 totalAmount = row.receivableAmount
                 totalCollected = row.collectableAmount
             }
         }
-        return CollectionResponse(totalAmount, totalCollected, trendData, id)
+        getMonthFromQuarter(quarter).forEach {
+            if(!monthList.contains(it)){
+                trendData.add(CollectionTrendResponse(it, 0F, 0F))
+            }
+        }
+        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id)
+    }
+
+    private fun getMonthFromQuarter(quarter: Int): List<String>{
+        return when (quarter){
+            1 -> { listOf("January", "February", "March") }
+            2 -> { listOf("April", "May", "June") }
+            3 -> { listOf("July", "August", "September") }
+            4 -> { listOf("October", "November", "December") }
+            else -> { throw AresException(AresError.ERR_1004, "") }
+        }
     }
 
     /** Outstanding Data */

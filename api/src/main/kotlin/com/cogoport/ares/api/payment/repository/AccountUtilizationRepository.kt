@@ -117,30 +117,39 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        select to_char(date_trunc('month',transaction_date),'Month') as duration,
-        sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
-        from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
-        group by date_trunc('month',transaction_date)
-        order by date_trunc('month',transaction_date)
-        limit 5
+        with x as (
+	        select to_char(generate_series(CURRENT_DATE - '4 month'::interval, CURRENT_DATE, '1 month'), 'Mon') as month
+        ),
+        y as (
+            select to_char(date_trunc('month',transaction_date),'Mon') as month,
+            sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
+            from account_utilizations
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL' and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
+            group by date_trunc('month',transaction_date)
+        )
+        select x.month duration, coalesce(y.amount, 0) amount from x left join y on y.month = x.month
         """
     )
     suspend fun generateMonthlyOutstanding(zone: String?): MutableList<Outstanding>
     @Query(
         """
-            with x as (select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-            sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
-            from account_utilizations
-            where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL'
-            group by date_trunc('quarter',transaction_date)
-            order by date_trunc('quarter',transaction_date))
+            with x as (
+                select extract(quarter from generate_series(CURRENT_DATE - '11 month'::interval, CURRENT_DATE, '3 month')) as quarter
+            ),
+            y as (
+                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
+                sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
+                from account_utilizations
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL' and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                group by date_trunc('quarter',transaction_date)
+            )
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
-            x.total_outstanding_amount as amount 
+            coalesce(y.total_outstanding_amount, 0) as amount 
             from x
+            left join y on x.quarter = y.quarter
         """
     )
     suspend fun generateQuarterlyOutstanding(zone: String?): MutableList<Outstanding>
