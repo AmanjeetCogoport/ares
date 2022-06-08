@@ -69,7 +69,10 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Build jar file
-        run: ./gradlew build
+        run: |
+          export PATH=graalvm-ce-java17-22.1.0/bin:$PATH
+          export JAVA_HOME=graalvm-ce-java17-22.1.0
+          ./gradlew build
 
       - name: Build and Push image to Github CR
         id: build-image
