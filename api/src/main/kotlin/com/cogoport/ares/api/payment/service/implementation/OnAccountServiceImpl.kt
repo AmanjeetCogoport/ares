@@ -65,7 +65,9 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.zone = null
         receivableRequest.serviceType = ServiceType.NA.toString()
-
+        receivableRequest.accMode = AccMode.AR
+        receivableRequest.ledCurrency = "INR"
+        receivableRequest.ledAmount = receivableRequest.amount
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
         payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
@@ -113,12 +115,35 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): OnAccountApiCommonResponse {
+    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
-        var paymentDetails = paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), paymentDetails)
 
-        var accUtilRes = accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
+        if (receivableRequest.isPosted)
+        {
+            payment.isPosted = true
+            accountUtilization.documentStatus = DocumentStatus.FINAL
+        }
+        else
+        {
+            payment.accCode  = receivableRequest.entityType
+            payment.bankName = receivableRequest.bankName
+            payment.currency = receivableRequest.currencyType
+            payment.payMode = receivableRequest.payMode
+            payment.transactionDate = receivableRequest.transactionDate
+            payment.transRefNumber = receivableRequest.utr
+            payment.amount = receivableRequest.amount
+
+            accountUtilization.accCode =  receivableRequest.entityType
+            accountUtilization.currency = receivableRequest.currencyType
+            accountUtilization.transactionDate = receivableRequest.transactionDate
+            accountUtilization.amountCurr = receivableRequest.amount
+        }
+
+        var paymentDetails = paymentRepository.update(payment)
+        val openSearchpaymentModel = paymentConverter.convertToModel(paymentDetails)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchpaymentModel)
+
+        var accUtilRes = accountUtilizationRepository.update(accountUtilization)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
@@ -163,7 +188,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.accMode = receivableRequest.accMode!!
         accountUtilization.signFlag = receivableRequest.signFlag
         accountUtilization.amountCurr = receivableRequest.amount
-        accountUtilization.amountLoc = receivableRequest.ledAmount
+        accountUtilization.amountLoc = receivableRequest.ledAmount!!
         accountUtilization.dueDate = receivableRequest.transactionDate!!
         accountUtilization.transactionDate = receivableRequest.transactionDate!!
         return accountUtilization
