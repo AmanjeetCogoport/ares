@@ -134,7 +134,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from account_utilizations
             where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status = 'FINAL'
             group by date_trunc('quarter',transaction_date)
-            order by date_trunc('quarter',transaction_date) desc)
+            order by date_trunc('quarter',transaction_date))
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'

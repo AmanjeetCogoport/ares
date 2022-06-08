@@ -103,11 +103,12 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
         validateInput(request.zone, request.role, request.quarterYear.split("_")[0][1].toString().toInt(), request.quarterYear.split("_")[1].toInt())
         val searchKey = searchKeyCollectionTrend(request)
-        return OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        return data ?: CollectionResponse(id = searchKey)
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
@@ -164,7 +165,7 @@ class DashboardServiceImpl : DashboardService {
             val data = hts.source()
             averageDso += data!!.value
             if (data.month == AresConstants.CURR_MONTH) {
-                currentDso = currResponse.hits()!!.hits()[0].source()!!.value
+                currentDso = hts.source()!!.value
             }
         }
         return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.sortedBy { it.month }.map { DsoResponse(Month.of(it.month.toInt()).toString(),it.dsoForTheMonth) },  dpoList.sortedBy { it.month }.map { DpoResponse(Month.of(it.month.toInt()).toString(),it.dpoForTheMonth) })
