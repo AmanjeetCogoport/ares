@@ -140,7 +140,7 @@ class OpenSearchClient {
                 s.index("index_ares_on_account_payment")
                     .query { q ->
                         q.bool { b ->
-                            b.must{ t ->
+                            b.must { t ->
                                 t.match { v -> v.field("deleted").query(FieldValue.of(false)) }
                             }
                             if (request.currencyType != null) {

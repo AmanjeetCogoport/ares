@@ -74,7 +74,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
-        val savedPayment =  paymentRepository.save(payment)
+        val savedPayment = paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
         receivableRequest.id = savedPayment.id
