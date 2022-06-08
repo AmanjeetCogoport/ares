@@ -28,7 +28,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -179,9 +178,9 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.paymentCode = PaymentCode.REC
             payment.zone = null
             payment.serviceType = ServiceType.NA.toString()
-            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
-            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
-            payment.organizationId = UUID.fromString(orgId.toString())
+//            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
+//            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
+//            payment.organizationId = UUID.fromString(orgId.toString())
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =
