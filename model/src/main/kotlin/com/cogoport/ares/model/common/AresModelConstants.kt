@@ -20,6 +20,7 @@ object AresModelConstants {
     const val CURRENCY_TYPE = "currencyType"
     const val QUERY_NAME = "queryName"
     const val QUARTER_YEAR = "quarterYear"
+    const val QUERY = "query"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000

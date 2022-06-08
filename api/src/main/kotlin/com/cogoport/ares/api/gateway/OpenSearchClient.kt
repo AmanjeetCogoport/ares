@@ -7,6 +7,7 @@ import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -147,6 +148,9 @@ class OpenSearchClient {
                 s.index("index_ares_on_account_payment")
                     .query { q ->
                         q.bool { b ->
+                            b.must { t ->
+                                t.match { v -> v.field("deleted").query(FieldValue.of(false)) }
+                            }
                             if (request.currencyType != null) {
                                 b.must { t ->
                                     t.match { v ->
@@ -171,9 +175,9 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            if (request.queryName != null) {
+                            if (request.query != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.queryName + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.query + "*").fields("customerName", "utr") }
                                 }
                             }
                             b
@@ -181,9 +185,24 @@ class OpenSearchClient {
                     }
                     .from((request.page - 1) * request.pageLimit)
                     .size(request.pageLimit)
+                    .sort { t ->
+                        t.field { f -> f.field("transactionDate").order(SortOrder.Desc) }
+                    }
             },
             classType
         )
         return response
+    }
+
+    fun orgDetailSearch(orgSerialId: Long): SearchResponse<Any>? {
+        val index = "organization_details"
+        val searchResponse = Client.search({ s ->
+            s.index(index)
+                .source { a -> a.filter { f -> f.includes("organizationId") } }
+                .query { q ->
+                    q.match { m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
+                }
+        }, Any::class.java)
+        return searchResponse
     }
 }

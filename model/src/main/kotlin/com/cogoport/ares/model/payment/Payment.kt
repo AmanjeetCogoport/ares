@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
@@ -7,8 +8,8 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
-import java.util.UUID
 
+@JsonInclude
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -24,7 +25,7 @@ data class Payment(
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
     @JsonProperty("customerId")
-    var customerId: UUID? = null,
+    var customerId: String? = null,
     @JsonProperty("customerName")
     var customerName: String? = "",
     @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
@@ -57,6 +58,8 @@ data class Payment(
     var isDeleted: Boolean = false,
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    @JsonProperty("createdBy")
+    var createdBy: String? = "",
     @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
@@ -66,5 +69,11 @@ data class Payment(
     @JsonProperty("serviceType")
     var serviceType: String? = "",
     @JsonProperty("paymentCode")
-    var paymentCode: PaymentCode? = PaymentCode.REC
+    var paymentCode: PaymentCode? = PaymentCode.REC,
+    @JsonProperty("paymentDate")
+    var paymentDate: String? = "",
+    @JsonProperty("uploadedBy")
+    var uploadedBy: String? = "",
+    @JsonProperty("bankName")
+    var bankName: String? = "",
 )

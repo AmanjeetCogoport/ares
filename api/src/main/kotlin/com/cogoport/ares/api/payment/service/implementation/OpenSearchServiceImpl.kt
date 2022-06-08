@@ -194,6 +194,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesDues), InvoiceStats(paymentsCount, paymentsDues), InvoiceStats(0, outstandingDues), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
     }
+
     private fun validateDueAmount(data: MutableList<DueAmount>) {
         listOf("INR", "USD").forEach { curr ->
             if (curr !in data.groupBy { it.currency }) {
