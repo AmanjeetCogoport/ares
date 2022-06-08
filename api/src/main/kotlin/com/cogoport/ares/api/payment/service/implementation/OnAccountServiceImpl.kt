@@ -68,9 +68,11 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate =  filterDateFromTs
-       // receivableRequest.zone = ZoneCode.EAST.toString()
-       // receivableRequest.serviceType = ServiceType.AIR_CUSTOMS.toString()
-        receivableRequest.organizationId = UUID.fromString("1fe59e4a-25d9-4c00-a263-b64938e9d835")
+        receivableRequest.zone = null
+        receivableRequest.serviceType = ServiceType.NA.toString()
+        val orgDetails = OpenSearchClient().orgDetailSearch(receivableRequest.orgSerialId!!)
+        val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String,Any>).map { it.value}.get(0)
+        receivableRequest.organizationId = UUID.fromString(orgId.toString())
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
@@ -84,7 +86,6 @@ open class OnAccountServiceImpl : OnAccountService {
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), receivableRequest)
-
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
         accUtilizationModel.accType = AccountType.REC
@@ -156,7 +157,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     // Will be removed via Mapper
     fun updateAccountUtilizationEntry(accountUtilization: AccountUtilization, receivableRequest: Payment): AccountUtilization {
-        accountUtilization.zoneCode = ZoneCode.valueOf(receivableRequest.zone!!)
+        accountUtilization.zoneCode = receivableRequest.zone!!
         accountUtilization.documentStatus = DocumentStatus.FINAL
         accountUtilization.serviceType = receivableRequest.serviceType.toString()
         accountUtilization.entityCode = receivableRequest.entityType
@@ -182,6 +183,11 @@ open class OnAccountServiceImpl : OnAccountService {
         for (payment in bulkPayment) {
             payment.accMode = AccMode.AR
             payment.paymentCode = PaymentCode.REC
+            payment.zone = null
+            payment.serviceType = ServiceType.NA.toString()
+            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
+            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String,Any>).map { it.value}.get(0)
+            payment.organizationId = UUID.fromString(orgId.toString())
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =

@@ -18,7 +18,7 @@ data class AccountUtilization(
     @field:Id @GeneratedValue var id: Long?,
     var documentNo: Long,
     var documentValue: String?,
-    var zoneCode: ZoneCode,
+    var zoneCode: String?,
     var serviceType: String,
     var documentStatus: DocumentStatus?,
     var entityCode: Int,

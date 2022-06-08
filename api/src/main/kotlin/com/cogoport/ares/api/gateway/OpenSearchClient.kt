@@ -183,15 +183,15 @@ class OpenSearchClient {
         return response
     }
 
-    fun <T : Any> orgDetailSearch(orgSerialId: Long): SearchResponse<String>? {
+    fun orgDetailSearch(orgSerialId: Long): SearchResponse<Any>? {
         val index = "organization_details"
         val searchResponse = Client.search({ s ->
                     s.index(index)
-                        .fields { a-> a.field("organizationId").format("text") }
+                        .source{ a-> a.filter{ f -> f.includes("organizationId")} }
                     .query { q ->
-                        q.match {  m -> m.field("orgSerialId").query(FieldValue.of(orgSerialId)) }
+                        q.match {  m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
                 }
-        }, String::class.java)
+        }, Any::class.java)
         return searchResponse
     }
 

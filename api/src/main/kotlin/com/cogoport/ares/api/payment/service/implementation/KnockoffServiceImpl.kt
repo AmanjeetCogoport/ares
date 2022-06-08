@@ -80,7 +80,7 @@ open class KnockoffServiceImpl : KnockoffService {
             /*4. Insert the account utilization record for payments*/
             var accountUtilEntity = AccountUtilization(
                 id = null, documentNo = paymentId!!, documentValue = paymentId.toString(),
-                zoneCode = knockOffRecord.zoneCode, serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
+                zoneCode = knockOffRecord.zoneCode.toString(), serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
                 entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
                 organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
                 accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
