@@ -26,7 +26,7 @@ interface DashboardService {
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
     suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
     suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse
-    suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend>
+    suspend fun getSalesTrend(request: SalesTrendRequest): List<SalesTrend>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
 }

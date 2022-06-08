@@ -1,8 +1,6 @@
 package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
@@ -13,6 +11,8 @@ import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 class OpenSearchClient {
 
@@ -28,8 +28,6 @@ class OpenSearchClient {
             classType
         )
         var outResp: T? = null
-        if (response?.hits()?.total()?.value() == 0.toLong())
-            throw AresException(AresError.ERR_1005, "")
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()
         }
@@ -71,15 +69,20 @@ class OpenSearchClient {
         Client.updateDocument(index, docId, docData)
     }
 
-    fun salesTrendTotalSales(zone: String?): SearchResponse<SalesTrend>? {
+    fun salesTrendTotalSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
         return Client.search(
             { s ->
                 s.index("index_invoices")
                     .query { q ->
-                        if (!zone.isNullOrBlank()) {
-                            q.matchPhrase { m -> m.field("zone").query(zone) }
-                        } else {
-                            q.matchAll { s -> s.queryName("") }
+                        q.bool { b ->
+                            if (!zone.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
+                                }
+                            }
+                            b.must { m ->
+                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
+                            }
                         }
                     }
                     .size(0)
@@ -93,17 +96,22 @@ class OpenSearchClient {
         )
     }
 
-    fun salesTrendCreditSales(zone: String?): SearchResponse<SalesTrend>? {
+    fun salesTrendCreditSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
         return Client.search(
             { s ->
                 s.index("index_invoices")
                     .query { q ->
                         q.bool { b ->
-                            if (zone.isNullOrBlank()) {
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
-                            } else {
-                                b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(zone)) } }
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            if (!zone.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
+                                }
+                            }
+                            b.must { t ->
+                                t.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
+                            }
+                            b.must { m ->
+                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
                             }
                         }
                     }
@@ -163,9 +171,9 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            if (request.searchString != null) {
+                            if (request.queryName != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.searchString + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.queryName + "*").fields("customerName", "utr") }
                                 }
                             }
                             b
