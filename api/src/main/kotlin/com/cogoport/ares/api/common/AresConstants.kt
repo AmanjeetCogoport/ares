@@ -4,7 +4,6 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.IsoFields
-import java.util.Calendar
 
 object AresConstants {
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)

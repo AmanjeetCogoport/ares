@@ -150,15 +150,15 @@ class OpenSearchServiceImpl : OpenSearchService {
             }
         }
         getMonthFromQuarter(quarter).forEach {
-            if(!monthList.contains(it)){
+            if (!monthList.contains(it)) {
                 trendData.add(CollectionTrendResponse(it, 0F, 0F))
             }
         }
         return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id)
     }
 
-    private fun getMonthFromQuarter(quarter: Int): List<String>{
-        return when (quarter){
+    private fun getMonthFromQuarter(quarter: Int): List<String> {
+        return when (quarter) {
             1 -> { listOf("January", "February", "March") }
             2 -> { listOf("April", "May", "June") }
             3 -> { listOf("July", "August", "September") }

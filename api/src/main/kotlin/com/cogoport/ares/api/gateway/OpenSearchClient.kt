@@ -1,8 +1,6 @@
 package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
@@ -78,7 +76,7 @@ class OpenSearchClient {
             { s ->
                 s.index("index_invoices")
                     .query { q ->
-                        q.bool{ b ->
+                        q.bool { b ->
                             if (!zone.isNullOrBlank()) {
                                 b.must { m ->
                                     m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
