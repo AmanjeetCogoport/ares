@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS
 on:
   push:
     branches:
-      - staging
+      - develop
 
 env:
   REGISTRY: ghcr.io
@@ -63,13 +63,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.GH_CR_USER }}
           password: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
-
-      - uses: graalvm/setup-graalvm@v1
-        with:
-          version: 'latest'
-          java-version: '17'
-          components: 'native-image'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate docker image name
         id: image_name
