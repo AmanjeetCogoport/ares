@@ -17,6 +17,8 @@ env:
   MICRONAUT_ENVIRONMENTS: staging
   GITHUB_USERNAME: $GH_CR_USER
   GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
+  PATH: graalvm-ce-java17-22.1.0/bin:$PATH
+  JAVA_HOME: graalvm-ce-java17-22.1.0
 
 permissions:
   contents: read
@@ -46,6 +48,12 @@ jobs:
           ec2-instance-type: t3.2xlarge
           subnet-id: subnet-05f1c897b9994c200
           security-group-id: sg-01bf1ea2e2b45a7cf
+      - name: Set paths
+        run: |
+          ls
+          export PATH=graalvm-ce-java17-22.1.0/bin:$PATH
+          export JAVA_HOME=graalvm-ce-java17-22.1.0
+
   deploy:
     name: Start deployment
     needs:
@@ -68,11 +76,15 @@ jobs:
         id: image_name
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
+#      - uses: graalvm/setup-graalvm@v1
+#        with:
+#          version: 'latest'
+#          java-version: '17'
+#          components: 'native-image'
+#          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build jar file
-        run: |
-          export PATH=graalvm-ce-java17-22.1.0/bin:$PATH
-          export JAVA_HOME=graalvm-ce-java17-22.1.0
-          ./gradlew build
+        run: ./gradlew build
 
       - name: Build and Push image to Github CR
         id: build-image
