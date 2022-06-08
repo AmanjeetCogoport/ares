@@ -12,6 +12,5 @@ import io.micronaut.http.annotation.QueryValue
 data class CollectionRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String? = null,
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
-    @QueryValue(AresModelConstants.QUARTER) val quarter: Int = AresModelConstants.CURR_QUARTER,
-    @QueryValue(AresModelConstants.YEAR) val year: Int = AresModelConstants.CURR_YEAR
+    @QueryValue(AresModelConstants.QUARTER_YEAR) val quarterYear: String = ("Q" + AresModelConstants.CURR_QUARTER + "_" + AresModelConstants.CURR_YEAR)
 )

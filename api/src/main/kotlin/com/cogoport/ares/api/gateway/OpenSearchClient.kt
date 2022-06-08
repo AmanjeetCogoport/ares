@@ -1,18 +1,19 @@
 package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 class OpenSearchClient {
 
@@ -28,8 +29,6 @@ class OpenSearchClient {
             classType
         )
         var outResp: T? = null
-        if (response?.hits()?.total()?.value() == 0.toLong())
-            throw AresException(AresError.ERR_1005, "")
         for (hts in response?.hits()?.hits()!!) {
             outResp = hts.source()
         }
@@ -71,15 +70,20 @@ class OpenSearchClient {
         Client.updateDocument(index, docId, docData)
     }
 
-    fun salesTrendTotalSales(zone: String?): SearchResponse<SalesTrend>? {
+    fun salesTrendTotalSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
         return Client.search(
             { s ->
                 s.index("index_invoices")
                     .query { q ->
-                        if (!zone.isNullOrBlank()) {
-                            q.matchPhrase { m -> m.field("zone").query(zone) }
-                        } else {
-                            q.matchAll { s -> s.queryName("") }
+                        q.bool { b ->
+                            if (!zone.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
+                                }
+                            }
+                            b.must { m ->
+                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
+                            }
                         }
                     }
                     .size(0)
@@ -93,17 +97,22 @@ class OpenSearchClient {
         )
     }
 
-    fun salesTrendCreditSales(zone: String?): SearchResponse<SalesTrend>? {
+    fun salesTrendCreditSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
         return Client.search(
             { s ->
                 s.index("index_invoices")
                     .query { q ->
                         q.bool { b ->
-                            if (zone.isNullOrBlank()) {
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
-                            } else {
-                                b.must { t -> t.match { m -> m.field("zone").query(FieldValue.of(zone)) } }
-                                b.must { t -> t.range { r -> r.field("creditDays").gt(JsonData.of(0)) } }
+                            if (!zone.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
+                                }
+                            }
+                            b.must { t ->
+                                t.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
+                            }
+                            b.must { m ->
+                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
                             }
                         }
                     }
@@ -139,6 +148,9 @@ class OpenSearchClient {
                 s.index("index_ares_on_account_payment")
                     .query { q ->
                         q.bool { b ->
+                            b.must { t ->
+                                t.match { v -> v.field("deleted").query(FieldValue.of(false)) }
+                            }
                             if (request.currencyType != null) {
                                 b.must { t ->
                                     t.match { v ->
@@ -163,9 +175,9 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            if (request.searchString != null) {
+                            if (request.query != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.searchString + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.query + "*").fields("customerName", "utr") }
                                 }
                             }
                             b
@@ -173,9 +185,24 @@ class OpenSearchClient {
                     }
                     .from((request.page - 1) * request.pageLimit)
                     .size(request.pageLimit)
+                    .sort { t ->
+                        t.field { f -> f.field("transactionDate").order(SortOrder.Desc) }
+                    }
             },
             classType
         )
         return response
+    }
+
+    fun orgDetailSearch(orgSerialId: Long): SearchResponse<Any>? {
+        val index = "organization_details"
+        val searchResponse = Client.search({ s ->
+            s.index(index)
+                .source { a -> a.filter { f -> f.includes("organizationId") } }
+                .query { q ->
+                    q.match { m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
+                }
+        }, Any::class.java)
+        return searchResponse
     }
 }
