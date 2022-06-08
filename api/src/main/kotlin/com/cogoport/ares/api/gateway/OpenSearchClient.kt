@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -163,9 +164,9 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            if (request.searchString != null) {
+                            if (request.query != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.searchString + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.query + "*").fields("customerName", "utr") }
                                 }
                             }
                             b
@@ -173,9 +174,25 @@ class OpenSearchClient {
                     }
                     .from((request.page - 1) * request.pageLimit)
                     .size(request.pageLimit)
+                    .sort{t ->
+                        t.field{f -> f.field("transactionDate").order(SortOrder.Desc) }
+                    }
             },
             classType
         )
         return response
     }
+
+    fun <T : Any> orgDetailSearch(orgSerialId: Long): SearchResponse<String>? {
+        val index = "organization_details"
+        val searchResponse = Client.search({ s ->
+                    s.index(index)
+                        .fields { a-> a.field("organizationId").format("text") }
+                    .query { q ->
+                        q.match {  m -> m.field("orgSerialId").query(FieldValue.of(orgSerialId)) }
+                }
+        }, String::class.java)
+        return searchResponse
+    }
+
 }

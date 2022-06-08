@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import jakarta.validation.constraints.NotNull
@@ -7,6 +8,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
+@JsonInclude
 @Introspected
 data class Payment(
     @JsonProperty("id")
@@ -19,8 +21,8 @@ data class Payment(
     var orgSerialId: Long? = null,
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
-    @JsonProperty("customerId")
-    var customerId: UUID? = null,
+    @JsonProperty("organizationId")
+    var organizationId: UUID? = null,
     @JsonProperty("customerName")
     var customerName: String? = "",
     @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
@@ -30,7 +32,7 @@ data class Payment(
     @JsonProperty("signFlag")
     var signFlag: Short = 1,
     @JsonProperty("currencyType") @field:NotNull(message = "Currency Type is required")
-    var currencyType: String = "",
+    var currencyType: String? = "",
     @JsonProperty("amount") @field:NotNull(message = "Amount is required")
     var amount: BigDecimal = 0.toBigDecimal(),
     @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger Currency is required")
@@ -53,6 +55,8 @@ data class Payment(
     var isDeleted: Boolean = false,
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    @JsonProperty("createdBy")
+    var createdBy: String? = "",
     @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
@@ -62,5 +66,13 @@ data class Payment(
     @JsonProperty("serviceType")
     var serviceType: String? = "",
     @JsonProperty("paymentCode")
-    var paymentCode: PaymentCode? = PaymentCode.REC
+    var paymentCode: PaymentCode? = PaymentCode.REC,
+    @JsonProperty("paymentDate")
+    var paymentDate: String? = "",
+    @JsonProperty("uploadedBy")
+    var uploadedBy: String? = "",
+    @JsonProperty("bankName")
+    var bankName: String? = "",
+    @JsonProperty("customerId")
+    var customerId: String? = ""
 )

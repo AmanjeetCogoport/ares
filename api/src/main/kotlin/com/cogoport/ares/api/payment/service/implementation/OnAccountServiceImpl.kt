@@ -6,6 +6,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
+import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -22,12 +23,18 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.ZoneCode
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.*
 import javax.transaction.Transactional
 import kotlin.math.ceil
+import kotlin.reflect.typeOf
+
 
 @Singleton
 open class OnAccountServiceImpl : OnAccountService {
@@ -43,6 +50,8 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
 
+    @Inject
+    lateinit var accUtilizationMapper : AccountUtilizationMapper
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -52,25 +61,30 @@ open class OnAccountServiceImpl : OnAccountService {
         val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
+
         return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
 
-        var payment = paymentConverter.convertToEntity(receivableRequest)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+        val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
+        receivableRequest.transactionDate =  filterDateFromTs
+       // receivableRequest.zone = ZoneCode.EAST.toString()
+       // receivableRequest.serviceType = ServiceType.AIR_CUSTOMS.toString()
+        receivableRequest.organizationId = UUID.fromString("1fe59e4a-25d9-4c00-a263-b64938e9d835")
 
+        var payment = paymentConverter.convertToEntity(receivableRequest)
         payment.accCode= AresModelConstants.AR_ACCOUNT_CODE
         if(receivableRequest.accMode==AccMode.AP){
             payment.accCode= AresModelConstants.AP_ACCOUNT_CODE
         }
-
         paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
-        var paymentModel = paymentConverter.convertToModel(payment)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), paymentModel)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), receivableRequest)
 
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
@@ -78,7 +92,6 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerAmount = 0.toBigDecimal()
-
         accUtilizationModel.docStatus = DocumentStatus.FINAL
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
@@ -89,8 +102,6 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-
-
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
@@ -152,7 +163,6 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.entityCode = receivableRequest.entityType
         // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
-        accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
         accountUtilization.sageOrganizationId = receivableRequest.sageOrganizationId
         accountUtilization.accCode = receivableRequest.accCode
@@ -170,6 +180,11 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
         for (payment in bulkPayment) {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+            val filterDateFromTs = Timestamp(dateFormat.parse(payment.paymentDate).time)
+            payment.transactionDate =  filterDateFromTs
+            payment.zone = ZoneCode.EAST.toString()
+            payment.serviceType = ServiceType.AIR_CUSTOMS.toString()
             payment.accMode = AccMode.AR
             payment.paymentCode = PaymentCode.REC
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
