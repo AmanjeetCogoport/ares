@@ -26,6 +26,7 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 import java.time.Month
 
 @Singleton
@@ -137,8 +138,8 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
-        var totalAmount: Float? = null
-        var totalCollected: Float? = null
+        var totalAmount: BigDecimal? = null
+        var totalCollected: BigDecimal? = null
         val monthList = mutableListOf<String?>()
         for (row in data) {
             if (row.duration != "Total") {
@@ -151,7 +152,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0F, 0F))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal()))
             }
         }
         return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id)

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.ReflectiveAccess
+import java.math.BigDecimal
 
 @Introspected
 @ReflectiveAccess
@@ -12,9 +13,9 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonInclude
 data class CollectionResponse(
     @JsonProperty("totalReceivableAmount")
-    var totalReceivableAmount: Float? = 0F,
+    var totalReceivableAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("totalCollectedAmount")
-    var totalCollectedAmount: Float? = 0F,
+    var totalCollectedAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("trend")
     var trend: List<CollectionTrendResponse>? = null,
     @JsonProperty("id")

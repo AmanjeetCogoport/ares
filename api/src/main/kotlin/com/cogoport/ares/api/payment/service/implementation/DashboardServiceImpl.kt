@@ -151,7 +151,7 @@ class DashboardServiceImpl : DashboardService {
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0F))
+                    dso.add(DsoResponse(it, 0.toBigDecimal()))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
@@ -166,7 +166,7 @@ class DashboardServiceImpl : DashboardService {
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0F))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
@@ -177,12 +177,12 @@ class DashboardServiceImpl : DashboardService {
         var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
-            averageDso += data!!.value
+            averageDso += data!!.value.toFloat()
             if (data.month == AresConstants.CURR_MONTH) {
-                currentDso = hts.source()!!.value
+                currentDso = hts.source()!!.value.toFloat()
             }
         }
-        return DailySalesOutstanding(currentDso, averageDso / 3, dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString(), it.dsoForTheMonth) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString(), it.dpoForTheMonth) })
+        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString(), it.dsoForTheMonth) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString(), it.dpoForTheMonth) })
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
