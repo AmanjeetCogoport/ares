@@ -3,12 +3,18 @@ package com.cogoport.ares.model.payment.event
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class CreateInvoiceRequest(
     var documentNo: Long,
     var oldDocumentNo: Long,
