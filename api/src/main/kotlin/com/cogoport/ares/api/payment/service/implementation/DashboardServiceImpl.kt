@@ -30,10 +30,7 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
-import java.time.LocalDate
 import java.time.Month
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
