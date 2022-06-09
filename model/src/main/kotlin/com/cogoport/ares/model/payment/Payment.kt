@@ -43,7 +43,7 @@ data class Payment(
     var ledCurrency: String? = "INR",
     @JsonProperty("ledAmount") @field:NotNull(message = "Ledger Amount is required")
     var ledAmount: BigDecimal? = 0.toBigDecimal(),
-    @JsonProperty("payMode")
+    @JsonProperty("paymentMode")
     var payMode: PayMode? = null,
     @JsonProperty("remarks")
     var remarks: String? = null,
@@ -78,5 +78,5 @@ data class Payment(
     @JsonProperty("bankName")
     var bankName: String? = "",
     @JsonProperty("organizationId")
-    var organizationId: UUID?
+    var organizationId: UUID? = null
 )

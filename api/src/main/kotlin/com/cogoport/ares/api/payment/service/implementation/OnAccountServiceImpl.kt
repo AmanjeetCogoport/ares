@@ -123,7 +123,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.isPosted = true
             accountUtilization.documentStatus = DocumentStatus.FINAL
         } else {
-            payment.accCode = receivableRequest.entityType!!
+            payment.entityCode = receivableRequest.entityType!!
             payment.bankName = receivableRequest.bankName
             payment.currency = receivableRequest.currencyType!!
             payment.payMode = receivableRequest.payMode
@@ -131,7 +131,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.transRefNumber = receivableRequest.utr
             payment.amount = receivableRequest.amount!!
 
-            accountUtilization.accCode = receivableRequest.entityType!!
+            accountUtilization.entityCode = receivableRequest.entityType!!
             accountUtilization.currency = receivableRequest.currencyType!!
             accountUtilization.transactionDate = receivableRequest.transactionDate
             accountUtilization.amountCurr = receivableRequest.amount!!
