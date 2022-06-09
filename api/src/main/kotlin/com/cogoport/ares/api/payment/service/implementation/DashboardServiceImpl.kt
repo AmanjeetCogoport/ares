@@ -119,7 +119,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
-        val data =  OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
@@ -130,7 +130,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
-        val data =  OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
@@ -223,7 +223,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
         val payment = accountUtilizationRepository.getReceivableByAge(request.zone)
-        if (payment.size == 0){
+        if (payment.size == 0) {
             return ReceivableAgeingResponse(listOf(request.zone))
         }
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
