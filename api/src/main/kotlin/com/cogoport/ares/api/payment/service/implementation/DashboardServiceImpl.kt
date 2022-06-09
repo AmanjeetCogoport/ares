@@ -72,11 +72,12 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
-        return OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        return data ?: OverallStatsResponse(id = searchKey)
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
@@ -100,7 +101,7 @@ class DashboardServiceImpl : DashboardService {
         return data.sortedBy { it.ageingDuration }
     }
 
-    override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse? {
+    override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
         validateInput(request.zone, request.role, request.quarterYear.split("_")[0][1].toString().toInt(), request.quarterYear.split("_")[1].toInt())
         val searchKey = searchKeyCollectionTrend(request)
         val data = OpenSearchClient().search(
@@ -115,24 +116,26 @@ class DashboardServiceImpl : DashboardService {
         return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0] else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
     }
 
-    override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding? {
+    override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
-        return OpenSearchClient().search(
+        val data =  OpenSearchClient().search(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        return data ?: MonthlyOutstanding(id = searchKey)
     }
 
-    override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
+    override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
         validateInput(request.zone, request.role)
         val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
-        return OpenSearchClient().search(
+        val data =  OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        return data ?: QuarterlyOutstanding(id = searchKey)
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
@@ -220,6 +223,9 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
         val payment = accountUtilizationRepository.getReceivableByAge(request.zone)
+        if (payment.size == 0){
+            return ReceivableAgeingResponse(listOf(request.zone))
+        }
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
         val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
         val receivableEastBucket = mutableListOf<AgeingBucketZone>()

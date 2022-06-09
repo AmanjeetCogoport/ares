@@ -41,7 +41,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            select case when due_date  >= now() then 'Not Due'
+            select case when due_date  >= now()::date then 'Not Due'
              when (now()::date - due_date ) between 1 and 30 then '1-30'
              when (now()::date - due_date ) between 31 and 60 then '31-60'
              when (now()::date - due_date ) between 61 and 90 then '61-90'
@@ -60,7 +60,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getReceivableByAge(zone: String?): MutableList<AgeingBucketZone>
     @Query(
         """
-            select case when due_date > now() then 'Not Due'
+            select case when due_date >= now()::date then 'Not Due'
             when (now()::date - due_date) between 1 and 30 then '1-30'
             when (now()::date - due_date) between 31 and 60 then '31-60'
             when (now()::date - due_date) between 61 and 90 then '61-90'
@@ -194,14 +194,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select organization_id,zone_code,
-        sum(case when due_date > now() then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
+        sum(case when due_date >= now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
         sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
         sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
         sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end) as ninety_amount,
         sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end) as oneeighty_amount,
         sum(case when (now()::date - due_date) between 180 and 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfive_amount,
         sum(case when (now()::date - due_date) > 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfiveplus_amount,
-        sum(case when due_date > now() then 1 else 0 end) as not_due_count,
+        sum(case when due_date >= now()::date then 1 else 0 end) as not_due_count,
         sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
         sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
         sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
