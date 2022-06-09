@@ -3,6 +3,7 @@ package com.cogoport.ares.model.payment
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.math.BigDecimal
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -11,6 +12,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class OverallStatsResponse(
     @JsonProperty("totalOutstandingAmount")
     val totalOutstandingAmount: BigDecimal = 0.toBigDecimal(),
