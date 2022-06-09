@@ -3,7 +3,6 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.SalesTrend
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
@@ -12,8 +11,6 @@ import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 class OpenSearchClient {
 
@@ -68,64 +65,6 @@ class OpenSearchClient {
 
     fun <T> updateDocument(index: String, docId: String, docData: T) {
         Client.updateDocument(index, docId, docData)
-    }
-
-    fun salesTrendTotalSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
-        return Client.search(
-            { s ->
-                s.index("index_invoices")
-                    .query { q ->
-                        q.bool { b ->
-                            if (!zone.isNullOrBlank()) {
-                                b.must { m ->
-                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
-                                }
-                            }
-                            b.must { m ->
-                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
-                            }
-                        }
-                    }
-                    .size(0)
-                    .aggregations("total_sales") { a ->
-                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
-                            .aggregations("amount") { a ->
-                                a.sum { s -> s.field("invoiceAmount") }
-                            }
-                    }
-            }, SalesTrend::class.java
-        )
-    }
-
-    fun salesTrendCreditSales(zone: String?, startDate: LocalDateTime): SearchResponse<SalesTrend>? {
-        return Client.search(
-            { s ->
-                s.index("index_invoices")
-                    .query { q ->
-                        q.bool { b ->
-                            if (!zone.isNullOrBlank()) {
-                                b.must { m ->
-                                    m.match { f -> f.field("zone").query(FieldValue.of(zone)) }
-                                }
-                            }
-                            b.must { t ->
-                                t.range { r -> r.field("creditDays").gt(JsonData.of(0)) }
-                            }
-                            b.must { m ->
-                                m.range { r -> r.field("invoiceDate").gte(JsonData.of(Timestamp.valueOf(LocalDate.of(startDate.year, startDate.monthValue, 1).atStartOfDay()))) }
-                            }
-                        }
-                    }
-                    .size(0)
-                    .aggregations("credit_sales") { a ->
-                        a.global { g -> g }
-                        a.dateHistogram { d -> d.field("invoiceDate").interval { i -> i.time("month") } }
-                            .aggregations("amount") { a ->
-                                a.sum { s -> s.field("invoiceAmount") }
-                            }
-                    }
-            }, SalesTrend::class.java
-        )
     }
 
     fun listCustomerSaleOutstanding(index: String, classType: Class<CustomerOutstanding>, values: String): SearchResponse<CustomerOutstanding>? {

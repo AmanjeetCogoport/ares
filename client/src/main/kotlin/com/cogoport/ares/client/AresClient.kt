@@ -1,6 +1,5 @@
 package com.cogoport.ares.client
 
-import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
@@ -26,7 +25,6 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.SalesTrendResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -59,12 +57,6 @@ interface AresClient {
     public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
     /** Sales trend need to be deleted */
-    @Get("/payment/dashboard/sales-trend")
-    public suspend fun getSalesTrend(
-        @QueryValue(AresModelConstants.ZONE) zone: String?,
-        @QueryValue(AresModelConstants.ROLE) role: String?
-    ): SalesTrendResponse?
-
     @Get("/payment/dashboard/outstanding-by-age{?request*}")
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
