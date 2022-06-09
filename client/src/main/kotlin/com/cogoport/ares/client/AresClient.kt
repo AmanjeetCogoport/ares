@@ -56,7 +56,6 @@ interface AresClient {
     @Get("/payment/dashboard/quarterly-outstanding{?request*}")
     public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
-    /** Sales trend need to be deleted */
     @Get("/payment/dashboard/outstanding-by-age{?request*}")
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
