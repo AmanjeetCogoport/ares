@@ -30,7 +30,7 @@ data class AccountUtilization(
     var accType: AccountType,
     var accMode: AccMode,
     var signFlag: Short,
-    val currency: String = "INR",
+    var currency: String = "INR",
     val ledCurrency: String = "INR",
     var amountCurr: BigDecimal,
     var amountLoc: BigDecimal,

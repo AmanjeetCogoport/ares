@@ -28,6 +28,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -65,14 +66,17 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.zone = null
         receivableRequest.serviceType = ServiceType.NA.toString()
-
+        receivableRequest.accMode = AccMode.AR
+        receivableRequest.ledCurrency = "INR"
+        receivableRequest.ledAmount = receivableRequest.amount
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
         payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
         if (receivableRequest.accMode == AccMode.AP) {
             payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
-
+        payment.createdAt = Timestamp.from(Instant.now())
+        payment.updatedAt = Timestamp.from(Instant.now())
         val savedPayment = paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
@@ -113,12 +117,31 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment?): OnAccountApiCommonResponse {
+    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
-        var paymentDetails = paymentRepository.update(paymentConverter.convertToEntity(receivableRequest))
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), paymentDetails)
+        if (receivableRequest.isPosted!!) {
+            payment.isPosted = true
+            accountUtilization.documentStatus = DocumentStatus.FINAL
+        } else {
+            payment.entityCode = receivableRequest.entityType!!
+            payment.bankName = receivableRequest.bankName
+            payment.currency = receivableRequest.currencyType!!
+            payment.payMode = receivableRequest.payMode
+            payment.transactionDate = receivableRequest.transactionDate
+            payment.transRefNumber = receivableRequest.utr
+            payment.amount = receivableRequest.amount!!
 
-        var accUtilRes = accountUtilizationRepository.update(updateAccountUtilizationEntry(accountUtilization, receivableRequest))
+            accountUtilization.entityCode = receivableRequest.entityType!!
+            accountUtilization.currency = receivableRequest.currencyType!!
+            accountUtilization.transactionDate = receivableRequest.transactionDate
+            accountUtilization.amountCurr = receivableRequest.amount!!
+        }
+
+        var paymentDetails = paymentRepository.update(payment)
+        val openSearchpaymentModel = paymentConverter.convertToModel(paymentDetails)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchpaymentModel)
+
+        var accUtilRes = accountUtilizationRepository.update(accountUtilization)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
@@ -153,17 +176,17 @@ open class OnAccountServiceImpl : OnAccountService {
         accountUtilization.zoneCode = receivableRequest.zone!!
         accountUtilization.documentStatus = DocumentStatus.FINAL
         accountUtilization.serviceType = receivableRequest.serviceType.toString()
-        accountUtilization.entityCode = receivableRequest.entityType
+        accountUtilization.entityCode = receivableRequest.entityType!!
         // accountUtilization.category = "non_asset"
         accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
         // accountUtilization.organizationId = receivableRequest.customerId!!
         accountUtilization.organizationName = receivableRequest.customerName
         accountUtilization.sageOrganizationId = receivableRequest.sageOrganizationId
-        accountUtilization.accCode = receivableRequest.accCode
+        accountUtilization.accCode = receivableRequest.accCode!!
         accountUtilization.accMode = receivableRequest.accMode!!
-        accountUtilization.signFlag = receivableRequest.signFlag
-        accountUtilization.amountCurr = receivableRequest.amount
-        accountUtilization.amountLoc = receivableRequest.ledAmount
+        accountUtilization.signFlag = receivableRequest.signFlag!!
+        accountUtilization.amountCurr = receivableRequest.amount!!
+        accountUtilization.amountLoc = receivableRequest.ledAmount!!
         accountUtilization.dueDate = receivableRequest.transactionDate!!
         accountUtilization.transactionDate = receivableRequest.transactionDate!!
         return accountUtilization
