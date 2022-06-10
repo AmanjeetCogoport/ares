@@ -74,8 +74,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
             val accUtilRes = accUtilRepository.save(acUtilization)
             try {
-                if (accUtilizationRequest.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
-
+                if (accUtilizationRequest.accMode == AccMode.AR) {
+                    emitDashboardEvent(accUtilizationRequest)
+                }
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             } catch (k: KafkaException) {
                 logger().error(k.stackTraceToString())
@@ -111,9 +112,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
         val accUtilRes = accUtilRepository.save(acUtilization)
         try {
-
-            if (accUtilizationRequest.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
-
+            if (accUtilizationRequest.accMode == AccMode.AR) {
+                emitDashboardEvent(accUtilizationRequest)
+            }
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
         } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
@@ -147,8 +148,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
             if (accountUtilization.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
 
-            Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
-
+            try {
+                Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
+            } catch (e: Exception) {
+                logger().error(e.stackTraceToString())
+            }
             result = true
         }
         return result
@@ -180,11 +184,29 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         if (updateInvoiceRequest.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
 
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString(), accountUtilization)
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString(), accountUtilization)
+            // TODO : Above code not looking right, discuss with Mohit about client update
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 
     override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
-        TODO("Not yet implemented")
+        var accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.oldDocumentNo, updateInvoiceStatusRequest.accType.name)
+
+        if (accountUtilization == null) {
+            throw AresException(AresError.ERR_1005, updateInvoiceStatusRequest.oldDocumentNo.toString())
+        }
+        if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+            throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
+        }
+        accUtilRepository.updateAccountUtilization(
+            accountUtilization.id!!, updateInvoiceStatusRequest.newDocumentNo,
+            updateInvoiceStatusRequest.newDocumentValue, updateInvoiceStatusRequest.docStatus!!
+        )
+
+        // TODO : update this in open search
     }
 
     /**
