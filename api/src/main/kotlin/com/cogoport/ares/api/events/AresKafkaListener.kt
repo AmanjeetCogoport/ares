@@ -41,8 +41,8 @@ class AresKafkaListener {
     }
 
     @Topic("update-invoice")
-    fun listenUpdateInvoice(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
-        invoiceService.updateInvoice(updateInvoiceEvent.updateInvoiceRequest)
+    fun listenUpdateInvoice(accountUtilizationEvent:AccountUtilizationEvent) = runBlocking {
+        invoiceService.updateInvoice(accountUtilizationEvent.accUtilizationRequest)
     }
 
     @Topic("update-invoice-status")

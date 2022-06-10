@@ -4,8 +4,10 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.common.models.Messages
@@ -16,6 +18,7 @@ import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.SQLException
@@ -36,6 +39,9 @@ open class KnockoffServiceImpl : KnockoffService {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var invoicePayMappingRepo: InvoicePayMappingRepository
 
     @Transactional(rollbackOn = [SQLException::class, RuntimeException::class, Throwable::class, Exception::class])
     override suspend fun uploadBillPayment(knockOffList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse> {
@@ -108,6 +114,25 @@ open class KnockoffServiceImpl : KnockoffService {
                 knockOffRecord.documentNo, knockOffRecord.documentValue,
                 true, paymentStatus, null
             )
+
+            /*6. Add the record in invoice payment mapping*/
+            var invoicePayMap=PaymentInvoiceMapping(
+                    id = null,
+                    accountMode = AccMode.AP,
+                    documentNo = knockOffRecord.documentNo,
+                    paymentId=paymentId,
+                    mappingType = PaymentInvoiceMappingType.BILL.name,
+                    currency = knockOffRecord.currency,
+                    ledCurrency = knockOffRecord.ledgerCurrency,
+                    signFlag = -1,
+                    amount = knockOffRecord.currencyAmount,
+                    ledAmount = knockOffRecord.ledgerAmount,
+                    transactionDate = knockOffRecord.transactionDate,
+                    createdAt = Timestamp.from(Instant.now()),
+                    updatedAt = Timestamp.from(Instant.now())
+            )
+            invoicePayMappingRepo.save(invoicePayMap)
+
             // Add success in the return response
             uploadBillResponseList.add(accPayResponse)
         }

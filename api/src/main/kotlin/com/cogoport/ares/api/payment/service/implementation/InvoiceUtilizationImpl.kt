@@ -15,6 +15,7 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.event.CreateInvoiceRequest
@@ -49,7 +50,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * @return mutableListOf CreateInvoiceResponse
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
-    override suspend fun addInvoice(accUtilizationRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
+    override suspend fun addInvoice(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
 
         val responseList = mutableListOf<CreateInvoiceResponse>()
         for (accUtilizationRequest in accUtilizationRequestList) {
@@ -148,8 +149,9 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * @param UpdateInvoiceRequest
      */
     @Transactional
-    override suspend fun updateInvoice(updateInvoiceRequest: UpdateInvoiceRequest) {
-        TODO()
+    override suspend fun updateInvoice(accUtilizationRequest: AccUtilizationRequest) {
+        deleteInvoice(accUtilizationRequest.documentNo,accUtilizationRequest.accType!!.name)
+        addAccountUtilization(accUtilizationRequest)
     }
 
     override suspend fun updateInvoiceStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
