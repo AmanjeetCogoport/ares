@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
+import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import io.micronaut.http.annotation.Body
@@ -15,16 +15,16 @@ import javax.validation.Valid
 class InvoiceController {
 
     @Inject
-    lateinit var invoiceService: InvoiceService
+    lateinit var accUtilService: AccountUtilizationService
 
     @Post("/add-bulk")
-    suspend fun addBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
-        return invoiceService.addInvoice(invoiceRequestList)
+    suspend fun addBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
+        return accUtilService.add(invoiceRequestList)
     }
 
     @Post
     suspend fun addInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
-        return invoiceService.addAccountUtilization(invoiceRequest)
+        return accUtilService.add(invoiceRequest)
     }
 
 //    @Delete

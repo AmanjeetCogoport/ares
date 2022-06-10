@@ -8,7 +8,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.api.payment.service.interfaces.InvoiceService
+import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -17,7 +17,6 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.event.CreateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import jakarta.inject.Inject
@@ -30,7 +29,7 @@ import java.time.Instant
 import javax.transaction.Transactional
 
 @Singleton
-open class InvoiceUtilizationImpl : InvoiceService {
+open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var accUtilRepository: AccountUtilizationRepository
@@ -46,10 +45,10 @@ open class InvoiceUtilizationImpl : InvoiceService {
 
     /**
      * @param accUtilizationRequestList
-     * @return mutableListOf CreateInvoiceResponse
+     * @return listOf CreateInvoiceResponse
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
-    override suspend fun addInvoice(accUtilizationRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
+    override suspend fun add(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
 
         val responseList = mutableListOf<CreateInvoiceResponse>()
         for (accUtilizationRequest in accUtilizationRequestList) {
@@ -90,7 +89,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * @param accUtilizationRequest
      * @return CreateInvoiceResponse
      */
-    override suspend fun addAccountUtilization(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
+    override suspend fun add(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
 
         if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
             return CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1202.message)
@@ -122,8 +121,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
     /**
      *
      */
-    override suspend fun deleteInvoice(data: MutableList<Pair<Long, String>>): Boolean {
-
+    override suspend fun delete(data: MutableList<Pair<Long, String>>): Boolean {
         var result = false
         for (obj in data) {
 
@@ -153,22 +151,22 @@ open class InvoiceUtilizationImpl : InvoiceService {
      * Updates Invoice in account utilization
      * @param UpdateInvoiceRequest
      */
-    @Transactional
-    override suspend fun updateInvoice(updateInvoiceRequest: UpdateInvoiceRequest) {
-        TODO()
+    override suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest) {
+
+        var accountUtilization = accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
+
+        if (accountUtilization == null) {
+            throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
+        }
+        accUtilRepository.updateAccountUtilization(
+            accountUtilization.id!!, updateInvoiceRequest.transactionDate, updateInvoiceRequest.dueDate,
+            updateInvoiceRequest.docStatus, updateInvoiceRequest.entityCode, updateInvoiceRequest.currency, updateInvoiceRequest.ledCurrency,
+            updateInvoiceRequest.currAmount, updateInvoiceRequest.ledAmount
+        )
     }
 
-    override suspend fun updateInvoiceStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
+    override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
         TODO("Not yet implemented")
-    }
-
-    /**
-     * Updates Invoice in account utilization
-     * @param UpdateInvoiceRequest
-     */
-    @Transactional
-    override suspend fun deleteCreateInvoice(createInvoiceRequest: CreateInvoiceRequest) {
-        TODO()
     }
 
     /**
