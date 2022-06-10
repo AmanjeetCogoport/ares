@@ -116,20 +116,20 @@ open class KnockoffServiceImpl : KnockoffService {
             )
 
             /*6. Add the record in invoice payment mapping*/
-            var invoicePayMap=PaymentInvoiceMapping(
-                    id = null,
-                    accountMode = AccMode.AP,
-                    documentNo = knockOffRecord.documentNo,
-                    paymentId=paymentId,
-                    mappingType = PaymentInvoiceMappingType.BILL.name,
-                    currency = knockOffRecord.currency,
-                    ledCurrency = knockOffRecord.ledgerCurrency,
-                    signFlag = -1,
-                    amount = knockOffRecord.currencyAmount,
-                    ledAmount = knockOffRecord.ledgerAmount,
-                    transactionDate = knockOffRecord.transactionDate,
-                    createdAt = Timestamp.from(Instant.now()),
-                    updatedAt = Timestamp.from(Instant.now())
+            var invoicePayMap = PaymentInvoiceMapping(
+                id = null,
+                accountMode = AccMode.AP,
+                documentNo = knockOffRecord.documentNo,
+                paymentId = paymentId,
+                mappingType = PaymentInvoiceMappingType.BILL.name,
+                currency = knockOffRecord.currency,
+                ledCurrency = knockOffRecord.ledgerCurrency,
+                signFlag = -1,
+                amount = knockOffRecord.currencyAmount,
+                ledAmount = knockOffRecord.ledgerAmount,
+                transactionDate = knockOffRecord.transactionDate,
+                createdAt = Timestamp.from(Instant.now()),
+                updatedAt = Timestamp.from(Instant.now())
             )
             invoicePayMappingRepo.save(invoicePayMap)
 

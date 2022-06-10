@@ -6,7 +6,6 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.CreateInvoiceEvent
-import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
@@ -41,7 +40,7 @@ class AresKafkaListener {
     }
 
     @Topic("update-invoice")
-    fun listenUpdateInvoice(accountUtilizationEvent:AccountUtilizationEvent) = runBlocking {
+    fun listenUpdateInvoice(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
         invoiceService.updateInvoice(accountUtilizationEvent.accUtilizationRequest)
     }
 

@@ -16,6 +16,6 @@ enum class AllCurrencyTypes {
     GBP, EUR, USD, INR;
 }
 
-enum class PaymentInvoiceMappingType{
-    TDS,INVOICE,BILL
+enum class PaymentInvoiceMappingType {
+    TDS, INVOICE, BILL
 }

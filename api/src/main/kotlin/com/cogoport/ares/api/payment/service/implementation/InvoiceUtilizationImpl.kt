@@ -15,7 +15,6 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.event.CreateInvoiceRequest
@@ -150,7 +149,7 @@ open class InvoiceUtilizationImpl : InvoiceService {
      */
     @Transactional
     override suspend fun updateInvoice(accUtilizationRequest: AccUtilizationRequest) {
-        deleteInvoice(accUtilizationRequest.documentNo,accUtilizationRequest.accType!!.name)
+        deleteInvoice(accUtilizationRequest.documentNo, accUtilizationRequest.accType!!.name)
         addAccountUtilization(accUtilizationRequest)
     }
 
