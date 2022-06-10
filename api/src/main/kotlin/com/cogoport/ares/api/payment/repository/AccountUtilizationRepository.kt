@@ -269,5 +269,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         ledCurrency: String,
         currAmount: BigDecimal,
         ledAmount: BigDecimal
-    )
+    ): Int
 }

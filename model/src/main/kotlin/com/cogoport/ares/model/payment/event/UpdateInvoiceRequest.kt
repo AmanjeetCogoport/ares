@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment.event
 
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
@@ -14,6 +15,7 @@ import java.time.Instant
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class UpdateInvoiceRequest(
     var documentNo: Long,
+    var accMode: AccMode,
     var accType: AccountType,
     var docStatus: DocumentStatus,
     var entityCode: Int,
