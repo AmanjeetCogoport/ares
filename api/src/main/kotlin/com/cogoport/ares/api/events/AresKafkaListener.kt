@@ -29,6 +29,11 @@ class AresKafkaListener {
         invoiceService.addAccountUtilization(accountUtilizationEvent.accUtilizationRequest)
     }
 
+    @Topic("delete-invoice")
+    fun deleteInvoice(data: MutableList<Pair<Long, String>>) = runBlocking {
+        invoiceService.deleteInvoice(data)
+    }
+
     @Topic("receivables-dashboard-data")
     fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
