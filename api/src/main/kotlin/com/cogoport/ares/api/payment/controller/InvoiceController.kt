@@ -20,7 +20,7 @@ class InvoiceController {
     lateinit var invoiceService: InvoiceService
 
     @Post("/add-bulk")
-    suspend fun addBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse> {
+    suspend fun addBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
         return invoiceService.addInvoice(invoiceRequestList)
     }
 
