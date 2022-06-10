@@ -1,15 +1,15 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
-import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
+import javax.validation.constraints.NotNull
 
 @JsonInclude
 @Introspected
