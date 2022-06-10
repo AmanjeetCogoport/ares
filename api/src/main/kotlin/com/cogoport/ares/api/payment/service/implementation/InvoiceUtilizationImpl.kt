@@ -122,21 +122,27 @@ open class InvoiceUtilizationImpl : InvoiceService {
     /**
      *
      */
-    override suspend fun deleteInvoice(docNumber: Long, accType: String): Boolean {
+    override suspend fun deleteInvoice(data :MutableList<Pair<Long,String>>): Boolean {
 
-        var accountUtilization = accUtilRepository.findRecord(docNumber, accType)
+        var result = false
+        for(obj in data) {
+
+        var accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
 
         if (accountUtilization == null) {
-            throw AresException(AresError.ERR_1005, docNumber.toString())
+            throw AresException(AresError.ERR_1005, obj.first.toString())
         }
         if (Utilities.isPayAccountType(accountUtilization.accType)) {
-            throw AresException(AresError.ERR_1202, docNumber.toString())
+            throw AresException(AresError.ERR_1202, obj.first.toString())
         }
         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-            throw AresException(AresError.ERR_1204, docNumber.toString())
+            throw AresException(AresError.ERR_1204, obj.first.toString())
         }
         accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
-        return true
+
+            result = true
+        }
+        return result
     }
 
     override suspend fun findByDocumentNo(docNumber: Long): AccountUtilization {

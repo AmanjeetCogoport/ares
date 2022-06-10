@@ -31,8 +31,8 @@ class AresKafkaListener {
     }
 
     @Topic("delete-invoice")
-    fun deleteInvoice(docNumber: Long,accType: String) = runBlocking {
-        invoiceService.deleteInvoice(docNumber,accType)
+    fun deleteInvoice(data :MutableList<Pair<Long,String>>) = runBlocking {
+        invoiceService.deleteInvoice(data)
     }
 
     @Topic("receivables-dashboard-data")
