@@ -157,10 +157,9 @@ open class KnockoffServiceImpl : KnockoffService {
         // Emit kafka to the kuber service
         try {
             emitPaymentStatus(uploadBillResponseList)
-        }catch (k:KafkaException){
+        } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
-        }
-        catch(e:Exception){
+        } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
         return uploadBillResponseList
