@@ -273,9 +273,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        update account_utilizations 
-        set document_no =:documentNo,document_value =:documentValue,document_status =:documentStatus,updated_at =now()
-        where id=:id
+        UPDATE
+	  account_utilizations 
+        SET document_no = :documentNo, document_value = :documentValue, document_status = :documentStatus, updated_at = now()
+        WHERE id=:id
     """
     )
     suspend fun updateAccountUtilization(id: Long, documentNo: Long, documentValue: String?, documentStatus: DocumentStatus): Int
