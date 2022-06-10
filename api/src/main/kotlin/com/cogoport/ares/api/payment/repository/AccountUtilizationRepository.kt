@@ -96,16 +96,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         (
             select 'Total' as duration,
-            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
-            abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
             from account_utilizations
             where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
         )
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end) as receivable_amount,
-            abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount 
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
             from account_utilizations
             where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
             group by date_trunc('month',transaction_date)
@@ -162,7 +162,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
             sum(case when acc_type in ('SINV','SDN','SCN') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
-            date_part('days',(:date)::date) as days
+            case when extract(month from :date::date) < extract(month from now()::date) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
+            else date_part('days', :date::date) end as days
             from account_utilizations
             where (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' and transaction_date <= :date::date
             )
@@ -181,7 +182,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             abs(sum(case when acc_type = 'PAY' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('PINV','PDN','PCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
             sum(case when acc_type in ('PINV','PDN','PCN') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_loc end) as total_sales,
-            date_part('days',(:date)::date) as days
+            case when extract(month from :date::date) < extract(month from now()::date) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
+            else date_part('days', :date::date) end as days
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status = 'FINAL' and transaction_date <= :date::date
         )
