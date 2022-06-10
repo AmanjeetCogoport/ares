@@ -270,4 +270,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         currAmount: BigDecimal,
         ledAmount: BigDecimal
     ): Int
+
+    @Query(
+        """
+        update account_utilizations 
+        set document_no =:documentNo,document_value =:documentValue,document_status =:documentStatus,updated_at =now()
+        where id=:id
+    """
+    )
+    suspend fun updateAccountUtilization(id: Long, documentNo: Long, documentValue: String?, documentStatus: DocumentStatus): Int
 }

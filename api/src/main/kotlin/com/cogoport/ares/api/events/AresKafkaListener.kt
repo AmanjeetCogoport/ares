@@ -37,7 +37,7 @@ class AresKafkaListener {
     }
 
     /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-    @Topic("update-invoice-status")
+    @Topic("update-account-status")
     fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
         accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
     }
