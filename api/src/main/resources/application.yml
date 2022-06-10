@@ -44,3 +44,7 @@ opensearch:
   host: ${OPENSEARCH_HOST:search.books.dev.cogoport.io}
   user: ${OPENSEARCH_USER:books_search_dev}
   pass: ${OPENSEARCH_PASS:F20guhTISeCQ93nRaD@}
+
+sentry:
+  dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
+

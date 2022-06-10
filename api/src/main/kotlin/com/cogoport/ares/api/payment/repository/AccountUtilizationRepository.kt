@@ -9,11 +9,13 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
+import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -96,16 +98,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         (
             select 'Total' as duration,
-            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end) as receivable_amount,
-            abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
             from account_utilizations
             where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
         )
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end) as receivable_amount,
-            abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as collectable_amount 
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
             from account_utilizations
             where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
             group by date_trunc('month',transaction_date)
@@ -162,7 +164,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
             sum(case when acc_type in ('SINV','SDN','SCN') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
-            date_part('days',(:date)::date) as days
+            case when extract(month from :date::date) < extract(month from now()::date) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
+            else date_part('days', :date::date) end as days
             from account_utilizations
             where (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' and transaction_date <= :date::date
             )
@@ -181,7 +184,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             abs(sum(case when acc_type = 'PAY' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('PINV','PDN','PCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
             sum(case when acc_type in ('PINV','PDN','PCN') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_loc end) as total_sales,
-            date_part('days',(:date)::date) as days
+            case when extract(month from :date::date) < extract(month from now()::date) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
+            else date_part('days', :date::date) end as days
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status = 'FINAL' and transaction_date <= :date::date
         )
@@ -242,8 +246,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              select case when (amount_loc-pay_loc)=0 then 'FULL'
              when (amount_loc-pay_loc)<>0 then 'PARTIAL'
 			else 'UNPAID' end as payment_status 
-            from account_utilizations au where document_no =:documentNo and acc_mode =accMode::account_mode
+            from account_utilizations au where document_no =:documentNo and acc_mode =:accMode::account_mode
             """
     )
     suspend fun findDocumentStatus(documentNo: Long, accMode: String): String
+
+    @Query(
+        """
+    update account_utilizations
+    set document_status=:documentStatus,entity_code=:entityCode,currency=:currency,led_currency =:ledCurrency,
+    amount_curr =:currAmount,amount_loc =:ledAmount,due_date =:dueDate,transaction_date =:transactionDate,
+    updated_at =now() where id=:id
+    """
+    )
+    suspend fun updateAccountUtilization(
+        id: Long,
+        transactionDate: Timestamp,
+        dueDate: Timestamp,
+        documentStatus: DocumentStatus,
+        entityCode: Int,
+        currency: String,
+        ledCurrency: String,
+        currAmount: BigDecimal,
+        ledAmount: BigDecimal
+    ): Int
 }

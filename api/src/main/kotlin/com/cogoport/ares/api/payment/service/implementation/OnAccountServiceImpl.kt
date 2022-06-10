@@ -22,6 +22,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -52,10 +53,10 @@ open class OnAccountServiceImpl : OnAccountService {
      * @return : AccountCollectionResponse
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
-        val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
+        val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
-        return AccountCollectionResponse(payments = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
+        return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
