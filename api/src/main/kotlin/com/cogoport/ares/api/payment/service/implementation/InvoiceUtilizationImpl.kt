@@ -122,23 +122,23 @@ open class InvoiceUtilizationImpl : InvoiceService {
     /**
      *
      */
-    override suspend fun deleteInvoice(data :MutableList<Pair<Long,String>>): Boolean {
+    override suspend fun deleteInvoice(data: MutableList<Pair<Long, String>>): Boolean {
 
         var result = false
-        for(obj in data) {
+        for (obj in data) {
 
-        var accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
+            var accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
 
-        if (accountUtilization == null) {
-            throw AresException(AresError.ERR_1005, obj.first.toString())
-        }
-        if (Utilities.isPayAccountType(accountUtilization.accType)) {
-            throw AresException(AresError.ERR_1202, obj.first.toString())
-        }
-        if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-            throw AresException(AresError.ERR_1204, obj.first.toString())
-        }
-        accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
+            if (accountUtilization == null) {
+                throw AresException(AresError.ERR_1005, obj.first.toString())
+            }
+            if (Utilities.isPayAccountType(accountUtilization.accType)) {
+                throw AresException(AresError.ERR_1202, obj.first.toString())
+            }
+            if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+                throw AresException(AresError.ERR_1204, obj.first.toString())
+            }
+            accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
 
             result = true
         }

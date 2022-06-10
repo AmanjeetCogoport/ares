@@ -31,7 +31,7 @@ class AresKafkaListener {
     }
 
     @Topic("delete-invoice")
-    fun deleteInvoice(data :MutableList<Pair<Long,String>>) = runBlocking {
+    fun deleteInvoice(data: MutableList<Pair<Long, String>>) = runBlocking {
         invoiceService.deleteInvoice(data)
     }
 
@@ -59,5 +59,4 @@ class AresKafkaListener {
     fun listenDeleteCreateInvoice(createInvoiceEvent: CreateInvoiceEvent) = runBlocking {
         invoiceService.deleteCreateInvoice(createInvoiceEvent.createInvoiceRequest)
     }
-
 }
