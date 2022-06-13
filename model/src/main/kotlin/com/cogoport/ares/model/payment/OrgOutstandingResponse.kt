@@ -22,10 +22,16 @@ data class OrgOutstandingResponse(
     val openInvoicesCount: Int?,
     @JsonProperty("openInvoicesAmount")
     val openInvoicesAmount: BigDecimal?,
+    @JsonProperty("openInvoicesLedAmount")
+    val openInvoicesLedAmount: BigDecimal?,
     @JsonProperty("paymentsCount")
     val paymentsCount: Int?,
     @JsonProperty("paymentsAmount")
     val paymentsAmount: BigDecimal?,
+    @JsonProperty("paymentsLedAmount")
+    val paymentsLedAmount: BigDecimal?,
     @JsonProperty("outstandingAmount")
-    val outstandingAmount: BigDecimal?
+    val outstandingAmount: BigDecimal?,
+    @JsonProperty("outstandingLedAmount")
+    val outstandingLedAmount: BigDecimal?
 )

@@ -224,9 +224,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select organization_id::varchar,organization_name,currency,zone_code,
         sum(case when acc_type <> 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+        sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
         sum(case when acc_type = 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
         sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
-        sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount
+        sum(case when acc_type = 'REC' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
+        sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount,
+        sum(sign_flag * (amount_loc - pay_loc)) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status = 'FINAL' and organization_id = :orgId::uuid and zone_code = :zone
         group by organization_id, organization_name, currency, zone_code
