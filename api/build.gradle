@@ -56,7 +56,6 @@ dependencies {
     implementation("io.zipkin.aws:brave-propagation-aws:0.23.4")
     implementation("io.opentracing.brave:brave-opentracing:1.0.0")
     implementation("io.zipkin.brave:brave-context-slf4j:5.13.9")
-    implementation("ch.qos.logback:logback-classic:1.2.11")
 
     //Service Discovery
     implementation('software.amazon.awssdk:servicediscovery:2.17.191')
@@ -64,7 +63,8 @@ dependencies {
 
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
 
-    runtimeOnly("org.slf4j:slf4j-simple")
+    implementation 'io.sentry:sentry:5.7.4'
+
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     compileOnly("org.graalvm.nativeimage:svm")
