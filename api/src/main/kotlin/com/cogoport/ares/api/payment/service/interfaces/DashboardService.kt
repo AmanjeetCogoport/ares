@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.model.payment.SalesTrendRequest
 import com.cogoport.ares.model.payment.CollectionRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -15,7 +14,6 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.SalesTrend
 
 interface DashboardService {
 
@@ -26,7 +24,6 @@ interface DashboardService {
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
     suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
     suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse
-    suspend fun getSalesTrend(request: SalesTrendRequest): MutableList<SalesTrend>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
 }

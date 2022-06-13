@@ -1,7 +1,7 @@
 package com.cogoport.ares.client
 
-import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
@@ -19,14 +19,13 @@ import com.cogoport.ares.model.payment.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.OverallStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsRequest
+import com.cogoport.ares.model.payment.OverallStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.SalesTrendResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -39,7 +38,6 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
-import java.time.LocalDateTime
 
 @Client(id = "ares-service")
 interface AresClient {
@@ -58,13 +56,6 @@ interface AresClient {
     @Get("/payment/dashboard/quarterly-outstanding{?request*}")
     public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
-    /** Sales trend need to be deleted */
-    @Get("/payment/dashboard/sales-trend")
-    public suspend fun getSalesTrend(
-        @QueryValue(AresModelConstants.ZONE) zone: String?,
-        @QueryValue(AresModelConstants.ROLE) role: String?
-    ): SalesTrendResponse?
-
     @Get("/payment/dashboard/outstanding-by-age{?request*}")
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
@@ -77,12 +68,9 @@ interface AresClient {
     @Get("/payment/outstanding/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
 
-    @Get("/payment/accounts")
-    suspend fun getOnAccountCollections(
-        @QueryValue("uploadedDate") uploadedDate: LocalDateTime?,
-        @QueryValue("entityType") entityType: Int?,
-        @QueryValue("currencyType") currencyType: String?
-    ): AccountCollectionResponse
+    @Get("/payment/accounts{?request*}")
+    suspend fun getOnAccountCollections(@Valid request: AccountCollectionRequest): AccountCollectionResponse
+
     @Post("/payment/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 

@@ -60,6 +60,7 @@ dependencies {
     //Service Discovery
     implementation('software.amazon.awssdk:servicediscovery:2.17.191')
     implementation("io.micronaut.aws:micronaut-aws-service-discovery:3.4.0")
+    implementation ('io.sentry:sentry:5.7.4')
 
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
 

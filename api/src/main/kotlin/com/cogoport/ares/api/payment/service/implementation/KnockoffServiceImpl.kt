@@ -4,10 +4,13 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
@@ -16,7 +19,9 @@ import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import jakarta.inject.Inject
+import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -37,7 +42,10 @@ open class KnockoffServiceImpl : KnockoffService {
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
 
-    @Transactional(rollbackOn = [SQLException::class, RuntimeException::class, Throwable::class, Exception::class])
+    @Inject
+    lateinit var invoicePayMappingRepo: InvoicePayMappingRepository
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
     override suspend fun uploadBillPayment(knockOffList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse> {
 
         var uploadBillResponseList = mutableListOf<AccountPayableFileResponse>()
@@ -77,10 +85,28 @@ open class KnockoffServiceImpl : KnockoffService {
                 ledTotalAmtPaid
             )
 
+            /*4. Add the record in invoice payment mapping*/
+            var invoicePayMap = PaymentInvoiceMapping(
+                id = null,
+                accountMode = AccMode.AP,
+                documentNo = knockOffRecord.documentNo,
+                paymentId = paymentId!!,
+                mappingType = PaymentInvoiceMappingType.BILL.name,
+                currency = knockOffRecord.currency,
+                ledCurrency = knockOffRecord.ledgerCurrency,
+                signFlag = -1,
+                amount = knockOffRecord.currencyAmount,
+                ledAmount = knockOffRecord.ledgerAmount,
+                transactionDate = knockOffRecord.transactionDate,
+                createdAt = Timestamp.from(Instant.now()),
+                updatedAt = Timestamp.from(Instant.now())
+            )
+            invoicePayMappingRepo.save(invoicePayMap)
+
             /*4. Insert the account utilization record for payments*/
             var accountUtilEntity = AccountUtilization(
                 id = null, documentNo = paymentId!!, documentValue = paymentId.toString(),
-                zoneCode = knockOffRecord.zoneCode, serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
+                zoneCode = knockOffRecord.zoneCode.toString(), serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
                 entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
                 organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
                 accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
@@ -89,7 +115,6 @@ open class KnockoffServiceImpl : KnockoffService {
                 dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
                 updatedAt = Timestamp.from(Instant.now()), orgSerialId = knockOffRecord.orgSerialId
             )
-
             accountUtilizationRepository.save(accountUtilEntity)
 
             /*5. If TDS Amount is present add a TDS entry in payment table*/
@@ -102,6 +127,24 @@ open class KnockoffServiceImpl : KnockoffService {
                 payTdsEntity.createdAt = Timestamp.from(Instant.now())
                 payTdsEntity.updatedAt = Timestamp.from(Instant.now())
                 paymentRepository.save(payTdsEntity)
+
+                /*4. Add the record in invoice payment mapping for TDS*/
+                var invoicePayTdsMap = PaymentInvoiceMapping(
+                    id = null,
+                    accountMode = AccMode.AP,
+                    documentNo = knockOffRecord.documentNo,
+                    paymentId = paymentId!!,
+                    mappingType = PaymentInvoiceMappingType.TDS.name,
+                    currency = knockOffRecord.currency,
+                    ledCurrency = knockOffRecord.ledgerCurrency,
+                    signFlag = -1,
+                    amount = knockOffRecord.currTdsAmount,
+                    ledAmount = knockOffRecord.ledTdsAmount,
+                    transactionDate = knockOffRecord.transactionDate,
+                    createdAt = Timestamp.from(Instant.now()),
+                    updatedAt = Timestamp.from(Instant.now())
+                )
+                invoicePayMappingRepo.save(invoicePayTdsMap)
             }
             var paymentStatus = accountUtilizationRepository.findDocumentStatus(knockOffRecord.documentNo, AccMode.AP.name)
             var accPayResponse = AccountPayableFileResponse(
@@ -112,7 +155,13 @@ open class KnockoffServiceImpl : KnockoffService {
             uploadBillResponseList.add(accPayResponse)
         }
         // Emit kafka to the kuber service
-        emitPaymentStatus(uploadBillResponseList)
+        try {
+            emitPaymentStatus(uploadBillResponseList)
+        } catch (k: KafkaException) {
+            logger().error(k.stackTraceToString())
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
         return uploadBillResponseList
     }
 

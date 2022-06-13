@@ -1,22 +1,22 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
-import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
+import javax.validation.constraints.NotNull
 
 @JsonInclude
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Payment(
+data class PaymentResponse(
     @JsonProperty("id")
     var id: Long? = 0,
     @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
@@ -54,17 +54,17 @@ data class Payment(
     @JsonProperty("refPaymentId")
     var refPaymentId: Long? = 0,
     @JsonProperty("transactionDate")
-    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var transactionDate: Any? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("isPosted")
     var isPosted: Boolean? = false,
     @JsonProperty("isDeleted")
     var isDeleted: Boolean? = false,
     @JsonProperty("createdAt")
-    var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var createdAt: Any? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("createdBy")
     var createdBy: String? = "",
     @JsonProperty("updatedAt")
-    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var updatedAt: Any? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
     @JsonProperty("zone")

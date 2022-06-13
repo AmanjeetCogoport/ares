@@ -1,8 +1,16 @@
 package com.cogoport.ares.model.payment
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class CustomerOutstanding(
     @JsonProperty("organizationId")
     var organizationId: String?,
@@ -20,6 +28,9 @@ data class CustomerOutstanding(
     var ageingBucket: List<AgeingBucket>?
 )
 
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class InvoiceStats(
     @JsonProperty("invoicesCount")
     var invoicesCount: Int?,
@@ -27,6 +38,9 @@ data class InvoiceStats(
     var amountDue: List<DueAmount>?
 )
 
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class DueAmount(
     @JsonProperty("currency")
     var currency: String?,
