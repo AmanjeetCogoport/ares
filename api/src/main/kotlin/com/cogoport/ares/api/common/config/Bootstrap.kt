@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.common.config
 
-import com.cogoport.ares.api.common.SentryConfig
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import io.micronaut.runtime.event.annotation.EventListener
@@ -43,14 +42,15 @@ class Bootstrap {
     }
 
     private fun configureSentry() {
-        Logger.getLogger("Boostrap").info("Sentry configured with params from application props")
-        Sentry.init { options: SentryOptions ->
-            options.dsn = sentryConfig.dsn
-            // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
-            // We recommend adjusting this value in production.
-            options.tracesSampleRate = 1.0
-            // When first trying Sentry it's good to see what the SDK is doing:
-            // options.setDebug(true)
+        if (sentryConfig.enabled == true) {
+            Sentry.init { options: SentryOptions ->
+                options.dsn = sentryConfig.dsn
+                // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+                // We recommend adjusting this value in production.
+                options.tracesSampleRate = 1.0
+                // When first trying Sentry it's good to see what the SDK is doing:
+                // options.setDebug(true)
+            }
         }
     }
 }

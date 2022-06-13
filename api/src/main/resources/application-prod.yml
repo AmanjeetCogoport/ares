@@ -28,3 +28,7 @@ opensearch:
   host: ${OPENSEARCH_HOST}
   user: ${OPENSEARCH_USER}
   pass: ${OPENSEARCH_PASS}
+
+sentry:
+  enabled: ${SENTRY_ENABLED:true}
+  dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
