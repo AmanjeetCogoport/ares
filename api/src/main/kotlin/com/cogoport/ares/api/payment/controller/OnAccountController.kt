@@ -11,7 +11,6 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Delete
-import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Put
 import io.micronaut.validation.Validated
@@ -41,7 +40,7 @@ class OnAccountController {
     }
 
     @Delete
-    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse {
+    suspend fun deleteOnAccountReceivables(@Body paymentId: Long): OnAccountApiCommonResponse {
         return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(paymentId))
     }
 
