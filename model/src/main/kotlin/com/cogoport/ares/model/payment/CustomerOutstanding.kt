@@ -34,6 +34,8 @@ data class CustomerOutstanding(
 data class InvoiceStats(
     @JsonProperty("invoicesCount")
     var invoicesCount: Int?,
+    @JsonProperty("invoiceLedAmount")
+    var invoiceLedAmount: BigDecimal?,
     @JsonProperty("amountDue")
     var amountDue: List<DueAmount>?
 )

@@ -10,8 +10,11 @@ data class OrgOutstanding(
     val currency: String?,
     val openInvoicesCount: Int?,
     val openInvoicesAmount: BigDecimal?,
+    val openInvoicesLedAmount: BigDecimal?,
     val paymentsCount: Int?,
     val paymentsAmount: BigDecimal?,
+    val paymentsLedAmount: BigDecimal?,
     val outstandingAmount: BigDecimal?,
+    val outstandingLedAmount: BigDecimal?,
     val zoneCode: String?
 )

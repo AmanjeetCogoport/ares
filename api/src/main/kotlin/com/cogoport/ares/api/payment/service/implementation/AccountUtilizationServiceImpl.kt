@@ -109,19 +109,20 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (accUtilizationRequest.accMode == AccMode.AR) {
             acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
         }
-
+        acUtilization.serviceType = acUtilization.serviceType.uppercase()
         val accUtilRes = accUtilRepository.save(acUtilization)
+
         try {
             if (accUtilizationRequest.accMode == AccMode.AR) {
                 emitDashboardEvent(accUtilizationRequest)
             }
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes?.id.toString(), accUtilRes)
         } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
-        return CreateInvoiceResponse(accUtilRes.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
+        return CreateInvoiceResponse(accUtilRes?.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION)
     }
 
     /**
