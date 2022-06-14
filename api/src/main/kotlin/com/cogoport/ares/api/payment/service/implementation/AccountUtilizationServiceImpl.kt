@@ -186,7 +186,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (updateInvoiceRequest.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
 
         try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString(), accountUtilization)
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
             // TODO : Above code not looking right, discuss with Mohit about client update
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
