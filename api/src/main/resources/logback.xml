@@ -4,7 +4,7 @@
         <withJansi>false</withJansi>
         <encoder>
             <pattern>
-                {"timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}", "level": "%5p", "service": "ares", "traceId": "%X{traceId}", "spanId": "%X{spanId}", "sessionInfo": %X{SessionInfo}, "thread": "%15.15t", "logger": "%-40.40logger{39}", "message": "%msg %replace(%xException){'\n','\u2028'}%nopex" }%n
+                {"timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}", "level": "%p", "service": "ares", "traceId": "%X{traceId}", "spanId": "%X{spanId}", "sessionInfo": {%X{sessionInfo}} , "thread": "%t", "logger": "%logger{39}", "message": "%msg %replace(%xException){'\n','\u2028'}%nopex" }%n
             </pattern>
         </encoder>
     </appender>
