@@ -29,7 +29,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
             updated_at from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type)"""
     )
-    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization
+    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization?
 
     @Query("delete from account_utilizations where id=:id")
     suspend fun deleteInvoiceUtils(id: Long): Int

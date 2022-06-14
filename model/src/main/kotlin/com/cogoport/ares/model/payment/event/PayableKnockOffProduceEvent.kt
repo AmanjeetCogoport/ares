@@ -1,5 +1,6 @@
-package com.cogoport.ares.model.payment
+package com.cogoport.ares.model.payment.event
 
+import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -8,5 +9,5 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class PayableKnockOffProduceEvent(
-    var accountPayableFileResponseList: MutableList<AccountPayableFileResponse>
+    var accountPayableFileResponse: AccountPayableFileResponse
 )

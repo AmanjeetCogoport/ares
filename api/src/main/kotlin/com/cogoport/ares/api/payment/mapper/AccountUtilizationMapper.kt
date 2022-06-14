@@ -13,7 +13,7 @@ interface AccountUtilizationMapper {
     @Mapping(source = "amountLoc", target = "ledgerAmount")
     @Mapping(source = "payCurr", target = "currencyPayment")
     @Mapping(source = "payLoc", target = "ledgerPayment")
-    fun convertToModel(accountUtilization: AccountUtilization): AccUtilizationRequest
+    fun convertToModel(accountUtilization: AccountUtilization?): AccUtilizationRequest
 
     @Mapping(source = "docValue", target = "documentValue")
     @Mapping(source = "currencyAmount", target = "amountCurr")
