@@ -13,7 +13,7 @@ import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
 
-@KafkaListener(offsetReset = OffsetReset.LATEST,pollTimeout = "30000ms")
+@KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "30000ms")
 class AresKafkaListener {
     @Inject
     private lateinit var accountUtilService: AccountUtilizationService
