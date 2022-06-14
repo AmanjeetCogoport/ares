@@ -29,7 +29,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
             updated_at from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type)"""
     )
-    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization
+    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization?
 
     @Query("delete from account_utilizations where id=:id")
     suspend fun deleteInvoiceUtils(id: Long): Int
@@ -83,10 +83,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         select
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then 1 else 0 end),0) as open_invoices_count,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc - pay_loc <> 0) then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
-        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' ) as organization_count, 
+        coalesce(sum(sign_flag*(amount_loc - pay_loc)),0) as total_outstanding_amount,
+        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and (:zone is null or zone_code = :zone) and document_status = 'FINAL' and acc_mode = 'AR' ) as organization_count, 
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
@@ -101,7 +101,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
             coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
             from account_utilizations
-            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
+            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
         )
         union all
         (
@@ -109,13 +109,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end),0) as receivable_amount,
             coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
             from account_utilizations
-            where (:quarter is null or extract(quarter from transaction_date) = :quarter) and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
+            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status = 'FINAL'
             group by date_trunc('month',transaction_date)
             order by date_trunc('month',transaction_date)
         )
         """
     )
-    suspend fun generateCollectionTrend(zone: String?, quarter: Int?): MutableList<CollectionTrend>
+    suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int): MutableList<CollectionTrend>
 
     @Query(
         """

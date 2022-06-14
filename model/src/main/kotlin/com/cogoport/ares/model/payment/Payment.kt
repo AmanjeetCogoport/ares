@@ -2,6 +2,7 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
@@ -53,16 +54,19 @@ data class Payment(
     var utr: String? = "",
     @JsonProperty("refPaymentId")
     var refPaymentId: Long? = 0,
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @JsonProperty("transactionDate")
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("isPosted")
     var isPosted: Boolean? = false,
     @JsonProperty("isDeleted")
     var isDeleted: Boolean? = false,
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("createdBy")
     var createdBy: String? = "",
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @JsonProperty("bankAccountNumber")

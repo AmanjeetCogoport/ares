@@ -17,7 +17,6 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import jakarta.inject.Inject
@@ -151,22 +150,26 @@ open class KnockoffServiceImpl : KnockoffService {
                 knockOffRecord.documentNo, knockOffRecord.documentValue,
                 true, paymentStatus, null
             )
+            try {
+                emitPaymentStatus(accPayResponse)
+            } catch (k: KafkaException) {
+                logger().error(k.stackTraceToString())
+            } catch (e: Exception) {
+                logger().error(e.stackTraceToString())
+            }
             // Add success in the return response
             uploadBillResponseList.add(accPayResponse)
         }
-        // Emit kafka to the kuber service
-        try {
-            emitPaymentStatus(uploadBillResponseList)
-        } catch (k: KafkaException) {
-            logger().error(k.stackTraceToString())
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-        }
+
         return uploadBillResponseList
     }
 
-    private fun emitPaymentStatus(accPayResponseList: MutableList<AccountPayableFileResponse>) {
-        var event = PayableKnockOffProduceEvent(accPayResponseList)
+    /**
+     * Emits Kafka message on topic <b>payables-bill-status</b>
+     * @param : accPayResponseList
+     */
+    private fun emitPaymentStatus(accPayResponseList: AccountPayableFileResponse) {
+        var event = com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent(accPayResponseList)
         aresKafkaEmitter.emitBillPaymentStatus(event)
     }
 }

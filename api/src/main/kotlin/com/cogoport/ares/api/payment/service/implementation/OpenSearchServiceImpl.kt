@@ -60,9 +60,9 @@ class OpenSearchServiceImpl : OpenSearchService {
         val year = request.year
 
         /** Collection Trend */
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter)
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse)
-        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter)
+        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year)
         updateCollectionTrend(null, quarter, year, collectionResponseAll)
 
         /** Overall Stats */

@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
-import com.cogoport.ares.model.payment.PayableKnockOffProduceEvent
+import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
 
