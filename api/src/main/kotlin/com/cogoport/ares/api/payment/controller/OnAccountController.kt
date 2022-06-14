@@ -41,7 +41,7 @@ class OnAccountController {
     }
 
     @Delete
-    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse {
+    suspend fun deleteOnAccountReceivables(@Body paymentId: Long): OnAccountApiCommonResponse {
         return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(paymentId))
     }
 
