@@ -28,16 +28,16 @@ class SessionMDCFilter : HttpServerFilter {
     private fun logRequest(request: HttpRequest<*>?) {
         val stringBuilder = StringBuilder()
         stringBuilder.append("{")
-        stringBuilder.append("\"").append("method").append("\":")
-        stringBuilder.append("\"").append(request?.method).append("\"")
-        stringBuilder.append(",\"").append("path").append("\":")
-        stringBuilder.append("\"").append(request?.path).append("\"")
-        stringBuilder.append(",\"").append("remoteHost").append("\":")
-        stringBuilder.append("\"").append(request?.remoteAddress?.address).append("\"")
+        stringBuilder.append("'").append("method").append("':")
+        stringBuilder.append("'").append(request?.method).append("'")
+        stringBuilder.append(",'").append("path").append("':")
+        stringBuilder.append("'").append(request?.path).append("'")
+        stringBuilder.append(",'").append("remoteHost").append("':")
+        stringBuilder.append("'").append(request?.remoteAddress?.address).append("'")
 
         request?.headers?.forEach {
-            stringBuilder.append(",\"").append(it.key).append("\":")
-            stringBuilder.append("\"").append(it.value.toString().replace("\"", "")).append("\"")
+            stringBuilder.append(",'").append(it.key).append("':")
+            stringBuilder.append("'").append(it.value.toString().replace("\"", "")).append("'")
         }
 
         stringBuilder.append("}")
