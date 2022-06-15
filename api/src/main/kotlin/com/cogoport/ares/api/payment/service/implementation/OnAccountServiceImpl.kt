@@ -19,11 +19,11 @@ import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -54,7 +54,7 @@ open class OnAccountServiceImpl : OnAccountService {
      * @return : AccountCollectionResponse
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
-        val data = OpenSearchClient().onAccountSearch(request, Payment::class.java)!!
+        val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
@@ -83,6 +83,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
         receivableRequest.id = savedPayment.id
+
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
@@ -154,9 +155,9 @@ open class OnAccountServiceImpl : OnAccountService {
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
-    override suspend fun deletePaymentEntry(delPayRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
+    override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
-        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(delPayRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
         if (payment.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
             throw AresException(AresError.ERR_1007, "")
@@ -172,7 +173,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        return OnAccountApiCommonResponse(id = delPayRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
+        return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
     // Will be removed via Mapper

@@ -1,10 +1,10 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
@@ -12,11 +12,11 @@ import java.sql.Timestamp
 import java.util.UUID
 
 @JsonInclude
-@Introspected
+// @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class Payment(
+data class PaymentResponse(
     @JsonProperty("id")
     var id: Long? = 0,
     @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
@@ -39,8 +39,7 @@ data class Payment(
     var signFlag: Short? = 1,
     @JsonProperty("currency") @field:NotNull(message = "Currency Type is required")
     var currencyType: String? = "",
-    @field:NotNull(message = "Amount is required")
-    @JsonProperty("amount")
+    @JsonProperty("amount") @field:NotNull(message = "Amount is required")
     var amount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger Currency is required")
     var ledCurrency: String? = "INR",
@@ -54,21 +53,21 @@ data class Payment(
     var utr: String? = "",
     @JsonProperty("refPaymentId")
     var refPaymentId: Long? = 0,
-    // @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("transactionDate")
-    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var transactionDate: Timestamp?,
     @JsonProperty("isPosted")
     var isPosted: Boolean? = false,
     @JsonProperty("isDeleted")
     var isDeleted: Boolean? = false,
-    // @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.ANY, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("createdAt")
-    var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var createdAt: Timestamp?,
     @JsonProperty("createdBy")
     var createdBy: String? = "",
-    //  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("updatedAt")
-    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var updatedAt: Timestamp?,
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
     @JsonProperty("zone")
@@ -77,12 +76,12 @@ data class Payment(
     var serviceType: String? = "",
     @JsonProperty("paymentCode")
     var paymentCode: PaymentCode? = PaymentCode.REC,
-    @JsonProperty("paymentDate")
-    var paymentDate: String? = "",
     @JsonProperty("uploadedBy")
     var uploadedBy: String? = "",
     @JsonProperty("bankName")
     var bankName: String? = "",
     @JsonProperty("organizationId")
-    var organizationId: UUID? = null
+    var organizationId: UUID? = null,
+    @JsonProperty("paymentDate")
+    var paymentDate: String? = ""
 )
