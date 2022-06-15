@@ -179,7 +179,6 @@ open class OnAccountServiceImpl : OnAccountService {
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
-
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
 
