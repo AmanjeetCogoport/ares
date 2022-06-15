@@ -142,7 +142,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var paymentDetails = paymentRepository.update(payment)
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
-
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
@@ -155,46 +154,29 @@ open class OnAccountServiceImpl : OnAccountService {
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
+    @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
         var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
         if (payment.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
             throw AresException(AresError.ERR_1007, "")
+
         payment.isDeleted = true
         var paymentResponse = paymentRepository.update(payment)
-        val openSearchpaymentModel = paymentConverter.convertToModel(paymentResponse)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchpaymentModel)
+        val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
+        openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
+
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
         var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment.id)
-        val paymentModel = paymentConverter.convertToModel(payment)
-
         accountUtilization.documentStatus = DocumentStatus.CANCELLED
+
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
-    }
-
-    // Will be removed via Mapper
-    fun updateAccountUtilizationEntry(accountUtilization: AccountUtilization, receivableRequest: Payment): AccountUtilization {
-        accountUtilization.zoneCode = receivableRequest.zone!!
-        accountUtilization.documentStatus = DocumentStatus.FINAL
-        accountUtilization.serviceType = receivableRequest.serviceType.toString()
-        accountUtilization.entityCode = receivableRequest.entityType!!
-        // accountUtilization.category = "non_asset"
-        accountUtilization.orgSerialId = receivableRequest.orgSerialId!!
-        // accountUtilization.organizationId = receivableRequest.customerId!!
-        accountUtilization.organizationName = receivableRequest.customerName
-        accountUtilization.sageOrganizationId = receivableRequest.sageOrganizationId
-        accountUtilization.accCode = receivableRequest.accCode!!
-        accountUtilization.accMode = receivableRequest.accMode!!
-        accountUtilization.signFlag = receivableRequest.signFlag!!
-        accountUtilization.amountCurr = receivableRequest.amount!!
-        accountUtilization.amountLoc = receivableRequest.ledAmount!!
-        accountUtilization.dueDate = receivableRequest.transactionDate!!
-        accountUtilization.transactionDate = receivableRequest.transactionDate!!
-        return accountUtilization
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
