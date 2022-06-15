@@ -19,7 +19,6 @@ import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
@@ -154,9 +153,9 @@ open class OnAccountServiceImpl : OnAccountService {
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
-    override suspend fun deletePaymentEntry(delPayRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
+    override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
-        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(delPayRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
         if (payment.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
             throw AresException(AresError.ERR_1007, "")
@@ -172,7 +171,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        return OnAccountApiCommonResponse(id = delPayRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
+        return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
     // Will be removed via Mapper
