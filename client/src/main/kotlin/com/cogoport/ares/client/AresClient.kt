@@ -81,7 +81,7 @@ interface AresClient {
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
     @Delete("/payment/accounts")
-    suspend fun deleteOnAccountReceivables(@Body paymentId: Long): OnAccountApiCommonResponse
+    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse
 
     @Post("/payment/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
