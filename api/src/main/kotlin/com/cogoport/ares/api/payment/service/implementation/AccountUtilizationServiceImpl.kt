@@ -207,7 +207,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             updateInvoiceStatusRequest.newDocumentValue, updateInvoiceStatusRequest.docStatus!!
         )
 
-        // TODO : update this in open search
+        accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.newDocumentNo, updateInvoiceStatusRequest.accType.name)
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 
     /**
