@@ -11,6 +11,7 @@ import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
@@ -81,7 +82,7 @@ interface AresClient {
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
     @Delete("/payment/accounts")
-    suspend fun deleteOnAccountReceivables(@QueryValue("paymentId") paymentId: Long): OnAccountApiCommonResponse
+    suspend fun deleteOnAccountReceivables(@Body deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse
 
     @Post("/payment/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
