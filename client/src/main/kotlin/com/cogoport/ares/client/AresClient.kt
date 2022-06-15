@@ -26,6 +26,7 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.ReceivableRequest
+import com.cogoport.ares.model.payment.DeletePaymentRequest
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Get
@@ -81,7 +82,7 @@ interface AresClient {
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
     @Delete("/payment/accounts")
-    suspend fun deleteOnAccountReceivables(@Body paymentId: Long): OnAccountApiCommonResponse
+    suspend fun deleteOnAccountReceivables(@Body deletePayRequest: DeletePaymentRequest): OnAccountApiCommonResponse
 
     @Post("/payment/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse

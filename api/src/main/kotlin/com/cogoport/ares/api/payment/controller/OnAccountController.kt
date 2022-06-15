@@ -6,6 +6,7 @@ import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.BulkPaymentResponse
+import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -40,8 +41,8 @@ class OnAccountController {
     }
 
     @Delete
-    suspend fun deleteOnAccountReceivables(@Body paymentId: Long): OnAccountApiCommonResponse {
-        return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(paymentId))
+    suspend fun deleteOnAccountReceivables(@Body delPayRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
+        return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(delPayRequest))
     }
 
     @Post("/bulk-create")
