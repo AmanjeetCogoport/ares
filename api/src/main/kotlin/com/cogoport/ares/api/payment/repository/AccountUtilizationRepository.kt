@@ -84,7 +84,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc - pay_loc <> 0) then 1 else 0 end),0) as open_invoices_count,
-        coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
+        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(sign_flag*(amount_loc - pay_loc)),0) as total_outstanding_amount,
         (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' ) as organization_count, 
         null as id
@@ -99,7 +99,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         (
             select 'Total' as duration,
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
+            coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
             from account_utilizations
             where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA')
         )
@@ -107,7 +107,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
+            coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
             from account_utilizations
             where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA')
             group by date_trunc('month',transaction_date)
@@ -124,7 +124,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         ),
         y as (
             select to_char(date_trunc('month',transaction_date),'Mon') as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','REC') then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
+            sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
             group by date_trunc('month',transaction_date)
@@ -140,7 +140,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ),
             y as (
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-                sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
+                sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
                 from account_utilizations
                 where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
                 group by date_trunc('quarter',transaction_date)
@@ -161,8 +161,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             select 
             extract(month from date_trunc('month',(:date)::date)) as month,
             sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
+            abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
+            sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
             sum(case when acc_type in ('SINV','SDN','SCN') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
             case when extract(month from :date::date) < extract(month from now()::date) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', :date::date) end as days
@@ -225,11 +225,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type <> 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
-        sum(case when acc_type = 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-        sum(case when acc_type = 'REC' then  amount_curr - pay_curr else 0 end) as payments_amount,
-        sum(case when acc_type = 'REC' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
-        sum(sign_flag * (amount_curr - pay_curr)) as outstanding_amount,
-        sum(sign_flag * (amount_loc - pay_loc)) as outstanding_led_amount
+        sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+        sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
+        sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
+        sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
+        sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and organization_id = :orgId::uuid and zone_code = :zone
         group by organization_id, organization_name, currency, zone_code
