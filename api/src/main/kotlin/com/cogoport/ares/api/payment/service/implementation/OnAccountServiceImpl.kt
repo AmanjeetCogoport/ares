@@ -133,6 +133,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.transactionDate = receivableRequest.transactionDate
             payment.transRefNumber = receivableRequest.utr
             payment.amount = receivableRequest.amount!!
+            payment.ledAmount = receivableRequest.amount
 
             accountUtilization.entityCode = receivableRequest.entityType!!
             accountUtilization.currency = receivableRequest.currencyType!!
@@ -204,7 +205,8 @@ open class OnAccountServiceImpl : OnAccountService {
             accUtilizationModel.accType = AccountType.PAY
             accUtilizationModel.currencyPayment = 0.toBigDecimal()
             accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerAmount = 0.toBigDecimal()
+            accUtilizationModel.ledgerAmount = payment.ledAmount
+            accUtilizationModel.ledCurrency = payment.ledCurrency!!
             accUtilizationModel.docStatus = DocumentStatus.FINAL
             var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
