@@ -79,6 +79,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
+        payment.isPosted = false
         val savedPayment = paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
@@ -90,8 +91,9 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-        accUtilizationModel.ledgerAmount = 0.toBigDecimal()
-        accUtilizationModel.docStatus = DocumentStatus.FINAL
+        accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
+        accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
+        accUtilizationModel.docStatus = DocumentStatus.PROFORMA
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -139,6 +141,8 @@ open class OnAccountServiceImpl : OnAccountService {
             accountUtilization.currency = receivableRequest.currencyType!!
             accountUtilization.transactionDate = receivableRequest.transactionDate
             accountUtilization.amountCurr = receivableRequest.amount!!
+            accountUtilization.amountLoc = receivableRequest.ledAmount!!
+            accountUtilization.ledCurrency = receivableRequest.ledCurrency!!
         }
 
         var paymentDetails = paymentRepository.update(payment)

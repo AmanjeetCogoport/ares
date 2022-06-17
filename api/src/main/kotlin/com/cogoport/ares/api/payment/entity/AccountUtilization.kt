@@ -31,7 +31,7 @@ data class AccountUtilization(
     var accMode: AccMode,
     var signFlag: Short,
     var currency: String = "INR",
-    val ledCurrency: String = "INR",
+    var ledCurrency: String = "INR",
     var amountCurr: BigDecimal,
     var amountLoc: BigDecimal,
     var payCurr: BigDecimal = 0.toBigDecimal(),
