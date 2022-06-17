@@ -1,0 +1,41 @@
+version: "3.9" 
+services:
+  ares:
+    build: .
+    ports:
+      - "8080:8085"
+    command: ["./gradlew", "flywayMigrate", "test", "--no-daemon"]
+    volumes:
+      - ".:/home/app/"
+    depends_on:
+      - "db"
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://db:5432/ares
+      - FLYWAY_LOCATIONS=filesystem:./db/migrations,filesystem:./seed
+  db: 
+    image: postgres:14.2-alpine3.15
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    env_file:
+      - '.env.local'
+
+  kafka:
+    image: bitnami/kafka:2.8.1
+    restart: unless-stopped
+    ports:
+    - "9092:9092"
+    env_file:
+      - '.env.local'
+    depends_on:
+      - zookeeper
+  
+  zookeeper:
+    image: zookeeper:3.8.0
+    hostname: zookeeper
+    ports:
+    - "2181:2181"
+    env_file:
+      - '.env.local'
+
+

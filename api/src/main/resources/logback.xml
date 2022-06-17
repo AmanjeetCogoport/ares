@@ -1,0 +1,16 @@
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>false</withJansi>
+        <encoder>
+            <pattern>
+                {"timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}", "level": "%p", "service": "ares", "traceId": "%X{traceId}", "spanId": "%X{spanId}", "sessionInfo": {%X{sessionInfo}} , "thread": "%t", "logger": "%logger{39}", "message": "%replace(%msg){'[\n\r	]+', '\\r'}%replace(%ex){'[\n\r	]+', '\\r'}%nopex"}%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>

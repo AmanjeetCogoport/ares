@@ -1,0 +1,28 @@
+plugins {
+    id("common-conventions")
+
+    // Apply the code coverage plugin for Kotlin
+    id("org.jetbrains.kotlinx.kover")
+
+    // Apply the kDoc generator plugin
+    id("org.jetbrains.dokka")
+
+    // Apply the micronaut library plugin, includes `java-library`
+    id("io.micronaut.library")
+}
+
+dependencies {
+    implementation 'io.micronaut:micronaut-core'
+    implementation "com.fasterxml.jackson.core:jackson-annotations"
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.1'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+}
+
+micronaut {
+    version "3.4.0"
+    processing {
+        incremental true
+        annotations "com.cogoport.ares.*"
+    }
+}
