@@ -225,7 +225,15 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     zone = accUtilizationRequest.zoneCode,
                     date = SimpleDateFormat("yyyy-MM-dd").format(accUtilizationRequest.dueDate),
                     quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year
+                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                )
+            )
+        )
+        aresKafkaEmitter.emitOutstandingData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    orgId = accUtilizationRequest.organizationId.toString()
                 )
             )
         )
