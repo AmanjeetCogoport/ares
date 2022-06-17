@@ -79,6 +79,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
+        payment.isPosted = false
         val savedPayment = paymentRepository.save(payment)
         var accUtilizationModel: AccUtilizationRequest =
             accUtilizationToPaymentConverter.convertEntityToModel(payment)
@@ -90,8 +91,9 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = 0.toBigDecimal()
         accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-        accUtilizationModel.ledgerAmount = 0.toBigDecimal()
-        accUtilizationModel.docStatus = DocumentStatus.FINAL
+        accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
+        accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
+        accUtilizationModel.docStatus = DocumentStatus.PROFORMA
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -133,11 +135,14 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.transactionDate = receivableRequest.transactionDate
             payment.transRefNumber = receivableRequest.utr
             payment.amount = receivableRequest.amount!!
+            payment.ledAmount = receivableRequest.amount
 
             accountUtilization.entityCode = receivableRequest.entityType!!
             accountUtilization.currency = receivableRequest.currencyType!!
             accountUtilization.transactionDate = receivableRequest.transactionDate
             accountUtilization.amountCurr = receivableRequest.amount!!
+            accountUtilization.amountLoc = receivableRequest.ledAmount!!
+            accountUtilization.ledCurrency = receivableRequest.ledCurrency!!
         }
 
         var paymentDetails = paymentRepository.update(payment)
@@ -192,21 +197,29 @@ open class OnAccountServiceImpl : OnAccountService {
 //            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
 //            payment.organizationId = UUID.fromString(orgId.toString())
             paymentEntityList.add(paymentConverter.convertToEntity(payment))
+            payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+            if (payment.accMode == AccMode.AP) {
+                payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
+            }
+
             var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
             var accUtilizationModel: AccUtilizationRequest =
                 accUtilizationToPaymentConverter.convertEntityToModel(savePayment)
 
             var paymentModel = paymentConverter.convertToModel(savePayment)
+            paymentModel.paymentDate = paymentModel.transactionDate?.toLocalDate().toString()
             Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savePayment.id.toString(), paymentModel)
-
             accUtilizationModel.zoneCode = payment.zone
             accUtilizationModel.serviceType = payment.serviceType
             accUtilizationModel.accType = AccountType.PAY
             accUtilizationModel.currencyPayment = 0.toBigDecimal()
             accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerAmount = 0.toBigDecimal()
+            accUtilizationModel.ledgerAmount = payment.ledAmount
+            accUtilizationModel.ledCurrency = payment.ledCurrency!!
             accUtilizationModel.docStatus = DocumentStatus.FINAL
-            var accUtilRes = accountUtilizationRepository.save(accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel))
+            var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
+            accUtilEntity.accCode = payment.accCode!!
+            var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
         }
 
