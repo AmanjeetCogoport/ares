@@ -42,60 +42,60 @@ import jakarta.validation.Valid
 
 @Client(id = "ares-service")
 interface AresClient {
-    @Get("/payment/dashboard/overall-stats{?request*}")
+    @Get("/payments/dashboard/overall-stats{?request*}")
     public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?
 
-    @Get("/payment/dashboard/daily-sales-outstanding{?request*}")
+    @Get("/payments/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
 
-    @Get("/payment/dashboard/collection-trend{?request*}")
+    @Get("/payments/dashboard/collection-trend{?request*}")
     public suspend fun getCollectionTrend(@Valid request: CollectionRequest): CollectionResponse?
 
-    @Get("/payment/dashboard/monthly-outstanding{?request*}")
+    @Get("/payments/dashboard/monthly-outstanding{?request*}")
     public suspend fun getMonthlyOutstanding(@Valid request: MonthlyOutstandingRequest): MonthlyOutstanding?
 
-    @Get("/payment/dashboard/quarterly-outstanding{?request*}")
+    @Get("/payments/dashboard/quarterly-outstanding{?request*}")
     public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
 
-    @Get("/payment/dashboard/outstanding-by-age{?request*}")
+    @Get("/payments/dashboard/outstanding-by-age{?request*}")
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
-    @Get("/payment/dashboard/receivables-by-age{?request*}")
+    @Get("/payments/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
 
-    @Get("/payment/outstanding/overall{?request*}")
+    @Get("/payments/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?
 
-    @Get("/payment/outstanding/{orgId}")
+    @Get("/payments/outstanding/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?>
 
-    @Get("/payment/accounts{?request*}")
+    @Get("/payments/accounts{?request*}")
     suspend fun getOnAccountCollections(@Valid request: AccountCollectionRequest): AccountCollectionResponse
 
-    @Post("/payment/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
+    @Post("/payments/receivables/upload/{userId}", consumes = [MediaType.MULTIPART_FORM_DATA], produces = [MediaType.TEXT_PLAIN])
     suspend fun upload(@Parameter("file") file: StreamingFileUpload, @PathVariable("userId") userId: String): Boolean
 
-    @Post("/payment/accounts")
+    @Post("/payments/accounts")
     suspend fun createOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
-    @Put("/payment/accounts")
+    @Put("/payments/accounts")
     suspend fun updateOnAccountReceivables(@Valid @Body request: Payment): OnAccountApiCommonResponse
 
-    @Delete("/payment/accounts")
+    @Delete("/payments/accounts")
     suspend fun deleteOnAccountReceivables(@Body deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse
 
-    @Post("/payment/accounts/bulk-create")
+    @Post("/payments/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
 
-    @Post("/payment/invoice/add-bulk")
+    @Post("/payments/invoice/add-bulk")
     suspend fun createBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse>
 
-    @Post("/payment/invoice")
+    @Post("/payments/invoice")
     suspend fun createInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse
 
-    @Delete("/payment/invoice")
+    @Delete("/payments/invoice")
     suspend fun deleteInvoice(@QueryValue("docNumber") docNumber: Long, @QueryValue("accType") accType: String): Boolean
 
-    @Post("/payment/knockoff/payables")
+    @Post("/payments/knockoff/payables")
     suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 }
