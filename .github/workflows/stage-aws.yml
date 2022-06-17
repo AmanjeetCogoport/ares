@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS - Staging
 on:
   push:
     branches:
-      - develop
+      - staging
 
 env:
   REGISTRY: ghcr.io
@@ -83,8 +83,8 @@ jobs:
       - name: Build jar file
         run: ./gradlew build -x test
 
-      - name: Migrate DB schema
-        run: ./scripts/migrate-db.sh
+#      - name: Migrate DB schema
+#        run: ./scripts/migrate-db.sh
 
       - name: Build and Push image to Github CR
         id: build-image

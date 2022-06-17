@@ -50,13 +50,11 @@ dependencies {
     implementation("io.micronaut.data:micronaut-data-r2dbc:3.5.0-SNAPSHOT")
 
     // AWS X-ray, Distributed tracing and logging
-    implementation("io.micronaut:micronaut-tracing:3.3.0-M1")
     runtimeOnly("io.zipkin.brave:brave-instrumentation-http:5.13.9")
     implementation("io.zipkin.aws:zipkin-reporter-xray-udp:0.23.4")
     implementation("io.zipkin.aws:brave-propagation-aws:0.23.4")
     implementation("io.opentracing.brave:brave-opentracing:1.0.0")
     implementation("io.zipkin.brave:brave-context-slf4j:5.13.9")
-    implementation("ch.qos.logback:logback-classic:1.2.11")
 
     //Service Discovery
     implementation('software.amazon.awssdk:servicediscovery:2.17.191')
@@ -67,7 +65,6 @@ dependencies {
 
     implementation 'io.sentry:sentry:5.7.4'
 
-    runtimeOnly("org.slf4j:slf4j-simple")
     runtimeOnly("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     compileOnly("org.graalvm.nativeimage:svm")
