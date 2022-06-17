@@ -3,7 +3,7 @@ micronaut:
     name: ares
   server:
     port: 8086
-    context-path: /payment
+    context-path: /payments
     cors:
       enabled: true
   router:
@@ -47,4 +47,3 @@ opensearch:
 
 sentry:
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
-
