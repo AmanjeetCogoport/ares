@@ -2,7 +2,7 @@ application:
   name: ares
 server:
   port: 8086
-  context-path: /payment
+  context-path: /payments
 router:
   static-resources:
     swagger:
