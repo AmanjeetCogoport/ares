@@ -54,6 +54,11 @@ class AresKafkaListener {
         openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
     }
 
+    @Topic("receivables-outstanding-data")
+    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
+        openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
+    }
+
     @Topic("knockoff-payables")
     fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)

@@ -26,8 +26,10 @@ import jakarta.inject.Singleton
 import org.apache.kafka.common.KafkaException
 import java.sql.SQLException
 import java.sql.Timestamp
-import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.IsoFields
 import javax.transaction.Transactional
 
 @Singleton
@@ -38,9 +40,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
-
-    @Inject
-    lateinit var dateFormatter: DateFormat
 
     @Inject
     lateinit var accountUtilizationConverter: AccountUtilizationMapper
@@ -224,9 +223,17 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    date = dateFormatter.format(accUtilizationRequest.dueDate),
-                    quarter = (accUtilizationRequest.dueDate!!.month / 3) + 1,
-                    year = accUtilizationRequest.dueDate!!.year
+                    date = SimpleDateFormat("yyyy-MM-dd").format(accUtilizationRequest.dueDate),
+                    quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
+                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                )
+            )
+        )
+        aresKafkaEmitter.emitOutstandingData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    orgId = accUtilizationRequest.organizationId.toString()
                 )
             )
         )

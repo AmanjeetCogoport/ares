@@ -15,6 +15,9 @@ interface AresKafkaEmitter {
     @Topic("receivables-dashboard-data")
     fun emitDashboardData(openSearchEvent: OpenSearchEvent)
 
+    @Topic("receivables-outstanding-data")
+    fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
+
     @Topic("payables-bill-status")
     fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
 }
