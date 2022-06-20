@@ -135,7 +135,7 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     open suspend fun updatePayment(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization, paymentEntity: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
-        if (receivableRequest.isPosted!=null && receivableRequest.isPosted==true) {
+        if (receivableRequest.isPosted != null && receivableRequest.isPosted == true) {
             paymentEntity.isPosted = true
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
         } else {
