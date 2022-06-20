@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS - Staging
 on:
   push:
     branches:
-      - staging
+      - develop
 
 env:
   REGISTRY: ghcr.io
