@@ -199,9 +199,10 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     private fun validateDueAmount(data: MutableList<DueAmount>) {
+        data.forEach { if (it.amount == 0.toBigDecimal()) it.amount = 0.0.toBigDecimal() }
         listOf("INR", "USD").forEach { curr ->
             if (curr !in data.groupBy { it.currency }) {
-                data.add(DueAmount(curr, 0.toBigDecimal(), 0))
+                data.add(DueAmount(curr, 0.0.toBigDecimal(), 0))
             }
         }
     }
