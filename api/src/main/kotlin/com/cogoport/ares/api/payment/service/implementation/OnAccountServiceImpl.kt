@@ -69,8 +69,8 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.zone = null
         receivableRequest.serviceType = ServiceType.NA.toString()
         receivableRequest.accMode = AccMode.AR
-        receivableRequest.ledCurrency = "INR"
-        receivableRequest.ledAmount = receivableRequest.amount
+        receivableRequest.ledCurrency = receivableRequest.ledCurrency
+        receivableRequest.ledAmount = receivableRequest.ledAmount
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
         payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
