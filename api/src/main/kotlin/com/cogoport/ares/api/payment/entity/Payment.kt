@@ -37,5 +37,8 @@ data class Payment(
     var cogoAccountNo: String?,
     var refAccountNo: String?,
     var paymentCode: PaymentCode?,
-    var bankName: String?
+    var bankName: String?,
+    var paymentNum: Long?,
+    var paymentNumValue: String?,
+    var exchangeRate: BigDecimal?
 )
