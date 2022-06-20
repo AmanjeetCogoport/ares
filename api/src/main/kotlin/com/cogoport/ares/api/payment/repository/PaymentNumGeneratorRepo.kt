@@ -7,17 +7,17 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import javax.transaction.Transactional
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-abstract class PaymentNumGeneratorRepo:CoroutineCrudRepository<PaymentSequenceNumbers,Int> {
+abstract class PaymentNumGeneratorRepo : CoroutineCrudRepository<PaymentSequenceNumbers, Int> {
 
-    abstract suspend fun findBySequenceTypeForUpdate(sequenceType:String):PaymentSequenceNumbers
+    abstract suspend fun findBySequenceTypeForUpdate(sequenceType: String): PaymentSequenceNumbers
 
     @Transactional
-    suspend fun getNextSequenceNumber(sequenceType: String):Long{
-        var sequenceNumber:PaymentSequenceNumbers = findBySequenceTypeForUpdate(sequenceType)
+    suspend fun getNextSequenceNumber(sequenceType: String): Long {
+        var sequenceNumber: PaymentSequenceNumbers = findBySequenceTypeForUpdate(sequenceType)
 
-        val paymentNumber = sequenceNumber.next_sequence_number
+        val paymentNumber = sequenceNumber.nextSequenceNumber
 
-        sequenceNumber.next_sequence_number+=1
+        sequenceNumber.nextSequenceNumber += 1
 
         update(sequenceNumber)
 

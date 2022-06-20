@@ -11,12 +11,12 @@ import java.sql.Timestamp
 
 @Introspected
 @MappedEntity("payment_sequence_numbers")
-data class PaymentSequenceNumbers (
-        @field:Id @GeneratedValue @NonNull var id: Int?,
-        var sequence_type: String,
-        var next_sequence_number: Long,
-        @DateCreated
-        var created_at: Timestamp?,
-        @DateUpdated
-        var updated_at: Timestamp?
-        )
+data class PaymentSequenceNumbers(
+    @field:Id @GeneratedValue @NonNull var id: Int?,
+    var sequenceType: String,
+    var nextSequenceNumber: Long,
+    @DateCreated
+    var createdAt: Timestamp?,
+    @DateUpdated
+    var updatedAt: Timestamp?
+)

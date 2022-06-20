@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
+import javax.validation.constraints.Min
 
 @JsonInclude
 @Introspected
@@ -27,39 +28,44 @@ data class Payment(
     var fileId: Long? = null,
 
     @JsonProperty("orgSerialId")
+    @field:NotNull(message = "Serial Id of the organization is required")
     var orgSerialId: Long? = null,
 
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
 
     @JsonProperty("customerId")
-    var customerId: String? = null,
+    @field:NotNull(message = "UUID of the organization is required")
+    var organizationId: UUID?,
 
     @JsonProperty("customerName")
-    var customerName: String? = "",
+    @field:NotNull(message = "Business name of organization is required")
+    var organizationName: String? = "",
 
-    @JsonProperty("accCode") @field:NotNull(message = "Account Code is required")
+    @JsonProperty("accCode")
     var accCode: Int? = 0,
 
-    @JsonProperty("accMode") @field:NotNull(message = "Account Mode is required")
+    @JsonProperty("accMode")
     var accMode: AccMode? = AccMode.AR,
 
     @JsonProperty("signFlag")
     var signFlag: Short? = 1,
 
-    @JsonProperty("currency") @field:NotNull(message = "Currency Type is required")
-    var currencyType: String? = "",
+    @JsonProperty("currency") @field:NotNull(message = "Currency  is required")
+    var currency: String? = "",
 
-    @field:NotNull(message = "Amount is required") @JsonProperty("amount")
+    @field:NotNull(message = "Currency amount is required")
+    @JsonProperty("amount")
     var amount: BigDecimal? = 0.toBigDecimal(),
 
-    @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger Currency is required")
+    @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger currency is required")
     var ledCurrency: String? = "INR",
 
-    @JsonProperty("ledAmount") @field:NotNull(message = "Ledger Amount is required")
+    @JsonProperty("ledAmount") @field:NotNull(message = "Ledger amount is required")
     var ledAmount: BigDecimal? = 0.toBigDecimal(),
 
     @JsonProperty("paymentMode")
+    @field:NotNull(message = "Payment mode is required")
     var payMode: PayMode? = null,
 
     @JsonProperty("remarks")
@@ -110,9 +116,13 @@ data class Payment(
     @JsonProperty("bankName")
     var bankName: String? = "",
 
-    @JsonProperty("organizationId")
-    var organizationId: UUID? = null,
-
     @JsonProperty("exchangeRate")
-    var exchangeRate:BigDecimal?= BigDecimal.ONE
+    @Min(value = 1, message = "Minimum value for exchange rate is 1")
+    var exchangeRate: BigDecimal? = BigDecimal.ONE,
+
+    @JsonProperty("receiptNumber")
+    var paymentNum: Long?,
+
+    @JsonProperty("receiptParam")
+    var paymentNumValue: String?
 )

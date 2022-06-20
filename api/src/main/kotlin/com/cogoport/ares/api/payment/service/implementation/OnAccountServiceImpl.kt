@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -28,6 +30,7 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -48,6 +51,9 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
 
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -63,46 +69,51 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+        val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.zone = null
         receivableRequest.serviceType = ServiceType.NA.toString()
         receivableRequest.accMode = AccMode.AR
-        receivableRequest.ledCurrency = receivableRequest.ledCurrency
-        receivableRequest.ledAmount = receivableRequest.ledAmount
+        receivableRequest.signFlag = SignSuffix.REC.sign
+
+        /*PRIVATE FUNCTION TO SET AMOUNTS*/
+        setPaymentAmounts(receivableRequest)
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
-        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
-        if (receivableRequest.accMode == AccMode.AP) {
-            payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
-        }
-        payment.createdAt = Timestamp.from(Instant.now())
-        payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isPosted = false
+        /*PRIVATE FUNCTION TO SET PAYMENT ENTITY*/
+        setPaymentEntity(payment)
+
+        /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
+        payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+        payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
+
+        /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
-        var accUtilizationModel: AccUtilizationRequest =
-            accUtilizationToPaymentConverter.convertEntityToModel(payment)
         receivableRequest.id = savedPayment.id
 
+        /*SAVE THE PAYMENT IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-        accUtilizationModel.zoneCode = receivableRequest.zone
-        accUtilizationModel.serviceType = receivableRequest.serviceType
-        accUtilizationModel.accType = AccountType.REC
-        accUtilizationModel.currencyPayment = 0.toBigDecimal()
-        accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-        accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
-        accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
-        accUtilizationModel.docStatus = DocumentStatus.PROFORMA
+
+        var accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
+
+        /*PRIVATE FUNCTION TO SET ACCOUNT UTILIZATION MODEL*/
+        setAccountUtilizationModel(accUtilizationModel, receivableRequest)
 
         var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
         accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        accUtilEntity.documentNo = payment.paymentNum!!
+        accUtilEntity.documentValue = payment.paymentNumValue
+
         if (receivableRequest.accMode == AccMode.AP) {
             accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
+        /*SAVE ACCOUNT UTILIZATION IN DATABASE AS ON ACCOUNT PAYMENT*/
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
@@ -114,7 +125,7 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
-        var accountUtilization = accountUtilizationRepository.findByDocumentNo(receivableRequest.id)
+        var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment?.paymentNum)
         if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
         if (payment != null && payment.isPosted && accountUtilization != null)
             throw AresException(AresError.ERR_1005, "")
@@ -122,39 +133,63 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun updatePayment(receivableRequest: Payment, accountUtilization: AccountUtilization, payment: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
+    open suspend fun updatePayment(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization, paymentEntity: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
-        if (receivableRequest.isPosted!!) {
-            payment.isPosted = true
-            accountUtilization.documentStatus = DocumentStatus.FINAL
+        if (receivableRequest.isPosted!=null && receivableRequest.isPosted==true) {
+            paymentEntity.isPosted = true
+            accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
         } else {
-            payment.entityCode = receivableRequest.entityType!!
-            payment.bankName = receivableRequest.bankName
-            payment.currency = receivableRequest.currencyType!!
-            payment.payMode = receivableRequest.payMode
-            payment.transactionDate = receivableRequest.transactionDate
-            payment.transRefNumber = receivableRequest.utr
-            payment.amount = receivableRequest.amount!!
-            payment.ledAmount = receivableRequest.amount
 
-            accountUtilization.entityCode = receivableRequest.entityType!!
-            accountUtilization.currency = receivableRequest.currencyType!!
-            accountUtilization.transactionDate = receivableRequest.transactionDate
-            accountUtilization.amountCurr = receivableRequest.amount!!
-            accountUtilization.amountLoc = receivableRequest.ledAmount!!
-            accountUtilization.ledCurrency = receivableRequest.ledCurrency!!
+            val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
+            val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
+
+            /*SET PAYMENT ENTITY DATA FOR UPDATE*/
+            paymentEntity.entityCode = receivableRequest.entityType!!
+            paymentEntity.bankName = receivableRequest.bankName
+            paymentEntity.payMode = receivableRequest.payMode
+            paymentEntity.transactionDate = filterDateFromTs
+            paymentEntity.transRefNumber = receivableRequest.utr
+            paymentEntity.amount = receivableRequest.amount!!
+            paymentEntity.currency = receivableRequest.currency!!
+            paymentEntity.ledAmount = receivableRequest.amount!! * receivableRequest.exchangeRate!!
+            paymentEntity.ledCurrency = receivableRequest.ledCurrency
+            paymentEntity.exchangeRate = receivableRequest.exchangeRate
+            paymentEntity.orgSerialId = receivableRequest.orgSerialId
+            paymentEntity.organizationId = receivableRequest.organizationId
+            paymentEntity.organizationName = receivableRequest.organizationName
+            paymentEntity.bankName = receivableRequest.bankName
+            paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber
+            paymentEntity.updatedAt = Timestamp.from(Instant.now())
+
+            /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
+            accountUtilizationEntity.entityCode = receivableRequest.entityType!!
+            accountUtilizationEntity.orgSerialId = receivableRequest.orgSerialId
+            accountUtilizationEntity.organizationId = receivableRequest.organizationId
+            accountUtilizationEntity.organizationName = receivableRequest.organizationName
+            accountUtilizationEntity.transactionDate = paymentEntity.transactionDate
+            accountUtilizationEntity.amountCurr = receivableRequest.amount!!
+            accountUtilizationEntity.currency = receivableRequest.currency!!
+            accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!!
+            accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!!
+            accountUtilizationEntity.updatedAt = Timestamp.from(Instant.now())
         }
 
-        var paymentDetails = paymentRepository.update(payment)
+        /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
+        var paymentDetails = paymentRepository.update(paymentEntity)
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
+        /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
 
-        var accUtilRes = accountUtilizationRepository.update(accountUtilization)
+        /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
+        var accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
+        // TODO : Delete below commented code after Mohit confirmation
+        // var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
@@ -163,22 +198,28 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
         var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
-        if (payment.id == null) throw AresException(AresError.ERR_1002, "")
+        if (payment == null)
+            throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
             throw AresException(AresError.ERR_1007, "")
 
         payment.isDeleted = true
+        /*MARK THE PAYMENT AS DELETED IN DATABASE*/
         var paymentResponse = paymentRepository.update(payment)
+
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
 
+        /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
-        var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment.id)
-        accountUtilization.documentStatus = DocumentStatus.CANCELLED
+        var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment.paymentNum)
+        accountUtilization.documentStatus = DocumentStatus.DELETED
 
+        /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
 
+        /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
@@ -224,5 +265,36 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         return BulkPaymentResponse(recordsInserted = bulkPayment.size)
+    }
+
+    private fun setPaymentAmounts(payment: Payment) {
+
+        if (payment.currency == payment.ledCurrency) {
+            payment.ledAmount = payment.amount
+            payment.exchangeRate = BigDecimal.ONE
+        } else {
+            payment.ledAmount = payment.amount!! * payment.exchangeRate!!
+        }
+    }
+
+    private fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
+        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        payment.createdAt = Timestamp.from(Instant.now())
+        payment.updatedAt = Timestamp.from(Instant.now())
+        payment.isPosted = false
+        payment.isDeleted = false
+        payment.paymentCode = PaymentCode.REC
+    }
+
+    private fun setAccountUtilizationModel(accUtilizationModel: AccUtilizationRequest, receivableRequest: Payment) {
+        accUtilizationModel.zoneCode = receivableRequest.zone
+        accUtilizationModel.serviceType = receivableRequest.serviceType
+        accUtilizationModel.accType = AccountType.REC
+        accUtilizationModel.currencyPayment = BigDecimal.ZERO
+        accUtilizationModel.ledgerPayment = BigDecimal.ZERO
+        accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
+        accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
+        accUtilizationModel.currency = receivableRequest.currency!!
+        accUtilizationModel.docStatus = DocumentStatus.PROFORMA
     }
 }
