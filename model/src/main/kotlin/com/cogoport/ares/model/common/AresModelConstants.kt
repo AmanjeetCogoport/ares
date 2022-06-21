@@ -7,6 +7,7 @@ import java.util.Calendar
 object AresModelConstants {
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = Calendar.getInstance().get(Calendar.YEAR)
+    val CURR_MONTH = LocalDate.now().monthValue
     const val ZONE = "zone"
     const val ROLE = "role"
     const val QUARTER = "quarter"
@@ -21,6 +22,8 @@ object AresModelConstants {
     const val QUERY_NAME = "queryName"
     const val QUARTER_YEAR = "quarterYear"
     const val QUERY = "query"
+    const val MONTH = "month"
+    const val COUNT = "count"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000
