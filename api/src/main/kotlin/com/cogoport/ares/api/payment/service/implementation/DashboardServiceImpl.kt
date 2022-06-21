@@ -333,7 +333,7 @@ class DashboardServiceImpl : DashboardService {
         listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "180-365", "365+").forEach {
             ageingBucket.add(getAgeingData(request.orgId, it))
         }
-        val totalReceivable = PayableOutstandingResponse(currency = "INR", amount = ledgerAmount?.toBigDecimal(), breakout = currencyBreakUp)
+        val totalReceivable = PayableOutstandingResponse(currency = "INR", amount = ledgerAmount?.toBigDecimal(), breakup = currencyBreakUp)
         return OrgPayableResponse(
             totalReceivables = totalReceivable,
             collectionTrend = collectionData,

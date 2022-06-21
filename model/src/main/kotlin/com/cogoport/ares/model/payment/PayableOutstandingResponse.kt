@@ -6,5 +6,5 @@ import java.math.BigDecimal
 data class PayableOutstandingResponse(
     val currency: String?,
     val amount: BigDecimal?,
-    val breakout: List<DueAmount>? = null
+    val breakup: List<DueAmount>? = null
 )
