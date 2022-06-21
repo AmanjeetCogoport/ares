@@ -91,7 +91,10 @@ open class OnAccountServiceImpl : OnAccountService {
         /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
         receivableRequest.id = savedPayment.id
-
+        receivableRequest.isPosted = false
+        receivableRequest.isDeleted = false
+        receivableRequest.paymentNum = payment.paymentNum
+        receivableRequest.paymentNumValue = payment.paymentNumValue
         /*SAVE THE PAYMENT IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
