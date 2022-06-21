@@ -158,6 +158,7 @@ class OpenSearchClient {
                         q.bool { b ->
                             b.must { it.match { it.field("accMode").query(FieldValue.of("AP")) } }
                             b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
                             b.must { m ->
                                 m.range { r -> r.field("transactionDate").gte(JsonData.of(Timestamp.valueOf(startDate))) }
                             }
@@ -183,6 +184,7 @@ class OpenSearchClient {
                         q.bool { b ->
                             b.must { m -> m.match { f -> f.field("accMode").query(FieldValue.of("AP")) } }
                             b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
                             if (orgId != null) {
                                 b.must { m -> m.match { f -> f.field("organizationId").query(FieldValue.of(orgId)) } }
                             }
