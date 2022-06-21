@@ -16,9 +16,13 @@ import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.OrgPayableRequest
+import com.cogoport.ares.model.payment.OrgPayableResponse
+import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.OutstandingResponse
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsRequest
 import com.cogoport.ares.model.payment.OverallStatsResponse
@@ -62,6 +66,12 @@ interface AresClient {
 
     @Get("/payments/dashboard/receivables-by-age{?request*}")
     public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
+
+    @Get("/payments/dashboard/org-collection{?request*}")
+    public suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse>
+
+    @Get("/payments/org-payables-stats{?request*}")
+    public suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse
 
     @Get("/payments/outstanding/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList?

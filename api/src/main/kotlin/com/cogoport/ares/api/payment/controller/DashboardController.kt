@@ -73,7 +73,7 @@ class DashboardController {
     }
 
     @Get("/org-collection{?request*}")
-    suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse> {
+    suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse> {
         return Response<List<OutstandingResponse>>().ok(dashboardService.getOrgCollection(request))
     }
 
