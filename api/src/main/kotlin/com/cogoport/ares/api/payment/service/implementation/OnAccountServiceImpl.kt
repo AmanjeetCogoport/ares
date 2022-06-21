@@ -95,6 +95,8 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.isDeleted = false
         receivableRequest.paymentNum = payment.paymentNum
         receivableRequest.paymentNumValue = payment.paymentNumValue
+        receivableRequest.accCode = payment.accCode
+        receivableRequest.paymentCode = payment.paymentCode
         /*SAVE THE PAYMENT IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
