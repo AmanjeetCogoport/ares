@@ -116,7 +116,7 @@ class OpenSearchClient {
                             }
                             if (request.query != null) {
                                 b.must { m ->
-                                    m.queryString { q -> q.query("*" + request.query + "*").fields("customerName", "utr") }
+                                    m.queryString { q -> q.query("*" + request.query + "*").fields("organizationName", "utr") }
                                 }
                             }
                             b
