@@ -176,11 +176,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
             throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
         }
+
+
         accUtilRepository.updateAccountUtilization(
             accountUtilization.id!!, updateInvoiceStatusRequest.newDocumentNo,
             updateInvoiceStatusRequest.newDocumentValue, updateInvoiceStatusRequest.docStatus!!
         )
-
         accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.newDocumentNo, updateInvoiceStatusRequest.accType.name)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
