@@ -88,12 +88,12 @@ class OpenSearchClient {
                     .query { q ->
                         q.bool { b ->
                             b.must { t ->
-                                t.match { v -> v.field("deleted").query(FieldValue.of(false)) }
+                                t.match { v -> v.field("isDeleted").query(FieldValue.of(false)) }
                             }
                             if (request.currencyType != null) {
                                 b.must { t ->
                                     t.match { v ->
-                                        v.field("currencyType").query(FieldValue.of(request.currencyType))
+                                        v.field("currency").query(FieldValue.of(request.currencyType))
                                     }
                                 }
                             }
