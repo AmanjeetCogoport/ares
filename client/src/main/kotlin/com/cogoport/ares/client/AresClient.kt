@@ -70,7 +70,7 @@ interface AresClient {
     @Get("/payments/dashboard/org-collection{?request*}")
     public suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse>
 
-    @Get("/payments/org-payables-stats{?request*}")
+    @Get("/payments/dashboard/org-payables-stats{?request*}")
     public suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse
 
     @Get("/payments/outstanding/overall{?request*}")
