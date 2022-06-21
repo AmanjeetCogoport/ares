@@ -2,15 +2,19 @@ package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.AccountCollectionRequest
+import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
+import java.time.LocalDateTime
 
 class OpenSearchClient {
 
@@ -143,5 +147,82 @@ class OpenSearchClient {
                 }
         }, Any::class.java)
         return searchResponse
+    }
+
+    fun getOrgCollection(request: OrganizationReceivablesRequest, startDate: LocalDateTime, endDate: LocalDateTime): List<AccountUtilizationResponse?>? {
+        return Client.search(
+            { s ->
+                s.index("index_account_utilization")
+                    .size(10000)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { it.match { it.field("accMode").query(FieldValue.of("AP")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
+                            b.must { m ->
+                                m.range { r -> r.field("transactionDate").gte(JsonData.of(Timestamp.valueOf(startDate))) }
+                            }
+                            b.must { m ->
+                                m.range { r -> r.field("transactionDate").lt(JsonData.of(Timestamp.valueOf(endDate))) }
+                            }
+                            if (request.orgId != null) {
+                                b.must { m -> m.match { it.field("organizationId").query(FieldValue.of(request.orgId.toString())) } }
+                            }
+                            b
+                        }
+                    }
+            },
+            AccountUtilizationResponse::class.java
+        )?.hits()?.hits()?.map { it.source() }
+    }
+
+    fun getOrgPayables(orgId: String? = null, startDate: Timestamp? = null, endDate: Timestamp? = null): SearchResponse<Void>? {
+        return Client.search(
+            { s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { m -> m.match { f -> f.field("accMode").query(FieldValue.of("AP")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
+                            if (orgId != null) {
+                                b.must { m -> m.match { f -> f.field("organizationId").query(FieldValue.of(orgId)) } }
+                            }
+                            if (startDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("dueDate").gte(JsonData.of(startDate))
+                                    }
+                                }
+                            }
+                            if (endDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("dueDate").lt(JsonData.of(endDate))
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .size(0)
+                    .aggregations("currency") { a ->
+                        a.terms { t ->
+                            t.field("currency.keyword")
+                        }
+                            .aggregations("currAmount") { a ->
+                                a.sum { s ->
+                                    s.script(Script.of { i -> i.inline { it.source("doc['signFlag'].value * (doc['amountCurr'].value - doc['payCurr'].value)") } })
+                                }
+                            }
+                    }
+                    .aggregations("ledgerAmount") { a ->
+                        a.sum { s ->
+                            s.script(Script.of { i -> i.inline { it.source("doc['signFlag'].value * (doc['amountLoc'].value - doc['payLoc'].value)") } })
+                        }
+                    }
+            },
+            Void::class.java
+        )
     }
 }

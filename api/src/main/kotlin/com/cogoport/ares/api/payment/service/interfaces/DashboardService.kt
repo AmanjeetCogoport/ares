@@ -13,6 +13,10 @@ import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.OrgPayableRequest
+import com.cogoport.ares.model.payment.OrgPayableResponse
+import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.OutstandingResponse
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 
 interface DashboardService {
@@ -26,4 +30,6 @@ interface DashboardService {
     suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
+    suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>
+    suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
 }

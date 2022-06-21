@@ -17,6 +17,10 @@ import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.OrgPayableRequest
+import com.cogoport.ares.model.payment.OrgPayableResponse
+import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.OutstandingResponse
 import com.cogoport.ares.model.payment.OverallStatsResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -66,6 +70,16 @@ class DashboardController {
     @Get("/receivables-by-age{?request*}")
     suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
         return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
+    }
+
+    @Get("/org-collection{?request*}")
+    suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse> {
+        return Response<List<OutstandingResponse>>().ok(dashboardService.getOrgCollection(request))
+    }
+
+    @Get("/org-payables-stats{?request*}")
+    suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse {
+        return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
     }
 
     /** To be Deleted */
