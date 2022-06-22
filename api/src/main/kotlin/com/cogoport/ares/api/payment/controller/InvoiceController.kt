@@ -26,9 +26,4 @@ class InvoiceController {
     suspend fun addInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
         return accUtilService.add(invoiceRequest)
     }
-
-//    @Delete
-//    suspend fun deleteInvoice(@QueryValue("docNumber") docNumber: Long, @QueryValue("accType") accType: String): Boolean {
-//        return invoiceService.deleteInvoice(docNumber, accType)
-//    }
 }
