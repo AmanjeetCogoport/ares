@@ -185,7 +185,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
         val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount.toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, 0) }.toMutableList()
+        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
         val invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount!! }
@@ -194,7 +194,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(invoicesDues)
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
-        val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(0, outstandingLedAmount, outstandingDues), null)
+        val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
     }
 
