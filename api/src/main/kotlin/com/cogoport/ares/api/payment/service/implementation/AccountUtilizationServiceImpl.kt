@@ -149,17 +149,24 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (accountUtilization == null) {
             throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
         }
-        accUtilRepository.updateAccountUtilization(
-            accountUtilization.id!!, updateInvoiceRequest.transactionDate, updateInvoiceRequest.dueDate,
-            updateInvoiceRequest.docStatus, updateInvoiceRequest.entityCode, updateInvoiceRequest.currency, updateInvoiceRequest.ledCurrency,
-            updateInvoiceRequest.currAmount, updateInvoiceRequest.ledAmount
-        )
 
-        accountUtilization = accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
+        accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
+        accountUtilization.dueDate = updateInvoiceRequest.dueDate
+        accountUtilization.documentStatus = updateInvoiceRequest.docStatus
+        accountUtilization.entityCode = updateInvoiceRequest.entityCode
+        accountUtilization.currency = updateInvoiceRequest.currency
+        accountUtilization.ledCurrency = updateInvoiceRequest.ledCurrency
+        accountUtilization.amountCurr = updateInvoiceRequest.currAmount
+        accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
+        accountUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        accUtilRepository.update(accountUtilization)
 
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-        if (updateInvoiceRequest.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
 
+        if (updateInvoiceRequest.accMode == AccMode.AR) {
+            emitDashboardEvent(accUtilizationRequest)
+        }
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         } catch (e: Exception) {
@@ -177,12 +184,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
         }
 
+        accountUtilization.documentNo = updateInvoiceStatusRequest.newDocumentNo
+        accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
+        accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
+        accountUtilization.updatedAt = Timestamp.from(Instant.now())
 
-        accUtilRepository.updateAccountUtilization(
-            accountUtilization.id!!, updateInvoiceStatusRequest.newDocumentNo,
-            updateInvoiceStatusRequest.newDocumentValue, updateInvoiceStatusRequest.docStatus!!
-        )
-        accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.newDocumentNo, updateInvoiceStatusRequest.accType.name)
+        accUtilRepository.update(accountUtilization)
+
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         } catch (e: Exception) {
