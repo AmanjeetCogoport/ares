@@ -78,6 +78,11 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*PRIVATE FUNCTION TO SET AMOUNTS*/
         setPaymentAmounts(receivableRequest)
+
+        setOrganizations(receivableRequest)
+
+        setBankInformation(receivableRequest)
+
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
         /*PRIVATE FUNCTION TO SET PAYMENT ENTITY*/
@@ -305,5 +310,15 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
         accUtilizationModel.docStatus = DocumentStatus.PROFORMA
+    }
+
+    private suspend fun setOrganizations(receivableRequest: Payment) {
+        receivableRequest.orgSerialId = 133
+        receivableRequest.organizationName = "Org"
+    }
+
+    private suspend fun setBankInformation(receivableRequest: Payment) {
+        receivableRequest.bankAccountNumber = "account number"
+        receivableRequest.bankName = "bank name"
     }
 }

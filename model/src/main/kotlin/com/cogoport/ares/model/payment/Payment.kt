@@ -28,7 +28,6 @@ data class Payment(
     var fileId: Long? = null,
 
     @JsonProperty("orgSerialId")
-    @field:NotNull(message = "Serial Id of the organization is required")
     var orgSerialId: Long? = null,
 
     @JsonProperty("sageOrganizationId")
@@ -39,7 +38,6 @@ data class Payment(
     var organizationId: UUID?,
 
     @JsonProperty("customerName")
-    @field:NotNull(message = "Business name of organization is required")
     var organizationName: String? = "",
 
     @JsonProperty("accCode")
@@ -124,5 +122,8 @@ data class Payment(
     var paymentNum: Long?,
 
     @JsonProperty("receiptParam")
-    var paymentNumValue: String?
+    var paymentNumValue: String?,
+
+    @JsonProperty("bankId")
+    var bankId: UUID?
 )
