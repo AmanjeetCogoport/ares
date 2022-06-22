@@ -4,5 +4,5 @@ import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 
 interface KnockoffService {
-    suspend fun uploadBillPayment(knockOffList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
+    suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse
 }

@@ -18,7 +18,7 @@ class KnockoffController {
     lateinit var knockoffService: KnockoffService
 
     @Post("/payables")
-    suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse> {
+    suspend fun knockOffPayables(@Valid @Body payableList: AccountPayablesFile): AccountPayableFileResponse {
         return knockoffService.uploadBillPayment(payableList)
     }
 }

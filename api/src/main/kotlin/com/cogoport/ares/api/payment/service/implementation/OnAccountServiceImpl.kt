@@ -68,7 +68,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
@@ -131,11 +130,15 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
-        var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment?.paymentNum)
+
+        var accountUtilization = accountUtilizationRepository.findRecord(payment?.paymentNum!!,AccountType.REC.name,AccMode.AR.name)
+
         if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
+
         if (payment != null && payment.isPosted && accountUtilization != null)
             throw AresException(AresError.ERR_1005, "")
-        return updatePayment(receivableRequest, accountUtilization, payment)
+
+        return updatePayment(receivableRequest, accountUtilization!!, payment)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
@@ -194,9 +197,6 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        // TODO : Delete below commented code after Mohit confirmation
-        // var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
-
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
@@ -204,6 +204,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
 
         var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+
         if (payment == null)
             throw AresException(AresError.ERR_1002, "")
         if (payment.isDeleted)
@@ -219,7 +220,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
-        var accountUtilization = accountUtilizationRepository.findByDocumentNo(payment.paymentNum)
+        var accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!,AccountType.REC.name,AccMode.AR.name)?:throw AresException(AresError.ERR_1202,"")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
@@ -240,6 +241,8 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.paymentCode = PaymentCode.REC
             payment.zone = null
             payment.serviceType = ServiceType.NA.toString()
+
+            //TODO: Remove below commented code after mohit confirmation
 //            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
 //            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
 //            payment.organizationId = UUID.fromString(orgId.toString())
