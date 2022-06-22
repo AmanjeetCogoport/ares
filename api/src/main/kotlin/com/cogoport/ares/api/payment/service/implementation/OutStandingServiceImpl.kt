@@ -66,7 +66,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return OutstandingList(
-            list = listOrganization,
+            list = listOrganization.sortedBy{ it?.organizationName?.uppercase() },
             totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
             totalRecords = total.toInt(),
             page = request.page
