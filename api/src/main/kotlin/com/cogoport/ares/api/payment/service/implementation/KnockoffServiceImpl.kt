@@ -4,7 +4,6 @@ import com.cogoport.ares.api.common.enums.KnockOffStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
-import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
@@ -54,52 +53,56 @@ open class KnockoffServiceImpl : KnockoffService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
     override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
 
-            /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
-            val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo,null,AccMode.AP.name)
-            if (accountUtilization == null) {
-               val accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, false,
-                                    KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS)
-                emitPaymentStatus(accPayResponse)
-                return accPayResponse
-            }
+        /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
+        val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo, null, AccMode.AP.name)
+        if (accountUtilization == null) {
+            val accPayResponse = AccountPayableFileResponse(
+                knockOffRecord.documentNo, knockOffRecord.documentValue, false,
+                KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS
+            )
+            emitPaymentStatus(accPayResponse)
+            return accPayResponse
+        }
 
-            /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
-            val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
-            val savedPaymentRecord = savePayment(paymentEntity,isTDSEntry = false)
+        /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
+        val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
+        val savedPaymentRecord = savePayment(paymentEntity, isTDSEntry = false)
 
-           /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
-            val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
-            val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
+        val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
+        val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
 
-             /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
-             saveAccountUtilization(savedPaymentRecord.paymentNum!!,savedPaymentRecord.paymentNumValue!!,knockOffRecord,accountUtilization,
-                currTotalAmtPaid,ledTotalAmtPaid)
+        /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
+        saveAccountUtilization(
+            savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+            currTotalAmtPaid, ledTotalAmtPaid
+        )
 
-            /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
-            saveInvoicePaymentMapping(savedPaymentRecord.id!!,knockOffRecord,isTDSEntry = false)
+        /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
+        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
 
-            /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
-            if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
-                paymentEntity.amount=knockOffRecord.currTdsAmount
-                paymentEntity.ledAmount=knockOffRecord.ledTdsAmount
+        /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
+        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
+            paymentEntity.amount = knockOffRecord.currTdsAmount
+            paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
 
-              val savedTDSPaymentRecord = savePayment(paymentEntity,isTDSEntry = true)
-              saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!,knockOffRecord,isTDSEntry = true)
-            }
+            val savedTDSPaymentRecord = savePayment(paymentEntity, isTDSEntry = true)
+            saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true)
+        }
 
-            var paymentStatus=KnockOffStatus.PARTIAL.name
-            if(accountUtilization.amountLoc-ledTotalAmtPaid== BigDecimal.ZERO)
-                paymentStatus=KnockOffStatus.FULL.name
+        var paymentStatus = KnockOffStatus.PARTIAL.name
+        if (accountUtilization.amountLoc - ledTotalAmtPaid == BigDecimal.ZERO)
+            paymentStatus = KnockOffStatus.FULL.name
 
-            var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
-            try {
-                emitPaymentStatus(accPayResponse)
-            } catch (k: KafkaException) {
-                logger().error(k.stackTraceToString())
-            } catch (e: Exception) {
-                logger().error(e.stackTraceToString())
-            }
+        var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
+        try {
+            emitPaymentStatus(accPayResponse)
+        } catch (k: KafkaException) {
+            logger().error(k.stackTraceToString())
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
         return accPayResponse
     }
 
@@ -112,15 +115,15 @@ open class KnockoffServiceImpl : KnockoffService {
         aresKafkaEmitter.emitBillPaymentStatus(event)
     }
 
-    private suspend fun savePayment(paymentEntity:Payment,isTDSEntry:Boolean):Payment{
-        paymentEntity.paymentCode =if(!isTDSEntry) PaymentCode.PAY else PaymentCode.VTDS
-        paymentEntity.accCode = if(!isTDSEntry) AresModelConstants.AP_ACCOUNT_CODE else AresModelConstants.TDS_AP_ACCOUNT_CODE
+    private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean): Payment {
+        paymentEntity.paymentCode = if (!isTDSEntry) PaymentCode.PAY else PaymentCode.VTDS
+        paymentEntity.accCode = if (!isTDSEntry) AresModelConstants.AP_ACCOUNT_CODE else AresModelConstants.TDS_AP_ACCOUNT_CODE
         paymentEntity.createdAt = Timestamp.from(Instant.now())
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
-        paymentEntity.signFlag= SignSuffix.PAY.sign
+        paymentEntity.signFlag = SignSuffix.PAY.sign
 
         /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
-        if(!isTDSEntry) {
+        if (!isTDSEntry) {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
             paymentEntity.paymentNumValue = SequenceSuffix.RECEIVED.prefix + paymentEntity.paymentNum
         }
@@ -128,38 +131,43 @@ open class KnockoffServiceImpl : KnockoffService {
         return paymentRepository.save(paymentEntity)
     }
 
-
-    private suspend fun saveInvoicePaymentMapping(paymentId:Long, knockOffRecord:AccountPayablesFile, isTDSEntry: Boolean){
+    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean) {
         var invoicePayMap = PaymentInvoiceMapping(
-                id = null,
-                accountMode = AccMode.AP,
-                documentNo = knockOffRecord.documentNo,
-                paymentId = paymentId,
-                mappingType = if(!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
-                currency = knockOffRecord.currency,
-                ledCurrency = knockOffRecord.ledgerCurrency,
-                signFlag = SignSuffix.PAY.sign,
-                amount =  if(!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
-                ledAmount = if(!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
-                transactionDate = knockOffRecord.transactionDate,
-                createdAt = Timestamp.from(Instant.now()),
-                updatedAt = Timestamp.from(Instant.now())
+            id = null,
+            accountMode = AccMode.AP,
+            documentNo = knockOffRecord.documentNo,
+            paymentId = paymentId,
+            mappingType = if (!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
+            currency = knockOffRecord.currency,
+            ledCurrency = knockOffRecord.ledgerCurrency,
+            signFlag = SignSuffix.PAY.sign,
+            amount = if (!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
+            ledAmount = if (!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
+            transactionDate = knockOffRecord.transactionDate,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now())
         )
         invoicePayMappingRepo.save(invoicePayMap)
     }
 
-    private suspend fun saveAccountUtilization(paymentNum: Long,paymentNumValue:String,knockOffRecord: AccountPayablesFile,accountUtilization: AccountUtilization,
-                                               currTotalAmtPaid:BigDecimal,ledTotalAmtPaid:BigDecimal){
+    private suspend fun saveAccountUtilization(
+        paymentNum: Long,
+        paymentNumValue: String,
+        knockOffRecord: AccountPayablesFile,
+        accountUtilization: AccountUtilization,
+        currTotalAmtPaid: BigDecimal,
+        ledTotalAmtPaid: BigDecimal
+    ) {
         val accountUtilEntity = AccountUtilization(
-                id = null, documentNo = paymentNum!!, documentValue = paymentNumValue,
-                zoneCode = knockOffRecord.zoneCode.toString(), serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
-                entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
-                organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
-                accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
-                signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
-                amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid , payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
-                dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
-                updatedAt = Timestamp.from(Instant.now()), orgSerialId = knockOffRecord.orgSerialId
+            id = null, documentNo = paymentNum!!, documentValue = paymentNumValue,
+            zoneCode = knockOffRecord.zoneCode.toString(), serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
+            entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
+            organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
+            accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
+            signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
+            amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid, payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
+            dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now()), orgSerialId = knockOffRecord.orgSerialId
         )
         accountUtilizationRepository.save(accountUtilEntity)
     }

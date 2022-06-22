@@ -28,7 +28,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) """
     )
-    suspend fun findRecord(documentNo: Long, accType: String? = null,accMode: String?=null): AccountUtilization?
+    suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
     @Query("delete from account_utilizations where id=:id")
     suspend fun deleteInvoiceUtils(id: Long): Int
@@ -235,7 +235,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
 
-
    /* @Query(
         """
            select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
@@ -244,7 +243,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             updated_at  from account_utilizations where document_no = :paymentNum limit 1
     """
     )*/
-   // suspend fun findByDocumentNo(documentNo: Long,): AccountUtilization
-
-
+    // suspend fun findByDocumentNo(documentNo: Long,): AccountUtilization
 }

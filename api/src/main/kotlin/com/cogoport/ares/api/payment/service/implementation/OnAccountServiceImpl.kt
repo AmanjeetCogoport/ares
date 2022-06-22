@@ -131,7 +131,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         var payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) }
 
-        var accountUtilization = accountUtilizationRepository.findRecord(payment?.paymentNum!!,AccountType.REC.name,AccMode.AR.name)
+        var accountUtilization = accountUtilizationRepository.findRecord(payment?.paymentNum!!, AccountType.REC.name, AccMode.AR.name)
 
         if (payment!!.id == null) throw AresException(AresError.ERR_1002, "")
 
@@ -220,7 +220,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
-        var accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!,AccountType.REC.name,AccMode.AR.name)?:throw AresException(AresError.ERR_1202,"")
+        var accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name) ?: throw AresException(AresError.ERR_1202, "")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
@@ -242,7 +242,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.zone = null
             payment.serviceType = ServiceType.NA.toString()
 
-            //TODO: Remove below commented code after mohit confirmation
+            // TODO: Remove below commented code after mohit confirmation
 //            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
 //            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
 //            payment.organizationId = UUID.fromString(orgId.toString())

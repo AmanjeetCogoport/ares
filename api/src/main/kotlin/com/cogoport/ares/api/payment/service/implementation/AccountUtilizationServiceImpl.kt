@@ -135,7 +135,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     }
 
     override suspend fun findByDocumentNo(docNumber: Long): AccountUtilization {
-        return accUtilRepository.findRecord(docNumber)?:throw AresException(AresError.ERR_1202,"")
+        return accUtilRepository.findRecord(docNumber) ?: throw AresException(AresError.ERR_1202, "")
     }
 
     /**
