@@ -93,7 +93,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
-        val data = mutableListOf<OverallAgeingStatsResponse>()
+        var data = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
         val key = data.map { it.ageingDuration }
@@ -104,7 +104,9 @@ class DashboardServiceImpl : DashboardService {
                 )
             }
         }
-        return data.sortedBy { it.ageingDuration }
+        data = data.sortedBy { it.ageingDuration }.toMutableList()
+        data.add(0, data.removeAt(4))
+        return data
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
