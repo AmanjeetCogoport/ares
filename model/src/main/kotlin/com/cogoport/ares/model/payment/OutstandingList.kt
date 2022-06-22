@@ -14,7 +14,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OutstandingList(
     @JsonProperty("list")
-    val list: MutableList<CustomerOutstanding?>? = null,
+    val list: List<CustomerOutstanding?>? = null,
     @JsonProperty("totalPage")
     val totalPage: Int,
     @JsonProperty("totalRecords")
