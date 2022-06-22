@@ -15,12 +15,19 @@ import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DpoResponse
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DsoResponse
+import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.OrgPayableRequest
+import com.cogoport.ares.model.payment.OrgPayableResponse
+import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.OutstandingResponse
 import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.OverallStatsRequest
 import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.PayableAgeingBucket
+import com.cogoport.ares.model.payment.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
@@ -30,7 +37,11 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.time.Month
+import java.time.YearMonth
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -289,5 +300,74 @@ class DashboardServiceImpl : DashboardService {
             amount = response.amount,
             zone = null
         )
+    }
+
+    override suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse> {
+        val startDate = YearMonth.of(request.year, request.month).minusMonths(request.count.toLong()).atDay(1).atStartOfDay()
+        val endDate = YearMonth.of(request.year, request.month).plusMonths(1).atDay(1).atStartOfDay()
+        val documents = OpenSearchClient().getOrgCollection(request, startDate, endDate)
+        val monthList = mutableListOf<String>()
+        val monthStart = YearMonth.of(request.year, request.month).minusMonths(request.count.toLong())
+        for (i in 1..request.count) {
+            monthList.add(monthStart.plusMonths(i.toLong()).toString())
+        }
+        val output = documents?.groupBy { SimpleDateFormat("yyyy-MM").format(it?.transactionDate) }!!.mapValues { it.value.sumOf { ((it?.amountLoc ?: 0.toBigDecimal()) - (it?.payLoc ?: 0.toBigDecimal())) * it?.signFlag.toString().toBigDecimal() } }
+        val outstandingResponse = monthList.map { OutstandingResponse(it, 0.toBigDecimal()) }
+        for (res in outstandingResponse) {
+            output.forEach {
+                if (it.key.uppercase() == res.duration) {
+                    res.amount = it.value
+                }
+            }
+        }
+        outstandingResponse.forEach { it.duration = Month.of(it.duration!!.split("-")[1].toInt()).toString() + "-" + it.duration!!.split("-")[0] }
+        return outstandingResponse
+    }
+
+    override suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse {
+        val data = OpenSearchClient().getOrgPayables(orgId = request.orgId)
+        val ledgerAmount = data?.aggregations()?.get("ledgerAmount")?.sum()?.value()
+        val currencyBreakUp = getCurrencyBucket(data)
+        val collectionData = getOrgCollection(OrganizationReceivablesRequest(orgId = request.orgId))
+        val ageingBucket = mutableListOf<PayableAgeingBucket>()
+        listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "180-365", "365+").forEach {
+            ageingBucket.add(getAgeingData(request.orgId, it))
+        }
+        val totalReceivable = PayableOutstandingResponse(currency = "INR", amount = ledgerAmount?.toBigDecimal(), breakup = currencyBreakUp)
+        return OrgPayableResponse(
+            totalReceivables = totalReceivable,
+            collectionTrend = collectionData,
+            ageingBucket = ageingBucket
+        )
+    }
+
+    private fun getAgeingData(orgId: String?, age: String): PayableAgeingBucket {
+        val dateList = getDateFromAge(age)
+        val data = OpenSearchClient().getOrgPayables(orgId, dateList[0], dateList[1])
+        return PayableAgeingBucket(age, getCurrencyBucket(data))
+    }
+
+    private fun getDateFromAge(age: String): List<Timestamp?> {
+        val today = LocalDate.now().atStartOfDay()
+        return when (age) {
+            "Not Due" -> { listOf(Timestamp.valueOf(today), null) }
+            "0-30" -> { listOf(Timestamp.valueOf(today.minusDays(30)), Timestamp.valueOf(today)) }
+            "31-60" -> { listOf(Timestamp.valueOf(today.minusDays(60)), Timestamp.valueOf(today.minusDays(30))) }
+            "61-90" -> { listOf(Timestamp.valueOf(today.minusDays(90)), Timestamp.valueOf(today.minusDays(60))) }
+            "91-180" -> { listOf(Timestamp.valueOf(today.minusDays(180)), Timestamp.valueOf(today.minusDays(90))) }
+            "181-365" -> { listOf(Timestamp.valueOf(today.minusDays(365)), Timestamp.valueOf(today.minusDays(180))) }
+            "365+" -> { listOf(null, Timestamp.valueOf(today.minusDays(365))) }
+            else -> { listOf(null, null) }
+        }
+    }
+
+    private fun getCurrencyBucket(data: SearchResponse<Void>?): List<DueAmount>? {
+        return data?.aggregations()?.get("currency")?.sterms()?.buckets()?.array()?.map {
+            DueAmount(
+                currency = it.key(),
+                amount = it.aggregations().get("currAmount")?.sum()?.value()?.toBigDecimal(),
+                invoicesCount = it.docCount().toInt()
+            )
+        }
     }
 }

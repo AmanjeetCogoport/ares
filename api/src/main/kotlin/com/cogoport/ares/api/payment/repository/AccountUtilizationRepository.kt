@@ -9,13 +9,11 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
-import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -256,34 +254,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             """
     )
     suspend fun findDocumentStatus(documentNo: Long, accMode: String): String
-
-    @Query(
-        """
-    update account_utilizations
-    set document_status=:documentStatus,entity_code=:entityCode,currency=:currency,led_currency =:ledCurrency,
-    amount_curr =:currAmount,amount_loc =:ledAmount,due_date =:dueDate,transaction_date =:transactionDate,
-    updated_at =now() where id=:id
-    """
-    )
-    suspend fun updateAccountUtilization(
-        id: Long,
-        transactionDate: Timestamp,
-        dueDate: Timestamp,
-        documentStatus: DocumentStatus,
-        entityCode: Int,
-        currency: String,
-        ledCurrency: String,
-        currAmount: BigDecimal,
-        ledAmount: BigDecimal
-    ): Int
-
-    @Query(
-        """
-        UPDATE
-	  account_utilizations 
-        SET document_no = :documentNo, document_value = :documentValue, document_status = :documentStatus, updated_at = now()
-        WHERE id = :id
-    """
-    )
-    suspend fun updateAccountUtilization(id: Long, documentNo: Long, documentValue: String?, documentStatus: DocumentStatus): Int
 }
