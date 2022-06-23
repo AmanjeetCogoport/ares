@@ -133,7 +133,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        //Emitting Kafka message to Update Outstanding and Dashboard
+        // Emitting Kafka message to Update Outstanding and Dashboard
         emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
 
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
@@ -150,7 +150,8 @@ open class OnAccountServiceImpl : OnAccountService {
                     zone = accUtilizationRequest.zoneCode,
                     date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.dueDate),
                     quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
-                        IsoFields.QUARTER_OF_YEAR),
+                        IsoFields.QUARTER_OF_YEAR
+                    ),
                     year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
                 )
             )
@@ -238,7 +239,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        //Emitting Kafka message to Update Outstanding and Dashboard
+        // Emitting Kafka message to Update Outstanding and Dashboard
         emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
@@ -273,7 +274,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        //Emitting Kafka message to Update Outstanding and Dashboard
+        // Emitting Kafka message to Update Outstanding and Dashboard
         emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
