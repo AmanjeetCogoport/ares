@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.exception.AresError
@@ -46,6 +47,9 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentConverter: PaymentToPaymentMapper
 
     @Inject
+    lateinit var cogoClient: CogoClient
+
+    @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject
@@ -80,8 +84,6 @@ open class OnAccountServiceImpl : OnAccountService {
         setPaymentAmounts(receivableRequest)
 
         setOrganizations(receivableRequest)
-
-        setBankInformation(receivableRequest)
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
@@ -313,12 +315,8 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
-        receivableRequest.orgSerialId = 133
-        receivableRequest.organizationName = "Org"
-    }
-
-    private suspend fun setBankInformation(receivableRequest: Payment) {
-        receivableRequest.bankAccountNumber = "account number"
-        receivableRequest.bankName = "bank name"
+        val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        receivableRequest.orgSerialId = clientResponse.list[0].serial_id.toLong()
+        receivableRequest.organizationName = clientResponse.list[0].businessName
     }
 }

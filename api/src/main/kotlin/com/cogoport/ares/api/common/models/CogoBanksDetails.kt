@@ -78,4 +78,4 @@ data class CogoBanksDetails(
     @JsonProperty("country")
     var country: List<Country>? = null,
 
-    )
+)
