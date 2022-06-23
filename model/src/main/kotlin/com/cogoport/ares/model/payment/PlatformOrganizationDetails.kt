@@ -6,11 +6,11 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class PlatformOrganizationDetials(
+data class PlatformOrganizationDetails(
     @JsonProperty("id")
     val id: String,
     @JsonProperty("serial_id")
-    val serial_id: Int,
+    val serialId: Int,
     @JsonProperty("registration_number")
     val registrationNumber: String,
     @JsonProperty("query_name")

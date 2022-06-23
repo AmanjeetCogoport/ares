@@ -316,7 +316,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
         val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
-        receivableRequest.orgSerialId = clientResponse.list[0].serial_id.toLong()
+        receivableRequest.orgSerialId = clientResponse.list[0].serialId.toLong()
         receivableRequest.organizationName = clientResponse.list[0].businessName
     }
 }
