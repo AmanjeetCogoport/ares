@@ -77,7 +77,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
             try {
                 if (accUtilizationRequest.accMode == AccMode.AR) {
-                    emitDashboardEvent(accUtilizationRequest)
+                    emitDashboardAndOutstandingEvent(accUtilizationRequest)
                 }
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             } catch (k: KafkaException) {
@@ -122,7 +122,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
             var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
 
-            if (accountUtilization.accMode == AccMode.AR) emitDashboardEvent(accUtilizationRequest)
+            if (accountUtilization.accMode == AccMode.AR) emitDashboardAndOutstandingEvent(accUtilizationRequest)
 
             try {
                 Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
@@ -165,7 +165,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
 
         if (updateInvoiceRequest.accMode == AccMode.AR) {
-            emitDashboardEvent(accUtilizationRequest)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
         }
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
@@ -202,7 +202,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardEvent(accUtilizationRequest: AccUtilizationRequest) {
+    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         aresKafkaEmitter.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
