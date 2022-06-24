@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -20,6 +21,7 @@ import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
@@ -46,6 +48,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     @Inject
     lateinit var accountUtilizationConverter: AccountUtilizationMapper
 
+    @Inject
+    lateinit var cogoClient: CogoClient
+
     /**
      * @param accUtilizationRequestList
      * @return listOf CreateInvoiceResponse
@@ -64,6 +69,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message))
                 continue
             }
+
+            val organizationInfo = getOrganizationDetails(accUtilizationRequest.organizationId.toString())
+            accUtilizationRequest.orgSerialId = organizationInfo.organizationSerialId!!
+            accUtilizationRequest.organizationName = organizationInfo.organizationName
+
             val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
@@ -230,5 +240,14 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         }
         throw AresException(AresError.ERR_1205, "accountType")
+    }
+
+    private suspend fun getOrganizationDetails(organizationId: String): PlatformOrganizationResponse {
+        val clientResponse = cogoClient.getCogoOrganization(organizationId)
+
+        if (clientResponse == null || clientResponse.organizationSerialId == null) {
+            throw AresException(AresError.ERR_1202, "")
+        }
+        return clientResponse
     }
 }
