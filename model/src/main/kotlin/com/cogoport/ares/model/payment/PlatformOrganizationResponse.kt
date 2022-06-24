@@ -9,7 +9,7 @@ import io.micronaut.core.annotation.Introspected
 data class PlatformOrganizationResponse(
 
     @JsonProperty("list")
-    val list: List<PlatformOrganizationDetials>,
+    val list: List<PlatformOrganizationDetails>,
 
     @JsonProperty("page")
     val page: Int,
