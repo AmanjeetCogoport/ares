@@ -8,18 +8,11 @@ import io.micronaut.core.annotation.Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PlatformOrganizationResponse(
 
-    @JsonProperty("list")
-    val list: List<PlatformOrganizationDetials>,
+    @JsonProperty("organization_name")
+    val organizationName: String?,
+    @JsonProperty("organization_serial_id")
+    val organizationSerialId: Long?,
+    @JsonProperty("zone")
+    val zone: String?
 
-    @JsonProperty("page")
-    val page: Int,
-
-    @JsonProperty("total")
-    val total: Int,
-
-    @JsonProperty("total_count")
-    val totalCount: Int,
-
-    @JsonProperty("page_limit")
-    val pageLimit: Int
 )

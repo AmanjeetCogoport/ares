@@ -15,9 +15,9 @@ interface CogoClient {
     @Header(name = "authorizationscope", value = "partner")
     suspend fun getCogoBank(entityCode: Int): CogoBankResponse
 
-    @Get("/list_organizations?filters%5Bid%5D={id}")
-    @Header(name = "authorizationparameters", value = "supply_crm:across_all")
-    @Header(name = "authorization", value = "Bearer: 7d38acef-e478-4da9-bb75-e6dc09d3452f")
+    @Get("/get_organization_zone_via_org_id?organization_id={id}")
+    @Header(name = "authorizationparameters", value = "business_finance-account_receivables:allowed")
+    @Header(name = "authorization", value = "Bearer: 1d9e275f-7981-44c2-b01f-390bec756606")
     @Header(name = "authorizationscope", value = "partner")
     suspend fun getCogoOrganization(id: String): PlatformOrganizationResponse
 }
