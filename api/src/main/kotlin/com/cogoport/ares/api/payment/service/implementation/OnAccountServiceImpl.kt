@@ -141,7 +141,8 @@ open class OnAccountServiceImpl : OnAccountService {
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         // Emitting Kafka message to Update Outstanding and Dashboard
-        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+        val paymentModel = accountUtilizationMapper.convertToModel(accUtilRes)
+        emitDashboardAndOutstandingEvent(paymentModel)
 
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
@@ -151,15 +152,16 @@ open class OnAccountServiceImpl : OnAccountService {
      * @param accUtilizationRequest
      */
     private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
+        val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
         aresKafkaEmitter.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.dueDate),
-                    quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
+                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
                         IsoFields.QUARTER_OF_YEAR
                     ),
-                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
                 )
             )
         )
