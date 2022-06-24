@@ -4,12 +4,16 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
+import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
+import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
@@ -35,6 +39,8 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.IsoFields
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -57,6 +63,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    @Inject
+    lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var accountUtilizationMapper: AccountUtilizationMapper
 
     /**
      * Fetch Account Collection payments from DB.
@@ -128,7 +140,37 @@ open class OnAccountServiceImpl : OnAccountService {
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
+        // Emitting Kafka message to Update Outstanding and Dashboard
+        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
+    }
+
+    /**
+     * Emit message to Kafka topic receivables-dashboard-data to update Dashboard and Receivables outstanding documents on OpenSearch
+     * @param accUtilizationRequest
+     */
+    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.dueDate),
+                    quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
+                        IsoFields.QUARTER_OF_YEAR
+                    ),
+                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                )
+            )
+        )
+        aresKafkaEmitter.emitOutstandingData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    orgId = accUtilizationRequest.organizationId.toString()
+                )
+            )
+        )
     }
 
     /**
@@ -204,6 +246,9 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
+        // Emitting Kafka message to Update Outstanding and Dashboard
+        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
@@ -235,6 +280,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+
+        // Emitting Kafka message to Update Outstanding and Dashboard
+        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
