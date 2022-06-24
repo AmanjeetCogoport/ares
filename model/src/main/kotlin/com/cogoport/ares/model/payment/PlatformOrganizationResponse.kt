@@ -10,9 +10,14 @@ data class PlatformOrganizationResponse(
 
     @JsonProperty("organization_name")
     val organizationName: String?,
+
     @JsonProperty("organization_serial_id")
     val organizationSerialId: Long?,
+
     @JsonProperty("zone")
-    val zone: String?
+    val zone: String?,
+
+    @JsonProperty("category_types")
+    val categoryTypes:String?
 
 )

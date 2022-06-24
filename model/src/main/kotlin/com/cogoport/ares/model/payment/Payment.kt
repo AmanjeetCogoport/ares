@@ -100,7 +100,7 @@ data class Payment(
     var zone: String? = "",
 
     @JsonProperty("serviceType")
-    var serviceType: String? = "",
+    var serviceType: ServiceType?,
 
     @JsonProperty("paymentCode")
     var paymentCode: PaymentCode? = PaymentCode.REC,

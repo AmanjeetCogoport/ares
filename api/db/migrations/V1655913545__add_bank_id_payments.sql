@@ -1,2 +1,2 @@
 alter table payments
-add bankId uuid;
+add bank_id uuid;

@@ -75,8 +75,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
-        receivableRequest.zone = null
-        receivableRequest.serviceType = ServiceType.NA.toString()
+        receivableRequest.serviceType = ServiceType.NA
         receivableRequest.accMode = AccMode.AR
         receivableRequest.signFlag = SignSuffix.REC.sign
 
@@ -159,6 +158,8 @@ open class OnAccountServiceImpl : OnAccountService {
             val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
             val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
 
+            setOrganizations(receivableRequest)
+
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
             paymentEntity.bankName = receivableRequest.bankName
@@ -188,6 +189,7 @@ open class OnAccountServiceImpl : OnAccountService {
             accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!!
             accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!!
             accountUtilizationEntity.updatedAt = Timestamp.from(Instant.now())
+            accountUtilizationEntity.zoneCode = receivableRequest.zone
         }
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
@@ -247,7 +249,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.accMode = AccMode.AR
             payment.paymentCode = PaymentCode.REC
             payment.zone = null
-            payment.serviceType = ServiceType.NA.toString()
+            payment.serviceType = ServiceType.NA
 
             // TODO: Remove below commented code after mohit confirmation
 //            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
@@ -316,7 +318,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
         val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+
+        if(clientResponse==null || clientResponse.organizationSerialId==null){
+            throw AresException(AresError.ERR_1202,"")
+        }
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
+        receivableRequest.zone = clientResponse.zone?.uppercase()
     }
 }
