@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
@@ -134,10 +135,14 @@ open class OnAccountServiceImpl : OnAccountService {
         /*SAVE ACCOUNT UTILIZATION IN DATABASE AS ON ACCOUNT PAYMENT*/
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        /*SAVE THE PAYMENT IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            // Emitting Kafka message to Update Outstanding and Dashboard
+            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+        }
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
         // Emitting Kafka message to Update Outstanding and Dashboard
@@ -248,12 +253,15 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
 
-        /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+        try {
+            /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
-        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-
+            // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
+            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+        }
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
@@ -283,12 +291,14 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
-        /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-
-        // Emitting Kafka message to Update Outstanding and Dashboard
-        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-
+        try {
+            /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            // Emitting Kafka message to Update Outstanding and Dashboard
+            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+        }
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
