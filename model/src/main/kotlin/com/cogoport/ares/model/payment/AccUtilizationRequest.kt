@@ -33,7 +33,7 @@ data class AccUtilizationRequest(
     var dueDate: Date?,
     var transactionDate: Date?,
     var serviceType: String?,
-    var category: String?,
+    var category: ServiceType?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now())
 )
