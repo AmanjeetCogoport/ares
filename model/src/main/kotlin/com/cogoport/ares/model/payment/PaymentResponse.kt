@@ -110,5 +110,8 @@ data class PaymentResponse(
     var paymentNum: Long? = 0L,
 
     @JsonProperty("paymentNumValue")
-    var paymentNumValue: String? = ""
+    var paymentNumValue: String? = "",
+
+    @JsonProperty("bankId")
+    var bankId: UUID?
 )

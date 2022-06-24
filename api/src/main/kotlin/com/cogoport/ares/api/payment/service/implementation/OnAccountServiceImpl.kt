@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -52,6 +53,9 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentConverter: PaymentToPaymentMapper
 
     @Inject
+    lateinit var cogoClient: CogoClient
+
+    @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject
@@ -83,13 +87,15 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
-        receivableRequest.zone = null
-        receivableRequest.serviceType = ServiceType.NA.toString()
+        receivableRequest.serviceType = ServiceType.NA
         receivableRequest.accMode = AccMode.AR
         receivableRequest.signFlag = SignSuffix.REC.sign
 
         /*PRIVATE FUNCTION TO SET AMOUNTS*/
         setPaymentAmounts(receivableRequest)
+
+        setOrganizations(receivableRequest)
+
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
         /*PRIVATE FUNCTION TO SET PAYMENT ENTITY*/
@@ -101,6 +107,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
+
         receivableRequest.id = savedPayment.id
         receivableRequest.isPosted = false
         receivableRequest.isDeleted = false
@@ -108,9 +115,6 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.paymentNumValue = payment.paymentNumValue
         receivableRequest.accCode = payment.accCode
         receivableRequest.paymentCode = payment.paymentCode
-
-        /*SAVE THE PAYMENT IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         var accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
@@ -129,6 +133,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*SAVE ACCOUNT UTILIZATION IN DATABASE AS ON ACCOUNT PAYMENT*/
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        /*SAVE THE PAYMENT IN OPEN SEARCH*/
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
@@ -194,6 +201,8 @@ open class OnAccountServiceImpl : OnAccountService {
             val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
             val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
 
+            setOrganizations(receivableRequest)
+
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
             paymentEntity.bankName = receivableRequest.bankName
@@ -223,6 +232,7 @@ open class OnAccountServiceImpl : OnAccountService {
             accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!!
             accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!!
             accountUtilizationEntity.updatedAt = Timestamp.from(Instant.now())
+            accountUtilizationEntity.zoneCode = receivableRequest.zone
         }
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
@@ -230,16 +240,16 @@ open class OnAccountServiceImpl : OnAccountService {
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
-        /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
-
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
 
         /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
 
-        // Emitting Kafka message to Update Outstanding and Dashboard
+        // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
         emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
 
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
@@ -262,14 +272,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
 
-        /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
-
         var accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name) ?: throw AresException(AresError.ERR_1202, "")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
+        /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
@@ -288,7 +298,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.accMode = AccMode.AR
             payment.paymentCode = PaymentCode.REC
             payment.zone = null
-            payment.serviceType = ServiceType.NA.toString()
+            payment.serviceType = ServiceType.NA
 
             // TODO: Remove below commented code after mohit confirmation
 //            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
@@ -353,5 +363,16 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
         accUtilizationModel.docStatus = DocumentStatus.PROFORMA
+    }
+
+    private suspend fun setOrganizations(receivableRequest: Payment) {
+        val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+
+        if (clientResponse == null || clientResponse.organizationSerialId == null) {
+            throw AresException(AresError.ERR_1202, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.organizationSerialId
+        receivableRequest.organizationName = clientResponse.organizationName
+        receivableRequest.zone = clientResponse.zone?.uppercase()
     }
 }
