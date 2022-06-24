@@ -140,7 +140,7 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // Emitting Kafka message to Update Outstanding and Dashboard
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-        }catch (ex:Exception){
+        } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
@@ -259,7 +259,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-        }catch (ex:Exception){
+        } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
@@ -296,7 +296,7 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // Emitting Kafka message to Update Outstanding and Dashboard
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-        }catch (ex:Exception){
+        } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
