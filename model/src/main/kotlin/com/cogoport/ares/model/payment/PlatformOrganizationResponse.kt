@@ -18,6 +18,6 @@ data class PlatformOrganizationResponse(
     val zone: String?,
 
     @JsonProperty("category_types")
-    val categoryTypes:String?
+    val categoryTypes: String?
 
 )
