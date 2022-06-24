@@ -19,7 +19,6 @@ object AresModelConstants {
     const val END_DATE = "endDate"
     const val ENTITY_TYPE = "entityType"
     const val CURRENCY_TYPE = "currencyType"
-    const val QUERY_NAME = "queryName"
     const val QUARTER_YEAR = "quarterYear"
     const val QUERY = "query"
     const val MONTH = "month"

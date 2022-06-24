@@ -6,7 +6,6 @@ import java.math.BigDecimal
 @MappedEntity
 data class OrgOutstanding(
     val organizationId: String?,
-    val organizationName: String?,
     val currency: String?,
     val openInvoicesCount: Int?,
     val openInvoicesAmount: BigDecimal?,
@@ -16,5 +15,4 @@ data class OrgOutstanding(
     val paymentsLedAmount: BigDecimal?,
     val outstandingAmount: BigDecimal?,
     val outstandingLedAmount: BigDecimal?,
-    val zoneCode: String?
 )

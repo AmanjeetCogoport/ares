@@ -22,16 +22,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @Query(
-        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
-            category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
-            sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
-            updated_at from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type)"""
+        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
+           ,organization_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,pay_loc,due_date,transaction_date,created_at,updated_at
+            from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
+            and (:accMode is null or acc_mode=:accMode::account_mode) """
     )
-    suspend fun findRecord(documentNo: Long, accType: String? = null): AccountUtilization?
+    suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
     @Query("delete from account_utilizations where id=:id")
     suspend fun deleteInvoiceUtils(id: Long): Int
-    suspend fun findByDocumentNo(documentNo: Long): AccountUtilization
 
     @Query(
         """update account_utilizations set 
@@ -212,14 +212,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
         where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null and(:orgId is null or organization_id = :orgId::uuid)
-        group by organization_id,zone_code,organization_name
-        order by organization_name
+        group by organization_id,zone_code
         """
     )
     suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
     @Query(
         """
-        select organization_id::varchar,organization_name,currency,zone_code,
+        select organization_id::varchar, currency,
         sum(case when acc_type <> 'REC' and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
@@ -229,29 +228,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and organization_id = :orgId::uuid and zone_code = :zone
-        group by organization_id, organization_name, currency, zone_code
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and organization_id = :orgId::uuid 
+        group by organization_id, currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
 
-    @Query(
+   /* @Query(
         """
            select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
             category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
             sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
             updated_at  from account_utilizations where document_no = :paymentNum limit 1
     """
-    )
-    suspend fun findByDocumentNo(paymentNum: Long?): AccountUtilization
-
-    @Query(
-        """
-             select case when (amount_loc-pay_loc)=0 then 'FULL'
-             when (amount_loc-pay_loc)<>0 then 'PARTIAL'
-			else 'UNPAID' end as payment_status 
-            from account_utilizations au where document_no =:documentNo and acc_mode =:accMode::account_mode
-            """
-    )
-    suspend fun findDocumentStatus(documentNo: Long, accMode: String): String
+    )*/
+    // suspend fun findByDocumentNo(documentNo: Long,): AccountUtilization
 }

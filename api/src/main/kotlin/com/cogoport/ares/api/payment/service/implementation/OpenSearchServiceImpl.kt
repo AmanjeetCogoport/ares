@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -52,6 +53,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
+
+    @Inject
+    lateinit var cogoClient: CogoClient
 
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
         val zone = request.zone
@@ -172,20 +176,21 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun pushOutstandingData(request: OpenSearchRequest) {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
-        } else if (request.zone.isNullOrBlank()) {
-            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
-            updateOrgOutstanding(request.zone, request.orgId, it)
+        val orgDetails = cogoClient.getCogoOrganization(request.orgId)
+        val zone = orgDetails.zone
+        val orgName = orgDetails.organizationName
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId).also {
+            updateOrgOutstanding(zone, orgName, request.orgId, it)
         }
     }
 
-    private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
+    private fun updateOrgOutstanding(zone: String?, orgName: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
         val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount.toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, 0) }.toMutableList()
+        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
         val invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount!! }
@@ -194,7 +199,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(invoicesDues)
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
-        val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(0, outstandingLedAmount, outstandingDues), null)
+        val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
     }
 
