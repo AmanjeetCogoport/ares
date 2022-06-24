@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
@@ -138,11 +139,13 @@ open class OnAccountServiceImpl : OnAccountService {
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-
-        // Emitting Kafka message to Update Outstanding and Dashboard
-        emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            // Emitting Kafka message to Update Outstanding and Dashboard
+            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+        }catch (ex:Exception){
+            logger().error(ex.stackTraceToString())
+        }
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
