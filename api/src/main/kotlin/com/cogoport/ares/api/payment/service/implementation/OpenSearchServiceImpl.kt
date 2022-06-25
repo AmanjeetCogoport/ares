@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -53,9 +52,6 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
-
-    @Inject
-    lateinit var cogoClient: CogoClient
 
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
         val zone = request.zone
@@ -177,11 +173,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        val orgDetails = cogoClient.getCogoOrganization(request.orgId)
-        val zone = orgDetails.zone
-        val orgName = orgDetails.organizationName
         accountUtilizationRepository.generateOrgOutstanding(request.orgId).also {
-            updateOrgOutstanding(zone, orgName, request.orgId, it)
+            updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
 

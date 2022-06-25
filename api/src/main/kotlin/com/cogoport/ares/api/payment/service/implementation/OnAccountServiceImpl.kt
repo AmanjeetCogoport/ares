@@ -140,8 +140,6 @@ open class OnAccountServiceImpl : OnAccountService {
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            // Emitting Kafka message to Update Outstanding and Dashboard
-            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
@@ -170,7 +168,8 @@ open class OnAccountServiceImpl : OnAccountService {
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    orgId = accUtilizationRequest.organizationId.toString()
+                    orgId = accUtilizationRequest.organizationId.toString(),
+                    orgName = accUtilizationRequest.organizationName
                 )
             )
         )
