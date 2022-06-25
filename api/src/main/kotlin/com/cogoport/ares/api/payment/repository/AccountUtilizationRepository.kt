@@ -52,7 +52,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
+             where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
              group by ageing_duration, zone
              order by 1
           """
@@ -69,7 +69,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(sign_flag * (amount_loc - pay_loc)) as amount,
             'INR' as currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
+            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
             group by ageing_duration
             order by ageing_duration
         """
@@ -83,7 +83,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc - pay_loc <> 0) then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
-        coalesce(sum(sign_flag*(amount_loc - pay_loc)),0) as total_outstanding_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
         (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' ) as organization_count, 
         null as id
         from account_utilizations
