@@ -70,9 +70,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 continue
             }
 
-            val organizationInfo = getOrganizationDetails(accUtilizationRequest.organizationId.toString())
-            accUtilizationRequest.orgSerialId = organizationInfo.organizationSerialId!!
-            accUtilizationRequest.organizationName = organizationInfo.organizationName
+            //  val organizationInfo = getOrganizationDetails(accUtilizationRequest.organizationId.toString())
+            // accUtilizationRequest.orgSerialId = organizationInfo.organizationSerialId!!
+            //  accUtilizationRequest.organizationName = organizationInfo.organizationName
 
             val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
             acUtilization.createdAt = Timestamp.from(Instant.now())
@@ -245,9 +245,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     private suspend fun getOrganizationDetails(organizationId: String): PlatformOrganizationResponse {
         val clientResponse = cogoClient.getCogoOrganization(organizationId)
 
-        if (clientResponse == null || clientResponse.organizationSerialId == null) {
-            throw AresException(AresError.ERR_1202, "")
-        }
+        // if (clientResponse == null || clientResponse.organizationSerialId == null) {
+        //   throw AresException(AresError.ERR_1202, "")
+        //  }
         return clientResponse
     }
 }
