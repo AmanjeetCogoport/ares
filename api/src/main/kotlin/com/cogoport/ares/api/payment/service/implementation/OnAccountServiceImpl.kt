@@ -223,7 +223,7 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentEntity.bankName = receivableRequest.bankName
             paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber
             paymentEntity.updatedAt = Timestamp.from(Instant.now())
-            paymentEntity.bankId=receivableRequest.bankId
+            paymentEntity.bankId = receivableRequest.bankId
 
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             accountUtilizationEntity.entityCode = receivableRequest.entityType!!
