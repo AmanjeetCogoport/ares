@@ -131,9 +131,11 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.accMode == AccMode.AP) {
             accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
-
         /*SAVE ACCOUNT UTILIZATION IN DATABASE AS ON ACCOUNT PAYMENT*/
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        /*SAVE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         /*SAVE THE ACCOUNT UTILIZATION IN OPEN SEARCH*/
         try {
@@ -143,12 +145,6 @@ open class OnAccountServiceImpl : OnAccountService {
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-
-        // Emitting Kafka message to Update Outstanding and Dashboard
-        val paymentModel = accountUtilizationMapper.convertToModel(accUtilRes)
-        emitDashboardAndOutstandingEvent(paymentModel)
-
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
@@ -256,7 +252,6 @@ open class OnAccountServiceImpl : OnAccountService {
         try {
             /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
