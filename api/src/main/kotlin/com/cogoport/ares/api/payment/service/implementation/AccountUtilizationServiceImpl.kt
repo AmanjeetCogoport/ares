@@ -227,7 +227,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    orgId = accUtilizationRequest.organizationId.toString()
+                    orgId = accUtilizationRequest.organizationId.toString(),
+                    orgName = accUtilizationRequest.organizationName
                 )
             )
         )

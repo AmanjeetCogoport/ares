@@ -54,9 +54,6 @@ class OpenSearchServiceImpl : OpenSearchService {
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
 
-    @Inject
-    lateinit var cogoClient: CogoClient
-
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
         val zone = request.zone
         val quarter = request.quarter
@@ -177,11 +174,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        val orgDetails = cogoClient.getCogoOrganization(request.orgId)
-        val zone = orgDetails.zone
-        val orgName = orgDetails.organizationName
         accountUtilizationRepository.generateOrgOutstanding(request.orgId).also {
-            updateOrgOutstanding(zone, orgName, request.orgId, it)
+            updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
 
