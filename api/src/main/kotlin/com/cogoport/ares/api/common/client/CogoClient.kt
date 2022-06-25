@@ -20,5 +20,4 @@ interface CogoClient {
     @Header(name = "authorization", value = "Bearer: 7cff5415-6007-4bab-9f3e-e4a08c11e915")
     @Header(name = "authorizationscope", value = "partner")
     suspend fun getCogoOrganization(id: String): PlatformOrganizationResponse
-
 }
