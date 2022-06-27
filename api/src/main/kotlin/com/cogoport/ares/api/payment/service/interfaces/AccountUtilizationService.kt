@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
