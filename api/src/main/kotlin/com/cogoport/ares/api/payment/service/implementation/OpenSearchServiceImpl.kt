@@ -192,7 +192,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(invoicesDues)
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
-        val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues), null)
+        val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null)
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
     }
 
