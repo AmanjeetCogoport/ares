@@ -39,6 +39,7 @@ object AresConstants {
     const val ORG_NAME = "orgName"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
+    const val ACC_MODE = "AccMode"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 }

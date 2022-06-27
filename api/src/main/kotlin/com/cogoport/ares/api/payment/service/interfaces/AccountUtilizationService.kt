@@ -10,7 +10,6 @@ interface AccountUtilizationService {
     suspend fun add(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse>
     suspend fun add(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse
     suspend fun delete(data: MutableList<Pair<Long, String>>): Boolean
-    suspend fun findByDocumentNo(docNumber: Long): AccountUtilization
     suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest)
     suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest)
 }
