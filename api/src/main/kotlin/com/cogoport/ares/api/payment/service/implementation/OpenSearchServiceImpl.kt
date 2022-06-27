@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CollectionResponse
 import com.cogoport.ares.model.payment.CollectionTrendResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -53,12 +54,25 @@ class OpenSearchServiceImpl : OpenSearchService {
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
 
+    /**
+     * @param: OpenSearchRequest
+     */
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
+        when (request.accMode) {
+            AccMode.AR -> { updateReceivables(request) }
+            AccMode.AP -> { updatePayables(request) }
+            else -> {
+                updateReceivables(request)
+                updatePayables(request)
+            }
+        }
+    }
+
+    private suspend fun updateReceivables(request: OpenSearchRequest) {
         val zone = request.zone
         val quarter = request.quarter
         val date = request.date
         val year = request.year
-
         /** Collection Trend */
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse)
@@ -88,12 +102,18 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateDailySalesOutstanding(zone, year, dailySalesZoneData)
         val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date)
         updateDailySalesOutstanding(null, year, dailySalesAllData)
+    }
 
+    /**
+     * This updates the data for Daily Payables Outstanding graph on OpenSearch on receipt of new Bill
+     * @param : OpenSearchRequest
+     */
+    private suspend fun updatePayables(request: OpenSearchRequest) {
         /** Daily Payables Outstanding */
-        val dailyPayablesZoneData = accountUtilizationRepository.generateDailyPayablesOutstanding(zone, date)
-        updateDailyPayablesOutstanding(zone, year, dailyPayablesZoneData)
-        val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, date)
-        updateDailyPayablesOutstanding(null, year, dailyPayablesAllData)
+        val dailyPayablesZoneData = accountUtilizationRepository.generateDailyPayablesOutstanding(request.zone, request.date)
+        updateDailyPayablesOutstanding(request.zone, request.year, dailyPayablesZoneData)
+        val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, request.date)
+        updateDailyPayablesOutstanding(null, request.year, dailyPayablesAllData)
     }
 
     private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?) {

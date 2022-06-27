@@ -7,7 +7,6 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -21,7 +20,6 @@ import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
@@ -70,10 +68,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 continue
             }
 
-            //  val organizationInfo = getOrganizationDetails(accUtilizationRequest.organizationId.toString())
-            // accUtilizationRequest.orgSerialId = organizationInfo.organizationSerialId!!
-            //  accUtilizationRequest.organizationName = organizationInfo.organizationName
-
             val acUtilization = accountUtilizationConverter.convertToEntity(accUtilizationRequest)
             acUtilization.createdAt = Timestamp.from(Instant.now())
             acUtilization.updatedAt = Timestamp.from(Instant.now())
@@ -86,9 +80,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             val accUtilRes = accUtilRepository.save(acUtilization)
 
             try {
-                if (accUtilizationRequest.accMode == AccMode.AR) {
-                    emitDashboardAndOutstandingEvent(accUtilizationRequest)
-                }
+                emitDashboardAndOutstandingEvent(accUtilizationRequest)
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             } catch (k: KafkaException) {
                 logger().error(k.stackTraceToString())
@@ -132,7 +124,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
             var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
 
-            if (accountUtilization.accMode == AccMode.AR) emitDashboardAndOutstandingEvent(accUtilizationRequest)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
 
             try {
                 Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
@@ -142,10 +134,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             result = true
         }
         return result
-    }
-
-    override suspend fun findByDocumentNo(docNumber: Long): AccountUtilization {
-        return accUtilRepository.findRecord(docNumber) ?: throw AresException(AresError.ERR_1202, "")
     }
 
     /**
@@ -173,10 +161,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accUtilRepository.update(accountUtilization)
 
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-
-        if (updateInvoiceRequest.accMode == AccMode.AR) {
-            emitDashboardAndOutstandingEvent(accUtilizationRequest)
-        }
+        emitDashboardAndOutstandingEvent(accUtilizationRequest)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         } catch (e: Exception) {
@@ -184,6 +169,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
     }
 
+    /**
+     *
+     * @param : updateInvoiceStatusRequest
+     */
     override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
         var accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.oldDocumentNo, updateInvoiceStatusRequest.accType.name)
 
@@ -213,22 +202,43 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * @param accUtilizationRequest
      */
     private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
-        aresKafkaEmitter.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.dueDate),
-                    quarter = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = accUtilizationRequest.dueDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
-                )
-            )
-        )
+        emitDashboardData(accUtilizationRequest)
+        if (accUtilizationRequest.accMode == AccMode.AR) {
+            emitOutstandingData(accUtilizationRequest)
+        }
+    }
+
+    /**
+     * Emit message to Kafka topic receivables-dashboard-data
+     * @param accUtilizationRequest
+     */
+    private fun emitOutstandingData(accUtilizationRequest: AccUtilizationRequest) {
         aresKafkaEmitter.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     orgId = accUtilizationRequest.organizationId.toString(),
                     orgName = accUtilizationRequest.organizationName
+                )
+            )
+        )
+    }
+
+    /**
+     * Emit message to Kafka topic receivables-dashboard-data
+     * @param accUtilizationRequest
+     */
+    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest) {
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.transactionDate),
+                    quarter = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                        .get(IsoFields.QUARTER_OF_YEAR),
+                    year = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault())
+                        .toLocalDate().year,
+                    accMode = accUtilizationRequest.accMode
                 )
             )
         )
@@ -241,14 +251,5 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         }
         throw AresException(AresError.ERR_1205, "accountType")
-    }
-
-    private suspend fun getOrganizationDetails(organizationId: String): PlatformOrganizationResponse {
-        val clientResponse = cogoClient.getCogoOrganization(organizationId)
-
-        // if (clientResponse == null || clientResponse.organizationSerialId == null) {
-        //   throw AresException(AresError.ERR_1202, "")
-        //  }
-        return clientResponse
     }
 }
