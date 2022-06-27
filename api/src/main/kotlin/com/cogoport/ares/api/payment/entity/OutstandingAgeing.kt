@@ -5,7 +5,6 @@ import java.math.BigDecimal
 @MappedEntity
 data class OutstandingAgeing(
     val organizationId: String?,
-    val zoneCode: String?,
     val notDueAmount: BigDecimal?,
     val thirtyAmount: BigDecimal?,
     val sixtyAmount: BigDecimal?,
