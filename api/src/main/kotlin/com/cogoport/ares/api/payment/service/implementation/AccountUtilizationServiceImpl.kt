@@ -7,7 +7,6 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -21,7 +20,6 @@ import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
@@ -226,7 +224,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         )
     }
 
-
     /**
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
@@ -255,5 +252,4 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
         throw AresException(AresError.ERR_1205, "accountType")
     }
-
 }

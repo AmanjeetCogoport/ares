@@ -59,16 +59,16 @@ class OpenSearchServiceImpl : OpenSearchService {
      */
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
         when (request.accMode) {
-            AccMode.AR -> { updateRecievales(request) }
+            AccMode.AR -> { updateReceivables(request) }
             AccMode.AP -> { updatePayables(request) }
             else -> {
-                updateRecievales(request)
+                updateReceivables(request)
                 updatePayables(request)
             }
         }
     }
 
-    private suspend fun updateRecievales(request: OpenSearchRequest) {
+    private suspend fun updateReceivables(request: OpenSearchRequest) {
         val zone = request.zone
         val quarter = request.quarter
         val date = request.date
