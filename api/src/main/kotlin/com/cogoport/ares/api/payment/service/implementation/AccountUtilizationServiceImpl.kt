@@ -190,6 +190,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (updateInvoiceStatusRequest.transactionDate != null) {
             accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate
         }
+        if(updateInvoiceStatusRequest.dueDate != null){
+            accountUtilization.dueDate = updateInvoiceStatusRequest.dueDate
+        }
 
         accUtilRepository.update(accountUtilization)
 
