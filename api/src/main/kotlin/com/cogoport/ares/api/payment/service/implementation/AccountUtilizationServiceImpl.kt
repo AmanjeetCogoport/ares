@@ -187,6 +187,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
         accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+        if (updateInvoiceStatusRequest.transactionDate != null) {
+            accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate
+        }
 
         accUtilRepository.update(accountUtilization)
 

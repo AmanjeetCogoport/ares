@@ -20,4 +20,5 @@ data class UpdateInvoiceStatusRequest(
     var newDocumentValue: String?,
     var docStatus: DocumentStatus?,
     var updatedAt: Timestamp = Timestamp.from(Instant.now()),
+    var transactionDate: Timestamp?
 )
