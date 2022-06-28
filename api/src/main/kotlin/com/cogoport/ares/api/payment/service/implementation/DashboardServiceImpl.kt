@@ -333,7 +333,7 @@ class DashboardServiceImpl : DashboardService {
         val currencyBreakUp = getCurrencyBucket(data)
         val collectionData = getOrgCollection(OrganizationReceivablesRequest(orgId = request.orgId))
         val ageingBucket = mutableListOf<PayableAgeingBucket>()
-        listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "180-365", "365+").forEach {
+        listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "181-365", "365+").forEach {
             ageingBucket.add(getAgeingData(request.orgId, it))
         }
         val totalReceivable = PayableOutstandingResponse(currency = "INR", amount = ledgerAmount?.toBigDecimal(), breakup = currencyBreakUp)
