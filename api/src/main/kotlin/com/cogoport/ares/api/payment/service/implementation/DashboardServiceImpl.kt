@@ -37,6 +37,7 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -332,7 +333,7 @@ class DashboardServiceImpl : DashboardService {
         val currencyBreakUp = getCurrencyBucket(data)
         val collectionData = getOrgCollection(OrganizationReceivablesRequest(orgId = request.orgId))
         val ageingBucket = mutableListOf<PayableAgeingBucket>()
-        listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "180-365", "365+").forEach {
+        listOf("Not Due", "0-30", "31-60", "61-90", "91-180", "181-365", "365+").forEach {
             ageingBucket.add(getAgeingData(request.orgId, it))
         }
         val totalReceivable = PayableOutstandingResponse(currency = "INR", amount = ledgerAmount?.toBigDecimal(), breakup = currencyBreakUp)
@@ -346,7 +347,7 @@ class DashboardServiceImpl : DashboardService {
     private fun getAgeingData(orgId: String?, age: String): PayableAgeingBucket {
         val dateList = getDateFromAge(age)
         val data = OpenSearchClient().getOrgPayables(orgId, dateList[0], dateList[1])
-        return PayableAgeingBucket(age, getCurrencyBucket(data))
+        return PayableAgeingBucket(age, getLedgerAmount(data), getCurrencyBucket(data))
     }
 
     private fun getDateFromAge(age: String): List<Timestamp?> {
@@ -371,5 +372,9 @@ class DashboardServiceImpl : DashboardService {
                 invoicesCount = it.docCount().toInt()
             )
         }
+    }
+
+    private fun getLedgerAmount(data: SearchResponse<Void>?): BigDecimal {
+        return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
     }
 }
