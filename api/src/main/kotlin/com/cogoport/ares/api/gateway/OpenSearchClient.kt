@@ -232,8 +232,13 @@ class OpenSearchClient {
             { s ->
                 s.index("index_account_utilization")
                     .query { q ->
-                        q.match { m -> m.field("organizationId").query(FieldValue.of(request.orgId)) }
                         q.bool { b ->
+                            b.must{ m->
+                                m.match { m -> m.field("accMode").query(FieldValue.of("AR")) }
+                            }
+                            b.must{m ->
+                                m.match { m -> m.field("organizationId").query(FieldValue.of(request.orgId)) }
+                            }
                             if (request.startDate != null && request.endDate != null) {
                                 b.must { m ->
                                     m.range { r ->
