@@ -25,7 +25,6 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.apache.kafka.common.KafkaException
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -78,15 +77,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
             }
             val accUtilRes = accUtilRepository.save(acUtilization)
-
-            try {
-                emitDashboardAndOutstandingEvent(accUtilizationRequest)
-                Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            } catch (k: KafkaException) {
-                logger().error(k.stackTraceToString())
-            } catch (e: Exception) {
-                logger().error(e.stackTraceToString())
-            }
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             responseList.add(CreateInvoiceResponse(accUtilRes.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -101,7 +92,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var accUtilizationList = mutableListOf<AccUtilizationRequest>()
         accUtilizationList.add(accUtilizationRequest)
         val listResponse = add(accUtilizationList)
-
+        try {
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
         return listResponse[0]
     }
 
@@ -122,12 +117,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
 
+            Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
             var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-
-            emitDashboardAndOutstandingEvent(accUtilizationRequest)
-
             try {
-                Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
+                emitDashboardAndOutstandingEvent(accUtilizationRequest)
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
             }
@@ -157,13 +150,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountCurr = updateInvoiceRequest.currAmount
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-
         accUtilRepository.update(accountUtilization)
-
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-        emitDashboardAndOutstandingEvent(accUtilizationRequest)
         try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
