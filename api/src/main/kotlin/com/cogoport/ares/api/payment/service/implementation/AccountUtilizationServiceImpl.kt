@@ -25,7 +25,6 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.apache.kafka.common.KafkaException
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
