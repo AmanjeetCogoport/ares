@@ -230,13 +230,13 @@ class OpenSearchClient {
     fun <T : Any> onAccountUtilizationSearch(request: LedgerSummaryRequest, classType: Class<T>): SearchResponse<T>? {
         val response = Client.search(
             { s ->
-                s.index("index_account_utilization")
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
                     .query { q ->
                         q.bool { b ->
-                            b.must{ m->
+                            b.must { m ->
                                 m.match { m -> m.field("accMode").query(FieldValue.of("AR")) }
                             }
-                            b.must{m ->
+                            b.must { m ->
                                 m.match { m -> m.field("organizationId").query(FieldValue.of(request.orgId)) }
                             }
                             if (request.startDate != null && request.endDate != null) {

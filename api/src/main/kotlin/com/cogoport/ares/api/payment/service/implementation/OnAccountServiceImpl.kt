@@ -389,6 +389,5 @@ open class OnAccountServiceImpl : OnAccountService {
         val payments = data.hits().hits().map { it.source() }
         val total = data.hits().total().value().toInt()
         return payments
-
     }
 }

@@ -53,7 +53,7 @@ class OnAccountController {
     }
 
     @Get("/ledger-summary{?request*}")
-    suspend fun getOrganizationAccountUtilization(request: LedgerSummaryRequest): List<PaymentResponse?>{
+    suspend fun getOrganizationAccountUtilization(request: LedgerSummaryRequest): List<PaymentResponse?> {
         return Response<List<PaymentResponse?>>().ok(onAccountService.getOrganizationAccountUtlization(request))
     }
 }
