@@ -157,10 +157,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
-                        IsoFields.QUARTER_OF_YEAR
-                    ),
+                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
                     year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                    accMode = accUtilizationRequest.accMode
                 )
             )
         )
@@ -242,6 +241,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentDetails = paymentRepository.update(paymentEntity)
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
+        openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
