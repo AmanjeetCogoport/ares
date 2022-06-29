@@ -85,8 +85,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
-        val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
+        val filterDateFromTs = Timestamp(SimpleDateFormat("dd/MM/yyyy").parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.serviceType = ServiceType.NA
         receivableRequest.accMode = AccMode.AR
@@ -300,45 +299,14 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
 
-        var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
+        var recordsInserted = 0
         for (payment in bulkPayment) {
-            payment.accMode = AccMode.AR
-            payment.paymentCode = PaymentCode.REC
-            payment.zone = null
-            payment.serviceType = ServiceType.NA
-
-            // TODO: Remove below commented code after mohit confirmation
-//            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
-//            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
-//            payment.organizationId = UUID.fromString(orgId.toString())
-            paymentEntityList.add(paymentConverter.convertToEntity(payment))
-            payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
-            if (payment.accMode == AccMode.AP) {
-                payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
-            }
-
-            var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
-            var accUtilizationModel: AccUtilizationRequest =
-                accUtilizationToPaymentConverter.convertEntityToModel(savePayment)
-
-            var paymentModel = paymentConverter.convertToModel(savePayment)
-            paymentModel.paymentDate = paymentModel.transactionDate?.toLocalDate().toString()
-            Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savePayment.id.toString(), paymentModel)
-            accUtilizationModel.zoneCode = payment.zone
-            accUtilizationModel.serviceType = payment.serviceType
-            accUtilizationModel.accType = AccountType.PAY
-            accUtilizationModel.currencyPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerAmount = payment.ledAmount
-            accUtilizationModel.ledCurrency = payment.ledCurrency!!
-            accUtilizationModel.docStatus = DocumentStatus.FINAL
-            var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
-            accUtilEntity.accCode = payment.accCode!!
-            var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            var onAccountApiCommonResponse = createPaymentEntry(payment)
+            if (onAccountApiCommonResponse.isSuccess)
+                recordsInserted++
         }
 
-        return BulkPaymentResponse(recordsInserted = bulkPayment.size)
+        return BulkPaymentResponse(recordsInserted = recordsInserted)
     }
 
     private fun setPaymentAmounts(payment: Payment) {
