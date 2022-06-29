@@ -85,7 +85,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        val filterDateFromTs = Timestamp(SimpleDateFormat("dd/MM/yyyy").parse(receivableRequest.paymentDate).time)
+        val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
+        val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.serviceType = ServiceType.NA
         receivableRequest.accMode = AccMode.AR
