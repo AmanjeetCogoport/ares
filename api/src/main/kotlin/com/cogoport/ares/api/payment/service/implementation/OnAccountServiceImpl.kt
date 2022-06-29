@@ -28,6 +28,7 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
@@ -381,5 +382,13 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
+    }
+
+    override suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<PaymentResponse?> {
+        val data = OpenSearchClient().onAccountUtilizationSearch(request, PaymentResponse::class.java)!!
+        val payments = data.hits().hits().map { it.source() }
+        val total = data.hits().total().value().toInt()
+        return payments
+
     }
 }

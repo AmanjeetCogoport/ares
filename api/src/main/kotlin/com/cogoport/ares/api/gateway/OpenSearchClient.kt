@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -224,5 +225,34 @@ class OpenSearchClient {
             },
             Void::class.java
         )
+    }
+
+    fun <T : Any> onAccountUtilizationSearch(request: LedgerSummaryRequest, classType: Class<T>): SearchResponse<T>? {
+        val response = Client.search(
+            { s ->
+                s.index("index_account_utilization")
+                    .query { q ->
+                        q.match { m -> m.field("organizationId").query(FieldValue.of(request.orgId)) }
+                        q.bool { b ->
+                            if (request.startDate != null && request.endDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("transactionDate")
+                                            .gte(JsonData.of(Timestamp.valueOf(request.startDate))).lte(
+                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                            )
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .sort { t ->
+                        t.field { f -> f.field("id").order(SortOrder.Desc) }
+                    }
+            },
+            classType
+        )
+        return response
     }
 }

@@ -7,7 +7,9 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DeletePaymentRequest
+import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.PaymentResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
@@ -48,5 +50,10 @@ class OnAccountController {
     @Post("/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse {
         return Response<BulkPaymentResponse>().ok(onAccountService.createBulkPayments(request))
+    }
+
+    @Get("/ledger-summary{?request*}")
+    suspend fun getOrganizationAccountUtilization(request: LedgerSummaryRequest): List<PaymentResponse?>{
+        return Response<List<PaymentResponse?>>().ok(onAccountService.getOrganizationAccountUtlization(request))
     }
 }
