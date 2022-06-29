@@ -300,9 +300,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
 
         var recordsInserted = 0
-        for(payment in bulkPayment){
+        for (payment in bulkPayment) {
             var onAccountApiCommonResponse = createPaymentEntry(payment)
-            if(onAccountApiCommonResponse.isSuccess)
+            if (onAccountApiCommonResponse.isSuccess)
                 recordsInserted++
         }
 
