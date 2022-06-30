@@ -210,10 +210,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
         if (proformaDate != null) {
             emitDashboardData(accUtilizationRequest, proformaDate)
-            emitDashboardData(accUtilizationRequest)
-        } else {
-            emitDashboardData(accUtilizationRequest)
         }
+        emitDashboardData(accUtilizationRequest)
         if (accUtilizationRequest.accMode == AccMode.AR) {
             emitOutstandingData(accUtilizationRequest)
         }
