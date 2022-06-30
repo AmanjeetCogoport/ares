@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
+import java.util.Date
 import javax.transaction.Transactional
 
 @Singleton
@@ -166,6 +167,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      */
     override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
         var accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.oldDocumentNo, updateInvoiceStatusRequest.accType.name)
+        var proformaDate: Date? = null
+        val proformaQuarter = accountUtilization?.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
+        val invoiceQuarter = updateInvoiceStatusRequest.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
+
+        if (proformaQuarter != invoiceQuarter) {
+            proformaDate = accountUtilization.transactionDate
+        }
 
         if (accountUtilization == null) {
             throw AresException(AresError.ERR_1005, updateInvoiceStatusRequest.oldDocumentNo.toString())
@@ -189,7 +197,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
-            emitDashboardAndOutstandingEvent(accUtilizationRequest)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest, proformaDate)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -199,8 +207,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
-        emitDashboardData(accUtilizationRequest)
+    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+        if (proformaDate != null) {
+            emitDashboardData(accUtilizationRequest, proformaDate)
+            emitDashboardData(accUtilizationRequest)
+        } else {
+            emitDashboardData(accUtilizationRequest)
+        }
         if (accUtilizationRequest.accMode == AccMode.AR) {
             emitOutstandingData(accUtilizationRequest)
         }
@@ -226,15 +239,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest) {
+    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+        val date: Date = proformaDate ?: accUtilizationRequest.transactionDate!!
         aresKafkaEmitter.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.transactionDate),
-                    quarter = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
+                    quarter = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
                         .get(IsoFields.QUARTER_OF_YEAR),
-                    year = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault())
+                    year = date.toInstant().atZone(ZoneId.systemDefault())
                         .toLocalDate().year,
                     accMode = accUtilizationRequest.accMode
                 )
