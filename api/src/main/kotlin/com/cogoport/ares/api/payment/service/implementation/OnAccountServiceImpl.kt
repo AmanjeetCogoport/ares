@@ -95,6 +95,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*PRIVATE FUNCTION TO SET AMOUNTS*/
         setPaymentAmounts(receivableRequest)
 
+        /*PRIVATE FUNCTION TO SET ORGANIZATION ID */
         setOrganizations(receivableRequest)
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
