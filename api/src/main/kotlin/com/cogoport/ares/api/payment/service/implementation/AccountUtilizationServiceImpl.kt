@@ -186,9 +186,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
 
         accUtilRepository.update(accountUtilization)
-
+        var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
