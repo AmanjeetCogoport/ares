@@ -31,7 +31,7 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.model.payment.PaymentResponse
+import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
@@ -112,5 +112,5 @@ interface AresClient {
     suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 
     @Get("/payments/accounts/ledger-summary{?request*}")
-    suspend fun getOnAccountCollections(@Valid request: LedgerSummaryRequest): List<PaymentResponse?>
+    suspend fun getOnAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 }

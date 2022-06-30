@@ -249,6 +249,16 @@ class OpenSearchClient {
                                     }
                                 }
                             }
+                            if (request.startDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("transactionDate")
+                                            .lt(
+                                                JsonData.of(Timestamp.valueOf(request.startDate))
+                                            )
+                                    }
+                                }
+                            }
                             b
                         }
                     }
