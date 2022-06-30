@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.CogoBankRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.utils.logger
@@ -71,6 +72,9 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
 
+    @Inject
+    lateinit var cogoBankRepo: CogoBankRepository
+
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -96,7 +100,10 @@ open class OnAccountServiceImpl : OnAccountService {
         setPaymentAmounts(receivableRequest)
 
         /*PRIVATE FUNCTION TO SET ORGANIZATION ID */
-        setOrganizations(receivableRequest)
+        if (receivableRequest.organizationId != null)
+            setOrganizations(receivableRequest)
+        else if (receivableRequest.orgSerialId != null)
+            setOrganizationsBySerialId(receivableRequest)
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
@@ -300,14 +307,14 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
-
         var recordsInserted = 0
         for (payment in bulkPayment) {
+            setBankDetails(payment)
+
             var onAccountApiCommonResponse = createPaymentEntry(payment)
             if (onAccountApiCommonResponse.isSuccess)
                 recordsInserted++
         }
-
         return BulkPaymentResponse(recordsInserted = recordsInserted)
     }
 
@@ -344,12 +351,34 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
         val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
-
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
         }
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
+    }
+
+    private suspend fun setOrganizationsBySerialId(receivableRequest: Payment) {
+        val clientResponse = accountUtilizationRepository.getOrganizationDetailsBySerialNumber(receivableRequest.orgSerialId!!)
+
+        if (clientResponse == null) {
+            throw AresException(AresError.ERR_1202, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.orgSerialId
+        receivableRequest.organizationName = clientResponse.organizationName
+        receivableRequest.zone = clientResponse.zoneCode
+        receivableRequest.organizationId = clientResponse.organizationId
+    }
+
+    private suspend fun setBankDetails(payment: Payment) {
+
+        val bankDetails = cogoBankRepo.findByAccountNo(payment.bankAccountNumber!!)
+
+        if (bankDetails == null)
+            throw AresException(AresError.ERR_1206, "")
+
+        payment.bankName = bankDetails.bankName
+        payment.bankId = bankDetails.bankId
     }
 }
