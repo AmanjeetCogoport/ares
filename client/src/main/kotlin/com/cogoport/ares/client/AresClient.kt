@@ -112,5 +112,5 @@ interface AresClient {
     suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse>
 
     @Get("/payments/accounts/ledger-summary{?request*}")
-    suspend fun getOnAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
+    suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 }
