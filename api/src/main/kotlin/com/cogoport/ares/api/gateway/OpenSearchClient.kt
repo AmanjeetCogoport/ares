@@ -237,7 +237,7 @@ class OpenSearchClient {
                             b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
                             b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
                             if (settlementInvoiceRequest.orgId != null) {
-                                //match condition for orgId
+                                // match condition for orgId
                             }
                             if (settlementInvoiceRequest.startDate != null) {
                                 b.must { m ->
@@ -275,5 +275,55 @@ class OpenSearchClient {
             },
             Void::class.java
         )
+    }
+
+    fun getSettlementInvoices(request: SettlementInvoiceRequest): SearchResponse<AccountUtilizationResponse>? {
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        return Client.search(
+            {
+                s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            if (request.entityCode != null) {
+                                b.must { m ->
+                                    m.match { it.field("entityCode").query(FieldValue.of(request.entityCode.toString())) }
+                                }
+                            }
+                            if (request.orgId != null) {
+                                b.must { m ->
+                                    m.match { it.field("organizationId").query(FieldValue.of(request.orgId.toString())) }
+                                }
+                            }
+                            if (request.startDate != null) {
+                                b.must { m ->
+                                    m.range { it.field("transactionDate").gte(JsonData.of(Timestamp.valueOf(request.startDate))) }
+                                }
+                            }
+                            if (request.endDate != null) {
+                                b.must { m ->
+                                    m.range { it.field("transactionDate").lte(JsonData.of(Timestamp.valueOf(request.endDate))) }
+                                }
+                            }
+                            if (!request.query.isNullOrBlank()) {
+                                b.must { t ->
+                                    t.queryString { q ->
+                                        q.query("*" + escapeSlash(request.query!!) + "*")
+                                            .fields("documentValue.keyword")
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .size(request.pageLimit).from(offset)
+            },
+            AccountUtilizationResponse::class.java
+        )
+    }
+
+    private fun escapeSlash(query: String): String {
+        val test = query.replace("/", "\\/").uppercase()
+        return test
     }
 }

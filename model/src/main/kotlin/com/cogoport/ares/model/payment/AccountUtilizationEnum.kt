@@ -34,3 +34,11 @@ enum class AllCurrencyTypes {
 enum class PaymentInvoiceMappingType {
     TDS, INVOICE, BILL
 }
+
+enum class InvoiceStatus {
+    PAID, UNPAID, PARTIAL_PAID
+}
+
+enum class InvoiceType {
+    SALES_INVOICES, SALES_CREDIT_NOTE, SALES_DEBIT_NOTE, SALES_PAYMENT, PURCHASE_INVOICES, PURCHASE_CREDIT_NOTE, PURCHASE_DEBIT_NOTE, PURCHASE_PAYMENT
+}

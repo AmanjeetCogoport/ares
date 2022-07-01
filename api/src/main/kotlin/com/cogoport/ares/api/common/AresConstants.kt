@@ -42,4 +42,6 @@ object AresConstants {
     const val ACC_MODE = "AccMode"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
+
+    const val TWO_PERCENT = 0.02
 }
