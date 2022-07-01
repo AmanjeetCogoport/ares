@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.repository
 
-import com.cogoport.ares.api.payment.entity.AccOrganizationInfo
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
@@ -234,12 +233,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
-
-    @Query(
-        """ 
-            select organization_id ,org_serial_id ,organization_name ,zone_code  
-            from account_utilizations where org_serial_id =:serialId limit 1 
-    """
-    )
-    suspend fun getOrganizationDetailsBySerialNumber(serialId: Long): AccOrganizationInfo?
 }

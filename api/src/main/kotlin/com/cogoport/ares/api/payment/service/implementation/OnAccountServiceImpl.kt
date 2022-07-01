@@ -15,7 +15,6 @@ import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.api.payment.repository.CogoBankRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.utils.logger
@@ -33,6 +32,7 @@ import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentResponse
+import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -72,9 +72,6 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
 
-    @Inject
-    lateinit var cogoBankRepo: CogoBankRepository
-
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -100,10 +97,7 @@ open class OnAccountServiceImpl : OnAccountService {
         setPaymentAmounts(receivableRequest)
 
         /*PRIVATE FUNCTION TO SET ORGANIZATION ID */
-        if (receivableRequest.organizationId != null)
-            setOrganizations(receivableRequest)
-        else if (receivableRequest.orgSerialId != null)
-            setOrganizationsBySerialId(receivableRequest)
+        setOrganizations(receivableRequest)
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
 
@@ -350,7 +344,13 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
-        val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        var clientResponse: PlatformOrganizationResponse? = null
+
+        if (receivableRequest.organizationId != null)
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        else
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.orgSerialId!!)
+
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
         }
@@ -359,26 +359,19 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.zone = clientResponse.zone?.uppercase()
     }
 
-    private suspend fun setOrganizationsBySerialId(receivableRequest: Payment) {
-        val clientResponse = accountUtilizationRepository.getOrganizationDetailsBySerialNumber(receivableRequest.orgSerialId!!)
-
-        if (clientResponse == null) {
-            throw AresException(AresError.ERR_1202, "")
-        }
-        receivableRequest.orgSerialId = clientResponse.orgSerialId
-        receivableRequest.organizationName = clientResponse.organizationName
-        receivableRequest.zone = clientResponse.zoneCode
-        receivableRequest.organizationId = clientResponse.organizationId
-    }
-
     private suspend fun setBankDetails(payment: Payment) {
-
-        val bankDetails = cogoBankRepo.findByAccountNo(payment.bankAccountNumber!!)
-
+        val bankDetails = cogoClient.getCogoBank(payment.entityType!!)
         if (bankDetails == null)
             throw AresException(AresError.ERR_1206, "")
 
-        payment.bankName = bankDetails.bankName
-        payment.bankId = bankDetails.bankId
+        for (bankList in bankDetails.bankList) {
+            for (bankInfo in bankList.bankDetails!!) {
+                if (payment.bankAccountNumber.equals(bankInfo.accountNumber, ignoreCase = true)) {
+                    payment.bankName = bankInfo.beneficiaryName
+                    payment.bankId = bankInfo.id
+                    return
+                }
+            }
+        }
     }
 }
