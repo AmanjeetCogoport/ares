@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.payment.controller
+package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.payment.service.interfaces.SettlementService

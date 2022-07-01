@@ -1,7 +1,7 @@
-package com.cogoport.ares.api.payment.service.implementation
+package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.models.ResponseList
-import com.cogoport.ares.api.payment.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 
