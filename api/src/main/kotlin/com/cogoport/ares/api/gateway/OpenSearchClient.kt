@@ -249,7 +249,7 @@ class OpenSearchClient {
                                     }
                                 }
                             }
-                            else if (request.startDate != null) {
+                            if (request.startDate != null && !request.startEndDateRequired) {
                                 b.must { m ->
                                     m.range { r ->
                                         r.field("transactionDate")
