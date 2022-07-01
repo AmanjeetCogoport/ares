@@ -24,6 +24,8 @@ object AresModelConstants {
     const val MONTH = "month"
     const val COUNT = "count"
 
+    const val ENTITY_CODE = "EntityCode"
+
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000
     const val TDS_AR_ACCOUNT_CODE = 240000
