@@ -387,8 +387,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?> {
         val data = OpenSearchClient().onAccountUtilizationSearch(request, AccountUtilizationResponse::class.java)!!
-        val payments = data.hits().hits().map { it.source() }
-        val total = data.hits().total().value().toInt()
-        return payments
+        return data.hits().hits().map { it.source() }
     }
 }
