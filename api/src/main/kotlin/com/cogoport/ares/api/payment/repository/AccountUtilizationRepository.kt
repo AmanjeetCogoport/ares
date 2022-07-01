@@ -134,7 +134,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             with x as (
-                select extract(quarter from generate_series(CURRENT_DATE - '11 month'::interval, CURRENT_DATE, '3 month')) as quarter
+                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
             ),
             y as (
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
