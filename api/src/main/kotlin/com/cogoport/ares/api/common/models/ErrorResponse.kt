@@ -1,4 +1,4 @@
-package com.cogoport.ares.common.models
+package com.cogoport.ares.api.common.models
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.http.HttpStatus
@@ -12,6 +12,6 @@ data class ErrorResponse(
     var errorMessage: String? = "",
 
     @JsonProperty("httpStatus")
-    var httpStatus: HttpStatus?
+    var httpStatus: HttpStatus?,
 
 )
