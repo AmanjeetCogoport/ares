@@ -32,6 +32,7 @@ import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentResponse
+import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -300,14 +301,14 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
-
         var recordsInserted = 0
         for (payment in bulkPayment) {
+            setBankDetails(payment)
+
             var onAccountApiCommonResponse = createPaymentEntry(payment)
             if (onAccountApiCommonResponse.isSuccess)
                 recordsInserted++
         }
-
         return BulkPaymentResponse(recordsInserted = recordsInserted)
     }
 
@@ -343,7 +344,12 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
-        val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        var clientResponse: PlatformOrganizationResponse? = null
+
+        if (receivableRequest.organizationId != null)
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        else
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.orgSerialId!!)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
@@ -351,5 +357,21 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
+    }
+
+    private suspend fun setBankDetails(payment: Payment) {
+        val bankDetails = cogoClient.getCogoBank(payment.entityType!!)
+        if (bankDetails == null)
+            throw AresException(AresError.ERR_1206, "")
+
+        for (bankList in bankDetails.bankList) {
+            for (bankInfo in bankList.bankDetails!!) {
+                if (payment.bankAccountNumber.equals(bankInfo.accountNumber, ignoreCase = true)) {
+                    payment.bankName = bankInfo.beneficiaryName
+                    payment.bankId = bankInfo.id
+                    return
+                }
+            }
+        }
     }
 }

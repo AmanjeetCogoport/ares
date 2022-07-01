@@ -18,7 +18,8 @@ enum class AresError(
     ERR_1007("ERR_1007", "Record already deleted", HttpStatus.BAD_REQUEST),
     ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST),
     ERR_1204("ERR_1204", "Document with final status cannot be modified/deleted : ", HttpStatus.FORBIDDEN),
-    ERR_1205("ERR_1205", "No sign found for this account type", HttpStatus.BAD_REQUEST);
+    ERR_1205("ERR_1205", "No sign found for this account type", HttpStatus.BAD_REQUEST),
+    ERR_1206("ERR_1206", "Bank information not found", HttpStatus.NOT_FOUND);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

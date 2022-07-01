@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
-import java.sql.Timestamp
+import java.util.UUID
 
 @Introspected
 @ReflectiveAccess
@@ -17,7 +17,7 @@ import java.sql.Timestamp
 @JsonInclude
 data class BankDetails(
     @JsonProperty("id")
-    var id: String? = null,
+    var id: UUID? = null,
     @JsonProperty("partner_id")
     var partnerId: String? = null,
     @JsonProperty("account_number")
@@ -39,9 +39,9 @@ data class BankDetails(
     @JsonProperty("can_pay")
     var canPay: Boolean? = null,
     @JsonProperty("created_at")
-    var createdAt: Timestamp? = null,
+    var createdAt: Any? = null,
     @JsonProperty("updated_at")
-    var updatedAt: Timestamp? = null,
+    var updatedAt: Any? = null,
     @JsonProperty("currency")
     var currency: String? = null
 )
