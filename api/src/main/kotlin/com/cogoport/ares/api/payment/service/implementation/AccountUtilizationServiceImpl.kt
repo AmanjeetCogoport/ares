@@ -25,13 +25,13 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.apache.kafka.common.KafkaException
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
+import java.util.Date
 import javax.transaction.Transactional
 
 @Singleton
@@ -78,15 +78,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
             }
             val accUtilRes = accUtilRepository.save(acUtilization)
-
-            try {
-                emitDashboardAndOutstandingEvent(accUtilizationRequest)
-                Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            } catch (k: KafkaException) {
-                logger().error(k.stackTraceToString())
-            } catch (e: Exception) {
-                logger().error(e.stackTraceToString())
-            }
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             responseList.add(CreateInvoiceResponse(accUtilRes.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
         return responseList
@@ -101,7 +93,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var accUtilizationList = mutableListOf<AccUtilizationRequest>()
         accUtilizationList.add(accUtilizationRequest)
         val listResponse = add(accUtilizationList)
-
+        try {
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
         return listResponse[0]
     }
 
@@ -122,12 +118,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
 
+            Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
             var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-
-            emitDashboardAndOutstandingEvent(accUtilizationRequest)
-
             try {
-                Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
+                emitDashboardAndOutstandingEvent(accUtilizationRequest)
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
             }
@@ -157,13 +151,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountCurr = updateInvoiceRequest.currAmount
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-
         accUtilRepository.update(accountUtilization)
-
+        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-        emitDashboardAndOutstandingEvent(accUtilizationRequest)
         try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -175,6 +167,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      */
     override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
         var accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.oldDocumentNo, updateInvoiceStatusRequest.accType.name)
+        var proformaDate: Date? = null
+        val proformaQuarter = accountUtilization?.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
+        val invoiceQuarter = updateInvoiceStatusRequest.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
+
+        if (proformaQuarter != invoiceQuarter) {
+            proformaDate = accountUtilization.transactionDate
+        }
 
         if (accountUtilization == null) {
             throw AresException(AresError.ERR_1005, updateInvoiceStatusRequest.oldDocumentNo.toString())
@@ -195,9 +194,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
 
         accUtilRepository.update(accountUtilization)
-
+        var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+            emitDashboardAndOutstandingEvent(accUtilizationRequest, proformaDate)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -207,7 +207,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
+    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+        if (proformaDate != null) {
+            emitDashboardData(accUtilizationRequest, proformaDate)
+        }
         emitDashboardData(accUtilizationRequest)
         if (accUtilizationRequest.accMode == AccMode.AR) {
             emitOutstandingData(accUtilizationRequest)
@@ -234,15 +237,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest) {
+    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+        val date: Date = proformaDate ?: accUtilizationRequest.transactionDate!!
         aresKafkaEmitter.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUtilizationRequest.transactionDate),
-                    quarter = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
+                    quarter = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
                         .get(IsoFields.QUARTER_OF_YEAR),
-                    year = accUtilizationRequest.transactionDate!!.toInstant().atZone(ZoneId.systemDefault())
+                    year = date.toInstant().atZone(ZoneId.systemDefault())
                         .toLocalDate().year,
                     accMode = accUtilizationRequest.accMode
                 )

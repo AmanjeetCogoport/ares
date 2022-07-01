@@ -34,6 +34,7 @@ import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentResponse
+import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -97,6 +98,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*PRIVATE FUNCTION TO SET AMOUNTS*/
         setPaymentAmounts(receivableRequest)
 
+        /*PRIVATE FUNCTION TO SET ORGANIZATION ID */
         setOrganizations(receivableRequest)
 
         var payment = paymentConverter.convertToEntity(receivableRequest)
@@ -159,10 +161,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(
-                        IsoFields.QUARTER_OF_YEAR
-                    ),
+                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
                     year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                    accMode = accUtilizationRequest.accMode
                 )
             )
         )
@@ -244,6 +245,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var paymentDetails = paymentRepository.update(paymentEntity)
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
+        openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
@@ -301,46 +303,15 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse {
-
-        var paymentEntityList = arrayListOf<com.cogoport.ares.api.payment.entity.Payment>()
+        var recordsInserted = 0
         for (payment in bulkPayment) {
-            payment.accMode = AccMode.AR
-            payment.paymentCode = PaymentCode.REC
-            payment.zone = null
-            payment.serviceType = ServiceType.NA
+            setBankDetails(payment)
 
-            // TODO: Remove below commented code after mohit confirmation
-//            val orgDetails = OpenSearchClient().orgDetailSearch(payment.orgSerialId!!)
-//            val orgId = (orgDetails?.hits()?.hits()?.map { it.source() }?.get(0) as Map<String, Any>).map { it.value }.get(0)
-//            payment.organizationId = UUID.fromString(orgId.toString())
-            paymentEntityList.add(paymentConverter.convertToEntity(payment))
-            payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
-            if (payment.accMode == AccMode.AP) {
-                payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
-            }
-
-            var savePayment = paymentRepository.save(paymentConverter.convertToEntity(payment))
-            var accUtilizationModel: AccUtilizationRequest =
-                accUtilizationToPaymentConverter.convertEntityToModel(savePayment)
-
-            var paymentModel = paymentConverter.convertToModel(savePayment)
-            paymentModel.paymentDate = paymentModel.transactionDate?.toLocalDate().toString()
-            Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savePayment.id.toString(), paymentModel)
-            accUtilizationModel.zoneCode = payment.zone
-            accUtilizationModel.serviceType = payment.serviceType
-            accUtilizationModel.accType = AccountType.PAY
-            accUtilizationModel.currencyPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerPayment = 0.toBigDecimal()
-            accUtilizationModel.ledgerAmount = payment.ledAmount
-            accUtilizationModel.ledCurrency = payment.ledCurrency!!
-            accUtilizationModel.docStatus = DocumentStatus.FINAL
-            var accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
-            accUtilEntity.accCode = payment.accCode!!
-            var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            var onAccountApiCommonResponse = createPaymentEntry(payment)
+            if (onAccountApiCommonResponse.isSuccess)
+                recordsInserted++
         }
-
-        return BulkPaymentResponse(recordsInserted = bulkPayment.size)
+        return BulkPaymentResponse(recordsInserted = recordsInserted)
     }
 
     private fun setPaymentAmounts(payment: Payment) {
@@ -375,7 +346,12 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
-        val clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        var clientResponse: PlatformOrganizationResponse? = null
+
+        if (receivableRequest.organizationId != null)
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
+        else
+            clientResponse = cogoClient.getCogoOrganization(receivableRequest.orgSerialId!!)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
@@ -388,5 +364,21 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?> {
         val data = OpenSearchClient().onAccountUtilizationSearch(request, AccountUtilizationResponse::class.java)!!
         return data.hits().hits().map { it.source() }
+    }
+
+    private suspend fun setBankDetails(payment: Payment) {
+        val bankDetails = cogoClient.getCogoBank(payment.entityType!!)
+        if (bankDetails == null)
+            throw AresException(AresError.ERR_1206, "")
+
+        for (bankList in bankDetails.bankList) {
+            for (bankInfo in bankList.bankDetails!!) {
+                if (payment.bankAccountNumber.equals(bankInfo.accountNumber, ignoreCase = true)) {
+                    payment.bankName = bankInfo.beneficiaryName
+                    payment.bankId = bankInfo.id
+                    return
+                }
+            }
+        }
     }
 }
