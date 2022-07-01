@@ -31,8 +31,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                     ErrorResponse(
                         it.code,
                         it.getMessage(exception.context),
-                        it.httpStatus,
-                        exception
+                        it.httpStatus
                     )
                 }!!
             }
@@ -40,24 +39,21 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                 errorMessage = ErrorResponse(
                     AresError.ERR_1000.code,
                     exception.message,
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    exception
+                    HttpStatus.SERVICE_UNAVAILABLE
                 )
             }
             is ConstraintViolationException, is ValidationException -> {
                 errorMessage = ErrorResponse(
                     AresError.ERR_1001.code,
                     exception.message,
-                    HttpStatus.BAD_REQUEST,
-                    exception
+                    HttpStatus.BAD_REQUEST
                 )
             }
             else -> {
                 errorMessage = ErrorResponse(
                     AresError.ERR_1001.code,
                     exception?.message,
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    exception
+                    HttpStatus.INTERNAL_SERVER_ERROR
                 )
             }
         }
@@ -99,8 +95,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             ErrorResponse(
                 AresError.ERR_1008.code,
                 AresError.ERR_1008.message,
-                HttpStatus.NOT_FOUND,
-                null
+                HttpStatus.NOT_FOUND
             )
         )
     }
