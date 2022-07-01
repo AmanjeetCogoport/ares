@@ -20,4 +20,10 @@ interface CogoClient {
     @Header(name = "authorization", value = "Bearer: 7cff5415-6007-4bab-9f3e-e4a08c11e915")
     @Header(name = "authorizationscope", value = "partner")
     suspend fun getCogoOrganization(id: String): PlatformOrganizationResponse
+
+    @Get("/get_organization_zone_via_org_id?organization_serial_id={serialId}")
+    @Header(name = "authorizationparameters", value = "business_finance-account_receivables:allowed")
+    @Header(name = "authorization", value = "Bearer: 7cff5415-6007-4bab-9f3e-e4a08c11e915")
+    @Header(name = "authorizationscope", value = "partner")
+    suspend fun getCogoOrganization(serialId: Long): PlatformOrganizationResponse
 }
