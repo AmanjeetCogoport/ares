@@ -5,6 +5,7 @@ import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
@@ -199,6 +200,56 @@ class OpenSearchClient {
                                 b.must { m ->
                                     m.range { r ->
                                         r.field("dueDate").lt(JsonData.of(endDate))
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .size(0)
+                    .aggregations("currency") { a ->
+                        a.terms { t ->
+                            t.field("currency.keyword")
+                        }
+                            .aggregations("currAmount") { a ->
+                                a.sum { s ->
+                                    s.script(Script.of { i -> i.inline { it.source("doc['signFlag'].value * (doc['amountCurr'].value - doc['payCurr'].value)") } })
+                                }
+                            }
+                    }
+                    .aggregations("ledgerAmount") { a ->
+                        a.sum { s ->
+                            s.script(Script.of { i -> i.inline { it.source("doc['signFlag'].value * (doc['amountLoc'].value - doc['payLoc'].value)") } })
+                        }
+                    }
+            },
+            Void::class.java
+        )
+    }
+
+    fun getInvoices(settlementInvoiceRequest: SettlementInvoiceRequest): SearchResponse<Void>? {
+        return Client.search(
+            { s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { m -> m.match { f -> f.field("accMode").query(FieldValue.of("AR")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("CANCELLED")) } }
+                            b.mustNot { it.match { it.field("documentStatus").query(FieldValue.of("DELETED")) } }
+                            if (settlementInvoiceRequest.orgId != null) {
+                                //match condition for orgId
+                            }
+                            if (settlementInvoiceRequest.startDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("dueDate").gte(JsonData.of(settlementInvoiceRequest.startDate))
+                                    }
+                                }
+                            }
+                            if (settlementInvoiceRequest.endDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field("dueDate").lt(JsonData.of(settlementInvoiceRequest.endDate))
                                     }
                                 }
                             }
