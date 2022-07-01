@@ -93,7 +93,6 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             HttpResponse.serverError(errorMessage)
     }
 
-
     @Error(status = HttpStatus.NOT_FOUND, global = true)
     fun notFound(request: HttpRequest<*>?): HttpResponse<ErrorResponse> {
         return HttpResponse.notFound(
@@ -105,5 +104,4 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             )
         )
     }
-
 }
