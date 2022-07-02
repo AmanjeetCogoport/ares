@@ -243,18 +243,8 @@ class OpenSearchClient {
                                 b.must { m ->
                                     m.range { r ->
                                         r.field("transactionDate")
-                                            .gte(JsonData.of(Timestamp.valueOf(request.startDate))).lte(
+                                            .lte(
                                                 JsonData.of(Timestamp.valueOf(request.endDate))
-                                            )
-                                    }
-                                }
-                            }
-                            if (request.startDate != null && !request.startEndDateRequired) {
-                                b.must { m ->
-                                    m.range { r ->
-                                        r.field("transactionDate")
-                                            .lt(
-                                                JsonData.of(Timestamp.valueOf(request.startDate))
                                             )
                                     }
                                 }

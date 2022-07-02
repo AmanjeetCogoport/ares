@@ -6,6 +6,5 @@ import io.micronaut.core.annotation.Introspected
 data class LedgerSummaryRequest(
     var startDate: String?,
     var endDate: String?,
-    var orgId: String,
-    var startEndDateRequired: Boolean
+    var orgId: String
 )
