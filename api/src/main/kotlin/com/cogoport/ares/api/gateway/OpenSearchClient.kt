@@ -234,15 +234,15 @@ class OpenSearchClient {
                     .query { q ->
                         q.bool { b ->
                             b.must { m ->
-                                m.match { m -> m.field("accMode").query(FieldValue.of("AR")) }
+                                m.match { m -> m.field(AresConstants.ACCMODE).query(FieldValue.of(AresConstants.MODE)) }
                             }
                             b.must { m ->
-                                m.match { m -> m.field("organizationId").query(FieldValue.of(request.orgId)) }
+                                m.match { m -> m.field(AresConstants.ORGANIZATION_ID).query(FieldValue.of(request.orgId)) }
                             }
                             if (request.startDate != null && request.endDate != null) {
                                 b.must { m ->
                                     m.range { r ->
-                                        r.field("transactionDate")
+                                        r.field(AresConstants.TRANSACTION_DATE)
                                             .lte(
                                                 JsonData.of(Timestamp.valueOf(request.endDate))
                                             )
