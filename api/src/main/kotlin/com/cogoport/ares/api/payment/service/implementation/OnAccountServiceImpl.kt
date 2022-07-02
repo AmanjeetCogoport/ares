@@ -357,7 +357,7 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
-        receivableRequest.organizationId=clientResponse.organizationId
+        receivableRequest.organizationId = clientResponse.organizationId
     }
 
     private suspend fun setBankDetails(payment: Payment) {

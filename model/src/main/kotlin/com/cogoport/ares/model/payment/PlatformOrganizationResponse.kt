@@ -10,7 +10,7 @@ import java.util.UUID
 data class PlatformOrganizationResponse(
 
     @JsonProperty("id")
-    val organizationId:UUID,
+    val organizationId: UUID,
 
     @JsonProperty("organization_name")
     val organizationName: String?,
