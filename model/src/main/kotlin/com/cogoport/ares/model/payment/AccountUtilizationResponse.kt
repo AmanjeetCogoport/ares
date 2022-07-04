@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -63,11 +64,15 @@ data class AccountUtilizationResponse(
     @JsonProperty("payLoc")
     var payLoc: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("dueDate")
+    @field:JsonFormat(pattern = "dd-MMM-yyyy")
     var dueDate: Date? = null,
     @JsonProperty("transactionDate")
+    @field:JsonFormat(pattern = "dd-MMM-yyyy")
     var transactionDate: Date? = null,
     @JsonProperty("createdAt")
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     @JsonProperty("updatedAt")
+    @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
 )
