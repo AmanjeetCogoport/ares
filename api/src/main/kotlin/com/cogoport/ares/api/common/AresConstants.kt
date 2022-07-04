@@ -43,5 +43,10 @@ object AresConstants {
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 
+    const val ACCMODE = "accMode"
+    const val MODE = "AR"
+    const val ORGANIZATION_ID = "organizationId"
+    const val TRANSACTION_DATE = "transactionDate"
+
     const val TWO_PERCENT = 0.02
 }

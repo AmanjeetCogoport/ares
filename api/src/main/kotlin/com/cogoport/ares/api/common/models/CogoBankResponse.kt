@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
 
@@ -14,5 +15,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreType
 data class CogoBankResponse(
-    var list: List<CogoBanksDetails>? = mutableListOf()
+    @JsonProperty("list")
+    var bankList: List<CogoBanksDetails>
 )

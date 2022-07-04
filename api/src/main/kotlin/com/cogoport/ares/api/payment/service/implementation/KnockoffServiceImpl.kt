@@ -92,7 +92,9 @@ open class KnockoffServiceImpl : KnockoffService {
         }
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
-        if (accountUtilization.amountLoc - ledTotalAmtPaid == BigDecimal.ZERO)
+        val leftAmount = accountUtilization.amountLoc - ledTotalAmtPaid
+
+        if (leftAmount.compareTo(BigDecimal.ZERO) == 0)
             paymentStatus = KnockOffStatus.FULL.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)

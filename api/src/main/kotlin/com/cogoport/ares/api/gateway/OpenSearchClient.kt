@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.AccountCollectionRequest
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 import com.cogoport.brahma.opensearch.Client
@@ -226,6 +227,41 @@ class OpenSearchClient {
             },
             Void::class.java
         )
+    }
+
+    fun <T : Any> onAccountUtilizationSearch(request: LedgerSummaryRequest, classType: Class<T>): SearchResponse<T>? {
+        val response = Client.search(
+            { s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { m ->
+                                m.match { m -> m.field(AresConstants.ACCMODE).query(FieldValue.of(AresConstants.MODE)) }
+                            }
+                            b.must { m ->
+                                m.match { m -> m.field(AresConstants.ORGANIZATION_ID).query(FieldValue.of(request.orgId)) }
+                            }
+                            if (request.startDate != null && request.endDate != null) {
+                                b.must { m ->
+                                    m.range { r ->
+                                        r.field(AresConstants.TRANSACTION_DATE)
+                                            .lte(
+                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                            )
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .size(1000)
+                    .sort { t ->
+                        t.field { f -> f.field("id").order(SortOrder.Asc) }
+                    }
+            },
+            classType
+        )
+        return response
     }
 
     fun getInvoices(settlementInvoiceRequest: SettlementInvoiceRequest): SearchResponse<Void>? {

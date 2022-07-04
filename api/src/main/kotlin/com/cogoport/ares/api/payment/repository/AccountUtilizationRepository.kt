@@ -134,7 +134,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             with x as (
-                select extract(quarter from generate_series(CURRENT_DATE - '11 month'::interval, CURRENT_DATE, '3 month')) as quarter
+                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
             ),
             y as (
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
@@ -233,14 +233,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
-
-   /* @Query(
-        """
-           select id,document_no,document_value , zone_code,service_type,document_status,entity_code ,
-            category,org_serial_id,sage_organization_id,organization_id,organization_name,acc_code,acc_type,acc_mode,
-            sign_flag,currency,led_currency,amount_curr,amount_loc,pay_curr,pay_loc,due_date,transaction_date,created_at,
-            updated_at  from account_utilizations where document_no = :paymentNum limit 1
-    """
-    )*/
-    // suspend fun findByDocumentNo(documentNo: Long,): AccountUtilization
 }
