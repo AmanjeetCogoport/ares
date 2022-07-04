@@ -244,7 +244,7 @@ class OpenSearchClient {
                                     m.range { r ->
                                         r.field(AresConstants.TRANSACTION_DATE)
                                             .lte(
-                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                                JsonData.of(Timestamp.valueOf(request.endDate.toString()))
                                             )
                                     }
                                 }
