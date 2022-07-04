@@ -253,7 +253,7 @@ class OpenSearchClient {
                         }
                     }
                     .sort { t ->
-                        t.field { f -> f.field("id").order(SortOrder.Desc) }
+                        t.field { f -> f.field("id").order(SortOrder.Asc) }
                     }
             },
             classType
