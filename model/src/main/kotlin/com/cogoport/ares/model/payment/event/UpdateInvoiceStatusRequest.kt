@@ -9,6 +9,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import java.util.Date
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.UUID
 
 @Introspected
 @ReflectiveAccess
@@ -22,5 +23,7 @@ data class UpdateInvoiceStatusRequest(
     var docStatus: DocumentStatus?,
     var updatedAt: Timestamp = Timestamp.from(Instant.now()),
     var transactionDate: Date?,
-    var dueDate: Date?
-)
+    var dueDate: Date?,
+    var performedBy: UUID? = null,
+    var performedByUserType: String? = null
+    )

@@ -13,6 +13,7 @@ import io.micronaut.configuration.kafka.annotation.OffsetStrategy
 import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
 
 @KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "5000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD)
 class AresKafkaListener {
@@ -45,8 +46,8 @@ class AresKafkaListener {
 
     /*For deleting the invoices*/
     @Topic("delete-account-utilization")
-    fun listenDeleteAccountUtilization(data: MutableList<Pair<Long, String>>) = runBlocking {
-        accountUtilService.delete(data)
+    fun listenDeleteAccountUtilization(data: MutableList<Pair<Long, String>>, performedBy: UUID? = null, performedByUserType: String? = null) = runBlocking {
+        accountUtilService.delete(data, performedBy, performedByUserType)
     }
 
     @Topic("receivables-dashboard-data")

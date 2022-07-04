@@ -13,9 +13,14 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
+import com.cogoport.ares.api.payment.entity.Audit
+import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
+import com.cogoport.ares.api.payment.model.AuditPaymentRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AuditRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
@@ -28,6 +33,7 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.BulkPaymentResponse
+import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
@@ -74,6 +80,9 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
 
+    @Inject
+    lateinit var auditService: AuditService
+
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -112,7 +121,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
-
+        auditService.auditPayment(AuditPaymentRequest( payment, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
         receivableRequest.id = savedPayment.id
         receivableRequest.isPosted = false
         receivableRequest.isDeleted = false
@@ -137,6 +146,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         /*SAVE ACCOUNT UTILIZATION IN DATABASE AS ON ACCOUNT PAYMENT*/
         var accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accUtilEntity, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
 
         /*SAVE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
@@ -243,13 +253,14 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
         var paymentDetails = paymentRepository.update(paymentEntity)
+        auditService.auditPayment(AuditPaymentRequest(paymentEntity, "update", receivableRequest.createdBy, receivableRequest.performedByUserType))
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
         openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
-
+        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilizationEntity, "update", receivableRequest.createdBy, receivableRequest.performedByUserType))
         /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
 
@@ -265,9 +276,9 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    override suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse {
+    override suspend fun deletePaymentEntry(deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
 
-        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        var payment: com.cogoport.ares.api.payment.entity.Payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
 
         if (payment == null)
             throw AresException(AresError.ERR_1002, "")
@@ -277,6 +288,7 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.isDeleted = true
         /*MARK THE PAYMENT AS DELETED IN DATABASE*/
         var paymentResponse = paymentRepository.update(payment)
+        auditService.auditPayment(AuditPaymentRequest(payment, "delete", deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
 
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
@@ -286,7 +298,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
         var accUtilRes = accountUtilizationRepository.update(accountUtilization)
-
+        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "delete", deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 
@@ -298,7 +310,7 @@ open class OnAccountServiceImpl : OnAccountService {
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
-        return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
+        return OnAccountApiCommonResponse(id = deletePaymentRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])

@@ -1,4 +1,4 @@
-CREATE TABLE account_utilization_audits
+CREATE TABLE audits
 (
     id          BIGSERIAL PRIMARY KEY,
     object_type VARCHAR(20) NOT NULL,
@@ -7,6 +7,5 @@ CREATE TABLE account_utilization_audits
     data        JSONB,
     performed_by  UUID, -- Can be null in case of system triggered actions
     performed_by_user_type VARCHAR(50),
-    created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

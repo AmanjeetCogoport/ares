@@ -35,5 +35,7 @@ data class AccUtilizationRequest(
     var serviceType: ServiceType?,
     var category: String?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-    var updatedAt: Timestamp? = Timestamp.from(Instant.now())
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var performedBy: UUID? = null,
+    var performedByType: String? = null
 )

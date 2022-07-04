@@ -8,9 +8,11 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
+import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -32,6 +34,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
 import java.util.Date
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -48,6 +51,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var cogoClient: CogoClient
+
+    @Inject
+    lateinit var auditService: AuditService
 
     /**
      * @param accUtilizationRequestList
@@ -78,6 +84,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
             }
             val accUtilRes = accUtilRepository.save(acUtilization)
+            auditService.auditAccountUtilization(AuditAccountUtilizationRequest(acUtilization, "create", accUtilizationRequest.performedBy.toString(), accUtilizationRequest.performedByType))
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             responseList.add(CreateInvoiceResponse(accUtilRes.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
         }
@@ -101,7 +108,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         return listResponse[0]
     }
 
-    override suspend fun delete(data: MutableList<Pair<Long, String>>): Boolean {
+    override suspend fun delete(data: MutableList<Pair<Long, String>>, performedBy: UUID?, performedByUserType: String?): Boolean {
         var result = false
         for (obj in data) {
 
@@ -117,7 +124,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 throw AresException(AresError.ERR_1204, obj.first.toString())
             }
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
-
+            auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "delete", performedBy.toString(), performedByUserType))
             Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
             var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
             try {
@@ -152,6 +159,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
         accUtilRepository.update(accountUtilization)
+        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "update", updateInvoiceRequest.performedBy.toString(), updateInvoiceRequest.performedByType))
         Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
@@ -194,6 +202,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
 
         accUtilRepository.update(accountUtilization)
+        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "update", updateInvoiceStatusRequest.performedBy.toString(), updateInvoiceStatusRequest.performedByUserType))
         var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
