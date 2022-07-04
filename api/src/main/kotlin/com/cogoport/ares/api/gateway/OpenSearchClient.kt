@@ -8,6 +8,7 @@ import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.FieldSort
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
@@ -306,17 +307,22 @@ class OpenSearchClient {
                                 }
                             }
                             if (!request.query.isNullOrBlank()) {
-                                b.must { t ->
-                                    t.queryString { q ->
+                                b.must { m ->
+                                    m.queryString { q ->
                                         q.query("*" + escapeSlash(request.query!!) + "*")
                                             .fields("documentValue.keyword")
                                     }
                                 }
                             }
+                            if (request.accMode != null) {
+                                b.must { m ->
+                                    m.match { it.field("accMode").query(FieldValue.of(request.accMode.toString())) }
+                                }
+                            }
                             b
                         }
                     }
-                    .size(request.pageLimit).from(offset)
+                    .size(request.pageLimit).from(offset).sort { s -> s.field(FieldSort.of { it.field("id").order(SortOrder.Desc) }) }
             },
             AccountUtilizationResponse::class.java
         )

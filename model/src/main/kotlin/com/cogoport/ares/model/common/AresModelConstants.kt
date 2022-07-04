@@ -23,6 +23,7 @@ object AresModelConstants {
     const val QUERY = "query"
     const val MONTH = "month"
     const val COUNT = "count"
+    const val ACC_MODE = "accMode"
 
     const val ENTITY_CODE = "EntityCode"
 

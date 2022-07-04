@@ -17,5 +17,6 @@ data class SettlementInvoiceRequest(
     @QueryValue(AresModelConstants.END_DATE) val endDate: String? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
-    @QueryValue(AresModelConstants.QUERY) val query: String? = null
+    @QueryValue(AresModelConstants.QUERY) val query: String? = null,
+    @QueryValue(AresModelConstants.ACC_MODE) val accMode: AccMode? = null
 )

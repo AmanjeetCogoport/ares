@@ -38,11 +38,13 @@ class SettlementServiceImpl : SettlementService {
             val afterTdsAmount = response.amountCurr!! - tds
             val settledAmount = response.payCurr!!
             val balanceAmount = afterTdsAmount - settledAmount
-            val status = getInvoiceStatus(afterTdsAmount, balanceAmount)
+            val status = getInvoiceStatus(afterTdsAmount, balanceAmount) // should come from index
             InvoiceListResponse(
+                id = response.id,
                 documentNo = response.documentValue,
                 documentType = getInvoiceType(response.accType!!),
                 invoiceDate = response.transactionDate,
+                dueDate = response.dueDate,
                 invoiceAmount = response.amountCurr,
                 taxableAmount = response.amountCurr,
                 tds = tds,
@@ -54,6 +56,7 @@ class SettlementServiceImpl : SettlementService {
         }
         return data
         TODO("add taxable amount to account utilization index from plutus")
+        TODO("add status column in account utilizations")
     }
 
     private fun getInvoiceStatus(afterTdsAmount: BigDecimal, balanceAmount: BigDecimal): InvoiceStatus {
