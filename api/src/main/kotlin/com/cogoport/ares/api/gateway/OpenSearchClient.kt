@@ -6,8 +6,10 @@ import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
+import org.opensearch.client.opensearch._types.FieldSort
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
@@ -260,5 +262,60 @@ class OpenSearchClient {
             classType
         )
         return response
+    }
+
+    fun getSettlementInvoices(request: SettlementInvoiceRequest): SearchResponse<AccountUtilizationResponse>? {
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        return Client.search(
+            {
+                    s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            if (request.entityCode != null) {
+                                b.must { m ->
+                                    m.match { it.field("entityCode").query(FieldValue.of(request.entityCode.toString())) }
+                                }
+                            }
+                            if (request.orgId != null) {
+                                b.must { m ->
+                                    m.match { it.field("organizationId").query(FieldValue.of(request.orgId.toString())) }
+                                }
+                            }
+                            if (request.startDate != null) {
+                                b.must { m ->
+                                    m.range { it.field("transactionDate").gte(JsonData.of(Timestamp.valueOf(request.startDate))) }
+                                }
+                            }
+                            if (request.endDate != null) {
+                                b.must { m ->
+                                    m.range { it.field("transactionDate").lte(JsonData.of(Timestamp.valueOf(request.endDate))) }
+                                }
+                            }
+                            if (!request.query.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.queryString { q ->
+                                        q.query("*" + escapeSlash(request.query!!) + "*")
+                                            .fields("documentValue.keyword")
+                                    }
+                                }
+                            }
+                            if (request.accMode != null) {
+                                b.must { m ->
+                                    m.match { it.field("accMode").query(FieldValue.of(request.accMode.toString())) }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .size(request.pageLimit).from(offset).sort { s -> s.field(FieldSort.of { it.field("id").order(SortOrder.Desc) }) }
+            },
+            AccountUtilizationResponse::class.java
+        )
+    }
+
+    private fun escapeSlash(query: String): String {
+        val test = query.replace("/", "\\/").uppercase()
+        return test
     }
 }

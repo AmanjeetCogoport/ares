@@ -47,4 +47,6 @@ object AresConstants {
     const val MODE = "AR"
     const val ORGANIZATION_ID = "organizationId"
     const val TRANSACTION_DATE = "transactionDate"
+
+    const val TWO_PERCENT = 0.02
 }
