@@ -71,7 +71,7 @@ open class KnockoffServiceImpl : KnockoffService {
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
         val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
         saveAccountUtilization(
