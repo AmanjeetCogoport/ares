@@ -23,6 +23,5 @@ data class Audit(
     var data: Any?,
     var performedBy: UUID?,
     var performedByUserType: String?,
-    @DateCreated var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
-    @DateUpdated var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now())
+    @DateCreated var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now())
 )
