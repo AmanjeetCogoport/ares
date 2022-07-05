@@ -7,6 +7,7 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.SettlementInvoiceRequest
+import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldSort
@@ -14,8 +15,10 @@ import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
+import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
@@ -246,7 +249,7 @@ class OpenSearchClient {
                                     m.range { r ->
                                         r.field(AresConstants.TRANSACTION_DATE)
                                             .lte(
-                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                                JsonData.of(Timestamp.valueOf(request.endDate.toString()))
                                             )
                                     }
                                 }
@@ -305,7 +308,9 @@ class OpenSearchClient {
                                     m.match { it.field("accMode").query(FieldValue.of(request.accMode.toString())) }
                                 }
                             }
-                            b
+                            b.must { m ->
+                                m.match { it.field("documentStatus").query(FieldValue.of("FINAL")) }
+                            }
                         }
                     }
                     .size(request.pageLimit).from(offset).sort { s -> s.field(FieldSort.of { it.field("id").order(SortOrder.Desc) }) }
@@ -317,5 +322,57 @@ class OpenSearchClient {
     private fun escapeSlash(query: String): String {
         val test = query.replace("/", "\\/").uppercase()
         return test
+    }
+
+    fun getSummary(request: SummaryRequest? = null, documentIds: List<String>? = null): BigDecimal{
+        return Client.search({ s -> s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+            .query { q ->
+                q.bool { b ->
+                    b.must { m ->
+                        m.match { it.field("documentStatus").query(FieldValue.of("FINAL")) }
+                    }
+                    if (documentIds != null) {
+                        b.must { m ->
+                            m.ids{ it.values(documentIds) }
+                        }
+                    }
+                    else {
+                        if (request?.orgId != null) {
+                            b.minimumShouldMatch("1")
+                            request.orgId!!.forEach { id ->
+                                b.should { m ->
+                                    m.match { it.field("organizationId").query(FieldValue.of(id)) }
+                                }
+                            }
+                        }
+                        if (request?.entityCode != null)
+                            b.must { m ->
+                                m.match { it.field("entityCode").query(FieldValue.of(request.entityCode)) }
+                            }
+                        if (request?.startDate != null) {
+                            b.must { m ->
+                                m.range {
+                                    it.field("transactionDate").gte(JsonData.of(Timestamp.valueOf(request.startDate)))
+                                }
+                            }
+                        }
+                        if (request?.endDate != null) {
+                            b.must { m ->
+                                m.range {
+                                    it.field("transactionDate").lte(JsonData.of(Timestamp.valueOf(request.endDate)))
+                                }
+                            }
+                        }
+                    }
+                    b
+                }
+            }
+            .aggregations("outstandingAmount"){ a ->
+                a.sum { s ->
+                    s.script{ sc -> sc.inline { it.source("doc['signFlag'].value * (doc['amountLoc'].value - doc['payLoc'].value)") } }
+                }
+            }
+        },
+            Void::class.java)?.aggregations()?.get("outstandingAmount")?.sum()?.value()!!.toBigDecimal()
     }
 }

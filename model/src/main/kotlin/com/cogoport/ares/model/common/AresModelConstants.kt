@@ -24,6 +24,7 @@ object AresModelConstants {
     const val MONTH = "month"
     const val COUNT = "count"
     const val ACC_MODE = "accMode"
+    const val DOCUMENT_IDS = "documentIds"
 
     const val ENTITY_CODE = "EntityCode"
 

@@ -92,7 +92,7 @@ open class KnockoffServiceImpl : KnockoffService {
         }
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
-        val leftAmount = accountUtilization.amountLoc - ledTotalAmtPaid
+        val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
         if (leftAmount.compareTo(BigDecimal.ZERO) == 0)
             paymentStatus = KnockOffStatus.FULL.name
