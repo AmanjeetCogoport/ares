@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @Singleton
-class AuditServiceImpl : AuditService{
+class AuditServiceImpl : AuditService {
     @Inject
     lateinit var auditRepository: AuditRepository
 
@@ -28,16 +28,15 @@ class AuditServiceImpl : AuditService{
         )
     }
 
-
-    private suspend fun saveToAudits(objectType: String, objectId: Long, actionName: String, data: Any, performedById: String?, performedByType: String?){
+    private suspend fun saveToAudits(objectType: String, objectId: Long, actionName: String, data: Any, performedById: String?, performedByType: String?) {
         val id: UUID? = if (performedById != null) UUID.fromString(performedById) else null
         auditRepository.save(
             Audit(
                 id = null,
-                objectType= objectType,
-                objectId= objectId,
-                actionName= actionName,
-                data= data,
+                objectType = objectType,
+                objectId = objectId,
+                actionName = actionName,
+                data = data,
                 performedBy = id,
                 performedByUserType = performedByType,
                 createdAt = Timestamp.valueOf(LocalDateTime.now())

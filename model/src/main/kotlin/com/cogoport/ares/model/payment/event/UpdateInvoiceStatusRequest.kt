@@ -26,4 +26,4 @@ data class UpdateInvoiceStatusRequest(
     var dueDate: Date?,
     var performedBy: UUID? = null,
     var performedByUserType: String? = null
-    )
+)

@@ -13,12 +13,10 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
 import com.cogoport.ares.api.payment.model.AuditPaymentRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.api.payment.repository.AuditRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
@@ -121,7 +119,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
-        auditService.auditPayment(AuditPaymentRequest( payment, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.auditPayment(AuditPaymentRequest(payment, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
         receivableRequest.id = savedPayment.id
         receivableRequest.isPosted = false
         receivableRequest.isDeleted = false
