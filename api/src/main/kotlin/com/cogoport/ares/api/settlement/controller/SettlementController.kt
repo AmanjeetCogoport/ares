@@ -35,4 +35,10 @@ class SettlementController {
     suspend fun getMatchingBalance(@QueryValue("documentIds") documentIds: List<String>): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getMatchingBalance(documentIds))
     }
+
+    @Get("/history")
+    suspend fun getHistory(): ResponseList<Document?> {
+        TODO()
+    }
+
 }

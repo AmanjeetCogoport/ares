@@ -1,6 +1,5 @@
 create table public.”settlements”(
     id bigserial constraint pim_PK primary key,
-    account_mode ACCOUNT_MODE,
     source_id bigint,
     source_type ACCOUNT_TYPE,
     destination_id bigint,
