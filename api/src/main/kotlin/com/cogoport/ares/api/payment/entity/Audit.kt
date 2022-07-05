@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.entity
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.DateCreated
-import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
