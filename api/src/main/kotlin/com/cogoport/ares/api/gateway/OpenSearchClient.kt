@@ -244,7 +244,7 @@ class OpenSearchClient {
                                     m.range { r ->
                                         r.field(AresConstants.TRANSACTION_DATE)
                                             .lte(
-                                                JsonData.of(Timestamp.valueOf(request.endDate))
+                                                JsonData.of(Timestamp.valueOf(request.endDate.toString()))
                                             )
                                     }
                                 }
@@ -252,6 +252,7 @@ class OpenSearchClient {
                             b
                         }
                     }
+                    .size(1000)
                     .sort { t ->
                         t.field { f -> f.field("id").order(SortOrder.Asc) }
                     }
