@@ -8,8 +8,8 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
-import com.cogoport.ares.model.payment.SettlementInvoiceRequest
-import com.cogoport.ares.model.settlement.InvoiceListResponse
+import com.cogoport.ares.model.payment.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import jakarta.inject.Singleton
@@ -19,7 +19,7 @@ import kotlin.math.ceil
 
 @Singleton
 class SettlementServiceImpl : SettlementService {
-    override suspend fun getInvoices(request: SettlementInvoiceRequest) = getInvoicesFromOpenSearch(request)
+    override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
 
     override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
         return SummaryResponse(OpenSearchClient().getSummary(request = request))
@@ -29,7 +29,7 @@ class SettlementServiceImpl : SettlementService {
         return SummaryResponse(OpenSearchClient().getSummary(documentIds = documentIds))
     }
 
-    private fun getInvoicesFromOpenSearch(request: SettlementInvoiceRequest): ResponseList<InvoiceListResponse> {
+    private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
         val clientResponse = OpenSearchClient().getSettlementInvoices(request)
         val total = clientResponse?.hits()?.total()?.value() ?: 0
         val accountUtilization = invoiceListResponses(clientResponse)
@@ -41,7 +41,7 @@ class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun invoiceListResponses(clientResponse: SearchResponse<AccountUtilizationResponse>?): List<InvoiceListResponse>? {
+    private fun invoiceListResponses(clientResponse: SearchResponse<AccountUtilizationResponse>?): List<Document>? {
         val data = clientResponse?.hits()?.hits()?.map {
             val response = it.source()
             val tds = response?.amountCurr!! * AresConstants.TWO_PERCENT.toBigDecimal()
@@ -49,7 +49,9 @@ class SettlementServiceImpl : SettlementService {
             val settledAmount = response.payCurr!!
             val balanceAmount = afterTdsAmount - settledAmount
             val status = getInvoiceStatus(afterTdsAmount, balanceAmount) // should come from index
-            InvoiceListResponse(
+            TODO("add taxable amount to account utilization index from plutus")
+            TODO("add status column in account utilizations")
+            Document(
                 id = response.id,
                 documentNo = response.documentValue,
                 documentType = getInvoiceType(response.accType!!),
@@ -65,8 +67,6 @@ class SettlementServiceImpl : SettlementService {
             )
         }
         return data
-        TODO("add taxable amount to account utilization index from plutus")
-        TODO("add status column in account utilizations")
     }
 
     private fun getInvoiceStatus(afterTdsAmount: BigDecimal, balanceAmount: BigDecimal): InvoiceStatus {

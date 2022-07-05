@@ -6,7 +6,7 @@ import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
-import com.cogoport.ares.model.payment.SettlementInvoiceRequest
+import com.cogoport.ares.model.payment.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -142,18 +142,6 @@ class OpenSearchClient {
         return response
     }
 
-    fun orgDetailSearch(orgSerialId: Long): SearchResponse<Any>? {
-        val index = "organization_details"
-        val searchResponse = Client.search({ s ->
-            s.index(index)
-                .source { a -> a.filter { f -> f.includes("organizationId") } }
-                .query { q ->
-                    q.match { m -> m.field("organizationSerialId").query(FieldValue.of(orgSerialId)) }
-                }
-        }, Any::class.java)
-        return searchResponse
-    }
-
     fun getOrgCollection(request: OrganizationReceivablesRequest, startDate: LocalDateTime, endDate: LocalDateTime): List<AccountUtilizationResponse?>? {
         return Client.search(
             { s ->
@@ -266,7 +254,7 @@ class OpenSearchClient {
         return response
     }
 
-    fun getSettlementInvoices(request: SettlementInvoiceRequest): SearchResponse<AccountUtilizationResponse>? {
+    fun getSettlementInvoices(request: SettlementDocumentRequest): SearchResponse<AccountUtilizationResponse>? {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         return Client.search(
             {

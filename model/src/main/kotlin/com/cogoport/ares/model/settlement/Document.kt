@@ -7,7 +7,7 @@ import java.math.BigDecimal
 import java.util.Date
 
 @JsonInclude
-data class InvoiceListResponse(
+data class Document(
     var id: Long?,
     var documentNo: String?,
     var documentType: InvoiceType,

@@ -10,7 +10,7 @@ import java.util.UUID
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class SettlementInvoiceRequest(
+data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: UUID? = null,
     @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: String? = null,
