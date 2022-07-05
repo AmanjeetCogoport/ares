@@ -119,7 +119,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*SAVING THE PAYMENT IN DATABASE*/
         val savedPayment = paymentRepository.save(payment)
-        auditService.auditPayment(AuditPaymentRequest(payment, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.auditPayment(AuditPaymentRequest(payment, AresConstants.CREATE, receivableRequest.createdBy, receivableRequest.performedByUserType))
         receivableRequest.id = savedPayment.id
         receivableRequest.isPosted = false
         receivableRequest.isDeleted = false
@@ -251,7 +251,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
         var paymentDetails = paymentRepository.update(paymentEntity)
-        auditService.auditPayment(AuditPaymentRequest(paymentEntity, "update", receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.auditPayment(AuditPaymentRequest(paymentEntity, AresConstants.UPDATE, receivableRequest.createdBy, receivableRequest.performedByUserType))
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
         openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
@@ -286,7 +286,7 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.isDeleted = true
         /*MARK THE PAYMENT AS DELETED IN DATABASE*/
         var paymentResponse = paymentRepository.update(payment)
-        auditService.auditPayment(AuditPaymentRequest(payment, "delete", deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
+        auditService.auditPayment(AuditPaymentRequest(payment, AresConstants.DELETE, deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
 
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()

@@ -47,4 +47,11 @@ object AresConstants {
     const val MODE = "AR"
     const val ORGANIZATION_ID = "organizationId"
     const val TRANSACTION_DATE = "transactionDate"
+
+    const val PAYMENTS = "payments"
+    const val ACCOUNT_UTILIZATIONS = "account_utilizations"
+
+    const val CREATE = "CREATE"
+    const val UPDATE = "UPDATE"
+    const val DELETE = "DELETE"
 }

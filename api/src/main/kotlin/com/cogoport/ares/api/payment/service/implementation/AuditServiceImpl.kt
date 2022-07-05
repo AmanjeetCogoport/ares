@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
 import com.cogoport.ares.api.payment.model.AuditPaymentRequest
@@ -18,13 +19,13 @@ class AuditServiceImpl : AuditService {
 
     override suspend fun auditPayment(request: AuditPaymentRequest) {
         saveToAudits(
-            objectType = "payments", objectId = request.payment.id!!, actionName = request.actionName, data = request.payment, performedById = request.performedById, performedByType = request.performedByType
+            objectType = AresConstants.PAYMENTS, objectId = request.payment.id!!, actionName = request.actionName, data = request.payment, performedById = request.performedById, performedByType = request.performedByType
         )
     }
 
     override suspend fun auditAccountUtilization(request: AuditAccountUtilizationRequest) {
         saveToAudits(
-            objectType = "account_utilizations", objectId = request.accountUtilization.id!!, actionName = request.actionName, data = request.accountUtilization, performedById = request.performedById, performedByType = request.performedByType
+            objectType = AresConstants.ACCOUNT_UTILIZATIONS, objectId = request.accountUtilization.id!!, actionName = request.actionName, data = request.accountUtilization, performedById = request.performedById, performedByType = request.performedByType
         )
     }
 
