@@ -27,12 +27,12 @@ class SettlementController {
     }
 
     @Get("/account-balance{?request*}")
-    suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse{
+    suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
     }
 
     @Get("/matching-balance")
-    suspend fun getMatchingBalance(@QueryValue("documentIds") documentIds: List<String>): SummaryResponse{
+    suspend fun getMatchingBalance(@QueryValue("documentIds") documentIds: List<String>): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getMatchingBalance(documentIds))
     }
 }

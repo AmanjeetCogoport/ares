@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
 import io.micronaut.http.annotation.QueryValue
-import java.sql.Timestamp
-import java.util.Date
 
 @Introspected
 @ReflectiveAccess

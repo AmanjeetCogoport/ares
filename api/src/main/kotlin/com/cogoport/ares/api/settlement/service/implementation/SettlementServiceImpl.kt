@@ -12,7 +12,6 @@ import com.cogoport.ares.model.payment.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.InvoiceListResponse
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
-import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
@@ -22,11 +21,11 @@ import kotlin.math.ceil
 class SettlementServiceImpl : SettlementService {
     override suspend fun getInvoices(request: SettlementInvoiceRequest) = getInvoicesFromOpenSearch(request)
 
-    override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse{
+    override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
         return SummaryResponse(OpenSearchClient().getSummary(request = request))
     }
 
-    override suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse{
+    override suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse {
         return SummaryResponse(OpenSearchClient().getSummary(documentIds = documentIds))
     }
 
