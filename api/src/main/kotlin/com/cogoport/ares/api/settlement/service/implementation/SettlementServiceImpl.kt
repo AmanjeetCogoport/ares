@@ -3,15 +3,20 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.payment.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import io.micronaut.core.util.ArgumentUtils.Check
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
@@ -19,6 +24,10 @@ import kotlin.math.ceil
 
 @Singleton
 class SettlementServiceImpl : SettlementService {
+
+    @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
 
     override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
@@ -27,6 +36,55 @@ class SettlementServiceImpl : SettlementService {
 
     override suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse {
         return SummaryResponse(OpenSearchClient().getSummary(documentIds = documentIds))
+    }
+
+    override suspend fun check(request: CheckRequest): List<CheckDocument> {
+        val source = mutableListOf<CheckDocument>()
+        val dest = mutableListOf<CheckDocument>()
+        request.stackDetails.reversed().forEach {
+            if (it.accountType == AccountType.REC){
+                source.add(it)
+            }
+            else if (it.accountType == AccountType.SINV){
+                dest.add(it)
+            }
+        }
+        return settleDocuments(source, dest)
+    }
+
+    private fun settleDocuments(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>): MutableList<CheckDocument>{
+        val response = mutableListOf<CheckDocument>()
+        for (payment in source){
+            var availableAmount = payment.allocationAmount!!
+            for (it in dest) {
+                val toSettleAmount = it.allocationAmount!! - it.settledAmount
+                if (toSettleAmount != 0.0.toBigDecimal()) {
+                    if (availableAmount == toSettleAmount) {
+                        it.documentStatus = InvoiceStatus.KNOCKED_OFF
+                        payment.documentStatus = InvoiceStatus.KNOCKED_OFF
+                        it.settledAmount = availableAmount
+                        payment.settledAmount = payment.allocationAmount!!
+                        availableAmount = 0.toBigDecimal()
+                        response.add(it)
+                    } else if (availableAmount > toSettleAmount) {
+                        it.documentStatus = InvoiceStatus.KNOCKED_OFF
+                        payment.documentStatus = InvoiceStatus.PARTIAL_PAID
+                        it.settledAmount = it.allocationAmount!!
+                        availableAmount -= toSettleAmount
+                        payment.settledAmount += toSettleAmount
+                        response.add(it)
+                    } else if (availableAmount < toSettleAmount) {
+                        it.documentStatus = InvoiceStatus.PARTIAL_PAID
+                        payment.documentStatus = InvoiceStatus.KNOCKED_OFF
+                        it.settledAmount += availableAmount
+                        availableAmount = 0.toBigDecimal()
+                        payment.settledAmount = payment.allocationAmount!!
+                    }
+                }
+            }
+            response.add(payment)
+        }
+        return response
     }
 
     private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {

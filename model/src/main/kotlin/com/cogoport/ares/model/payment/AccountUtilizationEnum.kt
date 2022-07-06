@@ -36,7 +36,7 @@ enum class PaymentInvoiceMappingType {
 }
 
 enum class InvoiceStatus {
-    PAID, UNPAID, PARTIAL_PAID
+    PAID, UNPAID, PARTIAL_PAID, KNOCKED_OFF
 }
 
 enum class InvoiceType {
