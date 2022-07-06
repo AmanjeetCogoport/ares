@@ -23,8 +23,10 @@ object AresModelConstants {
     const val MONTH = "month"
     const val COUNT = "count"
     const val ACC_MODE = "accMode"
+    const val ACCOUNT_TYPE = "accountType"
     const val SETTLEMENT_TYPE = "settType"
-
+    const val DOCUMENT_NO = "documentNo"
+    const val DOCUMENT_NOS = "documentNos"
     const val ENTITY_CODE = "EntityCode"
 
     const val AR_ACCOUNT_CODE = 223000

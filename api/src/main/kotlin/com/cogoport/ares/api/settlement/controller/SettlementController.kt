@@ -6,7 +6,9 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.SettledDocument
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import io.micronaut.http.annotation.Controller
@@ -41,5 +43,10 @@ class SettlementController {
     @Get("/history")
     suspend fun getHistory(@Valid request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
         return Response<ResponseList<HistoryDocument?>>().ok(settlementService.getHistory(request))
+    }
+
+    @Get("/settlement")
+    suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledDocument?> {
+        return Response<ResponseList<SettledDocument?>>().ok(settlementService.getSettlement(request))
     }
 }

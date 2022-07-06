@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
@@ -13,7 +14,9 @@ import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.SettledDocument
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import jakarta.inject.Inject
@@ -27,6 +30,9 @@ class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     @Inject
     lateinit var historyDocumentConverter: HistoryDocumentMapper
@@ -55,6 +61,32 @@ class SettlementServiceImpl : SettlementService {
         }
         return ResponseList(
             list = historyDocuments,
+            totalPages = 0,
+            totalRecords = 0,
+            pageNo = 0
+        )
+    }
+
+    /**
+     *
+     */
+    override suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledDocument?> {
+        var settledDocuments = mutableListOf<SettledDocument>()
+        when(request.accType){
+            AccountType.REC -> {
+                settledDocuments = settlementRepository.findBySourceIdAndSourceType(request.documentNo,
+                    request.accType!!
+                ) as MutableList<SettledDocument>
+            }
+            AccountType.PCN -> {
+                settledDocuments = settlementRepository.findByDestinationIdAndDestinationType(request.documentNo,
+                    request.accType!!
+                ) as MutableList<SettledDocument>
+            }
+        }
+
+        return ResponseList(
+            list = settledDocuments,
             totalPages = 0,
             totalRecords = 0,
             pageNo = 0
