@@ -27,5 +27,5 @@ create table public.settlements(
     created_at timestamp not null default now(),
     created_by uuid,
     updated_at timestamp not null default now(),
-    updated_by uuid,
+    updated_by uuid
 );
