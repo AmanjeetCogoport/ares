@@ -259,7 +259,7 @@ class OpenSearchClient {
         return Client.search(
             {
                 s ->
-                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
                     .query { q ->
                         q.bool { b ->
                             if (request.entityCode != null) {
