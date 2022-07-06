@@ -6,7 +6,7 @@ import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
-import com.cogoport.ares.model.payment.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -258,7 +258,7 @@ class OpenSearchClient {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         return Client.search(
             {
-                    s ->
+                s ->
                 s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
                     .query { q ->
                         q.bool { b ->

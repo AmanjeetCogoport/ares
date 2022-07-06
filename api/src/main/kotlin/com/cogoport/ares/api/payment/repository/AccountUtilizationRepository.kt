@@ -9,6 +9,7 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -233,4 +234,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
+
+    @Query(
+        """
+        Select  
+	    id as id,
+	    amount_loc as amount, 
+	    document_no as reference_no,
+	    pay_loc as utilized_amount,
+	    organization_id as organization_id,
+	    amount_loc-pay_loc as balance,
+	    transaction_date as transaction_date,
+	    acc_type as acc_type,
+	    updated_at as last_edited_date
+	    from account_utilizations 
+	    where organization_id in :orgIds
+	    and acc_type in ('PCN', 'REC')
+        """
+    )
+    suspend fun getHistoryDocument(orgIds: List<String>): List<HistoryDocument?>
 }

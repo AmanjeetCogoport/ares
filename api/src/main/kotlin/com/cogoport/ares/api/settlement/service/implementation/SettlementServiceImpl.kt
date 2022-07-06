@@ -3,15 +3,20 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
-import com.cogoport.ares.model.payment.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
@@ -19,6 +24,12 @@ import kotlin.math.ceil
 
 @Singleton
 class SettlementServiceImpl : SettlementService {
+
+    @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var historyDocumentConverter: HistoryDocumentMapper
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
 
     override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
@@ -27,6 +38,27 @@ class SettlementServiceImpl : SettlementService {
 
     override suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse {
         return SummaryResponse(OpenSearchClient().getSummary(documentIds = documentIds))
+    }
+
+    /**
+     * Get History Document list (Credit Notes and On Account Payments)
+     * @param SettlementHistoryRequest
+     * @return ResponseList<HistoryDocument>
+     */
+    override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
+        val list = request.orgId?.let { accountUtilizationRepository.getHistoryDocument(it) }
+        var historyDocuments = mutableListOf<HistoryDocument>()
+        list?.forEach { doc ->
+            {
+                historyDocuments.add(historyDocumentConverter.convertToModel(doc))
+            }
+        }
+        return ResponseList(
+            list = historyDocuments,
+            totalPages = 0,
+            totalRecords = 0,
+            pageNo = 0
+        )
     }
 
     private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
