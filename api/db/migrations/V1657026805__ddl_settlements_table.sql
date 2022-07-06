@@ -1,4 +1,4 @@
-CREATE TYPE public."settlement_type" AS ENUM (
+CREATE TYPE public.settlement_type AS ENUM (
     	'SINV',
     	'PINV',
     	'SCN',
@@ -12,8 +12,8 @@ CREATE TYPE public."settlement_type" AS ENUM (
     	'CTDS',
     	'VTDS');
 
-create table public.”settlements”(
-    id bigserial constraint pim_PK primary key,
+create table public.settlements(
+    id bigserial constraint settlement_PK primary key,
     source_id bigint,
     source_type SETTLEMENT_TYPE,
     destination_id bigint,
@@ -25,5 +25,7 @@ create table public.”settlements”(
     sign_flag smallint,
     settlement_date date,
     created_at timestamp not null default now(),
-    updated_at timestamp not null default now()
+    created_by uuid,
+    updated_at timestamp not null default now(),
+    updated_by uuid,
 );

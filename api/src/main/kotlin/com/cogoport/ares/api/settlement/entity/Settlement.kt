@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -13,13 +14,14 @@ import java.util.UUID
 data class Settlement (
     val id: UUID?,
     val sourceId: BigInteger,
-    val sourceType: AccountType,
+    val sourceType: SettlementType,
     val destinationId: BigInteger,
-    val destinationType: AccountType,
+    val destinationType: SettlementType,
     val currency: String,
     val amount: BigDecimal,
     val ledCurrency: String,
     val ledAmount: BigDecimal,
+    var signFlag: Short,
     val settlementDate: Date,
     val createdBy: String?,
     val createdAt: Timestamp?,
