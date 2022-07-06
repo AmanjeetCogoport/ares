@@ -8,8 +8,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
+    suspend fun findBySourceIdAndSourceType(documentNumber: String, sourceType: AccountType, pageable: Pageable): List<SettledDocument?>
 
-    suspend fun findBySourceIdAndSourceType( documentNumber: String, sourceType: AccountType,  pageable: Pageable ): List<SettledDocument?>
-
-    suspend fun findByDestinationIdAndDestinationType( documentNumber: String, destinationType: AccountType, pageable: Pageable ): List<SettledDocument?>
+    suspend fun findByDestinationIdAndDestinationType(documentNumber: String, destinationType: AccountType, pageable: Pageable): List<SettledDocument?>
 }

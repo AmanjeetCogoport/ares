@@ -72,14 +72,16 @@ class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledDocument?> {
         var settledDocuments = mutableListOf<SettledDocument>()
-        when(request.accType){
+        when (request.accType) {
             AccountType.REC -> {
-                settledDocuments = settlementRepository.findBySourceIdAndSourceType(request.documentNo,
+                settledDocuments = settlementRepository.findBySourceIdAndSourceType(
+                    request.documentNo,
                     request.accType!!
                 ) as MutableList<SettledDocument>
             }
             AccountType.PCN -> {
-                settledDocuments = settlementRepository.findByDestinationIdAndDestinationType(request.documentNo,
+                settledDocuments = settlementRepository.findByDestinationIdAndDestinationType(
+                    request.documentNo,
                     request.accType!!
                 ) as MutableList<SettledDocument>
             }
