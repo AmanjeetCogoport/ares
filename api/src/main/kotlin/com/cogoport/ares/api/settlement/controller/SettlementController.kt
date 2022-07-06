@@ -40,5 +40,4 @@ class SettlementController {
     suspend fun getHistory(): ResponseList<Document?> {
         TODO()
     }
-
 }
