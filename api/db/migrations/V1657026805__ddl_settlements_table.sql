@@ -1,4 +1,4 @@
-CREATE TYPE public.settlement_type AS ENUM (
+CREATE TYPE public."settlement_type" AS ENUM (
     	'SINV',
     	'PINV',
     	'SCN',
