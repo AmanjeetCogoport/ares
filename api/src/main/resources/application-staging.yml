@@ -42,3 +42,4 @@ opensearch:
   host: ${OPENSEARCH_HOST}
   user: ${OPENSEARCH_USER}
   pass: ${OPENSEARCH_PASS}
+

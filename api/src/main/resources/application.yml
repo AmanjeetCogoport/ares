@@ -25,17 +25,18 @@ r2dbc:
 
 kafka:
   bootstrap:
-    servers: b-1.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098,b-2.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098
-  security:
-    protocol: SASL_SSL
-  sasl:
-    mechanism: AWS_MSK_IAM
-    jaas:
-      config: software.amazon.msk.auth.iam.IAMLoginModule required;
-    client:
-      callback:
-        handler:
-          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
+    servers: localhost:29092
+#    servers: b-1.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098,b-2.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098
+#  security:
+#    protocol: SASL_SSL
+#  sasl:
+#    mechanism: AWS_MSK_IAM
+#    jaas:
+#      config: software.amazon.msk.auth.iam.IAMLoginModule required;
+#    client:
+#      callback:
+#        handler:
+#          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
@@ -50,3 +51,4 @@ sentry:
 
 cogoport:
   api_url: https://api-mustangs1.dev.cogoport.io
+  bearer_token: 'Bearer: 7cff5415-6007-4bab-9f3e-e4a08c11e915'
