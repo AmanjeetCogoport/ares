@@ -54,8 +54,17 @@ open class KnockoffServiceImpl : KnockoffService {
     override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
 
         /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
-        val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo, null, AccMode.AP.name)
+        val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo, knockOffRecord.accType.name, AccMode.AP.name)
         if (accountUtilization == null) {
+            val accPayResponse = AccountPayableFileResponse(
+                knockOffRecord.documentNo, knockOffRecord.documentValue, false,
+                KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS
+            )
+            emitPaymentStatus(accPayResponse)
+            return accPayResponse
+        }
+
+        if (paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)) {
             val accPayResponse = AccountPayableFileResponse(
                 knockOffRecord.documentNo, knockOffRecord.documentValue, false,
                 KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS
@@ -127,7 +136,7 @@ open class KnockoffServiceImpl : KnockoffService {
         /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
         if (!isTDSEntry) {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-            paymentEntity.paymentNumValue = SequenceSuffix.RECEIVED.prefix + paymentEntity.paymentNum
+            paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentEntity.paymentNum
         }
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
         return paymentRepository.save(paymentEntity)

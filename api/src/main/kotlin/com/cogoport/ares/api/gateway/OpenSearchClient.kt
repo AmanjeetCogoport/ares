@@ -258,7 +258,7 @@ class OpenSearchClient {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         return Client.search(
             {
-                    s ->
+                s ->
                 s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
                     .query { q ->
                         q.bool { b ->
