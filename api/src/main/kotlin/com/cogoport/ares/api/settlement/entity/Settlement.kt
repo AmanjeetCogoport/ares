@@ -12,7 +12,7 @@ import java.util.UUID
 @MappedEntity(value = "settlements")
 data class Settlement(
     @field:Id @GeneratedValue
-    val id: UUID?,
+    val id: Long?,
     val sourceId: Long,
     val sourceType: SettlementType,
     val destinationId: Long,

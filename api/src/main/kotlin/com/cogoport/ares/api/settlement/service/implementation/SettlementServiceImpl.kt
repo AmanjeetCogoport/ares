@@ -94,7 +94,17 @@ class SettlementServiceImpl : SettlementService {
             }
         }
 
-        settlements?.forEach { settlement -> settledDocuments.add(settlementConvert.convertToSettlementDocument(settlement)) }
+        settlements?.forEach {
+            settlement ->
+            when (request.accType) {
+                AccountType.REC -> {
+                    settledDocuments.add(settlementConvert.convertSourceToSettlementDocument(settlement))
+                }
+                AccountType.PCN -> {
+                    settledDocuments.add(settlementConvert.convertDestinationToSettlementDocument(settlement))
+                }
+            }
+        }
         return ResponseList(
             list = settledDocuments,
             totalPages = 0,
