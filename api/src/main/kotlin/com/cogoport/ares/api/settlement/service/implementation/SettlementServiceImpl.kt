@@ -60,7 +60,7 @@ class SettlementServiceImpl : SettlementService {
      * @return ResponseList<HistoryDocument>
      */
     override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
-        val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, request.page, request.pageLimit)
+        val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, request.settlementType, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.countHistoryDocument(request.orgId)
         var historyDocuments = mutableListOf<HistoryDocument>()
         documents?.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }

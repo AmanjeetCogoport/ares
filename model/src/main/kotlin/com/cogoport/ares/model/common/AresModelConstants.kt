@@ -24,7 +24,7 @@ object AresModelConstants {
     const val COUNT = "count"
     const val ACC_MODE = "accMode"
     const val ACCOUNT_TYPE = "accountType"
-    const val SETTLEMENT_TYPE = "settType"
+    const val SETTLEMENT_TYPE = "settlementType"
     const val DOCUMENT_NO = "documentNo"
     const val DOCUMENT_NOS = "documentNos"
     const val ENTITY_CODE = "EntityCode"

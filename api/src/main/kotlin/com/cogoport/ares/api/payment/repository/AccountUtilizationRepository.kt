@@ -10,9 +10,8 @@ import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
-import io.micronaut.data.model.Page
-import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
@@ -253,11 +252,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 	    updated_at as last_edited_date
 	    from account_utilizations 
 	    where organization_id in (:orgIds)
-	    and acc_type in ('PCN', 'REC')
+	    and acc_type in (:)
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    fun getHistoryDocument(orgIds: List<UUID>, pageIndex: Int?, pageSize: Int?): List<HistoryDocument?>
+    fun getHistoryDocument(orgIds: List<UUID>, settlementTypes: List<SettlementType>, pageIndex: Int?, pageSize: Int?): List<HistoryDocument?>
 
     @Query(
         """

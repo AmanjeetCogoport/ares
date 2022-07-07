@@ -13,7 +13,7 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementHistoryRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: List<UUID>,
-    @QueryValue(AresModelConstants.SETTLEMENT_TYPE) val settType: String? = null,
+    @QueryValue(AresModelConstants.SETTLEMENT_TYPE) val settlementType: List<SettlementType>,
     @QueryValue(AresModelConstants.START_DATE) val startDate: String? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: String? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
