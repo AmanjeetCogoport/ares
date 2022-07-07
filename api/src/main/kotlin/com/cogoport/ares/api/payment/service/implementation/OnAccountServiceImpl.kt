@@ -77,9 +77,6 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
 
-    @Value("\${cogoport.bearer_token}")
-    var bearerToken: String? = null
-
     /**
      * Fetch Account Collection payments from DB.
      * @param : updatedDate, entityType, currencyType
@@ -357,7 +354,6 @@ open class OnAccountServiceImpl : OnAccountService {
         val reqBody = CogoOrganizationRequest(
             receivableRequest.organizationId?.toString(),
             receivableRequest.orgSerialId,
-            bearerToken!!
         )
 
         clientResponse = cogoClient.getCogoOrganization(reqBody)
@@ -379,7 +375,6 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun setBankDetails(payment: Payment) {
         val bankDetails = cogoClient.getCogoBank(
             CogoEntitiesRequest(
-                bearerToken!!,
                 payment.entityType!!
             )
         )

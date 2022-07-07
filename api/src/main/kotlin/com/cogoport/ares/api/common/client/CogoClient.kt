@@ -5,9 +5,11 @@ import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.Header
 import io.micronaut.http.client.annotation.Client
 
 @Client(value = "\${cogoport.api_url}")
+@Header(name = "authorization", value = "\${cogoport.bearer_token}")
 interface CogoClient {
 
     @Get("/list_cogo_banks{?request*}")

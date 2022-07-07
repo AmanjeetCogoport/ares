@@ -6,5 +6,4 @@ import io.micronaut.core.annotation.Introspected
 data class CogoOrganizationRequest(
     var organizationId: String?,
     var organizationSerialId: Long?,
-    var authToken: String
 )
