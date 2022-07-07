@@ -4,11 +4,12 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.Pageable
+import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.util.UUID
 
-@R2dbcRepository
+@R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     suspend fun findBySourceIdAndSourceTypeIn(sourceId: Long, sourceType: MutableList<SettlementType>): List<Settlement?>
@@ -35,15 +36,9 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     suspend fun findSettlement(sourceId: Long, sourceType: MutableList<SettlementType>, pageIndex: Int, pageSize: Int ): List<Settlement?>
 
     @Query(
-        """
-            SELECT
-            count(1)
-              FROM settlements
-              where
-              source_id = :sourceId 
-        """
+        "SELECT count(1) FROM settlements where source_id = :sourceId"
     )
-    suspend fun countSettlement(sourceId: Long, sourceType: MutableList<SettlementType>): Long
+    suspend fun countSettlement(sourceId: Long, sourceType: List<SettlementType>): Long
 
     suspend fun countBySourceIdAndSourceTypeIn(sourceId: Long, sourceType: MutableList<SettlementType>): Long
 

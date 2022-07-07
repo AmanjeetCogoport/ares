@@ -22,7 +22,6 @@ import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
-import io.micronaut.data.model.Pageable
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -103,7 +102,10 @@ class SettlementServiceImpl : SettlementService {
             }
         }
 
-        var totalRecords = settlementRepository.countSettlement(request.documentNo)
+        var totalRecords = settlementRepository.countSettlement(request.documentNo, mutableListOf(
+            SettlementType.REC, SettlementType.PCN
+        ) )
+
 
         settlements?.forEach {
             settlement ->
