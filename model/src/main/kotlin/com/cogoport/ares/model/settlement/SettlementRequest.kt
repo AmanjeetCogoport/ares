@@ -5,7 +5,7 @@ import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.http.annotation.QueryValue
 
 data class SettlementRequest(
-    @QueryValue(AresModelConstants.DOCUMENT_NO) val documentNo: String,
+    @QueryValue(AresModelConstants.DOCUMENT_NO) val documentNo: Long,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = null,

@@ -40,12 +40,12 @@ class SettlementController {
         return Response<SummaryResponse>().ok(settlementService.getMatchingBalance(documentIds))
     }
 
-    @Get("/history")
+    @Get("/history{?request*}")
     suspend fun getHistory(@Valid request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
         return Response<ResponseList<HistoryDocument?>>().ok(settlementService.getHistory(request))
     }
 
-    @Get("/settlement")
+    @Get("/settlement{?request*}")
     suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledDocument?> {
         return Response<ResponseList<SettledDocument?>>().ok(settlementService.getSettlement(request))
     }
