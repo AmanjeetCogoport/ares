@@ -5,6 +5,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
@@ -21,4 +22,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun findByPaymentId(id: Long?): Payment
+
+    @Query("""
+        select exists( select id from payments where organization_id = :organizationId and trans_ref_number = :transRefNumber)
+    """)
+    suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
 }
