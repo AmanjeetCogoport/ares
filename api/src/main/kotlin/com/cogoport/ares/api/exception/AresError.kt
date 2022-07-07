@@ -21,7 +21,9 @@ enum class AresError(
     ERR_1202("ERR_1202", "Invalid account type for invoice", HttpStatus.BAD_REQUEST),
     ERR_1204("ERR_1204", "Document with final status cannot be modified/deleted : ", HttpStatus.FORBIDDEN),
     ERR_1205("ERR_1205", "No sign found for this account type", HttpStatus.BAD_REQUEST),
-    ERR_1206("ERR_1206", "Bank information not found", HttpStatus.NOT_FOUND);
+    ERR_1206("ERR_1206", "Bank information not found", HttpStatus.NOT_FOUND),
+    ERR_1501("ERR_1501", "No credit document found", HttpStatus.BAD_REQUEST),
+    ERR_1502("ERR_1502", "No debit document found", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

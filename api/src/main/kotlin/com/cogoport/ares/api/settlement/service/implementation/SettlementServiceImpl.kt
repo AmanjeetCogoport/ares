@@ -2,6 +2,8 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -15,11 +17,11 @@ import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
-import io.micronaut.core.util.ArgumentUtils.Check
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.Timestamp
 import kotlin.math.ceil
 
 @Singleton
@@ -41,50 +43,128 @@ class SettlementServiceImpl : SettlementService {
     override suspend fun check(request: CheckRequest): List<CheckDocument> {
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
+        val sourceType = mutableListOf<AccountType>()
+        val desttype = mutableListOf<AccountType>()
+        val creditType = listOf(AccountType.REC, AccountType.PCN, AccountType.PAY)
+        val debitType = listOf(AccountType.SINV, AccountType.PINV)
         request.stackDetails.reversed().forEach {
-            if (it.accountType == AccountType.REC){
+            if (creditType.contains(it.accountType)){
                 source.add(it)
+                sourceType.add(it.accountType)
             }
-            else if (it.accountType == AccountType.SINV){
+            else if (debitType.contains(it.accountType)){
                 dest.add(it)
+                desttype.add(it.accountType)
             }
         }
-        return settleDocuments(source, dest)
+        validateInput(sourceType, desttype)
+        val settledList = settleDocuments(source, dest)
+        return request.stackDetails.map{ r -> settledList.filter { it.id == r.id }[0] }
     }
 
     private fun settleDocuments(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>): MutableList<CheckDocument>{
         val response = mutableListOf<CheckDocument>()
         for (payment in source){
-            var availableAmount = payment.allocationAmount!!
-            for (it in dest) {
-                val toSettleAmount = it.allocationAmount!! - it.settledAmount
-                if (toSettleAmount != 0.0.toBigDecimal()) {
-                    if (availableAmount == toSettleAmount) {
-                        it.documentStatus = InvoiceStatus.KNOCKED_OFF
-                        payment.documentStatus = InvoiceStatus.KNOCKED_OFF
-                        it.settledAmount = availableAmount
-                        payment.settledAmount = payment.allocationAmount!!
-                        availableAmount = 0.toBigDecimal()
-                        response.add(it)
-                    } else if (availableAmount > toSettleAmount) {
-                        it.documentStatus = InvoiceStatus.KNOCKED_OFF
-                        payment.documentStatus = InvoiceStatus.PARTIAL_PAID
-                        it.settledAmount = it.allocationAmount!!
-                        availableAmount -= toSettleAmount
-                        payment.settledAmount += toSettleAmount
-                        response.add(it)
-                    } else if (availableAmount < toSettleAmount) {
-                        it.documentStatus = InvoiceStatus.PARTIAL_PAID
-                        payment.documentStatus = InvoiceStatus.KNOCKED_OFF
-                        it.settledAmount += availableAmount
-                        availableAmount = 0.toBigDecimal()
-                        payment.settledAmount = payment.allocationAmount!!
-                    }
+            var availableAmount = payment.allocationAmount
+            val canSettle = fetchSettlingDocs(payment.accountType)
+            for (invoice in dest) {
+                if (canSettle.contains(invoice.accountType)) {
+                    availableAmount = doSettlement(invoice, availableAmount, payment, response, source)
                 }
             }
-            response.add(payment)
+            assignStatus(payment)
+            payment.allocationAmount -= availableAmount
+            payment.balanceAfterAllocation = payment.balanceAmount - payment.allocationAmount
+                    response.add(payment)
         }
         return response
+    }
+
+    private fun doSettlement(invoice: CheckDocument, availableAmount: BigDecimal, payment: CheckDocument, response: MutableList<CheckDocument>, source: MutableList<CheckDocument>): BigDecimal {
+        var amount = availableAmount
+        var rate = 1.toBigDecimal()
+        if (payment.currency != invoice.currency){
+            rate = getExchangeRate(payment.currency, invoice.currency, payment.transactionDate)
+            amount = getExchangeValue(availableAmount, rate)
+        }
+        val toSettleAmount = invoice.allocationAmount - invoice.settledAmount
+        if (toSettleAmount != 0.0.toBigDecimal()) {
+            if (amount == toSettleAmount) {
+                amount = updateDocuments(invoice, payment, toSettleAmount, amount, rate)
+                invoice.allocationAmount = invoice.settledAmount
+                invoice.balanceAfterAllocation = invoice.balanceAmount - invoice.allocationAmount
+                response.add(invoice)
+            } else if (amount > toSettleAmount) {
+                amount = updateDocuments(invoice, payment, toSettleAmount, amount, rate)
+                invoice.allocationAmount = invoice.settledAmount
+                invoice.balanceAfterAllocation = invoice.balanceAmount - invoice.allocationAmount
+                response.add(invoice)
+            } else if (amount < toSettleAmount) {
+                amount = updateDocuments(invoice, payment, amount, amount, rate)
+                if (payment == source.last()) {
+                    invoice.allocationAmount = invoice.settledAmount
+                    invoice.balanceAfterAllocation = invoice.balanceAmount - invoice.allocationAmount
+                    response.add(invoice)
+                }
+            }
+        }
+        return getExchangeValue(amount, rate, true)
+    }
+
+    private fun getExchangeValue(amount: BigDecimal, exchangeRate: BigDecimal, reverse: Boolean = false):BigDecimal{
+        return if (reverse){
+            amount / exchangeRate
+        } else{
+            amount * exchangeRate
+        }
+    }
+
+    private fun getExchangeRate(from: String, to: String, transactionDate: Timestamp): BigDecimal{
+        return 79.toBigDecimal()
+    }
+    private fun fetchSettlingDocs(accType: AccountType): List<AccountType>{
+        return when (accType) {
+            AccountType.REC -> { listOf(AccountType.SINV, AccountType.SDN) }
+            AccountType.PINV -> { listOf(AccountType.PAY, AccountType.PCN) }
+            AccountType.PCN -> { listOf(AccountType.PINV, AccountType.PDN) }
+            AccountType.PAY -> { listOf(AccountType.PINV, AccountType.PDN) }
+            AccountType.SINV -> { listOf(AccountType.REC, AccountType.SCN) }
+            else -> { emptyList() }
+        }
+    }
+
+    private fun validateInput(source: List<AccountType>, dest: List<AccountType>){
+        var creditCount = 0
+        var debitCount = 0
+        for (invoice in dest){
+            fetchSettlingDocs(invoice).forEach { if (source.contains(it)) creditCount += 1 }
+            if (creditCount == 0) throw AresException(AresError.ERR_1501, "")
+        }
+        for (payment in source){
+            fetchSettlingDocs(payment).forEach { if (dest.contains(it)) debitCount += 1 }
+            if (debitCount == 0) throw AresException(AresError.ERR_1502, "")
+        }
+    }
+
+    private fun updateDocuments(invoice: CheckDocument, payment: CheckDocument, toSettleAmount: BigDecimal, availableAmount: BigDecimal, exchangeRate: BigDecimal): BigDecimal{
+        val amount = availableAmount - toSettleAmount
+        invoice.settledAmount += toSettleAmount
+        payment.settledAmount += getExchangeValue(toSettleAmount, exchangeRate, true)
+        assignStatus(invoice)
+        assignStatus(payment)
+        return getExchangeValue(amount, exchangeRate, true)
+    }
+
+    private fun assignStatus(doc: CheckDocument){
+        if (doc.balanceAmount == doc.settledAmount){
+            doc.documentStatus = InvoiceStatus.KNOCKED_OFF
+        }
+        else if (doc.settledAmount == 0.0.toBigDecimal()){
+            doc.documentStatus = InvoiceStatus.UNPAID
+        }
+        else if (doc.balanceAmount > doc.settledAmount){
+            doc.documentStatus = InvoiceStatus.PARTIAL_PAID
+        }
     }
 
     private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
