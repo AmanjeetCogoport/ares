@@ -36,27 +36,15 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-            select 
-            count(1)
-            from settlements
-            where source_id = :sourceId 
-        """
-    )
-    suspend fun countSettlement(sourceId: Long
-    //                            , sourceType: MutableList<SettlementType>
-    ): Long
-
-    @Query(
-        """
             SELECT
             count(1)
               FROM settlements
               where
-              source_id in (:orgIds)
-              and acc_type in ('PCN', 'REC')
+              source_id = :sourceId 
         """
     )
-    fun countHistoryDocument(orgIds: List<UUID>): Long
+    suspend fun countSettlement(sourceId: Long, sourceType: MutableList<SettlementType>): Long
+
     suspend fun countBySourceIdAndSourceTypeIn(sourceId: Long, sourceType: MutableList<SettlementType>): Long
 
     suspend fun findByDestinationIdAndDestinationType(destinationId: Long, destinationType: SettlementType, pageable: Pageable): List<Settlement?>

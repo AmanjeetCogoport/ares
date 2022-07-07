@@ -103,8 +103,7 @@ class SettlementServiceImpl : SettlementService {
             }
         }
 
-        var totalRecords = settlementRepository.countSettlement(request.documentNo,
-            mutableListOf(SettlementType.REC, SettlementType.PCN))
+        var totalRecords = settlementRepository.countSettlement(request.documentNo)
 
         settlements?.forEach {
             settlement ->
