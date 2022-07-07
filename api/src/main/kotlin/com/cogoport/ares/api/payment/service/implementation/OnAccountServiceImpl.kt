@@ -360,7 +360,6 @@ open class OnAccountServiceImpl : OnAccountService {
             bearerToken!!
         )
 
-
         clientResponse = cogoClient.getCogoOrganization(reqBody)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
