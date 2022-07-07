@@ -64,14 +64,14 @@ open class KnockoffServiceImpl : KnockoffService {
             return accPayResponse
         }
 
-       if(paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)){
-           val accPayResponse = AccountPayableFileResponse(
-                   knockOffRecord.documentNo, knockOffRecord.documentValue, false,
-                   KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS
-           )
-           emitPaymentStatus(accPayResponse)
-           return accPayResponse
-       }
+        if (paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)) {
+            val accPayResponse = AccountPayableFileResponse(
+                knockOffRecord.documentNo, knockOffRecord.documentValue, false,
+                KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS
+            )
+            emitPaymentStatus(accPayResponse)
+            return accPayResponse
+        }
 
         /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
         val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
