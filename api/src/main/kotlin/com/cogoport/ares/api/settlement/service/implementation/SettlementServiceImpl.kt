@@ -28,6 +28,7 @@ import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 @Singleton
 class SettlementServiceImpl : SettlementService {
@@ -56,19 +57,33 @@ class SettlementServiceImpl : SettlementService {
 
     /**
      * Get History Document list (Credit Notes and On Account Payments)
-     * @param SettlementHistoryRequest
+     * @param request
      * @return ResponseList<HistoryDocument>
      */
     override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
-        val list = request.orgId?.let { accountUtilizationRepository.getHistoryDocument(it) }
+        val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, request.page, request.pageLimit)
+        val totalRecords = accountUtilizationRepository.countHistoryDocument(request.orgId)
         var historyDocuments = mutableListOf<HistoryDocument>()
-        list?.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
+        documents?.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
         return ResponseList(
             list = historyDocuments,
-            totalPages = 0,
-            totalRecords = 0,
-            pageNo = 0
+            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = request.page
         )
+    }
+
+    /**
+     *
+     */
+    private fun getTotalPages(totalRows: Long, pageSize: Int): Long {
+
+        return try {
+            val totalPageSize = if (pageSize > 0) pageSize else 1
+            ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
+        } catch (e: Exception) {
+            0
+        }
     }
 
     /**
@@ -78,38 +93,32 @@ class SettlementServiceImpl : SettlementService {
         var settledDocuments = mutableListOf<SettledDocument>()
         var settlements = mutableListOf<Settlement>()
         when (request.accType) {
-            AccountType.REC -> {
-                settlements = settlementRepository.findBySourceIdAndSourceType(
+            AccountType.REC, AccountType.PCN -> {
+                settlements = settlementRepository.findSettlement(
                     request.documentNo,
-                    SettlementType.REC,
-                    Pageable.from(request.page, request.pageLimit)
-                ) as MutableList<Settlement>
-            }
-            AccountType.PCN -> {
-                settlements = settlementRepository.findByDestinationIdAndDestinationType(
-                    request.documentNo,
-                    SettlementType.PCN,
-                    Pageable.from(request.page, request.pageLimit)
+                    mutableListOf(SettlementType.REC, SettlementType.PCN),
+                    request.page,
+                    request.pageLimit
                 ) as MutableList<Settlement>
             }
         }
 
+        var totalRecords = settlementRepository.countSettlement(request.documentNo,
+            mutableListOf(SettlementType.REC, SettlementType.PCN))
+
         settlements?.forEach {
             settlement ->
             when (request.accType) {
-                AccountType.REC -> {
+                AccountType.REC, AccountType.PCN -> {
                     settledDocuments.add(settlementConvert.convertSourceToSettlementDocument(settlement))
-                }
-                AccountType.PCN -> {
-                    settledDocuments.add(settlementConvert.convertDestinationToSettlementDocument(settlement))
                 }
             }
         }
         return ResponseList(
             list = settledDocuments,
-            totalPages = 0,
-            totalRecords = 0,
-            pageNo = 0
+            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = request.page
         )
     }
 

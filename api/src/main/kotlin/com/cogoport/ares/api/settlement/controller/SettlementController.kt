@@ -45,7 +45,7 @@ class SettlementController {
         return Response<ResponseList<HistoryDocument?>>().ok(settlementService.getHistory(request))
     }
 
-    @Get("/settlement{?request*}")
+    @Get("{?request*}")
     suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledDocument?> {
         return Response<ResponseList<SettledDocument?>>().ok(settlementService.getSettlement(request))
     }

@@ -11,10 +11,13 @@ import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import io.micronaut.data.annotation.Query
+import io.micronaut.data.model.Page
+import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -236,9 +239,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
 
     @Query(
-        """
+        value = """
         Select  
 	    id as id,
+        '' as sid,
 	    amount_loc as amount, 
 	    document_no as reference_no,
 	    pay_loc as utilized_amount,
@@ -248,9 +252,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 	    acc_type as acc_type,
 	    updated_at as last_edited_date
 	    from account_utilizations 
-	    where organization_id in :orgIds
+	    where organization_id in (:orgIds)
 	    and acc_type in ('PCN', 'REC')
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getHistoryDocument(orgIds: List<String>): List<HistoryDocument?>
+    fun getHistoryDocument(orgIds: List<UUID>, pageIndex: Int?, pageSize: Int?): List<HistoryDocument?>
+
+    @Query(
+        """
+            SELECT
+            count(1)
+              FROM account_utilizations
+              where
+              organization_id in (:orgIds)
+              and acc_type in ('PCN', 'REC')
+        """
+    )
+    fun countHistoryDocument(orgIds: List<UUID>): Long
+
 }

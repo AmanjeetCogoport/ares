@@ -22,9 +22,5 @@ data class Settlement(
     val ledCurrency: String,
     val ledAmount: BigDecimal,
     var signFlag: Short,
-    val settlementDate: Date,
-    val createdBy: UUID?,
-    val createdAt: Timestamp?,
-    val updatedBy: UUID?,
-    val updatedAt: Timestamp?,
+    val settlementDate: Date
 )
