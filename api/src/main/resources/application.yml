@@ -51,3 +51,4 @@ sentry:
 
 cogoport:
   api_url: https://api-mustangs1.dev.cogoport.io
+  bearer_token: 'Bearer: 7cff5415-6007-4bab-9f3e-e4a08c11e915'
