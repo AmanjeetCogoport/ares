@@ -39,7 +39,6 @@ import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -76,9 +75,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
-
-    @Value("\${cogoport.bearer_token}")
-    var bearerToken: String? = null
 
     /**
      * Fetch Account Collection payments from DB.
@@ -357,7 +353,6 @@ open class OnAccountServiceImpl : OnAccountService {
         val reqBody = CogoOrganizationRequest(
             receivableRequest.organizationId?.toString(),
             receivableRequest.orgSerialId,
-            bearerToken!!
         )
 
         clientResponse = cogoClient.getCogoOrganization(reqBody)
@@ -379,7 +374,6 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun setBankDetails(payment: Payment) {
         val bankDetails = cogoClient.getCogoBank(
             CogoEntitiesRequest(
-                bearerToken!!,
                 payment.entityType!!
             )
         )
