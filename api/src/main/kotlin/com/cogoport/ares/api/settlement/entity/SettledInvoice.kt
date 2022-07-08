@@ -8,14 +8,13 @@ import java.math.BigDecimal
 import java.util.Date
 
 @MappedEntity(value = "settlements")
-data class Settlement(
+data class SettledInvoice(
     @field:Id @GeneratedValue
     val id: Long?,
-    val sourceId: Long,
-    val sourceType: SettlementType,
     val destinationId: Long,
     val destinationType: SettlementType,
     val currency: String?,
+    val currentBalance: BigDecimal?,
     val amount: BigDecimal?,
     val ledCurrency: String,
     val ledAmount: BigDecimal,

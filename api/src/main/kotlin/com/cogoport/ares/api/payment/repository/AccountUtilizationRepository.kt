@@ -9,11 +9,14 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.settlement.entity.HistoryDocument
+import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -233,4 +236,46 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
+    @Query(
+        value = """
+        Select  
+            id as id,
+            null as sid,
+            amount_loc as amount, 
+            document_no as reference_no,
+            pay_loc as utilized_amount,
+            organization_id as organization_id,
+            amount_loc-pay_loc as balance,
+            transaction_date as transaction_date,
+            acc_type as acc_type,
+            updated_at as last_edited_date
+                from account_utilizations 
+                where organization_id in (:orgIds)
+                and acc_type::varchar in (:accountTypes)
+                and (:startDate is null or transaction_date >= :startDate::date)
+                and (:endDate is null or transaction_date <= :endDate::date)
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+        """
+    )
+    fun getHistoryDocument(
+        orgIds: List<UUID>,
+        accountTypes: List<String>,
+        pageIndex: Int?,
+        pageSize: Int?,
+        startDate: String?,
+        endDate: String?
+    ): List<HistoryDocument?>
+
+    @Query(
+        """
+        SELECT count(1)
+            FROM account_utilizations
+            where
+            organization_id in (:orgIds)
+            and acc_type::varchar in (:accountTypes)
+            and (:startDate is null or transaction_date >= :startDate::date)
+            and (:endDate is null or transaction_date <= :endDate::date)
+        """
+    )
+    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
 }
