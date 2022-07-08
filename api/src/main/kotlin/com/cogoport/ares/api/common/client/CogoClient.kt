@@ -4,14 +4,20 @@ import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
+import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
+import io.micronaut.http.annotation.Headers
 import io.micronaut.http.client.annotation.Client
 
 @Client(value = "\${cogoport.api_url}")
-@Header(name = "authorization", value = "\${cogoport.bearer_token}")
+@Headers(
+    Header(name = HttpHeaders.AUTHORIZATION, value = "Bearer: \${cogoport.bearer_token}"),
+    Header(name = HttpHeaders.ACCEPT, value = "application/json"),
+    Header(name = HttpHeaders.CONTENT_TYPE, value = "application/json"),
+    Header(name = HttpHeaders.USER_AGENT, value = "Ares-Cogo-Client"),
+)
 interface CogoClient {
-
     @Get("/list_cogo_banks{?request*}")
     suspend fun getCogoBank(request: CogoEntitiesRequest): CogoBankResponse
 

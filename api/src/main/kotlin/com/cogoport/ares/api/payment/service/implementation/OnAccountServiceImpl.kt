@@ -39,7 +39,6 @@ import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
