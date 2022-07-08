@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.common.enums
+package com.cogoport.ares.model.common
 
 enum class KnockOffStatus {
     FULL,

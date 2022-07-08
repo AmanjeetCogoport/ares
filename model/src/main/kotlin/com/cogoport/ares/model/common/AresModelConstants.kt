@@ -10,7 +10,6 @@ object AresModelConstants {
     val CURR_MONTH = LocalDate.now().monthValue
     const val ZONE = "zone"
     const val ROLE = "role"
-    const val QUARTER = "quarter"
     const val YEAR = "year"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
@@ -24,8 +23,10 @@ object AresModelConstants {
     const val MONTH = "month"
     const val COUNT = "count"
     const val ACC_MODE = "accMode"
-    const val DOCUMENT_IDS = "documentIds"
-
+    const val ACCOUNT_TYPE = "accountType"
+    const val SETTLEMENT_TYPE = "settlementType"
+    const val DOCUMENT_NO = "documentNo"
+    const val DOCUMENT_NOS = "documentNos"
     const val ENTITY_CODE = "EntityCode"
 
     const val AR_ACCOUNT_CODE = 223000

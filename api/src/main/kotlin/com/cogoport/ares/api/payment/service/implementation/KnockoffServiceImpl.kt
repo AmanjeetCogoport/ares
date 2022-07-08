@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
-import com.cogoport.ares.api.common.enums.KnockOffStatus
+import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
