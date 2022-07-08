@@ -21,6 +21,8 @@ import java.util.UUID
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
 
+    @Query("select * from account_utilizations where id in (:id)")
+    suspend fun findByIds(id: List<Long>): List<AccountUtilization>
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
