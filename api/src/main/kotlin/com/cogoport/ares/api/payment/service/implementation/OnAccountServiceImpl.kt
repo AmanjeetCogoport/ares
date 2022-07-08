@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoClient
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -59,7 +59,7 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentConverter: PaymentToPaymentMapper
 
     @Inject
-    lateinit var cogoClient: CogoClient
+    lateinit var authClient: AuthClient
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -355,7 +355,7 @@ open class OnAccountServiceImpl : OnAccountService {
             receivableRequest.orgSerialId,
         )
 
-        clientResponse = cogoClient.getCogoOrganization(reqBody)
+        clientResponse = authClient.getCogoOrganization(reqBody)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
@@ -372,7 +372,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setBankDetails(payment: Payment) {
-        val bankDetails = cogoClient.getCogoBank(
+        val bankDetails = authClient.getCogoBank(
             CogoEntitiesRequest(
                 payment.entityType!!
             )

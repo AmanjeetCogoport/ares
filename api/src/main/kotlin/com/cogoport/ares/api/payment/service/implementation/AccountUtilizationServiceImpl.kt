@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -45,9 +44,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var accountUtilizationConverter: AccountUtilizationMapper
-
-    @Inject
-    lateinit var cogoClient: CogoClient
 
     /**
      * @param accUtilizationRequestList

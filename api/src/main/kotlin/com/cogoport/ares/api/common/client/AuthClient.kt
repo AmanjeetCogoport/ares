@@ -17,7 +17,7 @@ import io.micronaut.http.client.annotation.Client
     Header(name = HttpHeaders.CONTENT_TYPE, value = "application/json"),
     Header(name = HttpHeaders.USER_AGENT, value = "Ares-Cogo-Client"),
 )
-interface CogoClient {
+interface AuthClient {
     @Get("/list_cogo_banks{?request*}")
     suspend fun getCogoBank(request: CogoEntitiesRequest): CogoBankResponse
 
