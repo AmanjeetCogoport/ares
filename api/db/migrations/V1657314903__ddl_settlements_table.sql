@@ -1,16 +1,18 @@
 CREATE TYPE public."settlement_type" AS ENUM (
-    	'SINV',
-    	'PINV',
-    	'SCN',
-    	'SDN',
-    	'PCN',
-    	'PDN',
-    	'REC',
-    	'PAY',
-    	'SECH',
-    	'PECH',
-    	'CTDS',
-    	'VTDS');
+        'SINV',
+        'PINV',
+        'SCN',
+        'SDN',
+        'PCN',
+        'PDN',
+        'REC',
+        'PAY',
+        'SECH',
+        'PECH',
+        'CTDS',
+        'VTDS');
+
+CREATE CAST (varchar AS SETTLEMENT_TYPE) WITH INOUT AS IMPLICIT;
 
 create table public.settlements(
     id bigserial constraint settlement_PK primary key,
