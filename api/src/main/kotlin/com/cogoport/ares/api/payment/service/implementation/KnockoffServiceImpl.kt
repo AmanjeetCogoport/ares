@@ -170,15 +170,33 @@ open class KnockoffServiceImpl : KnockoffService {
         ledTotalAmtPaid: BigDecimal
     ) {
         val accountUtilEntity = AccountUtilization(
-            id = null, documentNo = paymentNum!!, documentValue = paymentNumValue,
-            zoneCode = knockOffRecord.zoneCode.toString(), serviceType = accountUtilization.serviceType, documentStatus = DocumentStatus.FINAL,
-            entityCode = knockOffRecord.entityCode, category = knockOffRecord.category, sageOrganizationId = null,
-            organizationId = knockOffRecord.organizationId!!, organizationName = knockOffRecord.organizationName,
-            accCode = AresModelConstants.AP_ACCOUNT_CODE, accType = knockOffRecord.accType, accMode = knockOffRecord.accMode,
-            signFlag = knockOffRecord.signFlag, currency = knockOffRecord.currency, ledCurrency = knockOffRecord.ledgerCurrency,
-            amountCurr = currTotalAmtPaid, amountLoc = ledTotalAmtPaid, payCurr = currTotalAmtPaid, payLoc = ledTotalAmtPaid,
-            dueDate = accountUtilization.dueDate, transactionDate = knockOffRecord.transactionDate, createdAt = Timestamp.from(Instant.now()),
-            updatedAt = Timestamp.from(Instant.now()), orgSerialId = knockOffRecord.orgSerialId
+            id = null,
+            documentNo = paymentNum!!,
+            documentValue = paymentNumValue,
+            zoneCode = knockOffRecord.zoneCode.toString(),
+            serviceType = accountUtilization.serviceType,
+            documentStatus = DocumentStatus.FINAL,
+            entityCode = knockOffRecord.entityCode,
+            category = knockOffRecord.category,
+            sageOrganizationId = null,
+            organizationId = knockOffRecord.organizationId!!,
+            organizationName = knockOffRecord.organizationName,
+            accCode = AresModelConstants.AP_ACCOUNT_CODE,
+            accType = knockOffRecord.accType,
+            accMode = knockOffRecord.accMode,
+            signFlag = knockOffRecord.signFlag,
+            currency = knockOffRecord.currency,
+            ledCurrency = knockOffRecord.ledgerCurrency,
+            amountCurr = currTotalAmtPaid,
+            amountLoc = ledTotalAmtPaid,
+            payCurr = currTotalAmtPaid,
+            payLoc = ledTotalAmtPaid,
+            taxableAmount = BigDecimal.ZERO,
+            dueDate = accountUtilization.dueDate,
+            transactionDate = knockOffRecord.transactionDate,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now()),
+            orgSerialId = knockOffRecord.orgSerialId
         )
         accountUtilizationRepository.save(accountUtilEntity)
     }
