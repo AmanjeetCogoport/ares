@@ -24,7 +24,7 @@ create table public.settlements(
     amount decimal(13,4),
     led_currency varchar(5) not null,
     led_amount decimal(13,4) not null,
-    sign_flag smallint,
+    sign_flag smallint not null,
     settlement_date date not null,
     created_at timestamp not null default now(),
     created_by uuid,
