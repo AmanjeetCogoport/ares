@@ -11,14 +11,14 @@ import java.util.Date
 data class Settlement(
     @field:Id @GeneratedValue
     val id: Long?,
-    val sourceId: Long,
-    val sourceType: SettlementType,
+    val sourceId: Long?,
+    val sourceType: SettlementType?,
     val destinationId: Long,
     val destinationType: SettlementType,
     val currency: String?,
     val amount: BigDecimal?,
     val ledCurrency: String,
     val ledAmount: BigDecimal,
-    var signFlag: Short,
+    var signFlag: Short?,
     val settlementDate: Date
 )
