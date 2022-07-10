@@ -17,6 +17,7 @@ import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -47,7 +48,46 @@ class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var settledInvoiceConverter: SettledInvoiceMapper
 
-    override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
+    override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentsFromOpenSearch(request)
+
+
+    /**
+     * Get invoices for Given CP orgId
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    override suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice> {
+        val documents = getDocumentsFromOpenSearch(request)
+        val invoices = mutableListOf<Invoice>()
+        documents.list?.forEach {
+            document ->
+            run {
+                invoices.add(
+                    Invoice(
+                        id = document.id,
+                        invoiceNo = document.documentNo,
+                        invoiceDate = document.invoiceDate,
+                        dueDate = document.dueDate,
+                        invoiceAmount = document.invoiceAmount,
+                        taxableAmount = document.taxableAmount,
+                        tds = document.tds,
+                        afterTdsAmount = document.afterTdsAmount,
+                        settledAmount = document.settledAmount,
+                        balanceAmount = document.balanceAmount,
+                        invoiceStatus = document.invoiceStatus,
+                    )
+                )
+
+            }
+        }
+        return ResponseList(
+            list = invoices,
+            totalPages = documents.totalPages,
+            totalRecords = documents.totalRecords,
+            pageNo = documents.pageNo
+        )
+
+    }
 
     /**
      * Get Account balance of selected Business Partners.
@@ -152,8 +192,8 @@ class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
-        val clientResponse = OpenSearchClient().getSettlementInvoices(request)
+    private fun getDocumentsFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
+        val clientResponse = OpenSearchClient().getSettlementDocuments(request)
         val total = clientResponse?.hits()?.total()?.value() ?: 0
         val accountUtilization = invoiceListResponses(clientResponse)
         return ResponseList(
@@ -163,6 +203,25 @@ class SettlementServiceImpl : SettlementService {
             pageNo = request.page
         )
     }
+
+    /**
+     * Get List of Documents from OpenSearch index_account_utilization
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
+        val clientResponse = OpenSearchClient().getSettlementDocuments(request)
+        val total = clientResponse?.hits()?.total()?.value() ?: 0
+        val accountUtilization = invoiceListResponses(clientResponse)
+        return ResponseList(
+            list = accountUtilization,
+            totalPages = ceil(total.toDouble() / request.pageLimit).toLong(),
+            totalRecords = total,
+            pageNo = request.page
+        )
+    }
+
+
 
     /**
      *

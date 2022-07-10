@@ -6,6 +6,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -28,6 +29,11 @@ class SettlementController {
     @Get("/documents{?request*}")
     suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
+    }
+
+    @Get("/invoices{?request*}")
+    suspend fun getInvoices(@Valid request: SettlementDocumentRequest): ResponseList<Invoice>? {
+        return Response<ResponseList<Invoice>?>().ok(settlementService.getInvoices(request))
     }
 
     @Get("/account-balance{?request*}")

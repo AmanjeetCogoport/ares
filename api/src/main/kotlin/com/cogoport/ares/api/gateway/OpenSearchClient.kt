@@ -2,6 +2,7 @@ package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.AccountCollectionRequest
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
@@ -402,6 +403,111 @@ class OpenSearchClient {
         return response
     }
 
+    /**
+     *
+     */
+    fun getSettlementDocuments(
+        request: SettlementDocumentRequest
+    ): SearchResponse<AccountUtilizationResponse>? {
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        return Client.search(
+            { s ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            if (request.entityCode != null) {
+                                b.must { m ->
+                                    m.match {
+                                        it.field("entityCode")
+                                            .query(
+                                                FieldValue.of(
+                                                    request.entityCode
+                                                        .toString()
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                            if (request.orgId != null) {
+                                b.must { m ->
+                                    m.match {
+                                        it.field("organizationId")
+                                            .query(
+                                                FieldValue.of(
+                                                    request.orgId.toString()
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                            if (request.startDate != null) {
+                                b.must { m ->
+                                    m.range {
+                                        it.field("transactionDate")
+                                            .gte(
+                                                JsonData.of(
+                                                    Timestamp.valueOf(
+                                                        request.startDate
+                                                    )
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                            if (request.endDate != null) {
+                                b.must { m ->
+                                    m.range {
+                                        it.field("transactionDate")
+                                            .lte(
+                                                JsonData.of(
+                                                    Timestamp.valueOf(
+                                                        request.endDate
+                                                    )
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                            if (!request.query.isNullOrBlank()) {
+                                b.must { m ->
+                                    m.queryString { q ->
+                                        q.query("*" + escapeSlash(request.query!!) + "*")
+                                            .fields("documentValue.keyword")
+                                    }
+                                }
+                            }
+                            if (request.accMode != null) {
+                                b.must { m ->
+                                    m.match {
+                                        it.field("accMode")
+                                            .query(
+                                                FieldValue.of(
+                                                    request.accMode.toString()
+                                                )
+                                            )
+                                    }
+                                }
+                            }
+                            b.must { m ->
+                                m.match {
+                                    it.field("documentStatus").query(FieldValue.of("FINAL"))
+                                }
+                            }
+                        }
+                    }
+                    .size(request.pageLimit)
+                    .from(offset)
+                    .sort { s ->
+                        s.field(FieldSort.of { it.field("id").order(SortOrder.Desc) })
+                    }
+            },
+            AccountUtilizationResponse::class.java
+        )
+    }
+
+    /**
+     * Get Invoices for Input CP orgId
+     */
     fun getSettlementInvoices(
         request: SettlementDocumentRequest
     ): SearchResponse<AccountUtilizationResponse>? {
@@ -487,6 +593,11 @@ class OpenSearchClient {
                             b.must { m ->
                                 m.match {
                                     it.field("documentStatus").query(FieldValue.of("FINAL"))
+                                }
+                            }
+                            b.must { m ->
+                                m.match {
+                                    it.field("accType").query(FieldValue.of(AccountType.SINV.toString()))
                                 }
                             }
                         }
