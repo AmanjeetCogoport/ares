@@ -10,18 +10,21 @@ import java.time.Instant
 @JsonInclude
 data class CheckDocument(
     var id: Long,
-    var documentNo: String?,
-    var accountType: AccountType,
+    var documentNo: Long?,
+    var accountType: SettlementType,
     var invoiceAmount: BigDecimal = 0.toBigDecimal(),
     var tds: BigDecimal?,
     var afterTdsAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAmount: BigDecimal = 0.toBigDecimal(),
     var allocationAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAfterAllocation: BigDecimal = 0.toBigDecimal(),
+    var ledgerAmount: BigDecimal,
     var documentStatus: InvoiceStatus?,
     var signFlag: Int,
     var settledAmount: BigDecimal = 0.toBigDecimal(),
     var currency: String = "INR",
     var legCurrency: String = "INR",
-    var transactionDate: Timestamp = Timestamp.from(Instant.now())
+    var exchangeRate: BigDecimal,
+    var transactionDate: Timestamp = Timestamp.from(Instant.now()),
+    var settledTds: BigDecimal = 0.toBigDecimal()
 )

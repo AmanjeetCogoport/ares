@@ -7,6 +7,8 @@ import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import java.math.BigDecimal
+import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -43,4 +45,13 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     suspend fun countBySourceIdAndSourceTypeIn(sourceId: Long, sourceType: MutableList<SettlementType>): Long
 
     suspend fun findByDestinationIdAndDestinationType(destinationId: Long, destinationType: SettlementType, pageable: Pageable): List<Settlement?>
+
+    @Query(
+        """
+            insert into settlements
+            values
+            (:id, :sourceId, :sourceType::settlement_type, :destinationId, :destinationType::settlement_type, :currency, :amount, :ledCurrency, :ledAmount, :signFlag, :settlementDate)
+        """
+    )
+    suspend fun insert(id: Long,sourceId: Long, sourceType: SettlementType, destinationId: Long, destinationType: SettlementType, currency: String, amount: BigDecimal, ledCurrency: String, ledAmount: BigDecimal, signFlag: Int, settlementDate: Date)
 }

@@ -12,6 +12,8 @@ CREATE TYPE public."settlement_type" AS ENUM (
     	'CTDS',
     	'VTDS');
 
+CREATE CAST (varchar AS SETTLEMENT_TYPE) WITH INOUT AS IMPLICIT;
+
 create table public.settlements(
     id bigserial constraint settlement_PK primary key,
     source_id bigint,

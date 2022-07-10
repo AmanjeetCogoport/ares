@@ -4,5 +4,6 @@ import java.sql.Timestamp
 
 data class CheckRequest(
     val stackDetails: MutableList<CheckDocument>,
-    val settlementDate: Timestamp?
+    val settlementDate: Timestamp?,
+    val type: String
 )
