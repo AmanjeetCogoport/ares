@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.payment.InvoiceStatus
-import com.cogoport.ares.model.payment.InvoiceType
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date

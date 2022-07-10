@@ -50,7 +50,6 @@ class SettlementServiceImpl : SettlementService {
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentsFromOpenSearch(request)
 
-
     /**
      * Get invoices for Given CP orgId
      * @param SettlementDocumentRequest
@@ -77,7 +76,6 @@ class SettlementServiceImpl : SettlementService {
                         invoiceStatus = document.invoiceStatus,
                     )
                 )
-
             }
         }
         return ResponseList(
@@ -86,7 +84,6 @@ class SettlementServiceImpl : SettlementService {
             totalRecords = documents.totalRecords,
             pageNo = documents.pageNo
         )
-
     }
 
     /**
@@ -220,8 +217,6 @@ class SettlementServiceImpl : SettlementService {
             pageNo = request.page
         )
     }
-
-
 
     /**
      *
