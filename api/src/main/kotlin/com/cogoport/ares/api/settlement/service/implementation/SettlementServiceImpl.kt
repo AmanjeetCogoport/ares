@@ -215,6 +215,7 @@ class SettlementServiceImpl : SettlementService {
     override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
 
     private suspend fun runSettlement(request: CheckRequest, performDbOperation: Boolean): List<CheckDocument> {
+        sanitizeInput(request)
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
         val creditType = listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SCN)
@@ -228,7 +229,7 @@ class SettlementServiceImpl : SettlementService {
                 dest.remove(it)
             }
         }
-        validateInput(source, dest)
+        businessValidation(source, dest)
         val settledList = settleDocuments(request, source, dest, performDbOperation)
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
@@ -331,7 +332,7 @@ class SettlementServiceImpl : SettlementService {
             null,
             sourceId,
             sourceType,
-            invoice.documentNo!!,
+            invoice.documentNo,
             invoice.accountType,
             currency,
             amount,
@@ -384,7 +385,13 @@ class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun validateInput(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>) {
+    private fun sanitizeInput(request: CheckRequest){
+        for (doc in request.stackDetails){
+            if (doc.documentNo == 0.toLong()) throw AresException(AresError.ERR_1003, "Document Number")
+        }
+    }
+
+    private fun businessValidation(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>) {
         var creditCount = 0
         var debitCount = 0
         for (payment in source) {

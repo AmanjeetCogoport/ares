@@ -1,15 +1,22 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.payment.InvoiceStatus
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
+import javax.validation.constraints.NotNull
 
 @JsonInclude
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@Introspected
 data class CheckDocument(
     var id: Long,
-    var documentNo: Long?,
+    var documentNo: Long,
     var accountType: SettlementType,
     var invoiceAmount: BigDecimal = 0.toBigDecimal(),
     var tds: BigDecimal?,
