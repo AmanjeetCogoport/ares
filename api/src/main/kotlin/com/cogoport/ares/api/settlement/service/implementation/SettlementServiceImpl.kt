@@ -177,8 +177,8 @@ class SettlementServiceImpl : SettlementService {
             val settledAmount = response.payCurr!!
             val balanceAmount = afterTdsAmount - settledAmount
             val status = getInvoiceStatus(afterTdsAmount, balanceAmount) // should come from index
-            TODO("add taxable amount to account utilization index from plutus")
-            TODO("add status column in account utilizations")
+            // TODO("add taxable amount to account utilization index from plutus")
+            // TODO("add status column in account utilizations")
             Document(
                 id = response.id,
                 documentNo = response.documentValue,
@@ -217,7 +217,6 @@ class SettlementServiceImpl : SettlementService {
             AccountType.PCN -> { InvoiceType.PURCHASE_CREDIT_NOTE }
             AccountType.PDN -> { InvoiceType.PURCHASE_DEBIT_NOTE }
             AccountType.PAY -> { InvoiceType.PURCHASE_PAYMENT }
-            else -> { TODO("Not Decided Yet") }
         }
     }
 }
