@@ -26,7 +26,9 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.settlement_date,
             '' as status
             FROM settlements s
-            join account_utilizations au on s.destination_id = au.id
+            join account_utilizations au 
+            ON s.destination_id = au.document_no
+            AND s.destination_type::varchar = au.acc_type::varchar 
                 WHERE s.source_id = :sourceId 
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
                 AND s.destination_type::varchar  NOT IN ('SECH', 'PECH', 'CTSD', 'VTDS') 
