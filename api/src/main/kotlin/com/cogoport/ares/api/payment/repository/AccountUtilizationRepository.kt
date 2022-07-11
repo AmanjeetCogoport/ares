@@ -20,14 +20,13 @@ import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
-
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) """
     )
@@ -242,6 +241,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             id as id,
             null as sid,
             amount_loc as amount, 
+            currency as currency,
             document_no as reference_no,
             pay_loc as utilized_amount,
             organization_id as organization_id,

@@ -16,3 +16,7 @@ enum class AccountType(dbValue: String) {
 enum class PaymentCode {
     PAY, REC, CTDS, VTDS
 }
+
+enum class Operator {
+    DIVIDE, MULTIPLY, SUBTRACT, ADD
+}

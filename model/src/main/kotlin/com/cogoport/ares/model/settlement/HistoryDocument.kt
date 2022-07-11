@@ -16,6 +16,7 @@ data class HistoryDocument(
     val referenceNo: String,
     val sid: String?,
     val amount: BigDecimal,
+    val currency: String,
     val utilizedAmount: BigDecimal,
     val organizationId: UUID,
     val accType: AccountType,

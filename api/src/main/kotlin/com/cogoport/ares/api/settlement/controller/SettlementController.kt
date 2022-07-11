@@ -50,4 +50,14 @@ class SettlementController {
     suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
         return Response<SettlementKnockoffResponse>().ok(SettlementKnockoffResponse())
     }
+
+    @Post("/check")
+    suspend fun check(@Body request: CheckRequest): List<CheckDocument> {
+        return Response<List<CheckDocument>>().ok(settlementService.check(request))
+    }
+
+    @Post("/settle")
+    suspend fun settle(@Body request: CheckRequest): List<CheckDocument> {
+        return Response<List<CheckDocument>>().ok(settlementService.settle(request))
+    }
 }
