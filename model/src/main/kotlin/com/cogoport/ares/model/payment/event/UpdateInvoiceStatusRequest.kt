@@ -6,9 +6,9 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
-import java.util.Date
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.Date
 
 @Introspected
 @ReflectiveAccess
