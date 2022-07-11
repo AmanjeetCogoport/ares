@@ -7,9 +7,12 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
@@ -34,6 +37,11 @@ class SettlementController {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
     }
 
+    @Get("/invoices{?request*}")
+    suspend fun getInvoices(@Valid request: SettlementDocumentRequest): ResponseList<Invoice>? {
+        return Response<ResponseList<Invoice>?>().ok(settlementService.getInvoices(request))
+    }
+
     @Get("/account-balance{?request*}")
     suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
@@ -52,6 +60,11 @@ class SettlementController {
     @Get("{?request*}")
     suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledInvoice?> {
         return Response<ResponseList<SettledInvoice?>>().ok(settlementService.getSettlement(request))
+    }
+
+    @Post("/knockoff")
+    suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
+        return Response<SettlementKnockoffResponse>().ok(SettlementKnockoffResponse())
     }
 
     @Post("/check")

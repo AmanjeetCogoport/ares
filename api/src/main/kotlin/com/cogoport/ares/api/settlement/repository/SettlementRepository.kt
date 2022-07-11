@@ -46,4 +46,14 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long
+
+    @Query(
+        """SELECT count(1) 
+            FROM settlements 
+            WHERE destination_id = :destinationId 
+            AND destination_type = :destinationType
+            AND source_type = :sourceType::SETTLEMENT_TYPE
+        """
+    )
+    suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
 }
