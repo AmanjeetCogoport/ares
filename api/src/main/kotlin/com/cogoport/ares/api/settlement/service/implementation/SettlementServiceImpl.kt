@@ -305,14 +305,14 @@ class SettlementServiceImpl : SettlementService {
         val doc = createSettlement(payment.id, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.legCurrency, (paidLedAmount + paymentTdsLed), 1, request.settlementDate)
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.CTDS else SettlementType.VTDS
-            val tdsDoc = createSettlement(null, tdsType, invoice, payment.currency, paymentTds, invoice.legCurrency, paymentTdsLed, -1, request.settlementDate)
+            val tdsDoc = createSettlement(payment.id, tdsType, invoice, payment.currency, paymentTds, invoice.legCurrency, paymentTdsLed, -1, request.settlementDate)
             invoice.settledTds += invoiceTds
         }
         if (payment.legCurrency != invoice.currency) {
             val excLedAmount = getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             val exType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.SECH else SettlementType.PECH
-            val exSign = excLedAmount.signum()
-            val excDoc = createSettlement(null, exType, invoice, null, null, invoice.legCurrency, excLedAmount, exSign.toShort(), request.settlementDate)
+            val exSign = excLedAmount.signum() * if(payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) -1 else 1
+            val excDoc = createSettlement(payment.id, exType, invoice, null, null, invoice.legCurrency, excLedAmount.abs(), exSign.toShort(), request.settlementDate)
         }
         val paymentUtilized = paidAmount + if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
