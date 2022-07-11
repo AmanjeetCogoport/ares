@@ -445,7 +445,7 @@ open class SettlementServiceImpl : SettlementService {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
-                if (canSettle.contains(invoice.accountType)) {
+                if (canSettle.contains(invoice.accountType) && availableAmount.compareTo(0.toBigDecimal()) != 0) {
                     availableAmount = doSettlement(request, invoice, availableAmount, payment, source, performDbOperation)
                 }
             }
