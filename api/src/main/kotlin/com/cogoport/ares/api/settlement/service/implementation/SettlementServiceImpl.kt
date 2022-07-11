@@ -77,10 +77,10 @@ class SettlementServiceImpl : SettlementService {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)
         }
 
-        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
-        payment.organizationId = invoiceUtilization?.organizationId
-        payment.organizationName = invoiceUtilization?.organizationName
-        payment.exchangeRate = exchangeRate
+//        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+//        payment.organizationId = invoiceUtilization?.organizationId
+//        payment.organizationName = invoiceUtilization?.organizationName
+//        payment.exchangeRate = exchangeRate
 
 //        Utilization of payment
         val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
@@ -108,8 +108,8 @@ class SettlementServiceImpl : SettlementService {
             payCurr = BigDecimal.ZERO,
             payLoc = BigDecimal.ZERO,
             accMode = invoiceUtilization.accMode,
-            transactionDate = request.transactionDate,
-            dueDate = request.transactionDate
+            transactionDate = Date(request.transactionDate),
+            dueDate = Date(request.transactionDate)
         )
 
         val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0

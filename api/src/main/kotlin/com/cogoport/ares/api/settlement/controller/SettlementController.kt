@@ -4,10 +4,7 @@ import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.*
-import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.QueryValue
+import io.micronaut.http.annotation.*
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -50,7 +47,7 @@ class SettlementController {
     }
 
     @Post("/knockoff")
-    suspend fun knockoff(@Valid request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-        return Response<SettlementKnockoffResponse>().ok(settlementService.knockoff(request))
+    suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
+        return Response<SettlementKnockoffResponse>().ok(SettlementKnockoffResponse())
     }
 }

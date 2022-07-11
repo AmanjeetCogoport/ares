@@ -24,7 +24,7 @@ data class SettlementKnockoffRequest (
     val payMode: String, // todo payment mode enum
 
     var transactionId: String,
-    val transactionDate: Date,
+    val transactionDate: String,
     val amount: BigDecimal,
     val currency: String,
 //    val exchange_rate: Float,
