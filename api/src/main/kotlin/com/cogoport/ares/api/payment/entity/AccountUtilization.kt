@@ -34,7 +34,7 @@ data class AccountUtilization(
     var ledCurrency: String = "INR",
     var amountCurr: BigDecimal,
     var amountLoc: BigDecimal,
-    var taxableAmount: BigDecimal,
+    var taxableAmount: BigDecimal? = BigDecimal.ZERO,
     var payCurr: BigDecimal = 0.toBigDecimal(),
     var payLoc: BigDecimal = 0.toBigDecimal(),
     var dueDate: Date?,
