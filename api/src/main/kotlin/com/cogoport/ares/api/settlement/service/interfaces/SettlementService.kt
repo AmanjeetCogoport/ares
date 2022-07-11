@@ -1,14 +1,16 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
 import com.cogoport.ares.api.common.models.ResponseList
-import com.cogoport.ares.model.settlement.*
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse

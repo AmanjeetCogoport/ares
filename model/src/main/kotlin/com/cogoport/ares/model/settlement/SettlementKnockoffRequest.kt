@@ -1,19 +1,14 @@
 package com.cogoport.ares.model.settlement
 
-import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.common.KnockOffStatus
-import com.cogoport.ares.model.payment.PaymentCode
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
-import io.micronaut.http.annotation.QueryValue
 import java.math.BigDecimal
-import java.util.*
 
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class SettlementKnockoffRequest (
+data class SettlementKnockoffRequest(
     val invoiceNumber: Long,
     val accCode: Int,
     val cogoAccountNo: String,
@@ -31,5 +26,5 @@ data class SettlementKnockoffRequest (
     val fee: BigDecimal,
     val tax: BigDecimal,
 
-    val email: String,  // narration or audits
+    val email: String, // narration or audits
 )

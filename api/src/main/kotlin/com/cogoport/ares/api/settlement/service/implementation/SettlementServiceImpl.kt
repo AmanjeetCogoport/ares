@@ -7,7 +7,6 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
@@ -18,11 +17,10 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
-import com.cogoport.ares.model.payment.*
-import com.cogoport.ares.model.settlement.*
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.payment.Operator
@@ -30,8 +28,11 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -42,7 +43,7 @@ import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.*
+import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -70,16 +71,15 @@ class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
-
     /***
-    - add entry into payments table
-	- add into account utilizations
-	- add entries into settlement table
-		- invoice knocked off with amount
-		- tds entry
-		- payment entry
-		- convinence fee entry [like EXC/TDS] for accounting of payment
-	- update utilization table with balance or status
+     - add entry into payments table
+     - add into account utilizations
+     - add entries into settlement table
+     - invoice knocked off with amount
+     - tds entry
+     - payment entry
+     - convinence fee entry [like EXC/TDS] for accounting of payment
+     - update utilization table with balance or status
      */
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
@@ -88,7 +88,7 @@ class SettlementServiceImpl : SettlementService {
         // TODO DocumentValue
         val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
 
-        if(invoiceUtilization == null){
+        if (invoiceUtilization == null) {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)
         }
 
@@ -105,7 +105,7 @@ class SettlementServiceImpl : SettlementService {
             documentValue = request.transactionId,
             zoneCode = invoiceUtilization.zoneCode,
             serviceType = invoiceUtilization.serviceType,
-            documentStatus =  DocumentStatus.FINAL,
+            documentStatus = DocumentStatus.FINAL,
             entityCode = invoiceUtilization.entityCode,
             category = invoiceUtilization.category,
             orgSerialId = invoiceUtilization.orgSerialId,
@@ -136,34 +136,26 @@ class SettlementServiceImpl : SettlementService {
 //
 //            )
 //        )
-        if(isTdsApplied){
+        if (isTdsApplied) {
 //            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
 //            settlements.add(
 //                Settlement(
 //
 //                )
 //            )
-
         }
 
 //        val settlement = Settlement()
 
-
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
 
-
-
-
-
-
 //     2%   tds on taxable amount only if tds is not deducted already
-
 
         return SettlementKnockoffResponse()
     }
 
-    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId:Long,settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
+    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId: Long, settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
 //        val settledDoc = Settlement(
 //            null,
 //            sourceId,

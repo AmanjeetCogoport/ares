@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.mapper
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.AccountPayablesFile
-import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 
@@ -19,5 +18,4 @@ interface PayableFileToPaymentMapper {
     @Mapping(source = "ledgerAmount", target = "ledAmount")
     @Mapping(source = "paymentMode", target = "payMode")
     fun convertToEntity(accPayFile: AccountPayablesFile): Payment
-
 }

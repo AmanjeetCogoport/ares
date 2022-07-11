@@ -5,5 +5,4 @@ import io.micronaut.core.annotation.ReflectiveAccess
 
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-class SettlementKnockoffResponse {
-}
+class SettlementKnockoffResponse
