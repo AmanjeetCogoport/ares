@@ -1,12 +1,15 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
@@ -17,6 +20,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.payment.Operator
@@ -24,8 +28,11 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
+import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -36,6 +43,7 @@ import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -49,6 +57,9 @@ class SettlementServiceImpl : SettlementService {
     lateinit var settlementRepository: SettlementRepository
 
     @Inject
+    lateinit var paymentRepository: PaymentRepository
+
+    @Inject
     lateinit var historyDocumentConverter: HistoryDocumentMapper
 
     @Inject
@@ -58,7 +69,144 @@ class SettlementServiceImpl : SettlementService {
     lateinit var settledInvoiceConverter: SettledInvoiceMapper
 
     @Inject
-    lateinit var paymentRepository: PaymentRepository
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    /***
+     - add entry into payments table
+     - add into account utilizations
+     - add entries into settlement table
+     - invoice knocked off with amount
+     - tds entry
+     - payment entry
+     - convinence fee entry [like EXC/TDS] for accounting of payment
+     - update utilization table with balance or status
+     */
+    override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
+
+        val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
+
+        // TODO DocumentValue
+        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
+
+        if (invoiceUtilization == null) {
+            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
+        }
+
+//        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+//        payment.organizationId = invoiceUtilization?.organizationId
+//        payment.organizationName = invoiceUtilization?.organizationName
+//        payment.exchangeRate = exchangeRate
+
+//        Utilization of payment
+        val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+        val accountUtilization = AccountUtilization(
+            id = null,
+            documentNo = documentNo,
+            documentValue = request.transactionId,
+            zoneCode = invoiceUtilization.zoneCode,
+            serviceType = invoiceUtilization.serviceType,
+            documentStatus = DocumentStatus.FINAL,
+            entityCode = invoiceUtilization.entityCode,
+            category = invoiceUtilization.category,
+            orgSerialId = invoiceUtilization.orgSerialId,
+            sageOrganizationId = invoiceUtilization.sageOrganizationId,
+            organizationId = invoiceUtilization.organizationId,
+            organizationName = invoiceUtilization.organizationName,
+            accType = invoiceUtilization.accType,
+            accCode = invoiceUtilization.accCode,
+            signFlag = 1,
+            currency = request.currency,
+            ledCurrency = invoiceUtilization.ledCurrency,
+            amountCurr = request.amount,
+            amountLoc = request.amount,
+            taxableAmount = BigDecimal.ZERO,
+            payCurr = BigDecimal.ZERO,
+            payLoc = BigDecimal.ZERO,
+            accMode = invoiceUtilization.accMode,
+            transactionDate = Date(request.transactionDate),
+            dueDate = Date(request.transactionDate)
+        )
+
+        val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
+
+        var settlements = mutableListOf<Settlement>()
+//        settlements.add(
+//            Settlement(
+//                id = null,
+//
+//            )
+//        )
+        if (isTdsApplied) {
+//            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
+//            settlements.add(
+//                Settlement(
+//
+//                )
+//            )
+        }
+
+//        val settlement = Settlement()
+
+        accountUtilizationRepository.update(invoiceUtilization)
+        val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
+
+//     2%   tds on taxable amount only if tds is not deducted already
+
+        return SettlementKnockoffResponse()
+    }
+
+    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId: Long, settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
+//        val settledDoc = Settlement(
+//            null,
+//            sourceId,
+//            sourceType,
+//            invoiceId,
+//            settlementType,
+//            currency,
+//            amount,
+//            ledCurrency,
+//            ledAmount,
+//            signFlag,
+//            transactionDate
+//        )
+//        settlementRepository.save(settledDoc)
+    }
+
+    /**
+     * Get invoices for Given CP orgId
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    override suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice> {
+        val documents = getDocumentsFromOpenSearch(request)
+        val invoices = mutableListOf<Invoice>()
+        documents.list?.forEach {
+            document ->
+            run {
+                invoices.add(
+                    Invoice(
+                        id = document.id,
+                        invoiceNo = document.documentNo,
+                        invoiceDate = document.invoiceDate,
+                        dueDate = document.dueDate,
+                        invoiceAmount = document.invoiceAmount,
+                        taxableAmount = document.taxableAmount,
+                        tds = document.tds,
+                        afterTdsAmount = document.afterTdsAmount,
+                        settledAmount = document.settledAmount,
+                        balanceAmount = document.balanceAmount,
+                        invoiceStatus = document.invoiceStatus,
+                    )
+                )
+            }
+        }
+        return ResponseList(
+            list = invoices,
+            totalPages = documents.totalPages,
+            totalRecords = documents.totalRecords,
+            pageNo = documents.pageNo
+        )
+    }
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
 
@@ -172,8 +320,25 @@ class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
+    private fun getDocumentsFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
+        val clientResponse = OpenSearchClient().getSettlementDocuments(request)
+        val total = clientResponse?.hits()?.total()?.value() ?: 0
+        val accountUtilization = invoiceListResponses(clientResponse)
+        return ResponseList(
+            list = accountUtilization,
+            totalPages = ceil(total.toDouble() / request.pageLimit).toLong(),
+            totalRecords = total,
+            pageNo = request.page
+        )
+    }
+
+    /**
+     * Get List of Documents from OpenSearch index_account_utilization
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
     private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
-        val clientResponse = OpenSearchClient().getSettlementInvoices(request)
+        val clientResponse = OpenSearchClient().getSettlementDocuments(request)
         val total = clientResponse?.hits()?.total()?.value() ?: 0
         val accountUtilization = invoiceListResponses(clientResponse)
         return ResponseList(
