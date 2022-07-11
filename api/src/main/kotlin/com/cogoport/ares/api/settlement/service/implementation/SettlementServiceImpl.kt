@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
@@ -22,6 +23,8 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.*
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -71,6 +74,7 @@ class SettlementServiceImpl : SettlementService {
 
         }
         val accountUtilization = AccountUtilization(
+            documentNo = request.transactionId,
 
 
         )
@@ -79,6 +83,27 @@ class SettlementServiceImpl : SettlementService {
 
 
         return SettlementKnockoffResponse()
+    }
+
+    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId:Long,settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
+        val settledDoc = Settlement(
+            null,
+            sourceId,
+            sourceType,
+            invoiceId,
+            settlementType,
+            currency,
+            amount,
+            ledCurrency,
+            ledAmount,
+            signFlag,
+            transactionDate,
+            null,
+            Timestamp.from(Instant.now()),
+            null,
+            Timestamp.from(Instant.now())
+        )
+        settlementRepository.save(settledDoc)
     }
 
     /**
