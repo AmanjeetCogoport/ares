@@ -385,8 +385,8 @@ class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun sanitizeInput(request: CheckRequest){
-        for (doc in request.stackDetails){
+    private fun sanitizeInput(request: CheckRequest) {
+        for (doc in request.stackDetails) {
             if (doc.documentNo == 0.toLong()) throw AresException(AresError.ERR_1003, "Document Number")
         }
     }

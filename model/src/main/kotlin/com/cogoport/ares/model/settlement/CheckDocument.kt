@@ -8,7 +8,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import javax.validation.constraints.NotNull
 
 @JsonInclude
 @ReflectiveAccess
