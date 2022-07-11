@@ -3,7 +3,10 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
@@ -14,19 +17,12 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
-import com.cogoport.ares.model.settlement.Document
-import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.Invoice
-import com.cogoport.ares.model.settlement.SettlementHistoryRequest
-import com.cogoport.ares.model.settlement.SettlementRequest
-import com.cogoport.ares.model.settlement.SettlementType
-import com.cogoport.ares.model.settlement.SummaryRequest
-import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.*
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.util.*
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -40,6 +36,9 @@ class SettlementServiceImpl : SettlementService {
     lateinit var settlementRepository: SettlementRepository
 
     @Inject
+    lateinit var paymentRepository: PaymentRepository
+
+    @Inject
     lateinit var historyDocumentConverter: HistoryDocumentMapper
 
     @Inject
@@ -49,6 +48,38 @@ class SettlementServiceImpl : SettlementService {
     lateinit var settledInvoiceConverter: SettledInvoiceMapper
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentsFromOpenSearch(request)
+
+    /***
+    - add entry into payments table
+	- add into account utilizations
+	- add entries into settlement table
+		- invoice knocked off with amount
+		- tds entry
+		- payment entry
+		- convinence fee entry [like EXC/TDS] for accounting of payment
+	- update utilization table with balance or status
+     */
+    override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
+
+        val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
+        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+        payment.exchangeRate = exchangeRate
+
+        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
+
+        if(invoiceUtilization == null){
+
+        }
+        val accountUtilization = AccountUtilization(
+
+
+        )
+
+
+
+
+        return SettlementKnockoffResponse()
+    }
 
     /**
      * Get invoices for Given CP orgId
