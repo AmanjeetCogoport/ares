@@ -113,6 +113,10 @@ class SettlementServiceImpl : SettlementService {
 
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
 
+
+//     2%   tds on taxable amount only if tds is not deducted already
+
+
         return SettlementKnockoffResponse()
     }
 
