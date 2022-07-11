@@ -35,8 +35,8 @@ enum class PaymentInvoiceMappingType {
     TDS, INVOICE, BILL
 }
 
-enum class InvoiceStatus {
-    PAID, UNPAID, PARTIAL_PAID
+enum class InvoiceStatus(val value: String) {
+    PAID("Paid"), UNPAID("Unpaid"), PARTIAL_PAID("Partially Paid"), KNOCKED_OFF("Knocked Off")
 }
 
 enum class InvoiceType {

@@ -19,5 +19,6 @@ data class SettledInvoice(
     val ledCurrency: String,
     val ledAmount: BigDecimal,
     var signFlag: Short,
-    val settlementDate: Date
+    val settlementDate: Date,
+    var status: String?
 )
