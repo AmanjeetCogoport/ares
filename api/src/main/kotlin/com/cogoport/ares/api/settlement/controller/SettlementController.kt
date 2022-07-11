@@ -3,12 +3,12 @@ package com.cogoport.ares.api.settlement.controller
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.SettledDocument
+import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -50,8 +50,8 @@ class SettlementController {
     }
 
     @Get("{?request*}")
-    suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledDocument?> {
-        return Response<ResponseList<SettledDocument?>>().ok(settlementService.getSettlement(request))
+    suspend fun getSettlement(@Valid request: SettlementRequest): ResponseList<SettledInvoice?> {
+        return Response<ResponseList<SettledInvoice?>>().ok(settlementService.getSettlement(request))
     }
 
     @Post("/check")

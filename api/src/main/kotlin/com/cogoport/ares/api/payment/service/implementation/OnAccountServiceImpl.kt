@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoClient
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -28,6 +28,8 @@ import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.BulkPaymentResponse
+import com.cogoport.ares.model.payment.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
@@ -57,7 +59,7 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentConverter: PaymentToPaymentMapper
 
     @Inject
-    lateinit var cogoClient: CogoClient
+    lateinit var authClient: AuthClient
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -348,10 +350,12 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun setOrganizations(receivableRequest: Payment) {
         var clientResponse: PlatformOrganizationResponse? = null
 
-        if (receivableRequest.organizationId != null)
-            clientResponse = cogoClient.getCogoOrganization(receivableRequest.organizationId.toString())
-        else
-            clientResponse = cogoClient.getCogoOrganization(receivableRequest.orgSerialId!!)
+        val reqBody = CogoOrganizationRequest(
+            receivableRequest.organizationId?.toString(),
+            receivableRequest.orgSerialId,
+        )
+
+        clientResponse = authClient.getCogoOrganization(reqBody)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
             throw AresException(AresError.ERR_1202, "")
@@ -368,7 +372,12 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setBankDetails(payment: Payment) {
-        val bankDetails = cogoClient.getCogoBank(payment.entityType!!)
+        val bankDetails = authClient.getCogoBank(
+            CogoEntitiesRequest(
+                payment.entityType!!
+            )
+        )
+
         if (bankDetails == null)
             throw AresException(AresError.ERR_1206, "")
 

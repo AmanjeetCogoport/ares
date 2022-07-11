@@ -6,7 +6,7 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.SettledDocument
+import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -22,7 +22,7 @@ interface SettlementService {
 
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
 
-    suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledDocument?>
+    suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledInvoice?>
 
     suspend fun check(request: CheckRequest): List<CheckDocument>
 

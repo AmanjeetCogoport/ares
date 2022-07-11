@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.config
 
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
@@ -16,5 +17,10 @@ class MapperConfig {
     @Bean
     fun getHistoryDocumentConverter(): HistoryDocumentMapper {
         return Mappers.getMapper(HistoryDocumentMapper::class.java)
+    }
+
+    @Bean
+    fun getSettledInvoiceConverter(): SettledInvoiceMapper {
+        return Mappers.getMapper(SettledInvoiceMapper::class.java)
     }
 }

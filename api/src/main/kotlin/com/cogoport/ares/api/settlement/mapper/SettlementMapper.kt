@@ -27,7 +27,6 @@ interface SettlementMapper {
     @Mapping(source = "settlementDate", target = "transactionDate")
     @Mapping(target = "settlementStatus", ignore = true)
     fun convertDestinationToSettlementDocument(historyDocument: Settlement?): com.cogoport.ares.model.settlement.SettledDocument
-
     @Mapping(source = "sourceId", target = "documentNo")
     @Mapping(target = "sid", expression = "java(null)")
     @Mapping(source = "ledAmount", target = "amountLedger")
