@@ -49,4 +49,6 @@ object AresConstants {
     const val TRANSACTION_DATE = "transactionDate"
 
     const val TWO_PERCENT = 0.02
+    const val DECIMAL_NUMBER_UPTO = 12
+    const val ROUND_DECIMAL_TO = 4
 }

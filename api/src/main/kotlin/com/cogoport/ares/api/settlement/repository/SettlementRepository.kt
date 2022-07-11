@@ -23,7 +23,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.led_currency,
             s.led_amount,
             s.sign_flag,
-            s.settlement_date
+            s.settlement_date,
+            '' as status
             FROM settlements s
             join account_utilizations au on s.destination_id = au.id
                 WHERE s.source_id = :sourceId 
