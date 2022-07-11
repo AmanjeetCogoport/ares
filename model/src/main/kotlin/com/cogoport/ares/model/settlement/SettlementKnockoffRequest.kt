@@ -15,8 +15,6 @@ import java.util.*
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementKnockoffRequest (
     val invoiceNumber: Long,
-    var organizationId: String,
-    var organizationName: String,
     val accCode: Int,
     val cogoAccountNo: String,
 
@@ -34,9 +32,4 @@ data class SettlementKnockoffRequest (
     val tax: BigDecimal,
 
     val email: String,  // narration or audits
-
-    val bankTransactionId: String
-
-//    TODO payment_num Auto generate
-//    TODO
 )

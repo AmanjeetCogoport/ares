@@ -114,8 +114,20 @@ class SettlementServiceImpl : SettlementService {
 
         val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
 
+        var settlements = mutableListOf<Settlement>()
+//        settlements.add(
+//            Settlement(
+//                id = null,
+//
+//            )
+//        )
         if(isTdsApplied){
             val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
+//            settlements.add(
+//                Settlement(
+//
+//                )
+//            )
 
         }
 
@@ -137,24 +149,20 @@ class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId:Long,settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
-//        val settledDoc = Settlement(
-//            null,
-//            sourceId,
-//            sourceType,
-//            invoiceId,
-//            settlementType,
-//            currency,
-//            amount,
-//            ledCurrency,
-//            ledAmount,
-//            signFlag,
-//            transactionDate,
-//            null,
-//            Timestamp.from(Instant.now()),
-//            null,
-//            Timestamp.from(Instant.now())
-//        )
-//        settlementRepository.save(settledDoc)
+        val settledDoc = Settlement(
+            null,
+            sourceId,
+            sourceType,
+            invoiceId,
+            settlementType,
+            currency,
+            amount,
+            ledCurrency,
+            ledAmount,
+            signFlag,
+            transactionDate
+        )
+        settlementRepository.save(settledDoc)
     }
 
     /**
