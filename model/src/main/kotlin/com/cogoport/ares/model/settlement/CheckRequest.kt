@@ -5,5 +5,5 @@ import java.time.Instant
 
 data class CheckRequest(
     val stackDetails: MutableList<CheckDocument>,
-    val settlementDate: Timestamp = Timestamp.from(Instant.now()),
+    val settlementDate: Timestamp = Timestamp.from(Instant.now())
 )

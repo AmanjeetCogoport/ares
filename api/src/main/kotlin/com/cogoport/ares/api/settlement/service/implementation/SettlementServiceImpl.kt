@@ -221,6 +221,35 @@ class SettlementServiceImpl : SettlementService {
 
     override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
 
+    override suspend fun edit(request: CheckRequest): List<CheckDocument> {
+        val sourceDoc = request.stackDetails.first{ it.accountType in listOf(SettlementType.REC, SettlementType.PCN)}
+        val sourceType = if (sourceDoc.accountType == SettlementType.REC) listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH) else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
+        val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(sourceDoc.id, sourceType)
+        val debitDoc = fetchedDoc.groupBy { it?.destinationId }
+        val sourceCurr = fetchedDoc.sumOf { it?.amount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
+        val sourceLed = fetchedDoc.sumOf { it?.ledAmount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
+        reduceAccountUtilization(sourceDoc.documentNo!!, AccountType.valueOf(sourceDoc.accountType.toString()), sourceCurr, sourceLed)
+        for (debit in debitDoc){
+            val destDoc = debit.value.first{ it?.sourceType == sourceDoc.accountType} ?: throw AresException(AresError.ERR_1501, "'")
+            val destCurr = destDoc.amount!!
+            val destLed = destDoc.ledAmount
+            reduceAccountUtilization(debit.key!!, AccountType.valueOf(destDoc.destinationType.toString()), destCurr, destLed)
+        }
+        deleteSettlement(fetchedDoc.map { it?.id!! })
+        return runSettlement(request, true)
+    }
+
+    private suspend fun reduceAccountUtilization(docId: Long, accType: AccountType, amount: BigDecimal, ledAmount: BigDecimal){
+        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1005,"")
+        accUtil.payCurr -= amount
+        accUtil.payLoc -= ledAmount
+        accountUtilizationRepository.update(accUtil)
+    }
+
+    private suspend fun deleteSettlement(ids: List<Long>){
+        settlementRepository.deleteByIdIn(ids)
+    }
+
     private suspend fun runSettlement(request: CheckRequest, performDbOperation: Boolean): List<CheckDocument> {
         sanitizeInput(request)
         val source = mutableListOf<CheckDocument>()
@@ -247,7 +276,7 @@ class SettlementServiceImpl : SettlementService {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
-                if (canSettle.contains(invoice.accountType)) {
+                if (canSettle.contains(invoice.accountType) && availableAmount.compareTo(0.toBigDecimal()) != 0) {
                     availableAmount = doSettlement(request, invoice, availableAmount, payment, source, performDbOperation)
                 }
             }

@@ -11,6 +11,31 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
+    suspend fun deleteByIdIn(ids: List<Long>)
+    @Query(
+        """
+            SELECT 
+            s.id,
+            s.source_id,
+            s.source_type,
+            s.destination_id,
+            s.destination_type, 
+            s.currency,
+            s.amount,
+            s.led_currency,
+            s.led_amount,
+            s.sign_flag,
+            s.settlement_date,
+            s.created_at,
+            s.created_by,
+            s.updated_at,
+            s.updated_by
+            FROM settlements s
+            where source_id = :sourceId and source_type::varchar in (:sourceType)
+        """
+    )
+    suspend fun findBySourceIdAndSourceType(sourceId: Long, sourceType: List<SettlementType>): List<Settlement?>
+
     @Query(
         """
         SELECT 
