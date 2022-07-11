@@ -1,12 +1,16 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
@@ -14,10 +18,7 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.InvoiceStatus
-import com.cogoport.ares.model.payment.InvoiceType
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.settlement.*
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -50,6 +51,9 @@ class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var settledInvoiceConverter: SettledInvoiceMapper
 
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentsFromOpenSearch(request)
 
     /***
@@ -65,22 +69,46 @@ class SettlementServiceImpl : SettlementService {
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
         val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
-        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
-        payment.exchangeRate = exchangeRate
 
         val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
 
         if(invoiceUtilization == null){
-
+            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
         }
+
+        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+        payment.organizationId = invoiceUtilization?.organizationId
+        payment.organizationName = invoiceUtilization?.organizationName
+        payment.exchangeRate = exchangeRate
+
+//        Utilization of payment
+        val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
         val accountUtilization = AccountUtilization(
-            documentNo = request.transactionId,
-
-
+            id = null,
+            documentNo = documentNo,
+            documentValue = request.transactionId,
+            zoneCode = invoiceUtilization.zoneCode,
+            serviceType = invoiceUtilization.serviceType,
+            documentStatus =  DocumentStatus.FINAL,
+            entityCode = invoiceUtilization.entityCode,
+            category = invoiceUtilization.category,
+            orgSerialId = invoiceUtilization.orgSerialId,
+            sageOrganizationId = invoiceUtilization.sageOrganizationId,
+            organizationId = invoiceUtilization.organizationId,
+            organizationName = invoiceUtilization.organizationName,
+            accType = invoiceUtilization.accType,
+            accCode = invoiceUtilization.accCode,
+            signFlag = 1,
+            currency = request.currency,
+            ledCurrency = invoiceUtilization.ledCurrency,
+            amountCurr = request.amount,
+            amountLoc = request.amount,
+            taxableAmount = BigDecimal.ZERO,
+            payCurr = BigDecimal.ZERO,
+            payLoc = BigDecimal.ZERO,
+            accMode = invoiceUtilization.accMode,
+            transactionDate = request.transactionDate
         )
-
-
-
 
         return SettlementKnockoffResponse()
     }
