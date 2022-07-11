@@ -41,14 +41,16 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.Date
+import javax.transaction.Transactional
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 @Singleton
-class SettlementServiceImpl : SettlementService {
+open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -384,8 +386,10 @@ class SettlementServiceImpl : SettlementService {
 
     override suspend fun check(request: CheckRequest): List<CheckDocument> = runSettlement(request, false)
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun edit(request: CheckRequest): List<CheckDocument> {
         val sourceDoc = request.stackDetails.first{ it.accountType in listOf(SettlementType.REC, SettlementType.PCN)}
         val sourceType = if (sourceDoc.accountType == SettlementType.REC) listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH) else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
@@ -441,7 +445,7 @@ class SettlementServiceImpl : SettlementService {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
-                if (canSettle.contains(invoice.accountType) && availableAmount.compareTo(0.toBigDecimal()) != 0) {
+                if (canSettle.contains(invoice.accountType)) {
                     availableAmount = doSettlement(request, invoice, availableAmount, payment, source, performDbOperation)
                 }
             }
