@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.settlement.entity
 
-import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id

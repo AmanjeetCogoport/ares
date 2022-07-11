@@ -145,13 +145,13 @@ class SettlementServiceImpl : SettlementService {
         var totalRecords = settlementRepository.countSettlement(request.documentNo, request.settlementType)
 
         settlements.forEach {
-                settlement ->
+            settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     var stlmnt = settledInvoiceConverter.convertToModel(settlement)
-                    if(stlmnt.currentBalance == BigDecimal.ZERO)
+                    if (stlmnt.currentBalance == BigDecimal.ZERO)
                         stlmnt.status = InvoiceStatus.PAID.value
-                    else if(stlmnt.currentBalance == stlmnt.amount)
+                    else if (stlmnt.currentBalance == stlmnt.amount)
                         stlmnt.status = InvoiceStatus.UNPAID.value
                     else
                         stlmnt.status = InvoiceStatus.PARTIAL_PAID.value
