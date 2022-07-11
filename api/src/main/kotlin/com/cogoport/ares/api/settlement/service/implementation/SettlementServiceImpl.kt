@@ -391,15 +391,15 @@ open class SettlementServiceImpl : SettlementService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun edit(request: CheckRequest): List<CheckDocument> {
-        val sourceDoc = request.stackDetails.first{ it.accountType in listOf(SettlementType.REC, SettlementType.PCN)}
+        val sourceDoc = request.stackDetails.first { it.accountType in listOf(SettlementType.REC, SettlementType.PCN) }
         val sourceType = if (sourceDoc.accountType == SettlementType.REC) listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH) else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(sourceDoc.id, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr = fetchedDoc.sumOf { it?.amount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
         val sourceLed = fetchedDoc.sumOf { it?.ledAmount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
         reduceAccountUtilization(sourceDoc.documentNo!!, AccountType.valueOf(sourceDoc.accountType.toString()), sourceCurr, sourceLed)
-        for (debit in debitDoc){
-            val destDoc = debit.value.first{ it?.sourceType == sourceDoc.accountType} ?: throw AresException(AresError.ERR_1501, "'")
+        for (debit in debitDoc) {
+            val destDoc = debit.value.first { it?.sourceType == sourceDoc.accountType } ?: throw AresException(AresError.ERR_1501, "'")
             val destCurr = destDoc.amount!!
             val destLed = destDoc.ledAmount
             reduceAccountUtilization(debit.key!!, AccountType.valueOf(destDoc.destinationType.toString()), destCurr, destLed)
@@ -408,14 +408,14 @@ open class SettlementServiceImpl : SettlementService {
         return runSettlement(request, true)
     }
 
-    private suspend fun reduceAccountUtilization(docId: Long, accType: AccountType, amount: BigDecimal, ledAmount: BigDecimal){
-        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1005,"")
+    private suspend fun reduceAccountUtilization(docId: Long, accType: AccountType, amount: BigDecimal, ledAmount: BigDecimal) {
+        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1005, "")
         accUtil.payCurr -= amount
         accUtil.payLoc -= ledAmount
         accountUtilizationRepository.update(accUtil)
     }
 
-    private suspend fun deleteSettlement(ids: List<Long>){
+    private suspend fun deleteSettlement(ids: List<Long>) {
         settlementRepository.deleteByIdIn(ids)
     }
 
