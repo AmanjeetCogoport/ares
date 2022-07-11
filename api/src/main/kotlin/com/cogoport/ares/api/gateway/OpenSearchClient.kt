@@ -9,9 +9,6 @@ import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.brahma.opensearch.Client
-import java.math.BigDecimal
-import java.sql.Timestamp
-import java.time.LocalDateTime
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldSort
 import org.opensearch.client.opensearch._types.FieldValue
@@ -20,6 +17,9 @@ import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.LocalDateTime
 
 class OpenSearchClient {
 

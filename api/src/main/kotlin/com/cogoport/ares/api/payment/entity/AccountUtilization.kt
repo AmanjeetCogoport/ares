@@ -9,8 +9,8 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
 import java.util.Date
+import java.util.UUID
 
 @MappedEntity(value = "account_utilizations")
 data class AccountUtilization(
