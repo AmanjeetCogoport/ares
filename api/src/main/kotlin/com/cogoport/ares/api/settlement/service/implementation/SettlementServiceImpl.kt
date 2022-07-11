@@ -107,8 +107,11 @@ class SettlementServiceImpl : SettlementService {
             payCurr = BigDecimal.ZERO,
             payLoc = BigDecimal.ZERO,
             accMode = invoiceUtilization.accMode,
-            transactionDate = request.transactionDate
+            transactionDate = request.transactionDate,
+            dueDate = request.transactionDate
         )
+
+        val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
 
         return SettlementKnockoffResponse()
     }
