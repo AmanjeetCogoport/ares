@@ -321,7 +321,7 @@ class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun updateAccountUtilization(document: CheckDocument, utilizedAmount: BigDecimal) {
-        val paymentUtilization = accountUtilizationRepository.findById(document.id)!!
+        val paymentUtilization = accountUtilizationRepository.findRecord(document.documentNo, document.accountType.toString()) ?: throw AresException(AresError.ERR_1503, "${document.documentNo}_${document.accountType}")
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         accountUtilizationRepository.update(paymentUtilization)
