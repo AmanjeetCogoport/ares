@@ -70,6 +70,7 @@ class SettlementServiceImpl : SettlementService {
 
         val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
 
+        // TODO DocumentValue
         val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
 
         if(invoiceUtilization == null){
@@ -111,7 +112,22 @@ class SettlementServiceImpl : SettlementService {
             dueDate = request.transactionDate
         )
 
+        val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
+
+        if(isTdsApplied){
+            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
+
+        }
+
+//        val settlement = Settlement()
+
+
+        accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
+
+
+
+
 
 
 //     2%   tds on taxable amount only if tds is not deducted already
@@ -121,24 +137,24 @@ class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId:Long,settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
-        val settledDoc = Settlement(
-            null,
-            sourceId,
-            sourceType,
-            invoiceId,
-            settlementType,
-            currency,
-            amount,
-            ledCurrency,
-            ledAmount,
-            signFlag,
-            transactionDate,
-            null,
-            Timestamp.from(Instant.now()),
-            null,
-            Timestamp.from(Instant.now())
-        )
-        settlementRepository.save(settledDoc)
+//        val settledDoc = Settlement(
+//            null,
+//            sourceId,
+//            sourceType,
+//            invoiceId,
+//            settlementType,
+//            currency,
+//            amount,
+//            ledCurrency,
+//            ledAmount,
+//            signFlag,
+//            transactionDate,
+//            null,
+//            Timestamp.from(Instant.now()),
+//            null,
+//            Timestamp.from(Instant.now())
+//        )
+//        settlementRepository.save(settledDoc)
     }
 
     /**
