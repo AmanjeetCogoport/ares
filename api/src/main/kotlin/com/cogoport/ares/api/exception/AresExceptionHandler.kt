@@ -10,9 +10,9 @@ import io.micronaut.http.exceptions.HttpStatusException
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import io.sentry.Sentry
 import jakarta.inject.Singleton
+import org.slf4j.MDC
 import javax.validation.ConstraintViolationException
 import javax.validation.ValidationException
-import org.slf4j.MDC
 
 @Singleton
 class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorResponse>> {
