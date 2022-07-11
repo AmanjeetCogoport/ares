@@ -311,7 +311,7 @@ class SettlementServiceImpl : SettlementService {
         if (payment.legCurrency != invoice.currency) {
             val excLedAmount = getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             val exType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.SECH else SettlementType.PECH
-            val exSign = excLedAmount.signum() * if(payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) -1 else 1
+            val exSign = excLedAmount.signum() * if (payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) -1 else 1
             val excDoc = createSettlement(payment.id, exType, invoice, null, null, invoice.legCurrency, excLedAmount.abs(), exSign.toShort(), request.settlementDate)
         }
         val paymentUtilized = paidAmount + if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
