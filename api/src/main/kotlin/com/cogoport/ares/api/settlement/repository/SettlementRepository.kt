@@ -9,7 +9,6 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
 import java.util.Date
-import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -35,7 +34,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun findSettlement(sourceId: Long, sourceType: MutableList<SettlementType>, pageIndex: Int, pageSize: Int ): List<Settlement?>
+    suspend fun findSettlement(sourceId: Long, sourceType: MutableList<SettlementType>, pageIndex: Int, pageSize: Int): List<Settlement?>
 
     @Query(
         "SELECT count(1) FROM settlements where source_id = :sourceId"
@@ -53,5 +52,5 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             (:id, :sourceId, :sourceType::settlement_type, :destinationId, :destinationType::settlement_type, :currency, :amount, :ledCurrency, :ledAmount, :signFlag, :settlementDate)
         """
     )
-    suspend fun insert(id: Long,sourceId: Long, sourceType: SettlementType, destinationId: Long, destinationType: SettlementType, currency: String, amount: BigDecimal, ledCurrency: String, ledAmount: BigDecimal, signFlag: Int, settlementDate: Date)
+    suspend fun insert(id: Long, sourceId: Long, sourceType: SettlementType, destinationId: Long, destinationType: SettlementType, currency: String, amount: BigDecimal, ledCurrency: String, ledAmount: BigDecimal, signFlag: Int, settlementDate: Date)
 }

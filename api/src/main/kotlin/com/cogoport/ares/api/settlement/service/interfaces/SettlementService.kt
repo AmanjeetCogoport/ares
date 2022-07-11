@@ -25,4 +25,6 @@ interface SettlementService {
     suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledDocument?>
 
     suspend fun check(request: CheckRequest): List<CheckDocument>
+
+    suspend fun settle(request: CheckRequest): List<CheckDocument>
 }

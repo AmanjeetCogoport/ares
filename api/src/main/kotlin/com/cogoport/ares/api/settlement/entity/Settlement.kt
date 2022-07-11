@@ -5,15 +5,13 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
-import java.sql.Timestamp
 import java.util.Date
-import java.util.UUID
 
 @MappedEntity(value = "settlements")
 data class Settlement(
     @field:Id @GeneratedValue
     val id: Long?,
-    val sourceId: Long,
+    val sourceId: Long?,
     val sourceType: SettlementType,
     val destinationId: Long,
     val destinationType: SettlementType,

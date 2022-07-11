@@ -42,7 +42,7 @@ class Utilities {
             return false
         }
 
-        fun binaryOperation(operandOne: BigDecimal, operandTwo: BigDecimal, operation: Operator): BigDecimal{
+        fun binaryOperation(operandOne: BigDecimal, operandTwo: BigDecimal, operation: Operator): BigDecimal {
             return when (operation) {
                 Operator.DIVIDE -> { operandOne.divide(operandTwo, AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN) }
                 Operator.MULTIPLY -> { operandOne.multiply(operandTwo).setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN) }
@@ -52,7 +52,7 @@ class Utilities {
             }
         }
 
-        fun decimalRound(amount: BigDecimal, digits: Int = AresConstants.ROUND_DECIMAL_TO, roundingMode: RoundingMode = RoundingMode.HALF_DOWN): BigDecimal{
+        fun decimalRound(amount: BigDecimal, digits: Int = AresConstants.ROUND_DECIMAL_TO, roundingMode: RoundingMode = RoundingMode.HALF_DOWN): BigDecimal {
             return amount.setScale(digits, roundingMode)
         }
     }

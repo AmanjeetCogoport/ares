@@ -271,5 +271,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     fun countHistoryDocument(orgIds: List<UUID>): Long
-
 }

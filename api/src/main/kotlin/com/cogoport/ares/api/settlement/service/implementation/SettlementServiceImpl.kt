@@ -113,10 +113,12 @@ class SettlementServiceImpl : SettlementService {
             }
         }
 
-        var totalRecords = settlementRepository.countSettlement(request.documentNo, mutableListOf(
-            SettlementType.REC, SettlementType.PCN
-        ) )
-
+        var totalRecords = settlementRepository.countSettlement(
+            request.documentNo,
+            mutableListOf(
+                SettlementType.REC, SettlementType.PCN
+            )
+        )
 
         settlements?.forEach {
             settlement ->
@@ -134,14 +136,17 @@ class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun check(request: CheckRequest): List<CheckDocument> {
+    override suspend fun check(request: CheckRequest): List<CheckDocument> = runSettlement(request, false)
+
+    override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
+
+    private suspend fun runSettlement(request: CheckRequest, performDbOperation: Boolean): List<CheckDocument>{
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
         val creditType = listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SCN)
         val debitType = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.SDN, SettlementType.PDN)
         for (doc in request.stackDetails.reversed()) {
-            if (creditType.contains(doc.accountType)) { source.add(doc) }
-            else if (debitType.contains(doc.accountType)) { dest.add(doc) }
+            if (creditType.contains(doc.accountType)) { source.add(doc) } else if (debitType.contains(doc.accountType)) { dest.add(doc) }
         }
         if (source.isEmpty() && dest.map { it.accountType }.contains(SettlementType.SINV) && dest.map { it.accountType }.contains(SettlementType.PINV)) {
             dest.filter { it.accountType == SettlementType.SINV }.forEach {
@@ -150,18 +155,18 @@ class SettlementServiceImpl : SettlementService {
             }
         }
         validateInput(source, dest)
-        val settledList = settleDocuments(source, dest)
+        val settledList = settleDocuments(request,source, dest, performDbOperation)
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
 
-    private suspend fun settleDocuments(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>): MutableList<CheckDocument> {
+    private suspend fun settleDocuments(request: CheckRequest,source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>, performDbOperation: Boolean): MutableList<CheckDocument> {
         val response = mutableListOf<CheckDocument>()
         for (payment in source) {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
                 if (canSettle.contains(invoice.accountType)) {
-                    availableAmount = doSettlement(invoice, availableAmount, payment, response, source)
+                    availableAmount = doSettlement(request,invoice, availableAmount, payment, source, performDbOperation)
                 }
             }
             payment.allocationAmount -= availableAmount
@@ -173,7 +178,7 @@ class SettlementServiceImpl : SettlementService {
         return response
     }
 
-    private suspend fun doSettlement(invoice: CheckDocument, availableAmount: BigDecimal, payment: CheckDocument, response: MutableList<CheckDocument>, source: MutableList<CheckDocument>): BigDecimal {
+    private suspend fun doSettlement(request: CheckRequest, invoice: CheckDocument, availableAmount: BigDecimal, payment: CheckDocument, source: MutableList<CheckDocument>, performDbOperation: Boolean): BigDecimal {
         var amount = availableAmount
         val toSettleAmount = invoice.allocationAmount - invoice.settledAmount
         if (toSettleAmount != 0.0.toBigDecimal()) {
@@ -189,56 +194,55 @@ class SettlementServiceImpl : SettlementService {
                 amount = getExchangeValue(availableAmount, rate)
             }
             if (amount >= toSettleAmount) {
-                amount = updateDocuments(invoice, payment, response, toSettleAmount, amount, rate, ledgerRate, updateDoc)
+                amount = updateDocuments(request, invoice, payment, toSettleAmount, amount, rate, ledgerRate, updateDoc, performDbOperation)
             } else if (amount < toSettleAmount) {
                 if (payment != source.last()) updateDoc = false
-                amount = updateDocuments(invoice, payment, response, amount, amount, rate, ledgerRate, updateDoc)
+                amount = updateDocuments(request, invoice, payment, amount, amount, rate, ledgerRate, updateDoc, performDbOperation)
             }
         }
         return amount
     }
 
-    private suspend fun updateDocuments(invoice: CheckDocument, payment: CheckDocument, response: MutableList<CheckDocument>, toSettleAmount: BigDecimal, availableAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, updateDoc: Boolean): BigDecimal {
+    private suspend fun updateDocuments(request: CheckRequest, invoice: CheckDocument, payment: CheckDocument, toSettleAmount: BigDecimal, availableAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, updateDoc: Boolean, performDbOperation: Boolean): BigDecimal {
         val invoiceTds = invoice.tds!! - invoice.settledTds
-        var paymentTds = getExchangeValue(invoiceTds,exchangeRate, true)
-        if(payment.accountType !in (listOf(SettlementType.PCN, SettlementType.SCN))) {
+        var paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
+        if (payment.accountType !in (listOf(SettlementType.PCN, SettlementType.SCN))) {
             paymentTds = 0.toBigDecimal()
         }
         val amount = availableAmount - toSettleAmount - paymentTds
         invoice.settledAmount += toSettleAmount
         payment.settledAmount += getExchangeValue(toSettleAmount + paymentTds, exchangeRate, true)
-        if (updateDoc){
+        if (updateDoc) {
             invoice.allocationAmount = invoice.settledAmount
             invoice.balanceAfterAllocation = invoice.balanceAmount.subtract(invoice.allocationAmount)
         }
         assignStatus(invoice)
         assignStatus(payment)
-        performDbOperation(toSettleAmount, exchangeRate, ledgerRate, payment, invoice)
+        if (performDbOperation) performDbOperation(request, toSettleAmount, exchangeRate, ledgerRate, payment, invoice)
         return getExchangeValue(amount, exchangeRate, true)
     }
 
-    private suspend fun performDbOperation(toSettleAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, payment: CheckDocument, invoice: CheckDocument) {
+    private suspend fun performDbOperation(request: CheckRequest, toSettleAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, payment: CheckDocument, invoice: CheckDocument) {
         val paidAmount = getExchangeValue(toSettleAmount, exchangeRate, true)
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         val invoiceTds = invoice.tds!! - invoice.settledTds
-        val paymentTds = getExchangeValue(invoiceTds,exchangeRate, true)
+        val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
-        val doc = createSettlement(payment.id, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.legCurrency, (paidLedAmount + paymentTdsLed),1,payment.transactionDate)
-        if (paymentTds.compareTo(0.toBigDecimal()) != 0){
+        val doc = createSettlement(payment.id, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.legCurrency, (paidLedAmount + paymentTdsLed), 1, request.settlementDate)
+        if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.CTDS else SettlementType.VTDS
-            val tdsDoc = createSettlement(1111, tdsType, invoice, payment.currency, paymentTds, invoice.legCurrency, paymentTdsLed, -1, payment.transactionDate)
+            val tdsDoc = createSettlement(null, tdsType, invoice, payment.currency, paymentTds, invoice.legCurrency, paymentTdsLed, -1, request.settlementDate)
             invoice.settledTds += invoiceTds
         }
-        if (payment.legCurrency != invoice.currency){
-            val excLedAmount = getExchangeValue(toSettleAmount + invoiceTds, invoice.exchangeRate) - (paidLedAmount + paymentTdsLed)
+        if (payment.legCurrency != invoice.currency) {
+            val excLedAmount = getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             val exType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.SECH else SettlementType.PECH
             val exSign = excLedAmount.signum()
-            val excDoc = createSettlement(2222, exType, invoice, null, null, invoice.legCurrency, excLedAmount, exSign.toShort(), payment.transactionDate)
+            val excDoc = createSettlement(null, exType, invoice, null, null, invoice.legCurrency, excLedAmount, exSign.toShort(), request.settlementDate)
         }
-        val paymentUtilized = paidAmount + if(payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
+        val paymentUtilized = paidAmount + if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds))
-
     }
 
     private suspend fun updateAccountUtilization(document: CheckDocument, utilizedAmount: BigDecimal) {
@@ -248,7 +252,7 @@ class SettlementServiceImpl : SettlementService {
         accountUtilizationRepository.update(paymentUtilization)
     }
 
-    private suspend fun createSettlement(sourceId: Long, sourceType: SettlementType, invoice: CheckDocument, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp){
+    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoice: CheckDocument, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
         val settledDoc = Settlement(
             null,
             sourceId,
@@ -274,15 +278,17 @@ class SettlementServiceImpl : SettlementService {
     }
 
     private fun getExchangeRate(from: String, to: String, transactionDate: Timestamp): BigDecimal {
-        return if (from == "USD" && to == "INR"){
+        return if (from == "USD" && to == "INR") {
             70.toBigDecimal()
-        } else if (from == "INR" && to == "USD"){
+        } else if (from == "INR" && to == "USD") {
             0.0142857142857.toBigDecimal()
-        }
-        else{
+        } else if (from == "USD" && to == "EUR") {
+            0.5.toBigDecimal()
+        } else if (from == "EUR" && to == "USD") {
+            2.toBigDecimal()
+        } else {
             1.toBigDecimal()
         }
-
     }
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
         return when (accType) {
@@ -323,7 +329,7 @@ class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun decimalRound(amount: BigDecimal): BigDecimal{
+    private fun decimalRound(amount: BigDecimal): BigDecimal {
         return Utilities.decimalRound(amount)
     }
 
