@@ -242,6 +242,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             id as id,
             null as sid,
             amount_loc as amount, 
+            currency as currency,
             document_no as reference_no,
             pay_loc as utilized_amount,
             organization_id as organization_id,
