@@ -331,6 +331,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getTDSDocumentList(request: TdsSettlementDocumentRequest): ResponseList<Document> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
         val offset = request.pageLimit?.let { (request.page?.let { request.pageLimit?.times(it) })?.minus(it) }
         val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {

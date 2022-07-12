@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
