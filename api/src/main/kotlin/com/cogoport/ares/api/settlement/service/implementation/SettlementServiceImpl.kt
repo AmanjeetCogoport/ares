@@ -301,6 +301,7 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {

@@ -303,10 +303,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             led_currency, 
             (amount_loc / amount_curr) as exchange_rate
                 FROM account_utilizations 
-                WHERE (amount_curr - pay_curr) <> 0 
+                WHERE (amount_curr - pay_curr) <> 0
+                    AND organization_id in (:orgId)
                     AND document_status = 'FINAL'
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:orgId is null OR organization_id = :orgId)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -316,7 +316,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 OFFSET :offset
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: UUID?, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
     @Query(
         """
@@ -325,8 +325,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE (amount_curr - pay_curr) <> 0 
                     AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:orgId is null OR organization_id = :orgId)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -334,5 +334,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_value ilike :query
     """
     )
-    suspend fun getDocumentCount(accType: AccountType?, orgId: UUID?, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 }
