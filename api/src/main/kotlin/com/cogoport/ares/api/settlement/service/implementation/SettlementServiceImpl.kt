@@ -37,6 +37,7 @@ import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -185,7 +186,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentList(request)
 
-    override suspend fun getTDSDocuments(request: SettlementDocumentRequest) = getTDSDocumentList(request)
+    override suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest) = getTDSDocumentList(request)
 
     /**
      * Get Account balance of selected Business Partners.
@@ -303,13 +304,14 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+        if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
         }
-        val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -327,21 +329,21 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getTDSDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+    private suspend fun getTDSDocumentList(request: TdsSettlementDocumentRequest): ResponseList<Document> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val offset = request.pageLimit?.let { (request.page?.let { request.pageLimit?.times(it) })?.minus(it) }
+        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
         }
-        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
         }
         return ResponseList(
             list = documentModel,
-            totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
+            totalPages = ceil(total?.toDouble()?.div(request.pageLimit!!) ?: 0.0).toLong(),
             totalRecords = total,
             pageNo = request.page
         )

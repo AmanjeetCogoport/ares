@@ -310,7 +310,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status = 'FINAL'
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
@@ -318,7 +317,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 OFFSET :offset
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
     @Query(
         """
@@ -346,7 +345,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND document_status = 'FINAL'
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
@@ -355,7 +353,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 OFFSET :offset
         """
     )
-    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
     @Query(
         """
@@ -369,13 +367,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
     """
     )
-    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
     @Query(
         """
@@ -386,12 +383,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:accMode is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
     """
     )
-    suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+    suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 }
