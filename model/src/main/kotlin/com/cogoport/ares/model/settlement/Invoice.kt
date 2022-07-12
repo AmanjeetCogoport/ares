@@ -1,6 +1,5 @@
 package com.cogoport.ares.model.settlement
 
-import com.cogoport.ares.model.payment.InvoiceStatus
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date
@@ -17,5 +16,5 @@ data class Invoice(
     var afterTdsAmount: BigDecimal?,
     var settledAmount: BigDecimal?,
     var balanceAmount: BigDecimal?,
-    var invoiceStatus: InvoiceStatus
+    var status: String
 )

@@ -1,6 +1,5 @@
 package com.cogoport.ares.model.settlement
 
-import com.cogoport.ares.model.payment.InvoiceStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
@@ -16,17 +15,17 @@ import java.time.Instant
 data class CheckDocument(
     var id: Long,
     var documentNo: Long,
+    var documentValue: String,
     var accountType: SettlementType,
-    var invoiceAmount: BigDecimal = 0.toBigDecimal(),
+    var documentAmount: BigDecimal = 0.toBigDecimal(),
     var tds: BigDecimal?,
     var afterTdsAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAmount: BigDecimal = 0.toBigDecimal(),
     var allocationAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAfterAllocation: BigDecimal = 0.toBigDecimal(),
     var ledgerAmount: BigDecimal,
-    var documentStatus: InvoiceStatus?,
-    var signFlag: Int,
-    var settledAmount: BigDecimal = 0.toBigDecimal(),
+    var status: String?,
+    var settledAllocation: BigDecimal = 0.toBigDecimal(),
     var currency: String = "INR",
     var legCurrency: String = "INR",
     var exchangeRate: BigDecimal,

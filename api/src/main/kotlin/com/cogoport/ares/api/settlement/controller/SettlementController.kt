@@ -25,6 +25,9 @@ import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
 
+/**
+ * Controller to handle all input requests for settlement API.
+ */
 @Validated
 @Controller("/settlement")
 class SettlementController {
@@ -37,6 +40,11 @@ class SettlementController {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
     }
 
+    /**
+     * API to be consumed at CP/LSP side.
+     * @param : SettlementDocumentRequest
+     * @return: List
+     */
     @Get("/invoices{?request*}")
     suspend fun getInvoices(@Valid request: SettlementDocumentRequest): ResponseList<Invoice>? {
         return Response<ResponseList<Invoice>?>().ok(settlementService.getInvoices(request))
@@ -75,5 +83,10 @@ class SettlementController {
     @Post("/settle")
     suspend fun settle(@Body request: CheckRequest): List<CheckDocument> {
         return Response<List<CheckDocument>>().ok(settlementService.settle(request))
+    }
+
+    @Post("/edit")
+    suspend fun edit(@Body request: CheckRequest): List<CheckDocument> {
+        return Response<List<CheckDocument>>().ok(settlementService.edit(request))
     }
 }

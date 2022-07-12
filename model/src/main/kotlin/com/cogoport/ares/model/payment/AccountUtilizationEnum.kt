@@ -39,6 +39,6 @@ enum class InvoiceStatus(val value: String) {
     PAID("Paid"), UNPAID("Unpaid"), PARTIAL_PAID("Partially Paid"), KNOCKED_OFF("Knocked Off")
 }
 
-enum class InvoiceType {
-    SALES_INVOICES, SALES_CREDIT_NOTE, SALES_DEBIT_NOTE, SALES_PAYMENT, PURCHASE_INVOICES, PURCHASE_CREDIT_NOTE, PURCHASE_DEBIT_NOTE, PURCHASE_PAYMENT
+enum class InvoiceType(val value: String) {
+    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"), PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment")
 }

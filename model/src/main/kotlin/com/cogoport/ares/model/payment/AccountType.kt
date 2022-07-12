@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.payment
 
-enum class AccountType(dbValue: String) {
+enum class AccountType(val dbValue: String) {
     SINV("SINV"), PINV("PINV"), SCN("SCN"), SDN("SDN"), PCN("PCN"), PDN("PDN"), REC("REC"), PAY("PAY");
 
     open operator fun contains(value: String?): Boolean {
