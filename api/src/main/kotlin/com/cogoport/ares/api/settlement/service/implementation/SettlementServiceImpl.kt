@@ -185,6 +185,8 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentList(request)
 
+    override suspend fun getTDSDocuments(request: SettlementDocumentRequest) = getTDSDocumentList(request)
+
     /**
      * Get Account balance of selected Business Partners.
      * @param SummaryRequest
@@ -308,6 +310,31 @@ open class SettlementServiceImpl : SettlementService {
             documentConverter.convertToModel(it!!)
         }
         val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        for (doc in documentModel) {
+            doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
+        }
+        return ResponseList(
+            list = documentModel,
+            totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
+            totalRecords = total,
+            pageNo = request.page
+        )
+    }
+
+    /**
+     * Get List of Documents from OpenSearch index_account_utilization
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    private suspend fun getTDSDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val documentModel = documentEntity.map {
+            documentConverter.convertToModel(it!!)
+        }
+        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -571,12 +598,12 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun getInvoiceStatus(afterTdsAmount: BigDecimal, balanceAmount: BigDecimal): String {
-        return if (balanceAmount == 0.toBigDecimal()) {
+        return if (balanceAmount.compareTo(BigDecimal.ZERO) == 0) {
             InvoiceStatus.PAID.value
-        } else if (afterTdsAmount == balanceAmount) {
-            InvoiceStatus.UNPAID.value
-        } else {
+        } else if (afterTdsAmount.compareTo(balanceAmount) != 0) {
             InvoiceStatus.PARTIAL_PAID.value
+        } else {
+            InvoiceStatus.UNPAID.value
         }
     }
 

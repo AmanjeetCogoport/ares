@@ -10,6 +10,7 @@ data class Document(
     var documentNo: Long,
     var documentValue: String,
     var documentType: String,
+    var accountType: String,
     var documentDate: Date,
     var dueDate: Date?,
     var documentAmount: BigDecimal,
