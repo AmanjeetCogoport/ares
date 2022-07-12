@@ -1,3 +1,3 @@
 package com.cogoport.ares.api.exception
 
-class AresException(var error: AresError, var context: String) : RuntimeException()
+class AresException(val error: AresError, val context: String) : RuntimeException()

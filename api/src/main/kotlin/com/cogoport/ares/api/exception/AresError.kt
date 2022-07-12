@@ -3,9 +3,9 @@ package com.cogoport.ares.api.exception
 import io.micronaut.http.HttpStatus
 
 enum class AresError(
-    var code: String,
-    var message: String,
-    var httpStatus: HttpStatus
+    val code: String,
+    val message: String,
+    val httpStatus: HttpStatus
 ) {
     ERR_1000("ERR_1000", "Service Unavailable. Please contact admin", HttpStatus.SERVICE_UNAVAILABLE),
     ERR_1008("ERR_1008", "Resource not found", HttpStatus.NOT_FOUND),
@@ -28,7 +28,7 @@ enum class AresError(
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
-            message += param
+            return message + param
         }
         return message
     }
