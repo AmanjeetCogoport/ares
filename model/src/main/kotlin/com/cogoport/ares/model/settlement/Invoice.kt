@@ -17,5 +17,5 @@ data class Invoice(
     var afterTdsAmount: BigDecimal?,
     var settledAmount: BigDecimal?,
     var balanceAmount: BigDecimal?,
-    var invoiceStatus: InvoiceStatus
+    var status: String
 )

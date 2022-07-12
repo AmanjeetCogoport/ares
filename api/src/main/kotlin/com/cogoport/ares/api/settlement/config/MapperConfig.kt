@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.config
 
+import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
@@ -22,5 +23,10 @@ class MapperConfig {
     @Bean
     fun getSettledInvoiceConverter(): SettledInvoiceMapper {
         return Mappers.getMapper(SettledInvoiceMapper::class.java)
+    }
+
+    @Bean
+    fun getDocumentConverter(): DocumentMapper {
+        return Mappers.getMapper(DocumentMapper::class.java)
     }
 }
