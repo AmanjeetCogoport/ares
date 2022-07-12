@@ -9,13 +9,16 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -278,4 +281,58 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
+
+    @Query(
+        """
+        SELECT 
+            id, 
+            document_no, 
+            document_value, 
+            acc_type as document_type, 
+            transaction_date as document_date,
+            due_date, 
+            amount_curr as document_amount, 
+            amount_loc as document_led_amount, 
+            taxable_amount, 
+            (taxable_amount * 0.02) as tds,
+            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            pay_curr as settled_amount, 
+            amount_curr - pay_curr as balance_amount,
+            null as status, 
+            currency, 
+            led_currency, 
+            (amount_loc / amount_curr) as exchange_rate
+                FROM account_utilizations 
+                WHERE (amount_curr - pay_curr) <> 0
+                    AND organization_id in (:orgId)
+                    AND document_status = 'FINAL'
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+                LIMIT :limit
+                OFFSET :offset
+        """
+    )
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+
+    @Query(
+        """
+        SELECT 
+            count(id)
+                FROM account_utilizations
+                WHERE (amount_curr - pay_curr) <> 0 
+                    AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+    """
+    )
+    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 }

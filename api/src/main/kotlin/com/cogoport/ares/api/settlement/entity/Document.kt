@@ -1,10 +1,11 @@
-package com.cogoport.ares.model.settlement
+package com.cogoport.ares.api.settlement.entity
 
+import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
 
+@MappedEntity
 data class Document(
-
     var id: Long,
     var documentNo: Long,
     var documentValue: String,

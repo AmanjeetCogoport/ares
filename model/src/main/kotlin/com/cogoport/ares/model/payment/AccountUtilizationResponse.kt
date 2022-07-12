@@ -74,5 +74,5 @@ data class AccountUtilizationResponse(
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     @JsonProperty("updatedAt")
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
-    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now())
 )
