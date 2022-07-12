@@ -40,6 +40,11 @@ class SettlementController {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
     }
 
+    @Get("/tds/documents{?request*}")
+    suspend fun getTDSDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
+        return Response<ResponseList<Document>?>().ok(settlementService.getTDSDocuments(request))
+    }
+
     /**
      * API to be consumed at CP/LSP side.
      * @param : SettlementDocumentRequest

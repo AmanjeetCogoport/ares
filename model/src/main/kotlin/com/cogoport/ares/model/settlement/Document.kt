@@ -8,6 +8,7 @@ data class Document(
     var id: Long,
     var documentNo: Long,
     var documentValue: String,
+    var accountType: String,
     var documentType: String,
     var documentDate: Date,
     var dueDate: Date?,

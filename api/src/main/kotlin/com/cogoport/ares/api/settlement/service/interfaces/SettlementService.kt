@@ -18,6 +18,7 @@ import com.cogoport.ares.model.settlement.SummaryResponse
 interface SettlementService {
 
     suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>?
+    suspend fun getTDSDocuments(request: SettlementDocumentRequest): ResponseList<Document>?
     suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice>
     suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse
 
