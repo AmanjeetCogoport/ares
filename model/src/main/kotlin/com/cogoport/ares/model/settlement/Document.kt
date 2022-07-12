@@ -11,13 +11,13 @@ data class Document(
     var id: Long?,
     var documentNo: String?,
     var documentType: InvoiceType,
-    var invoiceDate: Date?,
+    var documentDate: Date?,
     var dueDate: Date?,
-    var invoiceAmount: BigDecimal?,
+    var documentAmount: BigDecimal?,
     var taxableAmount: BigDecimal?,
     var tds: BigDecimal?,
     var afterTdsAmount: BigDecimal?,
     var settledAmount: BigDecimal?,
     var balanceAmount: BigDecimal?,
-    var invoiceStatus: InvoiceStatus
+    var status: InvoiceStatus
 )

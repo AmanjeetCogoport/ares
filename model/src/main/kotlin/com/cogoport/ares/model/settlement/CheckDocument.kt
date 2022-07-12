@@ -17,7 +17,7 @@ data class CheckDocument(
     var id: Long,
     var documentNo: Long,
     var accountType: SettlementType,
-    var invoiceAmount: BigDecimal = 0.toBigDecimal(),
+    var documentAmount: BigDecimal = 0.toBigDecimal(),
     var tds: BigDecimal?,
     var afterTdsAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAmount: BigDecimal = 0.toBigDecimal(),

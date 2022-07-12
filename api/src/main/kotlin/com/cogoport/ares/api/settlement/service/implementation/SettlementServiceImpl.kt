@@ -180,7 +180,7 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     override suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice> {
-        val documents = getDocumentsFromOpenSearch(request)
+        val documents = getInvoicesFromOpenSearch(request)
         val invoices = mutableListOf<Invoice>()
         documents.list?.forEach {
             document ->
@@ -189,15 +189,15 @@ open class SettlementServiceImpl : SettlementService {
                     Invoice(
                         id = document.id,
                         invoiceNo = document.documentNo,
-                        invoiceDate = document.invoiceDate,
+                        invoiceDate = document.documentDate,
                         dueDate = document.dueDate,
-                        invoiceAmount = document.invoiceAmount,
+                        invoiceAmount = document.documentAmount,
                         taxableAmount = document.taxableAmount,
                         tds = document.tds,
                         afterTdsAmount = document.afterTdsAmount,
                         settledAmount = document.settledAmount,
                         balanceAmount = document.balanceAmount,
-                        invoiceStatus = document.invoiceStatus,
+                        invoiceStatus = document.status,
                     )
                 )
             }
@@ -210,7 +210,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun getDocuments(request: SettlementDocumentRequest) = getInvoicesFromOpenSearch(request)
+    override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentsFromOpenSearch(request)
 
     /**
      * Get Account balance of selected Business Partners.
@@ -340,7 +340,7 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private fun getInvoicesFromOpenSearch(request: SettlementDocumentRequest): ResponseList<Document> {
-        val clientResponse = OpenSearchClient().getSettlementDocuments(request)
+        val clientResponse = OpenSearchClient().getSettlementInvoices(request)
         val total = clientResponse?.hits()?.total()?.value() ?: 0
         val accountUtilization = invoiceListResponses(clientResponse)
         return ResponseList(
@@ -370,15 +370,15 @@ open class SettlementServiceImpl : SettlementService {
                 id = response.id,
                 documentNo = response.documentValue,
                 documentType = getInvoiceType(response.accType!!),
-                invoiceDate = response.transactionDate,
+                documentDate = response.transactionDate,
                 dueDate = response.dueDate,
-                invoiceAmount = response.amountCurr,
+                documentAmount = response.amountCurr,
                 taxableAmount = response.amountCurr,
                 tds = tds,
                 afterTdsAmount = afterTdsAmount,
                 settledAmount = settledAmount,
                 balanceAmount = balanceAmount,
-                invoiceStatus = status
+                status = status
             )
         }
         return data
