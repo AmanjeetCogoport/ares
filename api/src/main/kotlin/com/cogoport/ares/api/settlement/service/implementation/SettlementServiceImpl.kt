@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
@@ -25,7 +26,6 @@ import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
-import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
@@ -302,7 +302,7 @@ open class SettlementServiceImpl : SettlementService {
             documentConverter.convertToModel(it!!)
         }
         val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
-        for (doc in documentModel){
+        for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
         }
@@ -314,7 +314,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice>{
+    private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
         request.accType = AccountType.SINV
         val response = getDocumentList(request)
         return ResponseList(
@@ -323,7 +323,6 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = response.totalRecords,
             pageNo = request.page
         )
-
     }
 
     override suspend fun check(request: CheckRequest): List<CheckDocument> = runSettlement(request, false)

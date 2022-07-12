@@ -9,10 +9,10 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.settlement.entity.HistoryDocument
-import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -318,7 +318,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: UUID?, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             count(id)
                 FROM account_utilizations
@@ -331,6 +332,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
-    """)
+    """
+    )
     suspend fun getDocumentCount(accType: AccountType?, orgId: UUID?, entityCode: Int?, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 }

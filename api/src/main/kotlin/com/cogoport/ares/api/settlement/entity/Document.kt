@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.settlement.entity
 
-
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
