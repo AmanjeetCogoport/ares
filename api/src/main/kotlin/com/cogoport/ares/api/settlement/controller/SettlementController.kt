@@ -84,7 +84,7 @@ class SettlementController {
     }
 
     @Post("/editTds")
-    suspend fun editTds(@Body request: EditTdsRequest){
+    suspend fun editTds(@Body request: EditTdsRequest) {
         settlementService.editTds(request)
     }
 }
