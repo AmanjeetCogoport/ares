@@ -405,6 +405,7 @@ open class SettlementServiceImpl : SettlementService {
             reduceAccountUtilization(debit.key!!, AccountType.valueOf(destDoc.destinationType.toString()), destCurr, destLed)
         }
         deleteSettlement(fetchedDoc.map { it?.id!! })
+        throw AresException(AresError.ERR_1004, "")
         return runSettlement(request, true)
     }
 
@@ -611,11 +612,11 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun assignStatus(doc: CheckDocument) {
         if (decimalRound(doc.balanceAmount).compareTo(decimalRound(doc.settledAmount)) == 0) {
-            doc.documentStatus = InvoiceStatus.KNOCKED_OFF
+            doc.status = InvoiceStatus.KNOCKED_OFF
         } else if (decimalRound(doc.settledAmount).compareTo(0.toBigDecimal()) == 0) {
-            doc.documentStatus = InvoiceStatus.UNPAID
+            doc.status = InvoiceStatus.UNPAID
         } else if (decimalRound(doc.balanceAmount).compareTo(decimalRound(doc.settledAmount)) == 1) {
-            doc.documentStatus = InvoiceStatus.PARTIAL_PAID
+            doc.status = InvoiceStatus.PARTIAL_PAID
         }
     }
 

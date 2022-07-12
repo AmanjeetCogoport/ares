@@ -24,7 +24,7 @@ data class CheckDocument(
     var allocationAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAfterAllocation: BigDecimal = 0.toBigDecimal(),
     var ledgerAmount: BigDecimal,
-    var documentStatus: InvoiceStatus?,
+    var status: InvoiceStatus?,
     var signFlag: Int,
     var settledAmount: BigDecimal = 0.toBigDecimal(),
     var currency: String = "INR",
