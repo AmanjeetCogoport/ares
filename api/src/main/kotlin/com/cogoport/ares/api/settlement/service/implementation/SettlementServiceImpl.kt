@@ -211,10 +211,10 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
         val accountTypes = stringAccountTypes(request)
         val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, accountTypes, request.page, request.pageLimit, request.startDate, request.endDate)
-        val totalRecords = if(request.accountType == "All"){
+        val totalRecords = if (request.accountType == "All") {
             accountUtilizationRepository.countHistoryDocument(request.orgId, listOf(AccountType.PCN, AccountType.REC), request.startDate, request.endDate)
-        }else{
-            accountUtilizationRepository.countHistoryDocument(request.orgId,  listOf(AccountType.valueOf(request.accountType)), request.startDate, request.endDate)
+        } else {
+            accountUtilizationRepository.countHistoryDocument(request.orgId, listOf(AccountType.valueOf(request.accountType)), request.startDate, request.endDate)
         }
         val historyDocuments = mutableListOf<HistoryDocument>()
         documents.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
@@ -227,9 +227,9 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
-        val accountTypes = if(request.accountType == "All"){
+        val accountTypes = if (request.accountType == "All") {
             mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
-        }else{
+        } else {
             mutableListOf(request.accountType)
         }
         return accountTypes
