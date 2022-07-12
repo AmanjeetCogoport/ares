@@ -209,11 +209,15 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList<HistoryDocument>
      */
     override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
-        var accountTypes = stringAccountTypes(request)
+        val accountTypes = stringAccountTypes(request)
         val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, accountTypes, request.page, request.pageLimit, request.startDate, request.endDate)
-        val totalRecords = accountUtilizationRepository.countHistoryDocument(request.orgId, request.accountType, request.startDate, request.endDate)
-        var historyDocuments = mutableListOf<HistoryDocument>()
-        documents?.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
+        val totalRecords = if(request.accountType == "All"){
+            accountUtilizationRepository.countHistoryDocument(request.orgId, listOf(AccountType.PCN, AccountType.REC), request.startDate, request.endDate)
+        }else{
+            accountUtilizationRepository.countHistoryDocument(request.orgId,  listOf(AccountType.valueOf(request.accountType)), request.startDate, request.endDate)
+        }
+        val historyDocuments = mutableListOf<HistoryDocument>()
+        documents.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
         return ResponseList(
             list = historyDocuments,
             totalPages = getTotalPages(totalRecords, request.pageLimit),
@@ -223,9 +227,10 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
-        var accountTypes = mutableListOf<String>()
-        request.accountType.forEach { accountType ->
-            accountTypes.add(accountType.toString())
+        val accountTypes = if(request.accountType == "All"){
+            mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
+        }else{
+            mutableListOf(request.accountType)
         }
         return accountTypes
     }
