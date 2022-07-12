@@ -27,6 +27,7 @@ import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
@@ -390,14 +391,33 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun edit(request: CheckRequest): List<CheckDocument> {
+    override suspend fun edit(request: CheckRequest): List<CheckDocument> = editSettlement(request)
+
+    override suspend fun editTds(request: EditTdsRequest) = editInvoiceTds(request)
+
+    private suspend fun editInvoiceTds(request: EditTdsRequest){
+        val doc = settlementRepository.findByDestIdAndDestType(request.documentNo, request.settlementType)
+        val tdsDoc = doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) } ?: throw AresException(AresError.ERR_1503, "TDS")
+        val sourceDoc = doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!)}
+        if (request.newTds > tdsDoc.amount!!){
+            reduceAccountUtilization(sourceDoc?.sourceId!!, AccountType.valueOf(sourceDoc.sourceType.toString()), (request.newTds - tdsDoc.amount!!), (request.newLedTds - tdsDoc.ledAmount))
+        }
+        else if (request.newTds < tdsDoc.amount){
+            reduceAccountUtilization(tdsDoc.destinationId, AccountType.valueOf(tdsDoc.destinationType.toString()), (tdsDoc.amount!! - request.newTds), (tdsDoc.ledAmount - request.newLedTds))
+        }
+        tdsDoc.amount = request.newTds
+        tdsDoc.ledAmount = request.newLedTds
+        settlementRepository.update(tdsDoc)
+    }
+
+    private suspend fun editSettlement(request: CheckRequest): List<CheckDocument>{
         val sourceDoc = request.stackDetails.first{ it.accountType in listOf(SettlementType.REC, SettlementType.PCN)}
         val sourceType = if (sourceDoc.accountType == SettlementType.REC) listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH) else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(sourceDoc.id, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr = fetchedDoc.sumOf { it?.amount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
         val sourceLed = fetchedDoc.sumOf { it?.ledAmount!!.multiply(BigDecimal.valueOf(it.signFlag.toLong())) }
-        reduceAccountUtilization(sourceDoc.documentNo!!, AccountType.valueOf(sourceDoc.accountType.toString()), sourceCurr, sourceLed)
+        reduceAccountUtilization(sourceDoc.documentNo, AccountType.valueOf(sourceDoc.accountType.toString()), sourceCurr, sourceLed)
         for (debit in debitDoc){
             val destDoc = debit.value.first{ it?.sourceType == sourceDoc.accountType} ?: throw AresException(AresError.ERR_1501, "'")
             val destCurr = destDoc.amount!!
@@ -409,7 +429,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun reduceAccountUtilization(docId: Long, accType: AccountType, amount: BigDecimal, ledAmount: BigDecimal){
-        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1005,"")
+        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1503,"${accType}_${docId}")
         accUtil.payCurr -= amount
         accUtil.payLoc -= ledAmount
         accountUtilizationRepository.update(accUtil)

@@ -6,6 +6,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.SettledInvoice
@@ -80,5 +81,10 @@ class SettlementController {
     @Post("/edit")
     suspend fun edit(@Body request: CheckRequest): List<CheckDocument> {
         return Response<List<CheckDocument>>().ok(settlementService.edit(request))
+    }
+
+    @Post("/editTds")
+    suspend fun editTds(@Body request: EditTdsRequest){
+        settlementService.editTds(request)
     }
 }

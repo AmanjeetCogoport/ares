@@ -12,6 +12,31 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     suspend fun deleteByIdIn(ids: List<Long>)
+
+    @Query(
+        """
+            SELECT 
+            s.id,
+            s.source_id,
+            s.source_type,
+            s.destination_id,
+            s.destination_type, 
+            s.currency,
+            s.amount,
+            s.led_currency,
+            s.led_amount,
+            s.sign_flag,
+            s.settlement_date,
+            s.created_at,
+            s.created_by,
+            s.updated_at,
+            s.updated_by
+            FROM settlements s
+            where destination_id = :destId and destination_type::varchar = :destType
+        """
+    )
+    suspend fun findByDestIdAndDestType(destId: Long, destType: SettlementType): List<Settlement?>
+
     @Query(
         """
             SELECT 
