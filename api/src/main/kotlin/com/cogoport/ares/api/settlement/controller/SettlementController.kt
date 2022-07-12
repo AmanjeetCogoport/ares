@@ -16,6 +16,7 @@ import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -41,7 +42,7 @@ class SettlementController {
     }
 
     @Get("/tds/documents{?request*}")
-    suspend fun getTDSDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
+    suspend fun getTDSDocuments(@Valid request: TdsSettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getTDSDocuments(request))
     }
 

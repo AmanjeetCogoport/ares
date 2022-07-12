@@ -10,18 +10,20 @@ data class Document(
     var documentValue: String,
     var accountType: String,
     var documentType: String,
-    var documentDate: Date,
+    var transactionDate: Date,
     var dueDate: Date?,
     var documentAmount: BigDecimal,
-    var documentLedAmount: BigDecimal,
+    var ledgerAmount: BigDecimal,
     var taxableAmount: BigDecimal,
     var tds: BigDecimal,
     var afterTdsAmount: BigDecimal,
     var settledAmount: BigDecimal,
+    var settledAllocation: BigDecimal?,
     var balanceAmount: BigDecimal,
     var status: String?,
     var currency: String,
     var ledCurrency: String,
+    var settledTds: BigDecimal?,
     var exchangeRate: BigDecimal
 
 )

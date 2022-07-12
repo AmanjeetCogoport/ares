@@ -37,6 +37,7 @@ import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -185,7 +186,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentList(request)
 
-    override suspend fun getTDSDocuments(request: SettlementDocumentRequest) = getTDSDocumentList(request)
+    override suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest) = getTDSDocumentList(request)
 
     /**
      * Get Account balance of selected Business Partners.
@@ -303,16 +304,19 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+        if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
         }
-        val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.settledTds = BigDecimal.ZERO
         }
         return ResponseList(
             list = documentModel,
@@ -327,21 +331,22 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getTDSDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+    private suspend fun getTDSDocumentList(request: TdsSettlementDocumentRequest): ResponseList<Document> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
+        val offset = request.pageLimit?.let { (request.page?.let { request.pageLimit?.times(it) })?.minus(it) }
+        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
         }
-        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.entityCode, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
         }
         return ResponseList(
             list = documentModel,
-            totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
+            totalPages = ceil(total?.toDouble()?.div(request.pageLimit!!) ?: 0.0).toLong(),
             totalRecords = total,
             pageNo = request.page
         )
@@ -440,7 +445,7 @@ open class SettlementServiceImpl : SettlementService {
             val ledgerRate = payment.exchangeRate
             var updateDoc = true
             if (payment.currency != invoice.currency) {
-                rate = if (payment.legCurrency == invoice.currency) {
+                rate = if (payment.ledCurrency == invoice.currency) {
                     ledgerRate
                 } else {
                     getExchangeRate(payment.currency, invoice.currency, payment.transactionDate)
@@ -482,17 +487,17 @@ open class SettlementServiceImpl : SettlementService {
         val invoiceTds = invoice.tds!! - invoice.settledTds
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
-        val doc = createSettlement(payment.documentNo, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.legCurrency, (paidLedAmount + paymentTdsLed), 1, request.settlementDate)
+        val doc = createSettlement(payment.documentNo, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.ledCurrency, (paidLedAmount + paymentTdsLed), 1, request.settlementDate)
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.CTDS else SettlementType.VTDS
-            val tdsDoc = createSettlement(payment.documentNo, tdsType, invoice, payment.currency, paymentTds, invoice.legCurrency, paymentTdsLed, -1, request.settlementDate)
+            val tdsDoc = createSettlement(payment.documentNo, tdsType, invoice, payment.currency, paymentTds, invoice.ledCurrency, paymentTdsLed, -1, request.settlementDate)
             invoice.settledTds += invoiceTds
         }
-        if (payment.legCurrency != invoice.currency) {
+        if (payment.ledCurrency != invoice.currency) {
             val excLedAmount = getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             val exType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.SECH else SettlementType.PECH
             val exSign = excLedAmount.signum() * if (payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) -1 else 1
-            val excDoc = createSettlement(payment.documentNo, exType, invoice, null, null, invoice.legCurrency, excLedAmount.abs(), exSign.toShort(), request.settlementDate)
+            val excDoc = createSettlement(payment.documentNo, exType, invoice, null, null, invoice.ledCurrency, excLedAmount.abs(), exSign.toShort(), request.settlementDate)
         }
         val paymentUtilized = paidAmount + if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
