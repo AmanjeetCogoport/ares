@@ -12,19 +12,19 @@ import java.util.UUID
 @MappedEntity(value = "settlements")
 data class Settlement(
     @field:Id @GeneratedValue
-    val id: Long?,
-    val sourceId: Long?,
-    val sourceType: SettlementType?,
-    val destinationId: Long,
-    val destinationType: SettlementType,
-    val currency: String?,
-    val amount: BigDecimal?,
-    val ledCurrency: String,
-    val ledAmount: BigDecimal,
+    var id: Long?,
+    var sourceId: Long?,
+    var sourceType: SettlementType?,
+    var destinationId: Long,
+    var destinationType: SettlementType,
+    var currency: String?,
+    var amount: BigDecimal?,
+    var ledCurrency: String,
+    var ledAmount: BigDecimal,
     var signFlag: Short,
-    val settlementDate: Date,
-    val createdBy: UUID?,
-    val createdAt: Timestamp?,
-    val updatedBy: UUID?,
-    val updatedAt: Timestamp?
+    var settlementDate: Date,
+    var createdBy: UUID?,
+    var createdAt: Timestamp?,
+    var updatedBy: UUID?,
+    var updatedAt: Timestamp?
 )
