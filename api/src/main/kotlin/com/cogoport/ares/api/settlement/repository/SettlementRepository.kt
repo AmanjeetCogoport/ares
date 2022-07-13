@@ -63,23 +63,30 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-        SELECT 
+         SELECT 
             s.id,
             s.destination_id,
-            s.destination_type, 
+            au.document_value,
+            s.destination_type,
+			au.acc_type::varchar,
             au.amount_curr - au.pay_curr as current_balance,
             s.currency,
             s.amount,
             s.led_currency,
             s.led_amount,
-            s.sign_flag,
+            au.sign_flag,
+            au.taxable_amount,
+            0 as tds,
+            au.transaction_date,
+            au.amount_loc/au.amount_curr as exchange_rate,
             s.settlement_date,
             '' as status
             FROM settlements s
             join account_utilizations au 
             ON s.destination_id = au.document_no
             AND s.destination_type::varchar = au.acc_type::varchar 
-                WHERE s.source_id = :sourceId 
+                WHERE au.amount_curr <> 0 
+                AND s.source_id = :sourceId 
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
                 AND s.destination_type::varchar  NOT IN ('SECH', 'PECH', 'CTSD', 'VTDS') 
                 OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
