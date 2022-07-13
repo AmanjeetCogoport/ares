@@ -356,7 +356,6 @@ open class OnAccountServiceImpl : OnAccountService {
             receivableRequest.orgSerialId,
         )
 
-        reqBody.organizationSerialId = 21964
         clientResponse = authClient.getCogoOrganization(reqBody)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
