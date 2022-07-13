@@ -15,14 +15,14 @@ import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 
 interface SettlementService {
 
     suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>?
+    suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document>?
     suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice>
     suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse
-
-    suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse
 
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
 

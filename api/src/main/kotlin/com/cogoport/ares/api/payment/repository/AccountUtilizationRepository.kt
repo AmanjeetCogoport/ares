@@ -9,13 +9,16 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -142,7 +145,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
                 group by date_trunc('quarter',transaction_date)
             )
             select case when x.quarter = 1 then 'Jan - Mar'
@@ -278,4 +281,127 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
+
+    @Query(
+        """
+        SELECT 
+            id, 
+            document_no, 
+            document_value, 
+            acc_type as document_type,
+            acc_type as account_type,
+            transaction_date as document_date,
+            due_date, 
+            amount_curr as document_amount, 
+            amount_loc as document_led_amount, 
+            taxable_amount, 
+            (taxable_amount * 0.02) as tds,
+            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            pay_curr as settled_amount, 
+            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
+            null as status, 
+            currency, 
+            led_currency, 
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
+                FROM account_utilizations 
+                WHERE amount_curr <> 0 
+                    AND (amount_curr - pay_curr) <> 0
+                    AND organization_id in (:orgId)
+                    AND document_status = 'FINAL'
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+                LIMIT :limit
+                OFFSET :offset
+        """
+    )
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+
+    @Query(
+        """
+        SELECT 
+            id, 
+            document_no, 
+            document_value, 
+            acc_type as document_type,
+            acc_type as account_type,
+            transaction_date as document_date,
+            due_date, 
+            amount_curr as document_amount, 
+            amount_loc as document_led_amount, 
+            taxable_amount, 
+            (taxable_amount * 0.02) as tds,
+            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            pay_curr as settled_amount, 
+            amount_curr - pay_curr as balance_amount,
+            null as status, 
+            currency, 
+            led_currency, 
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
+                FROM account_utilizations 
+                WHERE amount_curr <> 0
+                    AND organization_id in (:orgId)
+                    AND document_status = 'FINAL'
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+                LIMIT :limit
+                OFFSET :offset
+        """
+    )
+    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+
+    @Query(
+        """
+        SELECT 
+            count(id)
+                FROM account_utilizations
+                WHERE 
+                    amount_curr <> 0
+                    AND (amount_curr - pay_curr) <> 0 
+                    AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+    """
+    )
+    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+        SELECT 
+            count(id)
+                FROM account_utilizations
+                WHERE amount_curr <> 0
+                    AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND document_value ilike :query
+    """
+    )
+    suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+            SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
+                FROM account_utilizations
+                WHERE entity_code = :entityCode
+                    AND organization_id in (:orgId)
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+        """
+    )
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
 }

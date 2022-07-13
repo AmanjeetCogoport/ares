@@ -17,15 +17,18 @@ import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
 
+/**
+ * Controller to handle all input requests for settlement API.
+ */
 @Validated
 @Controller("/settlement")
 class SettlementController {
@@ -38,6 +41,16 @@ class SettlementController {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
     }
 
+    @Get("/tds/documents{?request*}")
+    suspend fun getTDSDocuments(@Valid request: TdsSettlementDocumentRequest): ResponseList<Document>? {
+        return Response<ResponseList<Document>?>().ok(settlementService.getTDSDocuments(request))
+    }
+
+    /**
+     * API to be consumed at CP/LSP side.
+     * @param : SettlementDocumentRequest
+     * @return: List
+     */
     @Get("/invoices{?request*}")
     suspend fun getInvoices(@Valid request: SettlementDocumentRequest): ResponseList<Invoice>? {
         return Response<ResponseList<Invoice>?>().ok(settlementService.getInvoices(request))
@@ -46,11 +59,6 @@ class SettlementController {
     @Get("/account-balance{?request*}")
     suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
-    }
-
-    @Get("/matching-balance")
-    suspend fun getMatchingBalance(@QueryValue("documentIds") documentIds: List<String>): SummaryResponse {
-        return Response<SummaryResponse>().ok(settlementService.getMatchingBalance(documentIds))
     }
 
     @Get("/history{?request*}")
