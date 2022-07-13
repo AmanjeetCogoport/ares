@@ -133,6 +133,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
+        accUtilEntity.taxableAmount = BigDecimal.ZERO
 
         if (receivableRequest.accMode == AccMode.AP) {
             accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
@@ -355,6 +356,7 @@ open class OnAccountServiceImpl : OnAccountService {
             receivableRequest.orgSerialId,
         )
 
+        reqBody.organizationSerialId = 21964
         clientResponse = authClient.getCogoOrganization(reqBody)
 
         if (clientResponse == null || clientResponse.organizationSerialId == null) {
@@ -374,7 +376,7 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun setBankDetails(payment: Payment) {
         val bankDetails = authClient.getCogoBank(
             CogoEntitiesRequest(
-                payment.entityType!!
+                payment.entityType!!.toString()
             )
         )
 
