@@ -1,22 +1,25 @@
 package com.cogoport.ares.api.settlement.entity
 
-import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
-import java.util.UUID
 
 @MappedEntity
 data class HistoryDocument(
     val id: Long?,
-    val referenceNo: String,
-    val sid: String?,
-    val amount: BigDecimal,
-    val currency: String,
-    val utilizedAmount: BigDecimal,
-    val organizationId: UUID,
-    val accType: AccountType,
-    val balance: BigDecimal,
+    val documentNo: Long,
+    val documentValue: String,
+    val accType: String?,
+    val currency: String?,
+    val currentBalance: BigDecimal?,
+    val amount: BigDecimal?,
+    val ledCurrency: String,
+    val ledAmount: BigDecimal,
+    val taxableAmount: BigDecimal,
     val transactionDate: Date,
+    var signFlag: Short,
+    val exchangeRate: BigDecimal,
+    val utilizedAmount: BigDecimal,
     val lastEditedDate: Date,
+    var status: String?
 )
