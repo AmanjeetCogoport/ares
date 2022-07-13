@@ -4,13 +4,11 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccountType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.core.annotation.ReflectiveAccess
 import io.micronaut.http.annotation.QueryValue
 import java.sql.Timestamp
 import java.util.UUID
 
 @Introspected
-@ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: List<UUID> = emptyList(),
