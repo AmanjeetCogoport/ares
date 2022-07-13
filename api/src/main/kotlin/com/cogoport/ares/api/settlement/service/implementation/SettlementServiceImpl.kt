@@ -202,14 +202,12 @@ open class SettlementServiceImpl : SettlementService {
 
         accountUtilization.payLoc = settledAmount
         accountUtilization.payCurr = accountUtilization.payCurr * payment.exchangeRate!!
-//        TODO Update Utilizations
 
 //     2%   tds on taxable amount only if tds is not deducted already
         paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
         settlements.forEach { settlement ->  settlementRepository.save(settlement)}
-
 
         return SettlementKnockoffResponse()
     }
