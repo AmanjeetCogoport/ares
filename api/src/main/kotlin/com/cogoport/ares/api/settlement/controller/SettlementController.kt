@@ -78,7 +78,7 @@ class SettlementController {
 
     @Post("/knockoff")
     suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-        return Response<SettlementKnockoffResponse>().ok(SettlementKnockoffResponse())
+        return Response<SettlementKnockoffResponse>().ok(settlementService.knockoff(request))
     }
 
     @Post("/check")

@@ -97,10 +97,10 @@ open class SettlementServiceImpl : SettlementService {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)
         }
 
-//        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
-//        payment.organizationId = invoiceUtilization?.organizationId
-//        payment.organizationName = invoiceUtilization?.organizationName
-//        payment.exchangeRate = exchangeRate
+        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+        payment.organizationId = invoiceUtilization?.organizationId
+        payment.organizationName = invoiceUtilization?.organizationName
+        payment.exchangeRate = exchangeRate
 
 //        Utilization of payment
         val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
@@ -128,19 +128,48 @@ open class SettlementServiceImpl : SettlementService {
             payCurr = BigDecimal.ZERO,
             payLoc = BigDecimal.ZERO,
             accMode = invoiceUtilization.accMode,
-            transactionDate = Date(request.transactionDate),
-            dueDate = Date(request.transactionDate)
+            transactionDate = request.transactionDate,
+            dueDate = request.transactionDate
         )
 
         val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
 
         var settlements = mutableListOf<Settlement>()
-//        settlements.add(
-//            Settlement(
-//                id = null,
-//
-//            )
-//        )
+        var amountToSettle = invoiceUtilization.payLoc
+        var payAmount = request.amount
+        if (!invoiceUtilization.currency.equals(request.currency)){
+            payAmount = request.amount * getExchangeRate(request.currency, invoiceUtilization.currency, request.transactionDate)
+        }
+
+        var settledAmount = BigDecimal.ZERO
+        var payBalance = BigDecimal.ZERO
+        var invBalance = BigDecimal.ZERO
+        if(payAmount > amountToSettle){
+            settledAmount = amountToSettle
+            payBalance = payAmount - amountToSettle
+            invBalance = BigDecimal.ZERO
+        }else{
+            settledAmount = payAmount
+            payBalance = BigDecimal.ZERO
+            invBalance = amountToSettle - payAmount
+        }
+
+        settlements.add(
+            Settlement(
+                id = null,
+                sourceId = accountUtilization.documentNo,
+                sourceType = SettlementType.PAY,
+                destinationId =  invoiceUtilization.documentNo,
+                destinationType = SettlementType.SINV,
+                currency = invoiceUtilization.currency,
+                amount = settledAmount,
+                ledCurrency = invoiceUtilization.ledCurrency,
+                ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                signFlag = 1,
+                settlementDate = Sus
+
+            )
+        )
         if (isTdsApplied) {
 //            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
 //            settlements.add(

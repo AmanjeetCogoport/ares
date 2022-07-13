@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
+import java.sql.Timestamp
 
 @Introspected
 @ReflectiveAccess
@@ -19,7 +20,7 @@ data class SettlementKnockoffRequest(
     val payMode: String, // todo payment mode enum
 
     var transactionId: String,
-    val transactionDate: String,
+    val transactionDate: Timestamp,
     val amount: BigDecimal,
     val currency: String,
 //    val exchange_rate: Float,
