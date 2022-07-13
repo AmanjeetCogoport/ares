@@ -11,5 +11,8 @@ interface DocumentMapper {
     @Mapping(source = "documentDate", target = "invoiceDate")
     fun convertToInvoice(doc: List<com.cogoport.ares.model.settlement.Document?>): List<Invoice?>
 
+    @Mapping(target = "settledAllocation", expression = "java(null)")
+    @Mapping(source = "documentLedAmount", target = "ledgerAmount")
+    @Mapping(source = "documentDate", target = "transactionDate")
     fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
 }
