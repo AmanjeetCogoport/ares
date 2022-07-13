@@ -174,7 +174,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
         if (isTdsApplied) {
-            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
+            val tds: BigDecimal = invoiceUtilization.taxableAmount!!.multiply(0.02.toBigDecimal())
             settlements.add(
                 Settlement(
                     id = null,
