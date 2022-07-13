@@ -19,11 +19,7 @@ import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.InvoiceStatus
-import com.cogoport.ares.model.payment.InvoiceType
-import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -91,7 +87,7 @@ open class SettlementServiceImpl : SettlementService {
         val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
 
         // TODO DocumentValue
-        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
+        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = AccountType.SINV.toString())
 
         if (invoiceUtilization == null) {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)
@@ -101,6 +97,9 @@ open class SettlementServiceImpl : SettlementService {
         payment.organizationId = invoiceUtilization?.organizationId
         payment.organizationName = invoiceUtilization?.organizationName
         payment.exchangeRate = getExchangeRate(payment.currency, invoiceUtilization.ledCurrency, request.transactionDate)
+        payment.ledCurrency = invoiceUtilization.ledCurrency
+        payment.accMode = AccMode.AR
+        payment.ledAmount = payment.amount * payment.exchangeRate!!
 
 //        Utilization of payment
         val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
