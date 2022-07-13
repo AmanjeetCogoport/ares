@@ -23,6 +23,6 @@ data class Document(
     var status: String?,
     var currency: String,
     var ledCurrency: String,
-    var exchangeRate: BigDecimal
-
+    var exchangeRate: BigDecimal,
+    var signFlag: Short
 )

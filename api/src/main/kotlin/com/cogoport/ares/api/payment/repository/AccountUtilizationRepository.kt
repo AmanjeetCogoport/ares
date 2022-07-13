@@ -302,7 +302,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0 
                     AND (amount_curr - pay_curr) <> 0
@@ -339,7 +340,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0
                     AND organization_id in (:orgId)
@@ -390,4 +392,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+            SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
+                FROM account_utilizations
+                WHERE entity_code = :entityCode
+                    AND organization_id in (:orgId)
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+        """
+    )
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
 }

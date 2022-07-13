@@ -23,8 +23,6 @@ interface SettlementService {
     suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice>
     suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse
 
-    suspend fun getMatchingBalance(documentIds: List<String>): SummaryResponse
-
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
 
     suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledInvoice?>
