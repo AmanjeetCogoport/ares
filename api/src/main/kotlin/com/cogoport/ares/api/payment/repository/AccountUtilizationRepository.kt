@@ -145,7 +145,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
                 group by date_trunc('quarter',transaction_date)
             )
             select case when x.quarter = 1 then 'Jan - Mar'
@@ -302,7 +302,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0 
                     AND (amount_curr - pay_curr) <> 0
@@ -339,7 +340,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0
                     AND organization_id in (:orgId)
@@ -390,4 +392,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+            SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
+                FROM account_utilizations
+                WHERE entity_code = :entityCode
+                    AND organization_id in (:orgId)
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+        """
+    )
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
 }
