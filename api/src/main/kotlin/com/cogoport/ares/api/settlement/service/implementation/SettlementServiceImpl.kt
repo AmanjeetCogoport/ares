@@ -100,7 +100,7 @@ open class SettlementServiceImpl : SettlementService {
         val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
         payment.organizationId = invoiceUtilization?.organizationId
         payment.organizationName = invoiceUtilization?.organizationName
-        payment.exchangeRate = exchangeRate
+        payment.exchangeRate = getExchangeRate(payment.currency, invoiceUtilization.ledCurrency, request.transactionDate)
 
 //        Utilization of payment
         val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
@@ -138,7 +138,7 @@ open class SettlementServiceImpl : SettlementService {
         var amountToSettle = invoiceUtilization.payLoc
         var payAmount = request.amount
         if (!invoiceUtilization.currency.equals(request.currency)){
-            payAmount = request.amount * getExchangeRate(request.currency, invoiceUtilization.currency, request.transactionDate)
+            payAmount = payment.amount * payment.exchangeRate!!
         }
 
         var settledAmount = BigDecimal.ZERO
@@ -164,7 +164,7 @@ open class SettlementServiceImpl : SettlementService {
                 currency = invoiceUtilization.currency,
                 amount = settledAmount,
                 ledCurrency = invoiceUtilization.ledCurrency,
-                ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                ledAmount = settledAmount * payment.exchangeRate!!,    //getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
                 signFlag = 1,
                 settlementDate = Timestamp.from(Instant.now()),
                 createdAt = Timestamp.from(Instant.now()),
@@ -183,9 +183,9 @@ open class SettlementServiceImpl : SettlementService {
                     destinationId =  invoiceUtilization.documentNo,
                     destinationType = SettlementType.SINV,
                     currency = invoiceUtilization.currency,
-                    amount = settledAmount,
+                    amount = tds,
                     ledCurrency = invoiceUtilization.ledCurrency,
-                    ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                    ledAmount = tds * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
                     signFlag = 1,
                     settlementDate = Timestamp.from(Instant.now()),
                     createdAt = Timestamp.from(Instant.now()),
