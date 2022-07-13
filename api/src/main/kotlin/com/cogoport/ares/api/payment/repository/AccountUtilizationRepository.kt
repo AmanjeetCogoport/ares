@@ -240,23 +240,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
     @Query(
         value = """
-        Select  
-            id as id,
-            null as sid,
-            amount_loc as amount, 
+        Select
+            id,
+            document_no,
+            document_value,
+            acc_type,
+            amount_curr as amount,
             currency as currency,
-            document_no as reference_no,
+            amount_loc-pay_loc as current_balance,
+            led_currency,
+            amount_loc as led_amount,
+            taxable_amount,
+            transaction_date,
+            sign_flag,
+            amount_loc/amount_curr as exchange_rate,
+            '' as status,
             pay_loc as utilized_amount,
-            organization_id as organization_id,
-            amount_loc-pay_loc as balance,
-            transaction_date as transaction_date,
-            acc_type as acc_type,
             updated_at as last_edited_date
-                from account_utilizations 
-                where organization_id in (:orgIds)
-                and acc_type::varchar in (:accountTypes)
-                and (:startDate is null or transaction_date >= :startDate::date)
-                and (:endDate is null or transaction_date <= :endDate::date)
+            FROM account_utilizations
+                WHERE amount_curr <> 0
+                AND organization_id in (:orgIds)
+                AND acc_type::varchar in (:accountTypes)
+                AND (:startDate is null or transaction_date >= :startDate::date)
+                AND (:endDate is null or transaction_date <= :endDate::date)
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -273,11 +279,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         SELECT count(1)
             FROM account_utilizations
-            where
-            organization_id in (:orgIds)
-            and acc_type::varchar in (:accountTypes)
-            and (:startDate is null or transaction_date >= :startDate::date)
-            and (:endDate is null or transaction_date <= :endDate::date)
+            WHERE
+            amount_curr <> 0
+            AND organization_id in (:orgIds)
+            AND acc_type::varchar in (:accountTypes)
+            AND (:startDate is null or transaction_date >= :startDate::date)
+            AND (:endDate is null or transaction_date <= :endDate::date)
         """
     )
     fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long

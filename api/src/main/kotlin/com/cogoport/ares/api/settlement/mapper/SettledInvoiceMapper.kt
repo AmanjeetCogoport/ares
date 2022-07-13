@@ -20,10 +20,4 @@ interface SettledInvoiceMapper {
     @Mapping(target = "settledTds", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(source = "currentBalance", target = "balanceAmount")
     fun convertToModel(historyDocument: SettledInvoice?): com.cogoport.ares.model.settlement.SettledInvoice
-
-//    @Mapping(source = "currencyAmount", target = "amount")
-//    @Mapping(source = "ledgerCurrency", target = "ledCurrency")
-//    @Mapping(source = "ledgerAmount", target = "ledAmount")
-//    @Mapping(source = "paymentMode", target = "payMode")
-//    fun convertKnockoffRequestToEntity(request: SettlementKnockoffRequest): Payment
 }
