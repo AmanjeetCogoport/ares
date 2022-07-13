@@ -397,5 +397,4 @@ class OpenSearchClient {
             )
         return response
     }
-
 }
