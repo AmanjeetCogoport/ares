@@ -165,8 +165,7 @@ open class SettlementServiceImpl : SettlementService {
                 amount = settledAmount,
                 ledCurrency = invoiceUtilization.ledCurrency,
                 ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
-                signFlag = 1,
-                settlementDate = Sus
+                signFlag = 1
 
             )
         )
