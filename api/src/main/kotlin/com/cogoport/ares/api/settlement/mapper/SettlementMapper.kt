@@ -7,18 +7,6 @@ import org.mapstruct.Mapping
 @Mapper
 interface SettlementMapper {
 
-//    @BeforeMapping
-//    fun beforeMapping(@MappingTarget target: SettledDocument, source: Settlement, accType: AccountType) = run {
-//        when(accType){
-//            AccountType.PCN -> {
-//                target.documentNo = source.destinationId
-//            }
-//            AccountType.REC -> {
-//                target.documentNo = source.sourceId
-//            }
-//        }
-//    }
-
     @Mapping(source = "destinationId", target = "documentNo")
     @Mapping(target = "sid", expression = "java(null)")
     @Mapping(source = "ledAmount", target = "amountLedger")

@@ -183,9 +183,18 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getInvoices(request: SettlementDocumentRequest) = getInvoiceList(request)
 
-    override suspend fun getDocuments(request: SettlementDocumentRequest) = getDocumentList(request)
+    override suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>? {
+        validateSettlementDocumentInput(request)
+        return getDocumentList(request)
+    }
 
-    override suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest) = getTDSDocumentList(request)
+    /**
+     *
+     */
+    override suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document> {
+        validateTdsDocumentInput(request)
+        return getTDSDocumentList(request)
+    }
 
     /**
      * Get Account balance of selected Business Partners.
@@ -295,8 +304,6 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
-        if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
@@ -320,13 +327,19 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     /**
+     * Validate input for list of documents
+     */
+    private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
+        if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+    }
+
+    /**
      * Get List of Documents from OpenSearch index_account_utilization
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
     private suspend fun getTDSDocumentList(request: TdsSettlementDocumentRequest): ResponseList<Document> {
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
         val offset = request.pageLimit?.let { (request.page?.let { request.pageLimit?.times(it) })?.minus(it) }
         val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
@@ -345,11 +358,23 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
+    private fun validateTdsDocumentInput(request: TdsSettlementDocumentRequest) {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
+    }
+
+    /**
+     * Get List of invoices for CP.
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
     private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         request.accType = AccountType.SINV
         val response = getDocumentList(request)
+        val invoiceList = documentConverter.convertToInvoice(response.list)
         return ResponseList(
-            list = documentConverter.convertToInvoice(response.list),
+            list = invoiceList,
             totalPages = response.totalPages,
             totalRecords = response.totalRecords,
             pageNo = request.page
