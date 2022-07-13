@@ -21,7 +21,6 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -59,11 +58,6 @@ class SettlementController {
     @Get("/account-balance{?request*}")
     suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse {
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
-    }
-
-    @Get("/matching-balance")
-    suspend fun getMatchingBalance(@QueryValue("documentIds") documentIds: List<String>): SummaryResponse {
-        return Response<SummaryResponse>().ok(settlementService.getMatchingBalance(documentIds))
     }
 
     @Get("/history{?request*}")

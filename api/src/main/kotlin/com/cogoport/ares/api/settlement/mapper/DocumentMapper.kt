@@ -7,9 +7,14 @@ import org.mapstruct.Mapping
 
 @Mapper
 interface DocumentMapper {
-    @Mapping(source = "documentNo", target = "invoiceNo")
-    @Mapping(source = "documentDate", target = "invoiceDate")
+
     fun convertToInvoice(doc: List<com.cogoport.ares.model.settlement.Document?>): List<Invoice?>
+
+    @Mapping(source = "documentNo", target = "invoiceNo")
+    @Mapping(source = "documentValue", target = "invoiceValue")
+    @Mapping(source = "transactionDate", target = "invoiceDate")
+    @Mapping(source = "documentAmount", target = "invoiceAmount")
+    fun documentToInvoice(doc: com.cogoport.ares.model.settlement.Document?): Invoice?
 
     @Mapping(target = "settledAllocation", expression = "java(null)")
     @Mapping(source = "documentLedAmount", target = "ledgerAmount")
