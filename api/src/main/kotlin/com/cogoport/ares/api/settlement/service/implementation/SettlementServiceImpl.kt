@@ -280,9 +280,9 @@ open class SettlementServiceImpl : SettlementService {
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     var stlmnt = settledInvoiceConverter.convertToModel(settlement)
-                    if (stlmnt.currentBalance == BigDecimal.ZERO)
+                    if (stlmnt.balanceAmount == BigDecimal.ZERO)
                         stlmnt.status = InvoiceStatus.PAID.value
-                    else if (stlmnt.currentBalance == stlmnt.amount)
+                    else if (stlmnt.balanceAmount == stlmnt.documentAmount)
                         stlmnt.status = InvoiceStatus.UNPAID.value
                     else
                         stlmnt.status = InvoiceStatus.PARTIAL_PAID.value
