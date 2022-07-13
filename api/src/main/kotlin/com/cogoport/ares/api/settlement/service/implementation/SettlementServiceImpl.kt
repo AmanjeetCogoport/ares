@@ -159,7 +159,7 @@ open class SettlementServiceImpl : SettlementService {
             Settlement(
                 id = null,
                 sourceId = accountUtilization.documentNo,
-                sourceType = SettlementType.PAY,
+                sourceType = SettlementType.REC,
                 destinationId =  invoiceUtilization.documentNo,
                 destinationType = SettlementType.SINV,
                 currency = invoiceUtilization.currency,
@@ -174,19 +174,46 @@ open class SettlementServiceImpl : SettlementService {
                 updatedAt = null
             )
         )
+
         if (isTdsApplied) {
             val tds: BigDecimal = invoiceUtilization.taxableAmount!!.multiply(0.02.toBigDecimal())
             settlements.add(
                 Settlement(
                     id = null,
                     sourceId = accountUtilization.documentNo,
-                    sourceType = SettlementType.PAY,
+                    sourceType = SettlementType.CTDS,
                     destinationId =  invoiceUtilization.documentNo,
                     destinationType = SettlementType.SINV,
                     currency = invoiceUtilization.currency,
                     amount = tds,
                     ledCurrency = invoiceUtilization.ledCurrency,
                     ledAmount = tds * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                    signFlag = 1,
+                    settlementDate = Timestamp.from(Instant.now()),
+                    createdAt = Timestamp.from(Instant.now()),
+                    createdBy = null,
+                    updatedBy = null,
+                    updatedAt = null
+                )
+            )
+        }
+
+
+        var setttledAmtLed = settledAmount * invoiceUtilization.amountLoc/invoiceUtilization.amountCurr!!
+        var setttledAmtFromRec = settledAmount * payment.exchangeRate!!
+
+        if(setttledAmtLed != setttledAmtFromRec){
+            settlements.add(
+                Settlement(
+                    id = null,
+                    sourceId = accountUtilization.documentNo,
+                    sourceType = SettlementType.SECH,
+                    destinationId =  invoiceUtilization.documentNo,
+                    destinationType = SettlementType.SINV,
+                    currency = null,
+                    amount = null,
+                    ledCurrency = invoiceUtilization.ledCurrency,
+                    ledAmount = setttledAmtFromRec - setttledAmtLed,
                     signFlag = 1,
                     settlementDate = Timestamp.from(Instant.now()),
                     createdAt = Timestamp.from(Instant.now()),
