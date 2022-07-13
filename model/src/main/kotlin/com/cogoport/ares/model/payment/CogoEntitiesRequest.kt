@@ -4,5 +4,5 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class CogoEntitiesRequest(
-    var entityCode: Int
+    var entityCode: String
 )
