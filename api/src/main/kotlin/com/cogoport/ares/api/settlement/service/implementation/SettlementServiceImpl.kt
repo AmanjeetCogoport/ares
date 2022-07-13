@@ -449,7 +449,7 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilizationRepository.update(accUtil)
     }
 
-    private suspend fun deleteSettlement(ids: List<Long>){
+    private suspend fun deleteSettlement(ids: List<Long>) {
         settlementRepository.deleteByIdIn(ids)
     }
 
