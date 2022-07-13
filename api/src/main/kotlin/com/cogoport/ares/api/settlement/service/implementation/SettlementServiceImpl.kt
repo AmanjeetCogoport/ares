@@ -104,6 +104,7 @@ open class SettlementServiceImpl : SettlementService {
 
 //        Utilization of payment
         val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+
         val accountUtilization = AccountUtilization(
             id = null,
             documentNo = documentNo,
@@ -138,7 +139,7 @@ open class SettlementServiceImpl : SettlementService {
         var amountToSettle = invoiceUtilization.payLoc
         var payAmount = request.amount
         if (!invoiceUtilization.currency.equals(request.currency)){
-            payAmount = payment.amount * payment.exchangeRate!!
+            payAmount = payment.amount * getExchangeRate(request.currency, invoiceUtilization.currency, request.transactionDate)
         }
 
         var settledAmount = BigDecimal.ZERO
@@ -196,9 +197,15 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
+        invoiceUtilization.payCurr = invoiceUtilization.payCurr + settledAmount
+        invoiceUtilization.payLoc = invoiceUtilization.payCurr * payment.exchangeRate!!
+
+        accountUtilization.payLoc = settledAmount
+        accountUtilization.payCurr = accountUtilization.payCurr * payment.exchangeRate!!
 //        TODO Update Utilizations
 
 //     2%   tds on taxable amount only if tds is not deducted already
+        paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
         settlements.forEach { settlement ->  settlementRepository.save(settlement)}
