@@ -145,7 +145,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
                 group by date_trunc('quarter',transaction_date)
             )
             select case when x.quarter = 1 then 'Jan - Mar'
