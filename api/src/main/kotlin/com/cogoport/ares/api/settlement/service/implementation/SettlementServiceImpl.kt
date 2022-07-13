@@ -165,44 +165,46 @@ open class SettlementServiceImpl : SettlementService {
                 amount = settledAmount,
                 ledCurrency = invoiceUtilization.ledCurrency,
                 ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
-                signFlag = 1
-
+                signFlag = 1,
+                settlementDate = Timestamp.from(Instant.now()),
+                createdAt = Timestamp.from(Instant.now()),
+                createdBy = null,
+                updatedBy = null,
+                updatedAt = null
             )
         )
         if (isTdsApplied) {
-//            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
-//            settlements.add(
-//                Settlement(
-//
-//                )
-//            )
+            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
+            settlements.add(
+                Settlement(
+                    id = null,
+                    sourceId = accountUtilization.documentNo,
+                    sourceType = SettlementType.PAY,
+                    destinationId =  invoiceUtilization.documentNo,
+                    destinationType = SettlementType.SINV,
+                    currency = invoiceUtilization.currency,
+                    amount = settledAmount,
+                    ledCurrency = invoiceUtilization.ledCurrency,
+                    ledAmount = settledAmount * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                    signFlag = 1,
+                    settlementDate = Timestamp.from(Instant.now()),
+                    createdAt = Timestamp.from(Instant.now()),
+                    createdBy = null,
+                    updatedBy = null,
+                    updatedAt = null
+                )
+            )
         }
 
-//        val settlement = Settlement()
-
-        accountUtilizationRepository.update(invoiceUtilization)
-        val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
+//        TODO Update Utilizations
 
 //     2%   tds on taxable amount only if tds is not deducted already
+        accountUtilizationRepository.update(invoiceUtilization)
+        val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
+        settlements.forEach { settlement ->  settlementRepository.save(settlement)}
+
 
         return SettlementKnockoffResponse()
-    }
-
-    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId: Long, settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
-//        val settledDoc = Settlement(
-//            null,
-//            sourceId,
-//            sourceType,
-//            invoiceId,
-//            settlementType,
-//            currency,
-//            amount,
-//            ledCurrency,
-//            ledAmount,
-//            signFlag,
-//            transactionDate
-//        )
-//        settlementRepository.save(settledDoc)
     }
 
     /**
