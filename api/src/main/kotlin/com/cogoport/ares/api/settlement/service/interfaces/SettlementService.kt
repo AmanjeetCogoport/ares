@@ -34,5 +34,5 @@ interface SettlementService {
 
     suspend fun edit(request: CheckRequest): List<CheckDocument>
 
-    suspend fun editTds(request: EditTdsRequest)
+    suspend fun editTds(request: EditTdsRequest): Long
 }
