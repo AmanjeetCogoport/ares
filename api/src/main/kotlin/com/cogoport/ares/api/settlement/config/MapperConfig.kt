@@ -1,6 +1,10 @@
 package com.cogoport.ares.api.settlement.config
 
-import com.cogoport.ares.api.settlement.mapper.*
+import com.cogoport.ares.api.settlement.mapper.DocumentMapper
+import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
+import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
+import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import org.mapstruct.factory.Mappers
