@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
@@ -9,6 +10,7 @@ import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
+import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -22,8 +24,10 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.UUID
 import javax.validation.Valid
 
 /**
@@ -94,5 +98,14 @@ class SettlementController {
     @Post("/editTds")
     suspend fun editTds(@Valid @Body request: EditTdsRequest): Response<Long> {
         return Response<Long>().ok("Updated Successfully", settlementService.editTds(request))
+    }
+
+    @Get("/org-summary")
+    suspend fun getOrgSummary(
+        @QueryValue(AresConstants.ORG_ID) orgId: UUID,
+        @QueryValue("startDate") startDate: String,
+        @QueryValue("endDate") endDate: String
+    ): OrgSummaryResponse {
+        return Response<OrgSummaryResponse>().ok(settlementService.getOrgSummary(orgId, startDate, endDate))
     }
 }
