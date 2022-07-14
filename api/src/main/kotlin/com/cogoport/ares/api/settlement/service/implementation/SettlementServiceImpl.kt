@@ -390,8 +390,10 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun edit(request: CheckRequest): List<CheckDocument> = editSettlement(request)
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun editTds(request: EditTdsRequest) = editInvoiceTds(request)
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(documentNo: Long, settlementType: SettlementType) = deleteSettlement(documentNo, settlementType)
 
     private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
@@ -447,9 +449,9 @@ open class SettlementServiceImpl : SettlementService {
             val payment = accountUtilizationRepository.findRecord(settledDoc.sourceId!!, settledDoc.sourceType.toString()) ?: throw AresException(AresError.ERR_1503, settledDoc.sourceId.toString())
             val invoice = accountUtilizationRepository.findRecord(settledDoc.destinationId, settledDoc.destinationType.toString()) ?: throw AresException(AresError.ERR_1503, settledDoc.destinationId.toString())
             var settledCurr = settledDoc.amount!!
-            if (payment.currency != invoice.currency){
+            if (payment.currency != invoice.currency) {
                 val rate = if (payment.ledCurrency == invoice.currency) {
-                    Utilities.binaryOperation(payment.amountLoc,payment.amountCurr, Operator.DIVIDE)
+                    Utilities.binaryOperation(payment.amountLoc, payment.amountCurr, Operator.DIVIDE)
                 } else {
                     getExchangeRate(payment.currency, invoice.currency, payment.transactionDate!!)
                 }

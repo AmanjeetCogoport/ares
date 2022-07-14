@@ -95,12 +95,12 @@ class SettlementController {
     }
 
     @Post("/editTds")
-    suspend fun editTds(@Valid @Body request: EditTdsRequest): Response<Long> {
-        return Response<Long>().ok("Updated Successfully", settlementService.editTds(request))
+    suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
+        return Response<Long>().ok(settlementService.editTds(request))
     }
 
     @Delete
-    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Response<Long> {
-        return Response<Long>().ok("Deleted Successfully", settlementService.delete(documentNo, settlementType))
+    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Long {
+        return Response<Long>().ok(settlementService.delete(documentNo, settlementType))
     }
 }
