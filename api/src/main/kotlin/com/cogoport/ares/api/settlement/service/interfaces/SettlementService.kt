@@ -7,6 +7,7 @@ import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
+import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -17,6 +18,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import java.util.UUID
 
 interface SettlementService {
 
@@ -38,4 +40,6 @@ interface SettlementService {
     suspend fun editTds(request: EditTdsRequest): Long
 
     suspend fun delete(documentNo: Long, settlementType: SettlementType): Long
+
+    suspend fun getOrgSummary(orgId: UUID, startDate: String?, endDate: String?): OrgSummaryResponse
 }

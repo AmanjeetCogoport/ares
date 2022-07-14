@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
+import com.cogoport.ares.api.payment.entity.OrgSummary
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
@@ -413,4 +414,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
+
+    @Query(
+        """
+            SELECT 
+                organization_id as org_id,
+                organization_name as org_name,
+                led_currency as currency,
+                coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as outstanding
+                FROM account_utilizations
+                WHERE organization_id = :orgId
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+                    GROUP BY organization_id, organization_name, led_currency
+        """
+    )
+    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 }
