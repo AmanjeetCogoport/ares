@@ -23,6 +23,7 @@ data class Document(
     var settledAmount: BigDecimal,
     var settledAllocation: BigDecimal?,
     var balanceAmount: BigDecimal,
+    var currentBalance: BigDecimal,
     var status: String?,
     var currency: String,
     var ledCurrency: String,

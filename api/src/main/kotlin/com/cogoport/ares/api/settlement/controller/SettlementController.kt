@@ -17,11 +17,13 @@ import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
@@ -96,8 +98,13 @@ class SettlementController {
     }
 
     @Post("/editTds")
-    suspend fun editTds(@Valid @Body request: EditTdsRequest): Response<Long> {
-        return Response<Long>().ok("Updated Successfully", settlementService.editTds(request))
+    suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
+        return Response<Long>().ok(settlementService.editTds(request))
+    }
+
+    @Delete
+    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Long {
+        return Response<Long>().ok(settlementService.delete(documentNo, settlementType))
     }
 
     @Get("/org-summary")
