@@ -76,7 +76,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """SELECT count(1) 
             FROM settlements 
             WHERE destination_id = :destinationId 
-            AND destination_type = :destinationType
+            AND destination_type = :destinationType::SETTLEMENT_TYPE
             AND source_type = :sourceType::SETTLEMENT_TYPE
         """
     )

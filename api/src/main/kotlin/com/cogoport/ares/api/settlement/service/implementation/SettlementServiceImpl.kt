@@ -174,7 +174,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
 
-        if (isTdsApplied) {
+        if (!isTdsApplied) {
             val tds: BigDecimal = invoiceUtilization.taxableAmount!!.multiply(0.02.toBigDecimal())
             settlements.add(
                 Settlement(
@@ -225,6 +225,7 @@ open class SettlementServiceImpl : SettlementService {
 
         invoiceUtilization.payCurr = invoiceUtilization.payCurr + settledAmount
         invoiceUtilization.payLoc = invoiceUtilization.payCurr * payment.exchangeRate!!
+        invoiceUtilization.updatedAt = Timestamp.from(Instant.now())
 
         accountUtilization.payLoc = settledAmount
         accountUtilization.payCurr = accountUtilization.payCurr * payment.exchangeRate!!
