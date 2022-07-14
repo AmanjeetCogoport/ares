@@ -13,6 +13,7 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -29,6 +30,7 @@ import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.Invoice
+import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
@@ -38,6 +40,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import com.cogoport.ares.model.settlement.TdsStyle
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -45,6 +48,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.Date
+import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -75,6 +79,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var documentConverter: DocumentMapper
+
+    @Inject
+    lateinit var orgSummaryConverter: OrgSummaryMapper
 
     /***
      - add entry into payments table
@@ -396,6 +403,12 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(documentNo: Long, settlementType: SettlementType) = deleteSettlement(documentNo, settlementType)
 
+    override suspend fun getOrgSummary(orgId: UUID, startDate: String?, endDate: String?): OrgSummaryResponse {
+        val responseEntity = accountUtilizationRepository.getOrgSummary(orgId, Timestamp.valueOf(startDate), Timestamp.valueOf(endDate)) ?: throw AresException(AresError.ERR_1005, "")
+        val responseModel = orgSummaryConverter.convertToModel(responseEntity)
+        responseModel.tdsStyle = TdsStyle(style = "gross", rate = 2.toBigDecimal())
+        return responseModel
+    }
     private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
         val doc = settlementRepository.findByDestIdAndDestType(request.documentNo!!, request.settlementType!!)
         val tdsDoc = doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) } ?: throw AresException(AresError.ERR_1503, "TDS")
