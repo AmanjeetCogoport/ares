@@ -13,6 +13,7 @@ import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
@@ -35,4 +36,6 @@ interface SettlementService {
     suspend fun edit(request: CheckRequest): List<CheckDocument>
 
     suspend fun editTds(request: EditTdsRequest): Long
+
+    suspend fun delete(documentNo: Long, settlementType: SettlementType): Long
 }
