@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.config
 import com.cogoport.ares.api.common.config.model.Services
 import com.cogoport.ares.api.utils.logger
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Value
 import io.micronaut.discovery.DiscoveryClient
 import io.micronaut.discovery.ServiceInstance
 import jakarta.inject.Inject
@@ -19,6 +20,9 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
 
     @Inject
     private lateinit var serviceDiscoveryAsyncClient: ServiceDiscoveryAsyncClient
+
+    @Value("\${environment}")
+    private lateinit var environment: String
 
     @Inject
     private lateinit var services: Services
@@ -37,6 +41,12 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
      * @return list of serviceInstances usable by MN.
      */
     override fun getInstances(serviceId: String?): Publisher<List<ServiceInstance>?> {
+        if (environment == "local") {
+            return Publisher { subscriber ->
+                subscriber.onNext(getServiceForLocalEnvironment(serviceId))
+                subscriber.onComplete()
+            }
+        }
         return Publisher { subscriber ->
             val discoverInstancesResult = serviceDiscoveryAsyncClient.discoverInstances(buildRequest(serviceId))
             discoverInstancesResult.whenComplete { t, u ->

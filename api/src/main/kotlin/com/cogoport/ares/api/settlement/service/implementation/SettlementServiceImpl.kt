@@ -280,13 +280,13 @@ open class SettlementServiceImpl : SettlementService {
 
         var totalRecords = settlementRepository.countSettlement(request.documentNo, request.settlementType)
         val invoiceIds = settlements.map { it.destinationId.toString() }
-        val invoideSids = plutusClient.getSidsForInvoiceIds(invoiceIds)
+        val invoideSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
         settlements.forEach {
             settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     var stlmnt = settledInvoiceConverter.convertToModel(settlement)
-                    stlmnt.sid = invoideSids?.map { if(it.invoiceId == stlmnt.documentNo) it.jobNumber }.toString()
+                    stlmnt.sid = invoideSids?.find { it.invoiceId == stlmnt.documentNo }?.jobNumber
                     if (stlmnt.balanceAmount == BigDecimal.ZERO)
                         stlmnt.status = InvoiceStatus.PAID.value
                     else if (stlmnt.balanceAmount == stlmnt.documentAmount)
