@@ -29,7 +29,7 @@ kafka:
     servers: localhost:29092
 
 services:
-  service: http://localhost:8083
+  service: https://api.dev.cogoport.io
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
