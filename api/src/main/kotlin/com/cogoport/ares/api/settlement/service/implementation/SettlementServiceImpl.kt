@@ -84,10 +84,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
-        val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
-
-        // TODO DocumentValue
-        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = AccountType.SINV.toString())
+        val invoiceUtilization = accountUtilizationRepository.findRecordByDocumentValue(documentValue = request.invoiceNumber, accType = AccountType.SINV.toString(), accMode = AccMode.AR.toString())
 
         if (invoiceUtilization == null) {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)

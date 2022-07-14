@@ -11,7 +11,7 @@ import java.sql.Timestamp
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementKnockoffRequest(
-    val invoiceNumber: Long,
+    val invoiceNumber: String,
     val accCode: Int,
     val cogoAccountNo: String,
 
