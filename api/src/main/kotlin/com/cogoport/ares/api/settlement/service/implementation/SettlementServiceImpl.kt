@@ -117,7 +117,7 @@ open class SettlementServiceImpl : SettlementService {
             sageOrganizationId = invoiceUtilization.sageOrganizationId,
             organizationId = invoiceUtilization.organizationId,
             organizationName = invoiceUtilization.organizationName,
-            accType = invoiceUtilization.accType,
+            accType = AccountType.REC,
             accCode = invoiceUtilization.accCode,
             signFlag = 1,
             currency = request.currency,
@@ -135,7 +135,7 @@ open class SettlementServiceImpl : SettlementService {
         val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
 
         var settlements = mutableListOf<Settlement>()
-        var amountToSettle = invoiceUtilization.payLoc
+        var amountToSettle = invoiceUtilization.amountCurr - invoiceUtilization.payCurr
         var payAmount = request.amount
         if (!invoiceUtilization.currency.equals(request.currency)){
             payAmount = payment.amount * getExchangeRate(request.currency, invoiceUtilization.currency, request.transactionDate)
@@ -170,7 +170,7 @@ open class SettlementServiceImpl : SettlementService {
                 createdAt = Timestamp.from(Instant.now()),
                 createdBy = null,
                 updatedBy = null,
-                updatedAt = null
+                updatedAt = Timestamp.from(Instant.now())
             )
         )
 
@@ -192,7 +192,7 @@ open class SettlementServiceImpl : SettlementService {
                     createdAt = Timestamp.from(Instant.now()),
                     createdBy = null,
                     updatedBy = null,
-                    updatedAt = null
+                    updatedAt = Timestamp.from(Instant.now())
                 )
             )
         }
@@ -218,7 +218,7 @@ open class SettlementServiceImpl : SettlementService {
                     createdAt = Timestamp.from(Instant.now()),
                     createdBy = null,
                     updatedBy = null,
-                    updatedAt = null
+                    updatedAt = Timestamp.from(Instant.now())
                 )
             )
         }
@@ -230,6 +230,8 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization.payCurr = accountUtilization.payCurr * payment.exchangeRate!!
 
 //     2%   tds on taxable amount only if tds is not deducted already
+        payment.createdAt = Timestamp.from(Instant.now())
+        payment.updatedAt = Timestamp.from(Instant.now())
         paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
