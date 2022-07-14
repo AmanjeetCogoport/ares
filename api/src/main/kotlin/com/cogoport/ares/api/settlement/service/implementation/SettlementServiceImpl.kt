@@ -38,6 +38,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -75,6 +76,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var documentConverter: DocumentMapper
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
 
     /***
      - add entry into payments table
@@ -275,12 +279,14 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         var totalRecords = settlementRepository.countSettlement(request.documentNo, request.settlementType)
-
+        val invoiceIds = settlements.map { it.destinationId.toString() }
+        val invoideSids = plutusClient.getSidsForInvoiceIds(invoiceIds)
         settlements.forEach {
             settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     var stlmnt = settledInvoiceConverter.convertToModel(settlement)
+                    stlmnt.sid = invoideSids?.map { if(it.invoiceId == stlmnt.documentNo) it.jobNumber }.toString()
                     if (stlmnt.balanceAmount == BigDecimal.ZERO)
                         stlmnt.status = InvoiceStatus.PAID.value
                     else if (stlmnt.balanceAmount == stlmnt.documentAmount)

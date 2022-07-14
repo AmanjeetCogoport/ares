@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.config
 
+import com.cogoport.ares.api.common.config.model.Services
 import com.cogoport.ares.api.utils.logger
 import io.micronaut.context.annotation.Factory
 import io.micronaut.discovery.DiscoveryClient
@@ -9,6 +10,7 @@ import org.reactivestreams.Publisher
 import software.amazon.awssdk.services.servicediscovery.ServiceDiscoveryAsyncClient
 import software.amazon.awssdk.services.servicediscovery.model.DiscoverInstancesRequest
 import software.amazon.awssdk.services.servicediscovery.model.ListServicesResponse
+import java.net.URI
 import kotlin.random.Random
 
 @Factory
@@ -17,6 +19,9 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
 
     @Inject
     private lateinit var serviceDiscoveryAsyncClient: ServiceDiscoveryAsyncClient
+
+    @Inject
+    private lateinit var services: Services
 
     /**
      * The description.
@@ -84,6 +89,11 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
             serviceIds.add(service.id())
         }
         return serviceIds
+    }
+
+    private fun getServiceForLocalEnvironment(serviceId: String?): List<ServiceInstance>? {
+        val serviceMap = mapOf("service" to URI(services.service))
+        return listOf(ServiceInstance.of(serviceId, serviceMap["service"]))
     }
 
     companion object {

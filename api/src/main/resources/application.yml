@@ -38,6 +38,9 @@ kafka:
 #        handler:
 #          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
 
+services:
+  service: http://localhost:8083
+
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
