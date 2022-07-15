@@ -27,6 +27,5 @@ data class SettledInvoice(
     var status: String?,
     var settledTds: BigDecimal? = BigDecimal.ZERO,
     var exchangeRate: BigDecimal,
-    var signFlag: Short,
-    var sid: Long?
+    var signFlag: Short
 )
