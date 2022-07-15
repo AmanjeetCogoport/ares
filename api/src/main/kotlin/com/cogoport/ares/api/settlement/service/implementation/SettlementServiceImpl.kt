@@ -19,7 +19,12 @@ import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
-import com.cogoport.ares.model.payment.*
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.InvoiceStatus
+import com.cogoport.ares.model.payment.InvoiceType
+import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -163,12 +168,12 @@ open class SettlementServiceImpl : SettlementService {
                 id = null,
                 sourceId = accountUtilization.documentNo,
                 sourceType = SettlementType.REC,
-                destinationId =  invoiceUtilization.documentNo,
+                destinationId = invoiceUtilization.documentNo,
                 destinationType = SettlementType.SINV,
                 currency = invoiceUtilization.currency,
                 amount = settledAmount,
                 ledCurrency = invoiceUtilization.ledCurrency,
-                ledAmount = settledAmount * payment.exchangeRate!!,    // getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                ledAmount = settledAmount * payment.exchangeRate!!, // getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
                 signFlag = 1,
                 settlementDate = Timestamp.from(Instant.now()),
                 createdAt = Timestamp.from(Instant.now()),
@@ -185,7 +190,7 @@ open class SettlementServiceImpl : SettlementService {
                     id = null,
                     sourceId = accountUtilization.documentNo,
                     sourceType = SettlementType.CTDS,
-                    destinationId =  invoiceUtilization.documentNo,
+                    destinationId = invoiceUtilization.documentNo,
                     destinationType = SettlementType.SINV,
                     currency = invoiceUtilization.currency,
                     amount = tds,
@@ -210,7 +215,7 @@ open class SettlementServiceImpl : SettlementService {
                     id = null,
                     sourceId = accountUtilization.documentNo,
                     sourceType = SettlementType.SECH,
-                    destinationId =  invoiceUtilization.documentNo,
+                    destinationId = invoiceUtilization.documentNo,
                     destinationType = SettlementType.SINV,
                     currency = null,
                     amount = null,
@@ -239,7 +244,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
-        settlements.forEach { settlement ->  settlementRepository.save(settlement) }
+        settlements.forEach { settlement -> settlementRepository.save(settlement) }
         return SettlementKnockoffResponse()
     }
 
