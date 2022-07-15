@@ -41,6 +41,7 @@ class SettlementController {
 
     @Inject
     lateinit var settlementService: SettlementService
+
     @Get("/documents{?request*}")
     suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
