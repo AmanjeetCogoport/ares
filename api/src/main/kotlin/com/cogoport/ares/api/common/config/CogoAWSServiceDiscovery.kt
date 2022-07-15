@@ -1,9 +1,7 @@
 package com.cogoport.ares.api.common.config
 
-import com.cogoport.ares.api.common.config.model.Services
 import com.cogoport.ares.api.utils.logger
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import io.micronaut.discovery.DiscoveryClient
 import io.micronaut.discovery.ServiceInstance
 import jakarta.inject.Inject
@@ -11,7 +9,6 @@ import org.reactivestreams.Publisher
 import software.amazon.awssdk.services.servicediscovery.ServiceDiscoveryAsyncClient
 import software.amazon.awssdk.services.servicediscovery.model.DiscoverInstancesRequest
 import software.amazon.awssdk.services.servicediscovery.model.ListServicesResponse
-import java.net.URI
 import kotlin.random.Random
 
 @Factory
@@ -20,12 +17,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
 
     @Inject
     private lateinit var serviceDiscoveryAsyncClient: ServiceDiscoveryAsyncClient
-
-    @Value("\${environment}")
-    private lateinit var environment: String
-
-    @Inject
-    private lateinit var services: Services
 
     /**
      * The description.
@@ -41,12 +32,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
      * @return list of serviceInstances usable by MN.
      */
     override fun getInstances(serviceId: String?): Publisher<List<ServiceInstance>?> {
-        if (environment == "local") {
-            return Publisher { subscriber ->
-                subscriber.onNext(getServiceForLocalEnvironment(serviceId))
-                subscriber.onComplete()
-            }
-        }
         return Publisher { subscriber ->
             val discoverInstancesResult = serviceDiscoveryAsyncClient.discoverInstances(buildRequest(serviceId))
             discoverInstancesResult.whenComplete { t, u ->
@@ -99,11 +84,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
             serviceIds.add(service.id())
         }
         return serviceIds
-    }
-
-    private fun getServiceForLocalEnvironment(serviceId: String?): List<ServiceInstance>? {
-        val serviceMap = mapOf("service" to URI(services.service))
-        return listOf(ServiceInstance.of(serviceId, serviceMap["service"]))
     }
 
     companion object {
