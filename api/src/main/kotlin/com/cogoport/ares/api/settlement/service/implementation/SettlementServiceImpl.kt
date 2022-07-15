@@ -42,6 +42,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -80,6 +81,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var documentConverter: DocumentMapper
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
 
     @Inject
     lateinit var orgSummaryConverter: OrgSummaryMapper
@@ -346,12 +350,14 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         var totalRecords = settlementRepository.countSettlement(request.documentNo, request.settlementType)
-
+        val invoiceIds = settlements.map { it.destinationId.toString() }
+        val invoideSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
         settlements.forEach {
             settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     var stlmnt = settledInvoiceConverter.convertToModel(settlement)
+                    stlmnt.sid = invoideSids?.find { it.invoiceId == stlmnt.documentNo }?.jobNumber
                     if (stlmnt.balanceAmount == BigDecimal.ZERO)
                         stlmnt.status = InvoiceStatus.PAID.value
                     else if (stlmnt.balanceAmount == stlmnt.documentAmount)
