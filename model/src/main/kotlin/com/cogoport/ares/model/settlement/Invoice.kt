@@ -7,8 +7,9 @@ import java.util.Date
 @JsonInclude
 data class Invoice(
     var id: Long?,
-    var invoiceNo: String?,
-    var invoiceDate: Date?,
+    var invoiceNo: Long,
+    var invoiceValue: String,
+    var invoiceDate: Date,
     var dueDate: Date?,
     var invoiceAmount: BigDecimal?,
     var taxableAmount: BigDecimal?,

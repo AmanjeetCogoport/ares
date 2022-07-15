@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
+import com.cogoport.ares.api.payment.entity.OrgSummary
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
@@ -153,7 +154,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '11 month'::interval)
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
                 group by date_trunc('quarter',transaction_date)
             )
             select case when x.quarter = 1 then 'Jan - Mar'
@@ -248,23 +249,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
     @Query(
         value = """
-        Select  
-            id as id,
-            null as sid,
-            amount_loc as amount, 
+        Select
+            id,
+            document_no,
+            document_value,
+            acc_type,
+            amount_curr as amount,
             currency as currency,
-            document_no as reference_no,
+            amount_loc-pay_loc as current_balance,
+            led_currency,
+            amount_loc as led_amount,
+            taxable_amount,
+            transaction_date,
+            sign_flag,
+            amount_loc/amount_curr as exchange_rate,
+            '' as status,
             pay_loc as utilized_amount,
-            organization_id as organization_id,
-            amount_loc-pay_loc as balance,
-            transaction_date as transaction_date,
-            acc_type as acc_type,
             updated_at as last_edited_date
-                from account_utilizations 
-                where organization_id in (:orgIds)
-                and acc_type::varchar in (:accountTypes)
-                and (:startDate is null or transaction_date >= :startDate::date)
-                and (:endDate is null or transaction_date <= :endDate::date)
+            FROM account_utilizations
+                WHERE amount_curr <> 0
+                AND organization_id in (:orgIds)
+                AND acc_type::varchar in (:accountTypes)
+                AND (:startDate is null or transaction_date >= :startDate::date)
+                AND (:endDate is null or transaction_date <= :endDate::date)
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -281,11 +288,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         SELECT count(1)
             FROM account_utilizations
-            where
-            organization_id in (:orgIds)
-            and acc_type::varchar in (:accountTypes)
-            and (:startDate is null or transaction_date >= :startDate::date)
-            and (:endDate is null or transaction_date <= :endDate::date)
+            WHERE
+            amount_curr <> 0
+            AND organization_id in (:orgIds)
+            AND acc_type::varchar in (:accountTypes)
+            AND (:startDate is null or transaction_date >= :startDate::date)
+            AND (:endDate is null or transaction_date <= :endDate::date)
         """
     )
     fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
@@ -307,10 +315,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
+            amount_curr - pay_curr as current_balance,
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0 
                     AND (amount_curr - pay_curr) <> 0
@@ -343,11 +353,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             (taxable_amount * 0.02) as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
-            amount_curr - pay_curr as balance_amount,
+            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
+            amount_curr - pay_curr as current_balance,
             null as status, 
             currency, 
             led_currency, 
-            (amount_loc / amount_curr) as exchange_rate
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0
                     AND organization_id in (:orgId)
@@ -398,4 +410,32 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+            SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
+                FROM account_utilizations
+                WHERE entity_code = :entityCode
+                    AND organization_id in (:orgId)
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+        """
+    )
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
+
+    @Query(
+        """
+            SELECT 
+                organization_id as org_id,
+                organization_name as org_name,
+                led_currency as currency,
+                coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as outstanding
+                FROM account_utilizations
+                WHERE organization_id = :orgId
+                    AND (:startDate is null or transaction_date >= :startDate)
+                    AND (:endDate is null or transaction_date <= :endDate)
+                    GROUP BY organization_id, organization_name, led_currency
+        """
+    )
+    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 }

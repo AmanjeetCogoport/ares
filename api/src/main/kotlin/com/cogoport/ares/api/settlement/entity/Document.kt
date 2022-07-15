@@ -20,9 +20,10 @@ data class Document(
     var afterTdsAmount: BigDecimal,
     var settledAmount: BigDecimal,
     var balanceAmount: BigDecimal,
+    var currentBalance: BigDecimal,
     var status: String?,
     var currency: String,
     var ledCurrency: String,
-    var exchangeRate: BigDecimal
-
+    var exchangeRate: BigDecimal,
+    var signFlag: Short
 )

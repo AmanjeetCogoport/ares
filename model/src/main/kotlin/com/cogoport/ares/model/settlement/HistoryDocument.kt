@@ -1,26 +1,35 @@
 package com.cogoport.ares.model.settlement
 
-import com.cogoport.ares.model.payment.AccountType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.util.Date
-import java.util.UUID
 
 @Introspected
-@ReflectiveAccess
+@JsonInclude
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class HistoryDocument(
     val id: Long?,
-    val referenceNo: String,
-    val sid: String?,
-    val amount: BigDecimal,
-    val currency: String,
-    val utilizedAmount: BigDecimal,
-    val organizationId: UUID,
-    val accType: AccountType,
-    val balance: BigDecimal,
+    val documentNo: Long,
+    val documentValue: String,
+    val accountType: String?,
+    val currency: String?,
+    val balanceAmount: BigDecimal?,
+    val documentAmount: BigDecimal?,
+    val ledCurrency: String,
+    val ledgerAmount: BigDecimal,
+    val tds: BigDecimal?,
+    val afterTdsAmount: BigDecimal?,
+    val allocationAmount: BigDecimal?,
+    val balanceAfterAllocation: BigDecimal?,
+    val settledAllocation: BigDecimal?,
+    val taxableAmount: BigDecimal,
+    val settledTds: BigDecimal?,
     val transactionDate: Date,
+    var signFlag: Short,
+    val exchangeRate: BigDecimal,
+    val utilizedAmount: BigDecimal,
     val lastEditedDate: Date,
+    var status: String?
 )
