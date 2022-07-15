@@ -20,6 +20,7 @@ data class CheckDocument(
     var afterTdsAmount: BigDecimal = 0.toBigDecimal(),
     var balanceAmount: BigDecimal = 0.toBigDecimal(),
     var allocationAmount: BigDecimal = 0.toBigDecimal(),
+    var currentBalance: BigDecimal?,
     var balanceAfterAllocation: BigDecimal = 0.toBigDecimal(),
     var ledgerAmount: BigDecimal,
     var status: String?,
