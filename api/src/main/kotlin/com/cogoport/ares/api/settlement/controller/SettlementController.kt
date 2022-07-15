@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
@@ -42,9 +41,6 @@ class SettlementController {
 
     @Inject
     lateinit var settlementService: SettlementService
-
-    @Inject
-    lateinit var cogoClient: AuthClient
     @Get("/documents{?request*}")
     suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
@@ -117,11 +113,5 @@ class SettlementController {
         @QueryValue("endDate") endDate: String
     ): OrgSummaryResponse {
         return Response<OrgSummaryResponse>().ok(settlementService.getOrgSummary(orgId, startDate, endDate))
-    }
-
-    @Get("/test")
-    suspend fun test(id: String) {
-        val data = cogoClient.getOrgTdsStyles(id)
-        data
     }
 }
