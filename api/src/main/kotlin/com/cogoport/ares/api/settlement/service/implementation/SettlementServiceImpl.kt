@@ -1,8 +1,10 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -44,6 +46,7 @@ import com.cogoport.ares.model.settlement.TdsStyle
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -82,6 +85,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var orgSummaryConverter: OrgSummaryMapper
+
+    @Inject
+    lateinit var cogoClient: AuthClient
 
     /***
      - add entry into payments table
@@ -316,6 +322,14 @@ open class SettlementServiceImpl : SettlementService {
         val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
+        }
+        val tdsStyles = mutableListOf<TdsStylesResponse>()
+        request.orgId.forEach {
+            tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
+        }
+        documentModel.forEach { doc ->
+            val rate = tdsStyles.find { it.id == doc.organizationId }?.tdsDeductionRate ?: (AresConstants.TWO_PERCENT * 100).toBigDecimal()
+            doc.tds = (doc.taxableAmount * Utilities.binaryOperation(rate, 100.toBigDecimal(), Operator.DIVIDE)).setScale(4, RoundingMode.HALF_DOWN)
         }
         val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
         for (doc in documentModel) {

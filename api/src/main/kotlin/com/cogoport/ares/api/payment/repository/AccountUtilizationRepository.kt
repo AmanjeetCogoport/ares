@@ -293,7 +293,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            id, 
+            id,
+            organization_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -303,7 +304,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr as document_amount, 
             amount_loc as document_led_amount, 
             taxable_amount, 
-            (taxable_amount * 0.02) as tds,
+            taxable_amount as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
@@ -335,6 +336,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             id, 
             document_no, 
             document_value, 
+            organization_id,
             acc_type as document_type,
             acc_type as account_type,
             transaction_date as document_date,
