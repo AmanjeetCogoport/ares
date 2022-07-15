@@ -36,7 +36,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
-    @Query("""select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
+    @Query(
+        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
            ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)

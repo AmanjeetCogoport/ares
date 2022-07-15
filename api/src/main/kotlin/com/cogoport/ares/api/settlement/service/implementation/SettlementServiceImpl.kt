@@ -141,18 +141,18 @@ open class SettlementServiceImpl : SettlementService {
         var settlements = mutableListOf<Settlement>()
         var amountToSettle = invoiceUtilization.amountCurr - invoiceUtilization.payCurr
         var payAmount = request.amount
-        if (!invoiceUtilization.currency.equals(request.currency)){
+        if (!invoiceUtilization.currency.equals(request.currency)) {
             payAmount = payment.amount * getExchangeRate(request.currency, invoiceUtilization.currency, request.transactionDate)
         }
 
         var settledAmount = BigDecimal.ZERO
         var payBalance = BigDecimal.ZERO
         var invBalance = BigDecimal.ZERO
-        if(payAmount > amountToSettle){
+        if (payAmount > amountToSettle) {
             settledAmount = amountToSettle
             payBalance = payAmount - amountToSettle
             invBalance = BigDecimal.ZERO
-        }else{
+        } else {
             settledAmount = payAmount
             payBalance = BigDecimal.ZERO
             invBalance = amountToSettle - payAmount
@@ -168,7 +168,7 @@ open class SettlementServiceImpl : SettlementService {
                 currency = invoiceUtilization.currency,
                 amount = settledAmount,
                 ledCurrency = invoiceUtilization.ledCurrency,
-                ledAmount = settledAmount * payment.exchangeRate!!,    //getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                ledAmount = settledAmount * payment.exchangeRate!!,    // getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
                 signFlag = 1,
                 settlementDate = Timestamp.from(Instant.now()),
                 createdAt = Timestamp.from(Instant.now()),
@@ -190,7 +190,7 @@ open class SettlementServiceImpl : SettlementService {
                     currency = invoiceUtilization.currency,
                     amount = tds,
                     ledCurrency = invoiceUtilization.ledCurrency,
-                    ledAmount = tds * getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                    ledAmount = tds * getExchangeRate(invoiceUtilization.ledCurrency, invoiceUtilization.currency, payment.transactionDate!!),
                     signFlag = 1,
                     settlementDate = Timestamp.from(Instant.now()),
                     createdAt = Timestamp.from(Instant.now()),
@@ -201,11 +201,10 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-
-        var setttledAmtLed = settledAmount * invoiceUtilization.amountLoc/invoiceUtilization.amountCurr!!
+        var setttledAmtLed = settledAmount * invoiceUtilization.amountLoc / invoiceUtilization.amountCurr!!
         var setttledAmtFromRec = settledAmount * payment.exchangeRate!!
 
-        if(setttledAmtLed != setttledAmtFromRec){
+        if (setttledAmtLed != setttledAmtFromRec) {
             settlements.add(
                 Settlement(
                     id = null,
@@ -240,8 +239,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
         val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
-        settlements.forEach { settlement ->  settlementRepository.save(settlement)}
-
+        settlements.forEach { settlement ->  settlementRepository.save(settlement) }
         return SettlementKnockoffResponse()
     }
 
