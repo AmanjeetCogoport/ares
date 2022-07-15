@@ -12,6 +12,7 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
+import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -33,6 +34,7 @@ import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentResponse
@@ -47,6 +49,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
+import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -75,6 +78,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper
+
+    @Inject
+    lateinit var orgStatsConverter: OrgStatsMapper
 
     /**
      * Fetch Account Collection payments from DB.
@@ -391,5 +397,11 @@ open class OnAccountServiceImpl : OnAccountService {
                 }
             }
         }
+    }
+
+    override suspend fun getOrgStats(orgId: UUID?): OrgStatsResponse {
+        if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
+        val response = accountUtilizationRepository.getOrgStats(orgId) ?: throw AresException(AresError.ERR_1005, "")
+        return orgStatsConverter.convertToModel(response)
     }
 }

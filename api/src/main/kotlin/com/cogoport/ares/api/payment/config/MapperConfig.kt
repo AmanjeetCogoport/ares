@@ -6,6 +6,7 @@ import com.cogoport.ares.api.payment.mapper.CollectionTrendMapper
 import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.InvoiceMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
+import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
@@ -79,5 +80,10 @@ class MapperConfig {
     @Bean
     fun getAccUtilizationConverter(): AccUtilizationToPaymentMapper {
         return Mappers.getMapper(AccUtilizationToPaymentMapper::class.java)
+    }
+
+    @Bean
+    fun orgStatsConverter(): OrgStatsMapper {
+        return Mappers.getMapper(OrgStatsMapper::class.java)
     }
 }

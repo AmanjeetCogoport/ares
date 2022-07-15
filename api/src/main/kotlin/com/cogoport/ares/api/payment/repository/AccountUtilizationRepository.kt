@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
+import com.cogoport.ares.api.payment.entity.OrgStatsResponse
 import com.cogoport.ares.api.payment.entity.OrgSummary
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
@@ -439,4 +440,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
+
+    @Query(
+        """
+        select 
+            organization_id,
+            led_currency as currency,
+            case when acc_type = 'SINV' then sum(amount_loc - pay_loc) end as receivables,
+            case when acc_type = 'PINV' then sum(amount_loc - pay_loc) end as payables
+                from account_utilizations
+                where acc_type in ('SINV','PINV')
+                and organization_id = :orgId
+                group by organization_id, led_currency, acc_type
+        """
+    )
+    suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
 }
