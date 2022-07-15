@@ -1,9 +1,9 @@
 package com.cogoport.ares.api.settlement.controller
 
-import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -29,6 +29,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.sql.Timestamp
 import java.util.UUID
 import javax.validation.Valid
 
@@ -109,10 +110,14 @@ class SettlementController {
 
     @Get("/org-summary")
     suspend fun getOrgSummary(
-        @QueryValue(AresConstants.ORG_ID) orgId: UUID,
-        @QueryValue("startDate") startDate: String,
-        @QueryValue("endDate") endDate: String
+        @QueryValue(AresModelConstants.ORG_ID) orgId: UUID,
+        @QueryValue(AresModelConstants.START_DATE) startDate: Timestamp? = null,
+        @QueryValue(AresModelConstants.END_DATE) endDate: Timestamp? = null
     ): OrgSummaryResponse {
-        return Response<OrgSummaryResponse>().ok(settlementService.getOrgSummary(orgId, startDate, endDate))
+        return Response<OrgSummaryResponse>().ok(
+            settlementService.getOrgSummary(
+                orgId!!, startDate, endDate
+            )
+        )
     }
 }

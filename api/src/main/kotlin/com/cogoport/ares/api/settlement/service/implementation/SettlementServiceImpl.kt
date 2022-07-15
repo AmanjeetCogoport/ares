@@ -467,8 +467,12 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(documentNo: Long, settlementType: SettlementType) = deleteSettlement(documentNo, settlementType)
 
-    override suspend fun getOrgSummary(orgId: UUID, startDate: String?, endDate: String?): OrgSummaryResponse {
-        val responseEntity = accountUtilizationRepository.getOrgSummary(orgId, Timestamp.valueOf(startDate), Timestamp.valueOf(endDate)) ?: throw AresException(AresError.ERR_1005, "")
+    override suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse {
+        val responseEntity = accountUtilizationRepository.getOrgSummary(
+            orgId,
+            startDate,
+            endDate
+        ) ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
         responseModel.tdsStyle = TdsStyle(style = "gross", rate = 2.toBigDecimal())
         return responseModel
