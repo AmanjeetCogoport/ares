@@ -311,8 +311,8 @@ class OpenSearchClient {
                     .aggregations("currency") { a ->
                         a.terms { t -> t.field("currency.keyword") }.aggregations(
                             "currAmount"
-                        ) { a ->
-                            a.sum { s ->
+                        ) { b ->
+                            b.sum { s ->
                                 s.script(
                                     Script.of { i ->
                                         i.inline {
@@ -354,8 +354,8 @@ class OpenSearchClient {
                         .query { q ->
                             q.bool { b ->
                                 b.must { m ->
-                                    m.match { m ->
-                                        m.field(AresConstants.ACCMODE)
+                                    m.match { n ->
+                                        n.field(AresConstants.ACCMODE)
                                             .query(
                                                 FieldValue.of(
                                                     AresConstants.MODE
@@ -364,8 +364,8 @@ class OpenSearchClient {
                                     }
                                 }
                                 b.must { m ->
-                                    m.match { m ->
-                                        m.field(AresConstants.ORGANIZATION_ID)
+                                    m.match { n ->
+                                        n.field(AresConstants.ORGANIZATION_ID)
                                             .query(FieldValue.of(request.orgId))
                                     }
                                 }

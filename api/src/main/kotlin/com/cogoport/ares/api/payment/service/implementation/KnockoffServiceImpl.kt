@@ -171,7 +171,7 @@ open class KnockoffServiceImpl : KnockoffService {
     ) {
         val accountUtilEntity = AccountUtilization(
             id = null,
-            documentNo = paymentNum!!,
+            documentNo = paymentNum,
             documentValue = paymentNumValue,
             zoneCode = knockOffRecord.zoneCode.toString(),
             serviceType = accountUtilization.serviceType,
