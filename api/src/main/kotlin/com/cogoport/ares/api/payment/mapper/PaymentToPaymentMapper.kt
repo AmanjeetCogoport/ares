@@ -3,8 +3,9 @@ package com.cogoport.ares.api.payment.mapper
 import com.cogoport.ares.api.payment.entity.Payment
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
+import org.mapstruct.ReportingPolicy
 
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface PaymentToPaymentMapper {
     @Mapping(source = "entityType", target = "entityCode")
     @Mapping(source = "remarks", target = "narration")

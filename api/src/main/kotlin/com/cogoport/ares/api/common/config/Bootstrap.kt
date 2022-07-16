@@ -8,22 +8,17 @@ import io.sentry.Sentry
 import io.sentry.SentryOptions
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.util.logging.Logger
 
 @Singleton
 class Bootstrap {
 
-    @Inject
-    private lateinit var openSearchConfig: OpenSearchConfig
+    @Inject private lateinit var openSearchConfig: OpenSearchConfig
 
-    @Inject
-    private lateinit var sentryConfig: SentryConfig
+    @Inject private lateinit var sentryConfig: SentryConfig
 
     @EventListener
-    fun onStartupEvent(event: ServerStartupEvent) {
+    fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         // Add all bootstrap services here
-
-        Logger.getLogger("Boostrap").info("OpenSearch configured with params from application props")
         configureOpenSearch()
         configureSentry()
     }
@@ -31,7 +26,8 @@ class Bootstrap {
     private fun configureOpenSearch() {
         // Configure and start OpenSearch Client
         Client.configure(
-            configuration = Configuration(
+            configuration =
+            Configuration(
                 scheme = openSearchConfig.scheme,
                 host = openSearchConfig.host,
                 port = openSearchConfig.port,
@@ -45,11 +41,7 @@ class Bootstrap {
         if (sentryConfig.enabled == true) {
             Sentry.init { options: SentryOptions ->
                 options.dsn = sentryConfig.dsn
-                // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
-                // We recommend adjusting this value in production.
-                options.tracesSampleRate = 1.0
-                // When first trying Sentry it's good to see what the SDK is doing:
-                // options.setDebug(true)
+                options.tracesSampleRate = 0.3
             }
         }
     }

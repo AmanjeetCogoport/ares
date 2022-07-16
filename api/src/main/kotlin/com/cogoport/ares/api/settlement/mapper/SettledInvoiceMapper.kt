@@ -5,8 +5,9 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
+import org.mapstruct.ReportingPolicy
 
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface SettledInvoiceMapper {
     fun convertKnockoffRequestToEntity(request: SettlementKnockoffRequest): Payment
 
@@ -22,5 +23,7 @@ interface SettledInvoiceMapper {
     @Mapping(target = "settledAllocation", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(target = "settledTds", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(source = "currentBalance", target = "balanceAmount")
-    fun convertToModel(historyDocument: SettledInvoice?): com.cogoport.ares.model.settlement.SettledInvoice
+    fun convertToModel(
+        historyDocument: SettledInvoice?
+    ): com.cogoport.ares.model.settlement.SettledInvoice
 }

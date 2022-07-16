@@ -3,8 +3,9 @@ package com.cogoport.ares.api.payment.mapper
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.model.payment.OrgOutstandingResponse
 import org.mapstruct.Mapper
+import org.mapstruct.ReportingPolicy
 
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface OrgOutstandingMapper {
     fun convertToModel(orgOutstanding: OrgOutstanding): OrgOutstandingResponse
 

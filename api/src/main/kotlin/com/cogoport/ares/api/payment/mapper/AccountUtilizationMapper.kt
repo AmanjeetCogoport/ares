@@ -4,8 +4,9 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
+import org.mapstruct.ReportingPolicy
 
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface AccountUtilizationMapper {
 
     @Mapping(source = "documentValue", target = "docValue")

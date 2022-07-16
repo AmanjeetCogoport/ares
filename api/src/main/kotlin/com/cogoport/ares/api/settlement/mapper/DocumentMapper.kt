@@ -4,8 +4,9 @@ import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.settlement.Invoice
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
+import org.mapstruct.ReportingPolicy
 
-@Mapper
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface DocumentMapper {
 
     fun convertToInvoice(doc: List<com.cogoport.ares.model.settlement.Document?>): List<Invoice?>
