@@ -116,7 +116,7 @@ class SettlementController {
     ): OrgSummaryResponse {
         return Response<OrgSummaryResponse>().ok(
             settlementService.getOrgSummary(
-                orgId!!, startDate, endDate
+                orgId, startDate, endDate
             )
         )
     }
