@@ -1,7 +1,11 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.models.BankDetails
+import com.cogoport.ares.api.common.models.CogoBankResponse
+import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -18,12 +22,8 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.InvoiceStatus
-import com.cogoport.ares.model.payment.InvoiceType
-import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -43,6 +43,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.lang.Math.abs
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -79,6 +80,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var orgSummaryConverter: OrgSummaryMapper
 
+    @Inject
+    lateinit var authClient: AuthClient
+
     /**
      * *
      * - add entry into payments table
@@ -92,6 +96,22 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
+        val cogoEntities = authClient.getCogoBank(CogoEntitiesRequest())
+        var cogoEntity: CogoBanksDetails? = null
+        var selectedBank: BankDetails? =null
+        for(bank in cogoEntities.bankList){
+            val banksDetails = bank.bankDetails?.filter { it.accountNumber == request.cogoAccountNo }
+            if (banksDetails?.size!! >= 1){
+                cogoEntity = bank
+                selectedBank = banksDetails.get(0)
+            }
+        }
+
+        if(cogoEntity == null || selectedBank == null){
+            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
+        }
+
+        logger().info(cogoEntities.toString())
         val invoiceUtilization =
             accountUtilizationRepository.findRecordByDocumentValue(
                 documentValue = request.invoiceNumber,
@@ -102,6 +122,10 @@ open class SettlementServiceImpl : SettlementService {
         val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
         payment.organizationId = invoiceUtilization.organizationId
         payment.organizationName = invoiceUtilization.organizationName
+        payment.bankId = selectedBank.id
+        payment.entityCode = cogoEntity.entityCode
+        payment.bankName = selectedBank.beneficiaryName
+
         payment.exchangeRate =
             getExchangeRate(
                 payment.currency,
@@ -222,7 +246,7 @@ open class SettlementServiceImpl : SettlementService {
             settledAmount * invoiceUtilization.amountLoc / invoiceUtilization.amountCurr
         val settledAmtFromRec = settledAmount * payment.exchangeRate!!
 
-        if (settledAmtLed != settledAmtFromRec) {
+        if ((settledAmtLed - settledAmtFromRec) != BigDecimal.ZERO) {
             settlements.add(
                 Settlement(
                     id = null,

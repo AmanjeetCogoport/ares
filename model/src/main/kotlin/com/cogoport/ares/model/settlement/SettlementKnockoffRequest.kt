@@ -12,10 +12,6 @@ data class SettlementKnockoffRequest(
     val invoiceNumber: String,
     val accCode: Int,
     val cogoAccountNo: String,
-
-    val entityCode: Int,
-    val bankId: String,
-    val bankName: String,
     val payMode: String, // todo payment mode enum
 
     var transactionId: String,
