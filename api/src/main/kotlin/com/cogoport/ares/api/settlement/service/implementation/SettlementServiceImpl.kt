@@ -4,7 +4,6 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
-import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
@@ -23,7 +22,13 @@ import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.payment.*
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.InvoiceStatus
+import com.cogoport.ares.model.payment.InvoiceType
+import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -43,7 +48,6 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.lang.Math.abs
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
