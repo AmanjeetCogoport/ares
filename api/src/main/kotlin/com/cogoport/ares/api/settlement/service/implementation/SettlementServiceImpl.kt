@@ -1,8 +1,10 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -44,6 +46,7 @@ import com.cogoport.ares.model.settlement.TdsStyle
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -78,6 +81,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var orgSummaryConverter: OrgSummaryMapper
+
+    @Inject
+    lateinit var cogoClient: AuthClient
 
     /**
      * *
@@ -441,6 +447,18 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val tdsStyles = mutableListOf<TdsStylesResponse>()
+        request.orgId.forEach {
+            tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
+        }
+        documentModel.forEach { doc ->
+            val rate = getTdsRate(tdsStyles, doc.organizationId)
+            doc.tds = (
+                doc.taxableAmount * Utilities.binaryOperation(
+                    rate, 100.toBigDecimal(), Operator.DIVIDE
+                )
+                ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
+        }
         val total =
             accountUtilizationRepository.getDocumentCount(
                 request.accType,
@@ -466,7 +484,22 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    /** Validate input for list of documents */
+    /**
+     * Get TDS Rate from styles if present else return default 2%
+     * @param tdsStyles
+     * @param orgId
+     * @return BigDecimat
+     */
+    private fun getTdsRate(
+        tdsStyles: MutableList<TdsStylesResponse>,
+        orgId: UUID
+    ) =
+        tdsStyles.find { it.id == orgId }?.tdsDeductionRate
+            ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+
+    /**
+     * Validate input for list of documents
+     */
     private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
         if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
