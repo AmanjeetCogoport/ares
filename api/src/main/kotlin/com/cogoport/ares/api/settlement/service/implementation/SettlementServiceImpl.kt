@@ -451,8 +451,7 @@ open class SettlementServiceImpl : SettlementService {
         request.orgId.forEach {
             try {
                 tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
-            }
-            catch (_: Exception){ }
+            } catch (_: Exception) { }
         }
         documentModel.forEach { doc ->
             val rate = getTdsRate(tdsStyles, doc.organizationId)
