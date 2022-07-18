@@ -366,7 +366,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0
-                    AND amount_curr - pay_curr <> 0
+                    AND pay_curr <> 0
                     AND organization_id in (:orgId)
                     AND document_status = 'FINAL'
                     AND (:accType is null OR acc_type::varchar = :accType)
@@ -387,7 +387,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0
-                    AND (amount_curr - pay_curr) <> 0 
+                    AND pay_curr <> 0 
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
