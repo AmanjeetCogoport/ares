@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
+import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
@@ -8,6 +9,7 @@ import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 
 @Client(value = "\${cogoport.api_url}")
@@ -23,4 +25,7 @@ interface AuthClient {
 
     @Get("/get_organization_zone_details{?request*}")
     suspend fun getCogoOrganization(request: CogoOrganizationRequest): PlatformOrganizationResponse
+
+    @Get("/get_organization_finance_detail")
+    suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
 }
