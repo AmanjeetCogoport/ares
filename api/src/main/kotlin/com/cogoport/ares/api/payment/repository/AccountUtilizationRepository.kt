@@ -386,8 +386,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             count(id)
                 FROM account_utilizations
                 WHERE 
-                    amount_curr <> 0
-                    AND pay_curr <> 0 
+                    amount_curr <> 0 
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
@@ -405,6 +404,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             count(id)
                 FROM account_utilizations
                 WHERE amount_curr <> 0
+                    AND pay_curr <> 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
