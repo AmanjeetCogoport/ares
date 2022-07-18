@@ -6,7 +6,9 @@ import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
+import java.util.UUID
 
 interface OnAccountService {
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse
@@ -15,4 +17,5 @@ interface OnAccountService {
     suspend fun deletePaymentEntry(paymentId: Long): OnAccountApiCommonResponse
     suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse
     suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
+    suspend fun getOrgStats(orgId: UUID?): OrgStatsResponse
 }

@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.AccountCollectionRequest
@@ -9,6 +10,7 @@ import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.DeletePaymentRequest
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -16,8 +18,10 @@ import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.UUID
 import javax.validation.Valid
 
 @Validated
@@ -55,5 +59,10 @@ class OnAccountController {
     @Get("/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?> {
         return Response<List<AccountUtilizationResponse?>>().ok(onAccountService.getOrganizationAccountUtlization(request))
+    }
+
+    @Get("/org-stats")
+    suspend fun getOrgStats(@QueryValue(AresConstants.ORG_ID) orgId: UUID?): OrgStatsResponse {
+        return Response<OrgStatsResponse>().ok(onAccountService.getOrgStats(orgId))
     }
 }

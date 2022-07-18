@@ -18,6 +18,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import java.sql.Timestamp
 import java.util.UUID
 
 interface SettlementService {
@@ -41,5 +42,5 @@ interface SettlementService {
 
     suspend fun delete(documentNo: Long, settlementType: SettlementType): Long
 
-    suspend fun getOrgSummary(orgId: UUID, startDate: String?, endDate: String?): OrgSummaryResponse
+    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse
 }

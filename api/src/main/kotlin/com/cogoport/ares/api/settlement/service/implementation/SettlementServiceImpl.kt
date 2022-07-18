@@ -17,10 +17,10 @@ import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
-import com.cogoport.ares.api.settlement.mapper.SettlementMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.InvoiceStatus
@@ -50,7 +50,6 @@ import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -72,9 +71,6 @@ open class SettlementServiceImpl : SettlementService {
     lateinit var historyDocumentConverter: HistoryDocumentMapper
 
     @Inject
-    lateinit var settlementConvert: SettlementMapper
-
-    @Inject
     lateinit var settledInvoiceConverter: SettledInvoiceMapper
 
     @Inject
@@ -89,105 +85,186 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var cogoClient: AuthClient
 
-    /***
-     - add entry into payments table
-     - add into account utilizations
-     - add entries into settlement table
-     - invoice knocked off with amount
-     - tds entry
-     - payment entry
-     - convinence fee entry [like EXC/TDS] for accounting of payment
-     - update utilization table with balance or status
+    /**
+     * *
+     * - add entry into payments table
+     * - add into account utilization table
+     * - add entries into settlement table
+     * - invoice knocked off with amount
+     * - tds entry
+     * - payment entry
+     * - convenience fee entry [like EXC/TDS] for accounting of payment
+     * - update utilization table with balance or status
      */
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
-        val exchangeRate = BigDecimal.ONE // TODO Get Exchange Rate for TODAY
+        val invoiceUtilization =
+            accountUtilizationRepository.findRecordByDocumentValue(
+                documentValue = request.invoiceNumber,
+                accType = AccountType.SINV.toString(),
+                accMode = AccMode.AR.toString()
+            ) ?: throw AresException(AresError.ERR_1002, AresConstants.ZONE)
 
-        // TODO DocumentValue
-        val invoiceUtilization = accountUtilizationRepository.findRecord(documentNo = request.invoiceNumber, accType = "SINV")
+        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
+        payment.organizationId = invoiceUtilization.organizationId
+        payment.organizationName = invoiceUtilization.organizationName
+        payment.exchangeRate =
+            getExchangeRate(
+                payment.currency,
+                invoiceUtilization.ledCurrency
+            )
+        payment.ledCurrency = invoiceUtilization.ledCurrency
+        payment.accMode = AccMode.AR
+        payment.ledAmount = payment.amount * payment.exchangeRate!!
 
-        if (invoiceUtilization == null) {
-            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
+        // Utilization of payment
+        val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+
+        val accountUtilization =
+            AccountUtilization(
+                id = null,
+                documentNo = documentNo,
+                documentValue = request.transactionId,
+                zoneCode = invoiceUtilization.zoneCode,
+                serviceType = invoiceUtilization.serviceType,
+                documentStatus = DocumentStatus.FINAL,
+                entityCode = invoiceUtilization.entityCode,
+                category = invoiceUtilization.category,
+                orgSerialId = invoiceUtilization.orgSerialId,
+                sageOrganizationId = invoiceUtilization.sageOrganizationId,
+                organizationId = invoiceUtilization.organizationId,
+                organizationName = invoiceUtilization.organizationName,
+                accType = AccountType.REC,
+                accCode = invoiceUtilization.accCode,
+                signFlag = 1,
+                currency = request.currency,
+                ledCurrency = invoiceUtilization.ledCurrency,
+                amountCurr = request.amount,
+                amountLoc = request.amount,
+                taxableAmount = BigDecimal.ZERO,
+                payCurr = BigDecimal.ZERO,
+                payLoc = BigDecimal.ZERO,
+                accMode = invoiceUtilization.accMode,
+                transactionDate = request.transactionDate,
+                dueDate = request.transactionDate
+            )
+
+        val isTdsApplied =
+            settlementRepository.countDestinationBySourceType(
+                invoiceUtilization.documentNo,
+                SettlementType.SINV,
+                SettlementType.CTDS
+            ) > 0
+
+        val settlements = mutableListOf<Settlement>()
+        val amountToSettle = invoiceUtilization.amountCurr - invoiceUtilization.payCurr
+        var payAmount = request.amount
+        if (invoiceUtilization.currency != request.currency) {
+            payAmount =
+                payment.amount *
+                getExchangeRate(
+                    request.currency,
+                    invoiceUtilization.currency
+                )
         }
 
-//        val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
-//        payment.organizationId = invoiceUtilization?.organizationId
-//        payment.organizationName = invoiceUtilization?.organizationName
-//        payment.exchangeRate = exchangeRate
+        val settledAmount: BigDecimal = if (payAmount > amountToSettle) {
+            amountToSettle
+        } else {
+            payAmount
+        }
 
-//        Utilization of payment
-        val documentNo = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-        val accountUtilization = AccountUtilization(
-            id = null,
-            documentNo = documentNo,
-            documentValue = request.transactionId,
-            zoneCode = invoiceUtilization.zoneCode,
-            serviceType = invoiceUtilization.serviceType,
-            documentStatus = DocumentStatus.FINAL,
-            entityCode = invoiceUtilization.entityCode,
-            category = invoiceUtilization.category,
-            orgSerialId = invoiceUtilization.orgSerialId,
-            sageOrganizationId = invoiceUtilization.sageOrganizationId,
-            organizationId = invoiceUtilization.organizationId,
-            organizationName = invoiceUtilization.organizationName,
-            accType = invoiceUtilization.accType,
-            accCode = invoiceUtilization.accCode,
-            signFlag = 1,
-            currency = request.currency,
-            ledCurrency = invoiceUtilization.ledCurrency,
-            amountCurr = request.amount,
-            amountLoc = request.amount,
-            taxableAmount = BigDecimal.ZERO,
-            payCurr = BigDecimal.ZERO,
-            payLoc = BigDecimal.ZERO,
-            accMode = invoiceUtilization.accMode,
-            transactionDate = Date(request.transactionDate),
-            dueDate = Date(request.transactionDate)
+        settlements.add(
+            Settlement(
+                id = null,
+                sourceId = accountUtilization.documentNo,
+                sourceType = SettlementType.REC,
+                destinationId = invoiceUtilization.documentNo,
+                destinationType = SettlementType.SINV,
+                currency = invoiceUtilization.currency,
+                amount = settledAmount,
+                ledCurrency = invoiceUtilization.ledCurrency,
+                ledAmount =
+                settledAmount *
+                    payment.exchangeRate!!, // getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                signFlag = 1,
+                settlementDate = Timestamp.from(Instant.now()),
+                createdAt = Timestamp.from(Instant.now()),
+                createdBy = null,
+                updatedBy = null,
+                updatedAt = Timestamp.from(Instant.now())
+            )
         )
 
-        val isTdsApplied = settlementRepository.countDestinationBySourceType(invoiceUtilization.documentNo, SettlementType.SINV, SettlementType.CTDS) > 0
-
-        var settlements = mutableListOf<Settlement>()
-//        settlements.add(
-//            Settlement(
-//                id = null,
-//
-//            )
-//        )
-        if (isTdsApplied) {
-//            val tds: BigDecimal = invoiceUtilization.taxableAmount.multiply(0.02.toBigDecimal())
-//            settlements.add(
-//                Settlement(
-//
-//                )
-//            )
+        if (!isTdsApplied) {
+            val tds: BigDecimal = invoiceUtilization.taxableAmount!!.multiply(0.02.toBigDecimal())
+            settlements.add(
+                Settlement(
+                    id = null,
+                    sourceId = accountUtilization.documentNo,
+                    sourceType = SettlementType.CTDS,
+                    destinationId = invoiceUtilization.documentNo,
+                    destinationType = SettlementType.SINV,
+                    currency = invoiceUtilization.currency,
+                    amount = tds,
+                    ledCurrency = invoiceUtilization.ledCurrency,
+                    ledAmount =
+                    tds *
+                        getExchangeRate(
+                            invoiceUtilization.ledCurrency,
+                            invoiceUtilization.currency
+                        ),
+                    signFlag = 1,
+                    settlementDate = Timestamp.from(Instant.now()),
+                    createdAt = Timestamp.from(Instant.now()),
+                    createdBy = null,
+                    updatedBy = null,
+                    updatedAt = Timestamp.from(Instant.now())
+                )
+            )
         }
 
-//        val settlement = Settlement()
+        val settledAmtLed =
+            settledAmount * invoiceUtilization.amountLoc / invoiceUtilization.amountCurr
+        val settledAmtFromRec = settledAmount * payment.exchangeRate!!
 
+        if (settledAmtLed != settledAmtFromRec) {
+            settlements.add(
+                Settlement(
+                    id = null,
+                    sourceId = accountUtilization.documentNo,
+                    sourceType = SettlementType.SECH,
+                    destinationId = invoiceUtilization.documentNo,
+                    destinationType = SettlementType.SINV,
+                    currency = null,
+                    amount = null,
+                    ledCurrency = invoiceUtilization.ledCurrency,
+                    ledAmount = settledAmtFromRec - settledAmtLed,
+                    signFlag = 1,
+                    settlementDate = Timestamp.from(Instant.now()),
+                    createdAt = Timestamp.from(Instant.now()),
+                    createdBy = null,
+                    updatedBy = null,
+                    updatedAt = Timestamp.from(Instant.now())
+                )
+            )
+        }
+
+        invoiceUtilization.payCurr = invoiceUtilization.payCurr + settledAmount
+        invoiceUtilization.payLoc = invoiceUtilization.payCurr * payment.exchangeRate!!
+        invoiceUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        accountUtilization.payLoc = settledAmount
+        accountUtilization.payCurr = accountUtilization.payCurr * payment.exchangeRate!!
+
+        // 2% tds on taxable amount only if tds is not deducted already
+        payment.createdAt = Timestamp.from(Instant.now())
+        payment.updatedAt = Timestamp.from(Instant.now())
+        paymentRepository.save(payment)
         accountUtilizationRepository.update(invoiceUtilization)
-        val paymentUtilization = accountUtilizationRepository.save(accountUtilization)
-
-//     2%   tds on taxable amount only if tds is not deducted already
-
+        accountUtilizationRepository.save(accountUtilization)
+        settlements.forEach { settlement -> settlementRepository.save(settlement) }
         return SettlementKnockoffResponse()
-    }
-
-    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoiceId: Long, settlementType: SettlementType, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
-//        val settledDoc = Settlement(
-//            null,
-//            sourceId,
-//            sourceType,
-//            invoiceId,
-//            settlementType,
-//            currency,
-//            amount,
-//            ledCurrency,
-//            ledAmount,
-//            signFlag,
-//            transactionDate
-//        )
-//        settlementRepository.save(settledDoc)
     }
 
     /**
@@ -203,9 +280,10 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     /**
-     *
      */
-    override suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document> {
+    override suspend fun getTDSDocuments(
+        request: TdsSettlementDocumentRequest
+    ): ResponseList<Document> {
         validateTdsDocumentInput(request)
         return getTDSDocumentList(request)
     }
@@ -216,7 +294,13 @@ open class SettlementServiceImpl : SettlementService {
      * @return SummaryResponse
      */
     override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
-        val amount = accountUtilizationRepository.getAccountBalance(request.orgId!!, request.entityCode!!, request.startDate, request.endDate)
+        val amount =
+            accountUtilizationRepository.getAccountBalance(
+                request.orgId!!,
+                request.entityCode!!,
+                request.startDate,
+                request.endDate
+            )
         return SummaryResponse(amount)
     }
 
@@ -225,16 +309,39 @@ open class SettlementServiceImpl : SettlementService {
      * @param request
      * @return ResponseList<HistoryDocument>
      */
-    override suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
+    override suspend fun getHistory(
+        request: SettlementHistoryRequest
+    ): ResponseList<HistoryDocument?> {
         val accountTypes = stringAccountTypes(request)
-        val documents = accountUtilizationRepository.getHistoryDocument(request.orgId, accountTypes, request.page, request.pageLimit, request.startDate, request.endDate)
-        val totalRecords = if (request.accountType == "All") {
-            accountUtilizationRepository.countHistoryDocument(request.orgId, listOf(AccountType.PCN, AccountType.REC), request.startDate, request.endDate)
-        } else {
-            accountUtilizationRepository.countHistoryDocument(request.orgId, listOf(AccountType.valueOf(request.accountType)), request.startDate, request.endDate)
-        }
+        val documents =
+            accountUtilizationRepository.getHistoryDocument(
+                request.orgId,
+                accountTypes,
+                request.page,
+                request.pageLimit,
+                request.startDate,
+                request.endDate
+            )
+        val totalRecords =
+            if (request.accountType == "All") {
+                accountUtilizationRepository.countHistoryDocument(
+                    request.orgId,
+                    listOf(AccountType.PCN, AccountType.REC),
+                    request.startDate,
+                    request.endDate
+                )
+            } else {
+                accountUtilizationRepository.countHistoryDocument(
+                    request.orgId,
+                    listOf(AccountType.valueOf(request.accountType)),
+                    request.startDate,
+                    request.endDate
+                )
+            }
         val historyDocuments = mutableListOf<HistoryDocument>()
-        documents.forEach { doc -> historyDocuments.add(historyDocumentConverter.convertToModel(doc)) }
+        documents.forEach { doc ->
+            historyDocuments.add(historyDocumentConverter.convertToModel(doc))
+        }
         return ResponseList(
             list = historyDocuments,
             totalPages = getTotalPages(totalRecords, request.pageLimit),
@@ -244,11 +351,12 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
-        val accountTypes = if (request.accountType == "All") {
-            mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
-        } else {
-            mutableListOf(request.accountType)
-        }
+        val accountTypes =
+            if (request.accountType == "All") {
+                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
+            } else {
+                mutableListOf(request.accountType)
+            }
         return accountTypes
     }
 
@@ -273,37 +381,43 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementRequest
      * @return ResponseList
      */
-    override suspend fun getSettlement(request: SettlementRequest): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
-        var settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
+    override suspend fun getSettlement(
+        request: SettlementRequest
+    ): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
+        val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
             SettlementType.REC, SettlementType.PCN -> {
-                settlements = settlementRepository.findSettlement(
+                @Suppress("UNCHECKED_CAST")
+                settlements =
+                    settlementRepository.findSettlement(
                     request.documentNo,
                     request.settlementType,
                     request.page,
                     request.pageLimit
                 ) as MutableList<SettledInvoice>
             }
+            else -> {}
         }
 
-        var totalRecords = settlementRepository.countSettlement(request.documentNo, request.settlementType)
+        val totalRecords =
+            settlementRepository.countSettlement(request.documentNo, request.settlementType)
 
-        settlements.forEach {
-            settlement ->
+        settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
-                    var stlmnt = settledInvoiceConverter.convertToModel(settlement)
-                    if (stlmnt.balanceAmount == BigDecimal.ZERO)
-                        stlmnt.status = InvoiceStatus.PAID.value
-                    else if (stlmnt.balanceAmount == stlmnt.documentAmount)
-                        stlmnt.status = InvoiceStatus.UNPAID.value
-                    else
-                        stlmnt.status = InvoiceStatus.PARTIAL_PAID.value
-                    settledDocuments.add(stlmnt)
+                    val settled = settledInvoiceConverter.convertToModel(settlement)
+                    when (settled.balanceAmount) {
+                        BigDecimal.ZERO -> settled.status = InvoiceStatus.PAID.value
+                        settled.documentAmount -> settled.status = InvoiceStatus.UNPAID.value
+                        else -> settled.status = InvoiceStatus.PARTIAL_PAID.value
+                    }
+                    settledDocuments.add(settled)
                 }
+                else -> {}
             }
         }
+
         return ResponseList(
             list = settledDocuments,
             totalPages = getTotalPages(totalRecords, request.pageLimit),
@@ -317,16 +431,22 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
+    private suspend fun getDocumentList(
+        request: SettlementDocumentRequest
+    ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository
-            .getDocumentList(
-                request.pageLimit, offset, request.accType, request.orgId,
-                request.entityCode, request.startDate, request.endDate, "%${request.query}%"
+        val documentEntity =
+            accountUtilizationRepository.getDocumentList(
+                request.pageLimit,
+                offset,
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%"
             )
-        val documentModel = documentEntity.map {
-            documentConverter.convertToModel(it!!)
-        }
+        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
         request.orgId.forEach {
             tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
@@ -339,10 +459,15 @@ open class SettlementServiceImpl : SettlementService {
                 )
                 ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
         }
-        val total = accountUtilizationRepository.getDocumentCount(
-            request.accType, request.orgId, request.entityCode,
-            request.startDate, request.endDate, "%${request.query}%"
-        )
+        val total =
+            accountUtilizationRepository.getDocumentCount(
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%"
+            )
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -385,13 +510,34 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getTDSDocumentList(request: TdsSettlementDocumentRequest): ResponseList<Document> {
-        val offset = request.pageLimit?.let { (request.page?.let { request.pageLimit?.times(it) })?.minus(it) }
-        val documentEntity = accountUtilizationRepository.getTDSDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
-        val documentModel = documentEntity.map {
-            documentConverter.convertToModel(it!!)
-        }
-        val total = accountUtilizationRepository.getTDSDocumentCount(request.accType, request.orgId, request.accMode, request.startDate, request.endDate, "%${request.query}%")
+    private suspend fun getTDSDocumentList(
+        request: TdsSettlementDocumentRequest
+    ): ResponseList<Document> {
+        val offset =
+            request.pageLimit?.let {
+                (request.page?.let { request.pageLimit?.times(it) })?.minus(it)
+            }
+        val documentEntity =
+            accountUtilizationRepository.getTDSDocumentList(
+                request.pageLimit,
+                offset,
+                request.accType,
+                request.orgId,
+                request.accMode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%"
+            )
+        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val total =
+            accountUtilizationRepository.getTDSDocumentCount(
+                request.accType,
+                request.orgId,
+                request.accMode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%"
+            )
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -427,10 +573,12 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun check(request: CheckRequest): List<CheckDocument> = runSettlement(request, false)
+    override suspend fun check(request: CheckRequest): List<CheckDocument> =
+        runSettlement(request, false)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun settle(request: CheckRequest): List<CheckDocument> = runSettlement(request, true)
+    override suspend fun settle(request: CheckRequest): List<CheckDocument> =
+        runSettlement(request, true)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun edit(request: CheckRequest): List<CheckDocument> = editSettlement(request)
@@ -439,98 +587,226 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun editTds(request: EditTdsRequest) = editInvoiceTds(request)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun delete(documentNo: Long, settlementType: SettlementType) = deleteSettlement(documentNo, settlementType)
+    override suspend fun delete(documentNo: Long, settlementType: SettlementType) =
+        deleteSettlement(documentNo, settlementType)
 
-    override suspend fun getOrgSummary(orgId: UUID, startDate: String?, endDate: String?): OrgSummaryResponse {
-        val responseEntity = accountUtilizationRepository.getOrgSummary(orgId, Timestamp.valueOf(startDate), Timestamp.valueOf(endDate)) ?: throw AresException(AresError.ERR_1005, "")
+    override suspend fun getOrgSummary(
+        orgId: UUID,
+        startDate: Timestamp?,
+        endDate: Timestamp?
+    ): OrgSummaryResponse {
+        val responseEntity =
+            accountUtilizationRepository.getOrgSummary(orgId, startDate, endDate)
+                ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
         responseModel.tdsStyle = TdsStyle(style = "gross", rate = 2.toBigDecimal())
         return responseModel
     }
+
     private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
-        val doc = settlementRepository.findByDestIdAndDestType(request.documentNo!!, request.settlementType!!)
-        val tdsDoc = doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) } ?: throw AresException(AresError.ERR_1503, "TDS")
-        val sourceDoc = doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!) } ?: throw AresException(AresError.ERR_1503, "PAYMENT")
-        val sourceLedgerRate = Utilities.binaryOperation(sourceDoc.ledAmount, sourceDoc.amount!!, Operator.DIVIDE)
+        val doc =
+            settlementRepository.findByDestIdAndDestType(
+                request.documentNo!!,
+                request.settlementType!!
+            )
+        val tdsDoc =
+            doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
+                ?: throw AresException(AresError.ERR_1503, "TDS")
+        val sourceDoc =
+            doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!) }
+                ?: throw AresException(AresError.ERR_1503, "PAYMENT")
+        val sourceLedgerRate =
+            Utilities.binaryOperation(sourceDoc.ledAmount, sourceDoc.amount!!, Operator.DIVIDE)
         var currNewTds = request.newTds!!
         if (sourceDoc.currency != request.currency) {
-            val rate = if (sourceDoc.ledCurrency == request.currency) {
-                sourceLedgerRate
-            } else {
-                val accUtil = accountUtilizationRepository.findRecord(sourceDoc.sourceId!!, sourceDoc.sourceType.toString()) ?: throw AresException(AresError.ERR_1503, "${sourceDoc.sourceType}_${sourceDoc.sourceId}")
-                getExchangeRate(sourceDoc.currency!!, request.currency!!, accUtil.transactionDate!!)
-            }
+            val rate =
+                if (sourceDoc.ledCurrency == request.currency) {
+                    sourceLedgerRate
+                } else {
+                    accountUtilizationRepository.findRecord(
+                        sourceDoc.sourceId!!,
+                        sourceDoc.sourceType.toString()
+                    )
+                        ?: throw AresException(
+                            AresError.ERR_1503,
+                            "${sourceDoc.sourceType}_${sourceDoc.sourceId}"
+                        )
+                    getExchangeRate(
+                        sourceDoc.currency!!,
+                        request.currency!!
+                    )
+                }
             currNewTds = getExchangeValue(request.newTds!!, rate, true)
         }
         if (currNewTds > tdsDoc.amount!!) {
             val paymentTdsDiff = currNewTds - tdsDoc.amount!!
-            reduceAccountUtilization(sourceDoc.sourceId!!, AccountType.valueOf(sourceDoc.sourceType.toString()), paymentTdsDiff, Utilities.binaryOperation(paymentTdsDiff, sourceLedgerRate, Operator.MULTIPLY))
+            reduceAccountUtilization(
+                sourceDoc.sourceId!!,
+                AccountType.valueOf(sourceDoc.sourceType.toString()),
+                paymentTdsDiff,
+                Utilities.binaryOperation(paymentTdsDiff, sourceLedgerRate, Operator.MULTIPLY)
+            )
         } else if (currNewTds < tdsDoc.amount) {
             val invoiceTdsDiff = request.oldTds!! - request.newTds!!
             val paymentTdsDiff = tdsDoc.amount!! - currNewTds
-            reduceAccountUtilization(tdsDoc.destinationId, AccountType.valueOf(tdsDoc.destinationType.toString()), invoiceTdsDiff, Utilities.binaryOperation(invoiceTdsDiff, request.exchangeRate!!, Operator.MULTIPLY))
+            reduceAccountUtilization(
+                tdsDoc.destinationId,
+                AccountType.valueOf(tdsDoc.destinationType.toString()),
+                invoiceTdsDiff,
+                Utilities.binaryOperation(
+                    invoiceTdsDiff,
+                    request.exchangeRate!!,
+                    Operator.MULTIPLY
+                )
+            )
             sourceDoc.amount = sourceDoc.amount?.minus(paymentTdsDiff)
-            sourceDoc.ledAmount = sourceDoc.ledAmount.minus(Utilities.binaryOperation(paymentTdsDiff, sourceLedgerRate, Operator.MULTIPLY))
+            sourceDoc.ledAmount =
+                sourceDoc.ledAmount.minus(
+                    Utilities.binaryOperation(
+                        paymentTdsDiff,
+                        sourceLedgerRate,
+                        Operator.MULTIPLY
+                    )
+                )
             settlementRepository.update(sourceDoc)
         }
         tdsDoc.amount = currNewTds
-        tdsDoc.ledAmount = Utilities.binaryOperation(currNewTds, sourceLedgerRate, Operator.MULTIPLY)
+        tdsDoc.ledAmount =
+            Utilities.binaryOperation(currNewTds, sourceLedgerRate, Operator.MULTIPLY)
         settlementRepository.update(tdsDoc)
         return tdsDoc.destinationId
     }
 
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
-        val sourceDoc = request.stackDetails.first { it.accountType in listOf(SettlementType.REC, SettlementType.PCN) }
+        val sourceDoc =
+            request.stackDetails.first {
+                it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
+            }
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType)
         return runSettlement(request, true)
     }
 
     private suspend fun deleteSettlement(documentNo: Long, settlementType: SettlementType): Long {
-        val sourceType = if (settlementType == SettlementType.REC) listOf(
-            SettlementType.REC,
-            SettlementType.CTDS,
-            SettlementType.SECH
-        ) else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
+        val sourceType =
+            if (settlementType == SettlementType.REC)
+                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH)
+            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
-        val sourceCurr = fetchedDoc.sumOf { it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong())) ?: BigDecimal.ZERO }
-        reduceAccountUtilization(documentNo, AccountType.valueOf(settlementType.toString()), sourceCurr)
+        val sourceCurr =
+            fetchedDoc.sumOf {
+                it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong()))
+                    ?: BigDecimal.ZERO
+            }
+        reduceAccountUtilization(
+            documentNo,
+            AccountType.valueOf(settlementType.toString()),
+            sourceCurr
+        )
         for (debit in debitDoc) {
-            val settledDoc = debit.value.first { it?.sourceType == settlementType } ?: throw AresException(AresError.ERR_1501, "")
-            val payment = accountUtilizationRepository.findRecord(settledDoc.sourceId!!, settledDoc.sourceType.toString()) ?: throw AresException(AresError.ERR_1503, settledDoc.sourceId.toString())
-            val invoice = accountUtilizationRepository.findRecord(settledDoc.destinationId, settledDoc.destinationType.toString()) ?: throw AresException(AresError.ERR_1503, settledDoc.destinationId.toString())
+            val settledDoc =
+                debit.value.first { it?.sourceType == settlementType }
+                    ?: throw AresException(AresError.ERR_1501, "")
+            val payment =
+                accountUtilizationRepository.findRecord(
+                    settledDoc.sourceId!!,
+                    settledDoc.sourceType.toString()
+                )
+                    ?: throw AresException(
+                        AresError.ERR_1503,
+                        settledDoc.sourceId.toString()
+                    )
+            val invoice =
+                accountUtilizationRepository.findRecord(
+                    settledDoc.destinationId,
+                    settledDoc.destinationType.toString()
+                )
+                    ?: throw AresException(
+                        AresError.ERR_1503,
+                        settledDoc.destinationId.toString()
+                    )
             var settledCurr = settledDoc.amount!!
             if (payment.currency != invoice.currency) {
-                val rate = if (payment.ledCurrency == invoice.currency) {
-                    Utilities.binaryOperation(payment.amountLoc, payment.amountCurr, Operator.DIVIDE)
-                } else {
-                    getExchangeRate(payment.currency, invoice.currency, payment.transactionDate!!)
-                }
+                val rate =
+                    if (payment.ledCurrency == invoice.currency) {
+                        Utilities.binaryOperation(
+                            payment.amountLoc,
+                            payment.amountCurr,
+                            Operator.DIVIDE
+                        )
+                    } else {
+                        getExchangeRate(
+                            payment.currency,
+                            invoice.currency
+                        )
+                    }
                 settledCurr = getExchangeValue(settledCurr, rate)
             }
-            reduceAccountUtilization(debit.key!!, AccountType.valueOf(settledDoc.destinationType.toString()), settledCurr)
+            reduceAccountUtilization(
+                debit.key!!,
+                AccountType.valueOf(settledDoc.destinationType.toString()),
+                settledCurr
+            )
         }
         settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
         return documentNo
     }
 
-    private suspend fun reduceAccountUtilization(docId: Long, accType: AccountType, amount: BigDecimal, ledAmount: BigDecimal? = null) {
-        val accUtil = accountUtilizationRepository.findRecord(docId, accType.toString()) ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
+    private suspend fun reduceAccountUtilization(
+        docId: Long,
+        accType: AccountType,
+        amount: BigDecimal,
+        ledAmount: BigDecimal? = null
+    ) {
+        val accUtil =
+            accountUtilizationRepository.findRecord(docId, accType.toString())
+                ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
         accUtil.payCurr -= amount
-        accUtil.payLoc -= ledAmount ?: getExchangeValue(amount, Utilities.binaryOperation(accUtil.amountLoc, accUtil.amountCurr, Operator.DIVIDE))
+        accUtil.payLoc -=
+            ledAmount
+                ?: getExchangeValue(
+                    amount,
+                    Utilities.binaryOperation(
+                        accUtil.amountLoc,
+                        accUtil.amountCurr,
+                        Operator.DIVIDE
+                    )
+                )
         accountUtilizationRepository.update(accUtil)
     }
 
-    private suspend fun runSettlement(request: CheckRequest, performDbOperation: Boolean): List<CheckDocument> {
+    private suspend fun runSettlement(
+        request: CheckRequest,
+        performDbOperation: Boolean
+    ): List<CheckDocument> {
         sanitizeInput(request)
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
-        val creditType = listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SCN)
-        val debitType = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.SDN, SettlementType.PDN)
+        val creditType =
+            listOf(
+                SettlementType.REC,
+                SettlementType.PCN,
+                SettlementType.PAY,
+                SettlementType.SCN
+            )
+        val debitType =
+            listOf(
+                SettlementType.SINV,
+                SettlementType.PINV,
+                SettlementType.SDN,
+                SettlementType.PDN
+            )
         for (doc in request.stackDetails.reversed()) {
-            if (creditType.contains(doc.accountType)) { source.add(doc) } else if (debitType.contains(doc.accountType)) { dest.add(doc) }
+            if (creditType.contains(doc.accountType)) {
+                source.add(doc)
+            } else if (debitType.contains(doc.accountType)) {
+                dest.add(doc)
+            }
         }
-        if (source.isEmpty() && dest.map { it.accountType }.contains(SettlementType.SINV) && dest.map { it.accountType }.contains(SettlementType.PINV)) {
+        if (source.isEmpty() &&
+            dest.map { it.accountType }.contains(SettlementType.SINV) &&
+            dest.map { it.accountType }.contains(SettlementType.PINV)
+        ) {
             dest.filter { it.accountType == SettlementType.SINV }.forEach {
                 source.add(it)
                 dest.remove(it)
@@ -541,18 +817,34 @@ open class SettlementServiceImpl : SettlementService {
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
 
-    private suspend fun settleDocuments(request: CheckRequest, source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>, performDbOperation: Boolean): MutableList<CheckDocument> {
+    private suspend fun settleDocuments(
+        request: CheckRequest,
+        source: MutableList<CheckDocument>,
+        dest: MutableList<CheckDocument>,
+        performDbOperation: Boolean
+    ): MutableList<CheckDocument> {
         val response = mutableListOf<CheckDocument>()
         for (payment in source) {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
-                if (canSettle.contains(invoice.accountType) && availableAmount.compareTo(0.toBigDecimal()) != 0) {
-                    availableAmount = doSettlement(request, invoice, availableAmount, payment, source, performDbOperation)
+                if (canSettle.contains(invoice.accountType) &&
+                    availableAmount.compareTo(0.toBigDecimal()) != 0
+                ) {
+                    availableAmount =
+                        doSettlement(
+                            request,
+                            invoice,
+                            availableAmount,
+                            payment,
+                            source,
+                            performDbOperation
+                        )
                 }
             }
             payment.allocationAmount -= availableAmount
-            payment.balanceAfterAllocation = payment.balanceAmount.subtract(payment.allocationAmount)
+            payment.balanceAfterAllocation =
+                payment.balanceAmount.subtract(payment.allocationAmount)
             assignStatus(payment)
             response.add(payment)
         }
@@ -560,7 +852,14 @@ open class SettlementServiceImpl : SettlementService {
         return response
     }
 
-    private suspend fun doSettlement(request: CheckRequest, invoice: CheckDocument, availableAmount: BigDecimal, payment: CheckDocument, source: MutableList<CheckDocument>, performDbOperation: Boolean): BigDecimal {
+    private suspend fun doSettlement(
+        request: CheckRequest,
+        invoice: CheckDocument,
+        availableAmount: BigDecimal,
+        payment: CheckDocument,
+        source: MutableList<CheckDocument>,
+        performDbOperation: Boolean
+    ): BigDecimal {
         var amount = availableAmount
         val toSettleAmount = invoice.allocationAmount - invoice.settledAllocation
         if (toSettleAmount != 0.0.toBigDecimal()) {
@@ -568,24 +867,60 @@ open class SettlementServiceImpl : SettlementService {
             val ledgerRate = payment.exchangeRate
             var updateDoc = true
             if (payment.currency != invoice.currency) {
-                rate = if (payment.ledCurrency == invoice.currency) {
-                    ledgerRate
-                } else {
-                    getExchangeRate(payment.currency, invoice.currency, payment.transactionDate)
-                }
+                rate =
+                    if (payment.ledCurrency == invoice.currency) {
+                        ledgerRate
+                    } else {
+                        getExchangeRate(
+                            payment.currency,
+                            invoice.currency
+                        )
+                    }
                 amount = getExchangeValue(availableAmount, rate)
             }
             if (amount >= toSettleAmount) {
-                amount = updateDocuments(request, invoice, payment, toSettleAmount, amount, rate, ledgerRate, updateDoc, performDbOperation)
+                amount =
+                    updateDocuments(
+                        request,
+                        invoice,
+                        payment,
+                        toSettleAmount,
+                        amount,
+                        rate,
+                        ledgerRate,
+                        updateDoc,
+                        performDbOperation
+                    )
             } else if (amount < toSettleAmount) {
                 if (payment != source.last()) updateDoc = false
-                amount = updateDocuments(request, invoice, payment, amount, amount, rate, ledgerRate, updateDoc, performDbOperation)
+                amount =
+                    updateDocuments(
+                        request,
+                        invoice,
+                        payment,
+                        amount,
+                        amount,
+                        rate,
+                        ledgerRate,
+                        updateDoc,
+                        performDbOperation
+                    )
             }
         }
         return amount
     }
 
-    private suspend fun updateDocuments(request: CheckRequest, invoice: CheckDocument, payment: CheckDocument, toSettleAmount: BigDecimal, availableAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, updateDoc: Boolean, performDbOperation: Boolean): BigDecimal {
+    private suspend fun updateDocuments(
+        request: CheckRequest,
+        invoice: CheckDocument,
+        payment: CheckDocument,
+        toSettleAmount: BigDecimal,
+        availableAmount: BigDecimal,
+        exchangeRate: BigDecimal,
+        ledgerRate: BigDecimal,
+        updateDoc: Boolean,
+        performDbOperation: Boolean
+    ): BigDecimal {
         val invoiceTds = invoice.tds!! - invoice.settledTds
         var paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         if (payment.accountType !in (listOf(SettlementType.PCN, SettlementType.SCN))) {
@@ -593,69 +928,163 @@ open class SettlementServiceImpl : SettlementService {
         }
         val amount = availableAmount - toSettleAmount - paymentTds
         invoice.settledAllocation += toSettleAmount
-        payment.settledAllocation += getExchangeValue(toSettleAmount + paymentTds, exchangeRate, true)
+        payment.settledAllocation +=
+            getExchangeValue(toSettleAmount + paymentTds, exchangeRate, true)
         if (updateDoc) {
             invoice.allocationAmount = invoice.settledAllocation
-            invoice.balanceAfterAllocation = invoice.balanceAmount.subtract(invoice.allocationAmount)
+            invoice.balanceAfterAllocation =
+                invoice.balanceAmount.subtract(invoice.allocationAmount)
         }
         assignStatus(invoice)
         assignStatus(payment)
-        if (performDbOperation) performDbOperation(request, toSettleAmount, exchangeRate, ledgerRate, payment, invoice)
+        if (performDbOperation)
+            performDbOperation(
+                request,
+                toSettleAmount,
+                exchangeRate,
+                ledgerRate,
+                payment,
+                invoice
+            )
         return getExchangeValue(amount, exchangeRate, true)
     }
 
-    private suspend fun performDbOperation(request: CheckRequest, toSettleAmount: BigDecimal, exchangeRate: BigDecimal, ledgerRate: BigDecimal, payment: CheckDocument, invoice: CheckDocument) {
+    private suspend fun performDbOperation(
+        request: CheckRequest,
+        toSettleAmount: BigDecimal,
+        exchangeRate: BigDecimal,
+        ledgerRate: BigDecimal,
+        payment: CheckDocument,
+        invoice: CheckDocument
+    ) {
         val paidAmount = getExchangeValue(toSettleAmount, exchangeRate, true)
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         val invoiceTds = invoice.tds!! - invoice.settledTds
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
-        val doc = createSettlement(payment.documentNo, payment.accountType, invoice, payment.currency, (paidAmount + paymentTds), payment.ledCurrency, (paidLedAmount + paymentTdsLed), 1, request.settlementDate)
+        createSettlement(
+            payment.documentNo,
+            payment.accountType,
+            invoice,
+            payment.currency,
+            (paidAmount + paymentTds),
+            payment.ledCurrency,
+            (paidLedAmount + paymentTdsLed),
+            1,
+            request.settlementDate
+        )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
-            val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.CTDS else SettlementType.VTDS
-            val tdsDoc = createSettlement(payment.documentNo, tdsType, invoice, payment.currency, paymentTds, invoice.ledCurrency, paymentTdsLed, -1, request.settlementDate)
+            val tdsType =
+                if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
+                    SettlementType.CTDS
+                else SettlementType.VTDS
+            createSettlement(
+                payment.documentNo,
+                tdsType,
+                invoice,
+                payment.currency,
+                paymentTds,
+                invoice.ledCurrency,
+                paymentTdsLed,
+                -1,
+                request.settlementDate
+            )
             invoice.settledTds += invoiceTds
         }
         if (payment.ledCurrency != invoice.currency) {
-            val excLedAmount = getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
-            val exType = if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType)) SettlementType.SECH else SettlementType.PECH
-            val exSign = excLedAmount.signum() * if (payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) -1 else 1
-            val excDoc = createSettlement(payment.documentNo, exType, invoice, null, null, invoice.ledCurrency, excLedAmount.abs(), exSign.toShort(), request.settlementDate)
+            val excLedAmount =
+                getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
+            val exType =
+                if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
+                    SettlementType.SECH
+                else SettlementType.PECH
+            val exSign =
+                excLedAmount.signum() *
+                    if (payment.accountType in
+                        listOf(
+                                SettlementType.SCN,
+                                SettlementType.REC,
+                                SettlementType.SINV
+                            )
+                    )
+                        -1
+                    else 1
+            createSettlement(
+                payment.documentNo,
+                exType,
+                invoice,
+                null,
+                null,
+                invoice.ledCurrency,
+                excLedAmount.abs(),
+                exSign.toShort(),
+                request.settlementDate
+            )
         }
-        val paymentUtilized = paidAmount + if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN)) paymentTds else 0.toBigDecimal()
+        val paymentUtilized =
+            paidAmount +
+                if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
+                    paymentTds
+                else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds))
     }
 
-    private suspend fun updateAccountUtilization(document: CheckDocument, utilizedAmount: BigDecimal) {
-        val paymentUtilization = accountUtilizationRepository.findRecord(document.documentNo, document.accountType.toString()) ?: throw AresException(AresError.ERR_1503, "${document.documentNo}_${document.accountType}")
+    private suspend fun updateAccountUtilization(
+        document: CheckDocument,
+        utilizedAmount: BigDecimal
+    ) {
+        val paymentUtilization =
+            accountUtilizationRepository.findRecord(
+                document.documentNo,
+                document.accountType.toString()
+            )
+                ?: throw AresException(
+                    AresError.ERR_1503,
+                    "${document.documentNo}_${document.accountType}"
+                )
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         accountUtilizationRepository.update(paymentUtilization)
     }
 
-    private suspend fun createSettlement(sourceId: Long?, sourceType: SettlementType, invoice: CheckDocument, currency: String?, amount: BigDecimal?, ledCurrency: String, ledAmount: BigDecimal, signFlag: Short, transactionDate: Timestamp) {
-        val settledDoc = Settlement(
-            null,
-            sourceId,
-            sourceType,
-            invoice.documentNo,
-            invoice.accountType,
-            currency,
-            amount,
-            ledCurrency,
-            ledAmount,
-            signFlag,
-            transactionDate,
-            null,
-            Timestamp.from(Instant.now()),
-            null,
-            Timestamp.from(Instant.now())
-        )
+    private suspend fun createSettlement(
+        sourceId: Long?,
+        sourceType: SettlementType,
+        invoice: CheckDocument,
+        currency: String?,
+        amount: BigDecimal?,
+        ledCurrency: String,
+        ledAmount: BigDecimal,
+        signFlag: Short,
+        transactionDate: Timestamp
+    ) {
+        val settledDoc =
+            Settlement(
+                null,
+                sourceId,
+                sourceType,
+                invoice.documentNo,
+                invoice.accountType,
+                currency,
+                amount,
+                ledCurrency,
+                ledAmount,
+                signFlag,
+                transactionDate,
+                null,
+                Timestamp.from(Instant.now()),
+                null,
+                Timestamp.from(Instant.now())
+            )
         settlementRepository.save(settledDoc)
     }
 
-    private fun getExchangeValue(amount: BigDecimal, exchangeRate: BigDecimal, reverse: Boolean = false): BigDecimal {
+    private fun getExchangeValue(
+        amount: BigDecimal,
+        exchangeRate: BigDecimal,
+        reverse: Boolean = false
+    ): BigDecimal {
         return if (reverse) {
             Utilities.binaryOperation(amount, exchangeRate, Operator.DIVIDE)
         } else {
@@ -663,7 +1092,7 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun getExchangeRate(from: String, to: String, transactionDate: Date): BigDecimal {
+    private fun getExchangeRate(from: String, to: String): BigDecimal {
         return if (from == "USD" && to == "INR") {
             70.toBigDecimal()
         } else if (from == "INR" && to == "USD") {
@@ -676,38 +1105,69 @@ open class SettlementServiceImpl : SettlementService {
             1.toBigDecimal()
         }
     }
+
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
         return when (accType) {
-            SettlementType.REC -> { listOf(SettlementType.SINV, SettlementType.SDN) }
-            SettlementType.PINV -> { listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) }
-            SettlementType.PCN -> { listOf(SettlementType.PINV, SettlementType.PDN) }
-            SettlementType.PAY -> { listOf(SettlementType.PINV, SettlementType.PDN) }
-            SettlementType.SINV -> { listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) }
-            SettlementType.SCN -> { listOf(SettlementType.SINV, SettlementType.SDN) }
-            SettlementType.SDN -> { listOf(SettlementType.SCN, SettlementType.REC) }
-            SettlementType.PDN -> { listOf(SettlementType.PCN, SettlementType.PAY) }
-            SettlementType.CTDS -> { listOf(SettlementType.SINV, SettlementType.SDN) }
-            SettlementType.VTDS -> { listOf(SettlementType.PINV, SettlementType.PDN) }
-            else -> { emptyList() }
+            SettlementType.REC -> {
+                listOf(SettlementType.SINV, SettlementType.SDN)
+            }
+            SettlementType.PINV -> {
+                listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
+            }
+            SettlementType.PCN -> {
+                listOf(SettlementType.PINV, SettlementType.PDN)
+            }
+            SettlementType.PAY -> {
+                listOf(SettlementType.PINV, SettlementType.PDN)
+            }
+            SettlementType.SINV -> {
+                listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV)
+            }
+            SettlementType.SCN -> {
+                listOf(SettlementType.SINV, SettlementType.SDN)
+            }
+            SettlementType.SDN -> {
+                listOf(SettlementType.SCN, SettlementType.REC)
+            }
+            SettlementType.PDN -> {
+                listOf(SettlementType.PCN, SettlementType.PAY)
+            }
+            SettlementType.CTDS -> {
+                listOf(SettlementType.SINV, SettlementType.SDN)
+            }
+            SettlementType.VTDS -> {
+                listOf(SettlementType.PINV, SettlementType.PDN)
+            }
+            else -> {
+                emptyList()
+            }
         }
     }
 
     private fun sanitizeInput(request: CheckRequest) {
         for (doc in request.stackDetails) {
-            if (doc.documentNo == 0.toLong()) throw AresException(AresError.ERR_1003, "Document Number")
+            if (doc.documentNo == 0.toLong())
+                throw AresException(AresError.ERR_1003, "Document Number")
         }
         request.stackDetails.forEach { it.settledAllocation = BigDecimal.ZERO }
     }
 
-    private fun businessValidation(source: MutableList<CheckDocument>, dest: MutableList<CheckDocument>) {
+    private fun businessValidation(
+        source: MutableList<CheckDocument>,
+        dest: MutableList<CheckDocument>
+    ) {
         var creditCount = 0
         var debitCount = 0
         for (payment in source) {
-            fetchSettlingDocs(payment.accountType).forEach { debit -> if (dest.map { it.accountType }.contains(debit)) debitCount += 1 }
+            fetchSettlingDocs(payment.accountType).forEach { debit ->
+                if (dest.map { it.accountType }.contains(debit)) debitCount += 1
+            }
             if (debitCount == 0) throw AresException(AresError.ERR_1502, "") else debitCount = 0
         }
         for (invoice in dest) {
-            fetchSettlingDocs(invoice.accountType).forEach { credit -> if (source.map { it.accountType }.contains(credit)) creditCount += 1 }
+            fetchSettlingDocs(invoice.accountType).forEach { credit ->
+                if (source.map { it.accountType }.contains(credit)) creditCount += 1
+            }
             if (creditCount == 0) throw AresException(AresError.ERR_1501, "") else creditCount = 0
         }
     }
@@ -717,7 +1177,9 @@ open class SettlementServiceImpl : SettlementService {
             doc.status = InvoiceStatus.KNOCKED_OFF.value
         } else if (decimalRound(doc.settledAllocation).compareTo(0.toBigDecimal()) == 0) {
             doc.status = InvoiceStatus.UNPAID.value
-        } else if (decimalRound(doc.balanceAmount).compareTo(decimalRound(doc.settledAllocation)) == 1) {
+        } else if (decimalRound(doc.balanceAmount).compareTo(decimalRound(doc.settledAllocation)) ==
+            1
+        ) {
             doc.status = InvoiceStatus.PARTIAL_PAID.value
         }
     }
@@ -738,14 +1200,30 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun getInvoiceType(accType: AccountType): String {
         return when (accType) {
-            AccountType.SINV -> { InvoiceType.SINV.value }
-            AccountType.SCN -> { InvoiceType.SCN.value }
-            AccountType.SDN -> { InvoiceType.SDN.value }
-            AccountType.REC -> { InvoiceType.REC.value }
-            AccountType.PINV -> { InvoiceType.PINV.value }
-            AccountType.PCN -> { InvoiceType.PCN.value }
-            AccountType.PDN -> { InvoiceType.PDN.value }
-            AccountType.PAY -> { InvoiceType.PAY.value }
+            AccountType.SINV -> {
+                InvoiceType.SINV.value
+            }
+            AccountType.SCN -> {
+                InvoiceType.SCN.value
+            }
+            AccountType.SDN -> {
+                InvoiceType.SDN.value
+            }
+            AccountType.REC -> {
+                InvoiceType.REC.value
+            }
+            AccountType.PINV -> {
+                InvoiceType.PINV.value
+            }
+            AccountType.PCN -> {
+                InvoiceType.PCN.value
+            }
+            AccountType.PDN -> {
+                InvoiceType.PDN.value
+            }
+            AccountType.PAY -> {
+                InvoiceType.PAY.value
+            }
         }
     }
 }
