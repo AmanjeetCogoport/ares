@@ -319,7 +319,11 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getDocumentList(request: SettlementDocumentRequest): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        val documentEntity = accountUtilizationRepository.getDocumentList(request.pageLimit, offset, request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
+        val documentEntity = accountUtilizationRepository
+            .getDocumentList(
+                request.pageLimit, offset, request.accType, request.orgId,
+                request.entityCode, request.startDate, request.endDate, "%${request.query}%"
+            )
         val documentModel = documentEntity.map {
             documentConverter.convertToModel(it!!)
         }
@@ -328,10 +332,17 @@ open class SettlementServiceImpl : SettlementService {
             tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
         }
         documentModel.forEach { doc ->
-            val rate = tdsStyles.find { it.id == doc.organizationId }?.tdsDeductionRate ?: (AresConstants.TWO_PERCENT * 100).toBigDecimal()
-            doc.tds = (doc.taxableAmount * Utilities.binaryOperation(rate, 100.toBigDecimal(), Operator.DIVIDE)).setScale(4, RoundingMode.HALF_DOWN)
+            val rate = getTdsRate(tdsStyles, doc.organizationId)
+            doc.tds = (
+                doc.taxableAmount * Utilities.binaryOperation(
+                    rate, 100.toBigDecimal(), Operator.DIVIDE
+                )
+                ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
         }
-        val total = accountUtilizationRepository.getDocumentCount(request.accType, request.orgId, request.entityCode, request.startDate, request.endDate, "%${request.query}%")
+        val total = accountUtilizationRepository.getDocumentCount(
+            request.accType, request.orgId, request.entityCode,
+            request.startDate, request.endDate, "%${request.query}%"
+        )
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -347,6 +358,19 @@ open class SettlementServiceImpl : SettlementService {
             pageNo = request.page
         )
     }
+
+    /**
+     * Get TDS Rate from styles if present else return default 2%
+     * @param tdsStyles
+     * @param orgId
+     * @return BigDecimat
+     */
+    private fun getTdsRate(
+        tdsStyles: MutableList<TdsStylesResponse>,
+        orgId: UUID
+    ) =
+        tdsStyles.find { it.id == orgId }?.tdsDeductionRate
+            ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
 
     /**
      * Validate input for list of documents
