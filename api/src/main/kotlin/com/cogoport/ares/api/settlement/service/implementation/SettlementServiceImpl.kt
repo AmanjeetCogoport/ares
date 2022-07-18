@@ -449,7 +449,10 @@ open class SettlementServiceImpl : SettlementService {
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
         request.orgId.forEach {
-            tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
+            try {
+                tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
+            }
+            catch (_: Exception){ }
         }
         documentModel.forEach { doc ->
             val rate = getTdsRate(tdsStyles, doc.organizationId)
