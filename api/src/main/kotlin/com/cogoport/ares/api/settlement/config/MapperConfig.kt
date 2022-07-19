@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.config
 
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
@@ -34,5 +35,10 @@ class MapperConfig {
     @Bean
     fun orgSummaryConverter(): OrgSummaryMapper {
         return Mappers.getMapper(OrgSummaryMapper::class.java)
+    }
+
+    @Bean
+    fun tdsDocumentConverter(): InvoiceDocumentMapper {
+        return Mappers.getMapper(InvoiceDocumentMapper::class.java)
     }
 }

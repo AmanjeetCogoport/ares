@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -93,6 +94,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var plutusClient: PlutusClient
+
+    @Inject
+    lateinit var invoiceDocumentConverter: InvoiceDocumentMapper
 
     /**
      * *
@@ -478,6 +482,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
         request.orgId.forEach {
@@ -506,7 +511,6 @@ open class SettlementServiceImpl : SettlementService {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
             doc.settledAllocation = BigDecimal.ZERO
-            doc.settledTds = BigDecimal.ZERO
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
@@ -516,6 +520,22 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private fun calculateSettledTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>) {
+        documentEntity.forEach {
+            if (!it?.tdsCurrency.isNullOrBlank() && (it?.currency != it?.tdsCurrency)) {
+                if (it?.ledCurrency == it?.tdsCurrency) {
+                    it?.settledTds = it?.settledTds?.let { amt ->
+                        getExchangeValue(amt, it.exchangeRate, true)
+                    }!!
+                } else {
+                    //                    val sourceDoc = accountUtilizationRepository.findRecord(it?.sourceId!!)
+                    val rate = it?.tdsCurrency?.let { it1 -> getExchangeRate(it1, it.currency) }
+                    it?.settledTds = rate?.let { it1 -> getExchangeValue(it.settledTds, it1) }!!
+                }
+            }
+        }
     }
 
     /**
@@ -543,7 +563,7 @@ open class SettlementServiceImpl : SettlementService {
                 query,
                 request.status.toString()
             )
-        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -614,6 +634,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(
@@ -939,7 +960,8 @@ open class SettlementServiceImpl : SettlementService {
                         tdsAmount = payment.tds!!,
                         tdsLedAmount = getExchangeValue(payment.tds!!, payment.exchangeRate),
                         settlementDate = request.settlementDate,
-                        signFlag = 1
+                        signFlag = 1,
+                        createdBy = request.createdBy
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1069,7 +1091,8 @@ open class SettlementServiceImpl : SettlementService {
             payment.ledCurrency,
             (paidLedAmount + paymentTdsLed),
             1,
-            request.settlementDate
+            request.settlementDate,
+            request.createdBy
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             createTdsRecord(
@@ -1081,7 +1104,8 @@ open class SettlementServiceImpl : SettlementService {
                 tdsAmount = paymentTds,
                 tdsLedAmount = paymentTdsLed,
                 settlementDate = request.settlementDate,
-                signFlag = -1
+                signFlag = -1,
+                createdBy = request.createdBy
             )
             invoice.settledTds += invoiceTds
         }
@@ -1109,7 +1133,8 @@ open class SettlementServiceImpl : SettlementService {
                 invoice.ledCurrency,
                 excLedAmount.abs(),
                 exSign.toShort(),
-                request.settlementDate
+                request.settlementDate,
+                request.createdBy
             )
         }
         val paymentUtilized =
@@ -1130,7 +1155,8 @@ open class SettlementServiceImpl : SettlementService {
         tdsAmount: BigDecimal,
         tdsLedAmount: BigDecimal,
         signFlag: Short,
-        settlementDate: Timestamp
+        settlementDate: Timestamp,
+        createdBy: UUID?
     ) {
         val tdsType =
             if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
@@ -1148,7 +1174,8 @@ open class SettlementServiceImpl : SettlementService {
             ledCurrency,
             tdsLedAmount,
             signFlag,
-            settlementDate
+            settlementDate,
+            createdBy
         )
     }
 
@@ -1180,7 +1207,8 @@ open class SettlementServiceImpl : SettlementService {
         ledCurrency: String,
         ledAmount: BigDecimal,
         signFlag: Short,
-        transactionDate: Timestamp
+        transactionDate: Timestamp,
+        createdBy: UUID?
     ) {
         val settledDoc =
             Settlement(
@@ -1195,9 +1223,9 @@ open class SettlementServiceImpl : SettlementService {
                 ledAmount,
                 signFlag,
                 transactionDate,
-                null,
+                createdBy,
                 Timestamp.from(Instant.now()),
-                null,
+                createdBy,
                 Timestamp.from(Instant.now())
             )
         settlementRepository.save(settledDoc)

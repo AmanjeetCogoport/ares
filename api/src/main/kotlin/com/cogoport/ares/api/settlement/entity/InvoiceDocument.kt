@@ -6,11 +6,8 @@ import java.util.Date
 import java.util.UUID
 
 @MappedEntity
-data class Document(
+data class InvoiceDocument(
     var id: Long,
-    var sourceId: Long?,
-    var settledTds: BigDecimal,
-    var tdsCurrency: String?,
     var documentNo: Long,
     var organizationId: UUID,
     var documentValue: String,
