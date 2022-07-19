@@ -377,6 +377,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                         WHEN :status = 'PARTIAL_PAID' then  (amount_curr - pay_curr) <> 0 AND (pay_curr > 0)
                         END
                         )
+                    AND (:query is null OR document_value ilike :query)
                 LIMIT :limit
                 OFFSET :offset
         """
@@ -439,6 +440,31 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+        SELECT 
+            count(id)
+                FROM account_utilizations
+                WHERE 
+                    amount_curr <> 0
+                    AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND (
+                        :status is null OR
+                        CASE WHEN :status = 'PAID' then  amount_curr = pay_curr
+                        WHEN :status = 'UNPAID' then  pay_curr = 0
+                        WHEN :status = 'PARTIAL_PAID' then  (amount_curr - pay_curr) <> 0 AND (pay_curr > 0)
+                        END
+                        )
+                    AND (:query is null OR document_value ilike :query)
+    """
+    )
+    suspend fun getInvoiceDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): Long?
 
     @Query(
         """

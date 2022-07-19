@@ -517,13 +517,14 @@ open class SettlementServiceImpl : SettlementService {
             )
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val total =
-            accountUtilizationRepository.getDocumentCount(
+            accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
                 request.orgId,
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%"
+                request.query,
+                request.status.toString()
             )
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
