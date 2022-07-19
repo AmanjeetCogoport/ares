@@ -452,6 +452,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
         request.orgId.forEach {
@@ -480,7 +481,6 @@ open class SettlementServiceImpl : SettlementService {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
             doc.settledAllocation = BigDecimal.ZERO
-            doc.settledTds = BigDecimal.ZERO
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
@@ -490,6 +490,24 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private fun calculateSettledTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>) {
+        documentEntity.forEach {
+            if (!it?.tdsCurrency.isNullOrBlank()) {
+                if (it?.currency != it?.tdsCurrency) {
+                    if (it?.ledCurrency == it?.tdsCurrency) {
+                        it?.settledTds = it?.settledTds?.let { amt ->
+                            getExchangeValue(amt, it.exchangeRate, true)
+                        }!!
+                    } else {
+                        //                    val sourceDoc = accountUtilizationRepository.findRecord(it?.sourceId!!)
+                        val rate = it?.tdsCurrency?.let { it1 -> getExchangeRate(it1, it.currency) }
+                        it?.settledTds = rate?.let { it1 -> getExchangeValue(it.settledTds, it1) }!!
+                    }
+                }
+            }
+        }
     }
 
     /**
