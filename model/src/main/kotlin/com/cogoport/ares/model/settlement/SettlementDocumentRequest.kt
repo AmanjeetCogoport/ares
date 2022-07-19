@@ -1,7 +1,9 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.InvoiceStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.http.annotation.QueryValue
@@ -12,11 +14,12 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: List<UUID> = emptyList(),
+    @QueryValue(AresModelConstants.STATUS) val status: InvoiceStatus,
     @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
-    @QueryValue(AresModelConstants.QUERY) val query: String = "",
+    @QueryValue(AresModelConstants.QUERY) val query: String? = null,
     @QueryValue(AresModelConstants.ACCOUNT_TYPE) var accType: AccountType? = null
 )

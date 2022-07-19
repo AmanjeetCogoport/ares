@@ -494,6 +494,53 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
+    /**
+     * Get List of Documents from OpenSearch index_account_utilization
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    private suspend fun getDocumentList1(
+        request: SettlementDocumentRequest
+    ): ResponseList<Document> {
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        val documentEntity =
+            accountUtilizationRepository.getDocumentList1(
+                request.pageLimit,
+                offset,
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%",
+                request.status.toString()
+            )
+        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val total =
+            accountUtilizationRepository.getDocumentCount(
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                "%${request.query}%"
+            )
+        for (doc in documentModel) {
+            doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.settledTds = BigDecimal.ZERO
+            doc.allocationAmount = doc.balanceAmount
+            doc.balanceAfterAllocation = BigDecimal.ZERO
+        }
+        return ResponseList(
+            list = documentModel,
+            totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
+            totalRecords = total,
+            pageNo = request.page
+        )
+    }
+
     /** Validate input for list of documents */
     private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
         if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
@@ -557,8 +604,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        request.accType = AccountType.SINV
-        val response = getDocumentList(request)
+        val response = getDocumentList1(request)
         val invoiceList = documentConverter.convertToInvoice(response.list)
         return ResponseList(
             list = invoiceList,
