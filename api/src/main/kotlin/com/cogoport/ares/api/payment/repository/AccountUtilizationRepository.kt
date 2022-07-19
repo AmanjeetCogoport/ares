@@ -364,6 +364,51 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             (taxable_amount * 0.02) as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
+            amount_curr - pay_curr as balance_amount,
+            amount_curr - pay_curr as current_balance,
+            null as status, 
+            currency, 
+            led_currency, 
+            (amount_loc / amount_curr) as exchange_rate,
+            sign_flag
+                FROM account_utilizations 
+                WHERE amount_curr <> 0 
+                    AND organization_id in (:orgId)
+                    AND document_status = 'FINAL'
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND (
+                        :status is null OR
+                        CASE WHEN :status = 'PAID' then  amount_curr = pay_curr
+                        WHEN :status = 'UNPAID' then  pay_curr = 0
+                        WHEN :status = 'PARTIAL_PAID' then  (amount_curr - pay_curr) <> 0 AND (pay_curr > 0)
+                        END
+                        )
+                    AND (:query is null OR document_value ilike :query)
+                LIMIT :limit
+                OFFSET :offset
+        """
+    )
+    suspend fun getInvoiceDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<Document?>
+
+    @Query(
+        """
+        SELECT 
+            id, 
+            document_no, 
+            document_value, 
+            acc_type as document_type,
+            acc_type as account_type,
+            transaction_date as document_date,
+            due_date, 
+            amount_curr as document_amount, 
+            amount_loc as document_led_amount, 
+            taxable_amount, 
+            (taxable_amount * 0.02) as tds,
+            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            pay_curr as settled_amount, 
             amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
             amount_curr - pay_curr as current_balance,
             null as status, 
@@ -404,6 +449,31 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+
+    @Query(
+        """
+        SELECT 
+            count(id)
+                FROM account_utilizations
+                WHERE 
+                    amount_curr <> 0
+                    AND document_status = 'FINAL'
+                    AND organization_id in (:orgId)
+                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND (:entityCode is null OR entity_code = :entityCode)
+                    AND (:startDate is null OR transaction_date >= :startDate::date)
+                    AND (:endDate is null OR transaction_date <= :endDate::date)
+                    AND (
+                        :status is null OR
+                        CASE WHEN :status = 'PAID' then  amount_curr = pay_curr
+                        WHEN :status = 'UNPAID' then  pay_curr = 0
+                        WHEN :status = 'PARTIAL_PAID' then  (amount_curr - pay_curr) <> 0 AND (pay_curr > 0)
+                        END
+                        )
+                    AND (:query is null OR document_value ilike :query)
+    """
+    )
+    suspend fun getInvoiceDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): Long?
 
     @Query(
         """
