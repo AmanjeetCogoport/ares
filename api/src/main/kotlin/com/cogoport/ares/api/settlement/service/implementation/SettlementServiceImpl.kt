@@ -525,6 +525,10 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementDocumentRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
+        var query:String? = null
+        if(request.query != null){
+            query = "%${request.query}%"
+        }
         val documentEntity =
             accountUtilizationRepository.getInvoiceDocumentList(
                 request.pageLimit,
@@ -534,7 +538,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                request.query,
+                query,
                 request.status.toString()
             )
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
@@ -545,7 +549,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                request.query,
+                query,
                 request.status.toString()
             )
         for (doc in documentModel) {
