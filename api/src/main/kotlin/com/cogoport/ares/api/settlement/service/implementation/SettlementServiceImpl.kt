@@ -512,7 +512,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
+                request.query,
                 request.status.toString()
             )
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }

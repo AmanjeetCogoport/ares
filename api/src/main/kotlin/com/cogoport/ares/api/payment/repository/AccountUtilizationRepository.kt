@@ -355,7 +355,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             (taxable_amount * 0.02) as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
-            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
+            amount_curr - pay_curr as balance_amount,
             amount_curr - pay_curr as current_balance,
             null as status, 
             currency, 
@@ -372,12 +372,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND (
                         :status is null OR
-                        CASE WHEN :status = 'PAID' then  (amount_curr - pay_curr) = 0
-                        WHEN :status = 'UNPAID' then  (amount_curr = pay_curr) 
+                        CASE WHEN :status = 'PAID' then  amount_curr = pay_curr
+                        WHEN :status = 'UNPAID' then  pay_curr = 0
                         WHEN :status = 'PARTIAL_PAID' then  (amount_curr - pay_curr) <> 0 AND (pay_curr > 0)
                         END
                         )
-                    AND (:query is null OR document_value ilike :query)
                 LIMIT :limit
                 OFFSET :offset
         """
