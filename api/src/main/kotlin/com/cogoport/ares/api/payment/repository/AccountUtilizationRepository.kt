@@ -13,6 +13,7 @@ import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
+import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
@@ -391,12 +392,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 OFFSET :offset
         """
     )
-    suspend fun getInvoiceDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<Document?>
+    suspend fun getInvoiceDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<InvoiceDocument?>
 
     @Query(
         """
         SELECT 
-            id, 
+            au.id,
+            s.source_id,
+            coalesce(s.amount,0) as settled_tds,
+            s.currency as tds_currency,
+            organization_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -406,17 +411,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr as document_amount, 
             amount_loc as document_led_amount, 
             taxable_amount, 
-            (taxable_amount * 0.02) as tds,
+            0 as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
             amount_curr - pay_curr as current_balance,
             null as status, 
-            currency, 
-            led_currency, 
+            au.currency, 
+            au.led_currency, 
             (amount_loc / amount_curr) as exchange_rate,
-            sign_flag
-                FROM account_utilizations 
+            au.sign_flag
+                FROM account_utilizations au
+                LEFT JOIN settlements s ON 
+                    s.destination_id = au.document_no 
+                    AND s.destination_type::varchar = au.acc_type::varchar 
+                    AND s.source_type::varchar in ('CTDS','VTDS')
                 WHERE amount_curr <> 0
                     AND pay_curr <> 0
                     AND organization_id in (:orgId)

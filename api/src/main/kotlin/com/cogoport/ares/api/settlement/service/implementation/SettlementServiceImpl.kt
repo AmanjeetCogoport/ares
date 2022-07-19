@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -93,6 +94,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var plutusClient: PlutusClient
+
+    @Inject
+    lateinit var invoiceDocumentConverter: InvoiceDocumentMapper
 
     /**
      * *
@@ -561,7 +565,7 @@ open class SettlementServiceImpl : SettlementService {
                 query,
                 request.status.toString()
             )
-        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -632,6 +636,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(
