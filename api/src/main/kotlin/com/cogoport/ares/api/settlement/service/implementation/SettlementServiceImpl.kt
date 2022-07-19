@@ -956,7 +956,8 @@ open class SettlementServiceImpl : SettlementService {
                         tdsAmount = payment.tds!!,
                         tdsLedAmount = getExchangeValue(payment.tds!!, payment.exchangeRate),
                         settlementDate = request.settlementDate,
-                        signFlag = 1
+                        signFlag = 1,
+                        createdBy = request.createdBy
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1086,7 +1087,8 @@ open class SettlementServiceImpl : SettlementService {
             payment.ledCurrency,
             (paidLedAmount + paymentTdsLed),
             1,
-            request.settlementDate
+            request.settlementDate,
+            request.createdBy
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             createTdsRecord(
@@ -1098,7 +1100,8 @@ open class SettlementServiceImpl : SettlementService {
                 tdsAmount = paymentTds,
                 tdsLedAmount = paymentTdsLed,
                 settlementDate = request.settlementDate,
-                signFlag = -1
+                signFlag = -1,
+                createdBy = request.createdBy
             )
             invoice.settledTds += invoiceTds
         }
@@ -1126,7 +1129,8 @@ open class SettlementServiceImpl : SettlementService {
                 invoice.ledCurrency,
                 excLedAmount.abs(),
                 exSign.toShort(),
-                request.settlementDate
+                request.settlementDate,
+                request.createdBy
             )
         }
         val paymentUtilized =
@@ -1147,7 +1151,8 @@ open class SettlementServiceImpl : SettlementService {
         tdsAmount: BigDecimal,
         tdsLedAmount: BigDecimal,
         signFlag: Short,
-        settlementDate: Timestamp
+        settlementDate: Timestamp,
+        createdBy: UUID?
     ) {
         val tdsType =
             if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
@@ -1165,7 +1170,8 @@ open class SettlementServiceImpl : SettlementService {
             ledCurrency,
             tdsLedAmount,
             signFlag,
-            settlementDate
+            settlementDate,
+            createdBy
         )
     }
 
@@ -1197,7 +1203,8 @@ open class SettlementServiceImpl : SettlementService {
         ledCurrency: String,
         ledAmount: BigDecimal,
         signFlag: Short,
-        transactionDate: Timestamp
+        transactionDate: Timestamp,
+        createdBy: UUID?
     ) {
         val settledDoc =
             Settlement(
@@ -1212,9 +1219,9 @@ open class SettlementServiceImpl : SettlementService {
                 ledAmount,
                 signFlag,
                 transactionDate,
-                null,
+                createdBy,
                 Timestamp.from(Instant.now()),
-                null,
+                createdBy,
                 Timestamp.from(Instant.now())
             )
         settlementRepository.save(settledDoc)
