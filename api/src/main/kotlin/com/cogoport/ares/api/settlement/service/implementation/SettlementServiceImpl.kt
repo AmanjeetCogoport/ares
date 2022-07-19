@@ -43,6 +43,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -84,6 +85,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var cogoClient: AuthClient
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
 
     /**
      * *
@@ -402,11 +406,13 @@ open class SettlementServiceImpl : SettlementService {
 
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo, request.settlementType)
-
+        val invoiceIds = settlements.map { it.destinationId.toString() }
+        val invoideSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     val settled = settledInvoiceConverter.convertToModel(settlement)
+                    settled.sid = invoideSids?.find { it.invoiceId == settled.documentNo }?.jobNumber
                     when (settled.balanceAmount) {
                         BigDecimal.ZERO -> settled.status = InvoiceStatus.PAID.value
                         settled.documentAmount -> settled.status = InvoiceStatus.UNPAID.value
@@ -843,6 +849,23 @@ open class SettlementServiceImpl : SettlementService {
                             performDbOperation
                         )
                 }
+                if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
+                    payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
+                    performDbOperation
+                ) {
+                    createTdsRecord(
+                        sourceId = invoice.documentNo,
+                        destId = payment.documentNo,
+                        destType = payment.accountType,
+                        currency = payment.currency,
+                        ledCurrency = payment.ledCurrency,
+                        tdsAmount = payment.tds!!,
+                        tdsLedAmount = getExchangeValue(payment.tds!!, payment.exchangeRate),
+                        settlementDate = request.settlementDate,
+                        signFlag = 1
+                    )
+                    payment.settledTds += payment.tds!!
+                }
             }
             payment.allocationAmount -= availableAmount
             payment.balanceAfterAllocation =
@@ -923,15 +946,10 @@ open class SettlementServiceImpl : SettlementService {
         updateDoc: Boolean,
         performDbOperation: Boolean
     ): BigDecimal {
-        val invoiceTds = invoice.tds!! - invoice.settledTds
-        var paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
-        if (payment.accountType !in (listOf(SettlementType.PCN, SettlementType.SCN))) {
-            paymentTds = 0.toBigDecimal()
-        }
-        val amount = availableAmount - toSettleAmount - paymentTds
+        val amount = availableAmount - toSettleAmount
         invoice.settledAllocation += toSettleAmount
         payment.settledAllocation +=
-            getExchangeValue(toSettleAmount + paymentTds, exchangeRate, true)
+            getExchangeValue(toSettleAmount, exchangeRate, true)
         if (updateDoc) {
             invoice.allocationAmount = invoice.settledAllocation
             invoice.balanceAfterAllocation =
@@ -967,7 +985,8 @@ open class SettlementServiceImpl : SettlementService {
         createSettlement(
             payment.documentNo,
             payment.accountType,
-            invoice,
+            invoice.documentNo,
+            invoice.accountType,
             payment.currency,
             (paidAmount + paymentTds),
             payment.ledCurrency,
@@ -976,20 +995,16 @@ open class SettlementServiceImpl : SettlementService {
             request.settlementDate
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
-            val tdsType =
-                if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
-                    SettlementType.CTDS
-                else SettlementType.VTDS
-            createSettlement(
-                payment.documentNo,
-                tdsType,
-                invoice,
-                payment.currency,
-                paymentTds,
-                invoice.ledCurrency,
-                paymentTdsLed,
-                -1,
-                request.settlementDate
+            createTdsRecord(
+                sourceId = payment.documentNo,
+                destId = invoice.documentNo,
+                destType = invoice.accountType,
+                currency = payment.currency,
+                ledCurrency = payment.ledCurrency,
+                tdsAmount = paymentTds,
+                tdsLedAmount = paymentTdsLed,
+                settlementDate = request.settlementDate,
+                signFlag = -1
             )
             invoice.settledTds += invoiceTds
         }
@@ -1002,19 +1017,16 @@ open class SettlementServiceImpl : SettlementService {
                 else SettlementType.PECH
             val exSign =
                 excLedAmount.signum() *
-                    if (payment.accountType in
-                        listOf(
-                                SettlementType.SCN,
-                                SettlementType.REC,
-                                SettlementType.SINV
-                            )
-                    )
+                    if (payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) {
                         -1
-                    else 1
+                    } else {
+                        1
+                    }
             createSettlement(
                 payment.documentNo,
                 exType,
-                invoice,
+                invoice.documentNo,
+                invoice.accountType,
                 null,
                 null,
                 invoice.ledCurrency,
@@ -1026,10 +1038,41 @@ open class SettlementServiceImpl : SettlementService {
         val paymentUtilized =
             paidAmount +
                 if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
-                    paymentTds
+                    payment.tds!!
                 else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds))
+    }
+
+    private suspend fun createTdsRecord(
+        sourceId: Long?,
+        destId: Long,
+        destType: SettlementType,
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        signFlag: Short,
+        settlementDate: Timestamp
+    ) {
+        val tdsType =
+            if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
+                SettlementType.CTDS
+            } else {
+                SettlementType.VTDS
+            }
+        createSettlement(
+            sourceId,
+            tdsType,
+            destId,
+            destType,
+            currency,
+            tdsAmount,
+            ledCurrency,
+            tdsLedAmount,
+            signFlag,
+            settlementDate
+        )
     }
 
     private suspend fun updateAccountUtilization(
@@ -1053,7 +1096,8 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun createSettlement(
         sourceId: Long?,
         sourceType: SettlementType,
-        invoice: CheckDocument,
+        destId: Long,
+        destType: SettlementType,
         currency: String?,
         amount: BigDecimal?,
         ledCurrency: String,
@@ -1066,8 +1110,8 @@ open class SettlementServiceImpl : SettlementService {
                 null,
                 sourceId,
                 sourceType,
-                invoice.documentNo,
-                invoice.accountType,
+                destId,
+                destType,
                 currency,
                 amount,
                 ledCurrency,
@@ -1135,10 +1179,10 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PCN, SettlementType.PAY)
             }
             SettlementType.CTDS -> {
-                listOf(SettlementType.SINV, SettlementType.SDN)
+                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
             }
             SettlementType.VTDS -> {
-                listOf(SettlementType.PINV, SettlementType.PDN)
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PCN)
             }
             else -> {
                 emptyList()

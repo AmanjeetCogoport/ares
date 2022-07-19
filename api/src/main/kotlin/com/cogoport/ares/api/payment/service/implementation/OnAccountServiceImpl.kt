@@ -350,7 +350,7 @@ open class OnAccountServiceImpl : OnAccountService {
         clientResponse = authClient.getCogoOrganization(reqBody)
 
         if (clientResponse.organizationSerialId == null) {
-            throw AresException(AresError.ERR_1202, "")
+            throw AresException(AresError.ERR_1207, "")
         }
         receivableRequest.orgSerialId = clientResponse.organizationSerialId
         receivableRequest.organizationName = clientResponse.organizationName
