@@ -108,16 +108,16 @@ open class SettlementServiceImpl : SettlementService {
 
         val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
         var cogoEntity: CogoBanksDetails? = null
-        var selectedBank: BankDetails? =null
-        for(bank in cogoEntities.bankList){
+        var selectedBank: BankDetails? = null
+        for (bank in cogoEntities.bankList) {
             val banksDetails = bank.bankDetails?.filter { it.accountNumber == request.cogoAccountNo }
-            if (banksDetails?.size!! >= 1){
+            if (banksDetails?.size!! >= 1) {
                 cogoEntity = bank
                 selectedBank = banksDetails.get(0)
             }
         }
 
-        if(cogoEntity == null || selectedBank == null){
+        if (cogoEntity == null || selectedBank == null) {
             throw AresException(AresError.ERR_1002, AresConstants.ZONE)
         }
 
