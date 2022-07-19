@@ -844,7 +844,8 @@ open class SettlementServiceImpl : SettlementService {
                         )
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
-                    payment.settledTds.compareTo(BigDecimal.ZERO) == 0
+                    payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
+                    performDbOperation
                 ) {
                     createTdsRecord(
                         sourceId = invoice.documentNo,
@@ -1031,7 +1032,7 @@ open class SettlementServiceImpl : SettlementService {
         val paymentUtilized =
             paidAmount +
                 if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
-                    paymentTds
+                    payment.tds!!
                 else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized)
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds))
