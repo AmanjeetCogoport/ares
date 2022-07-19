@@ -39,6 +39,7 @@ import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -301,7 +302,7 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    override suspend fun getInvoices(request: SettlementDocumentRequest) = getInvoiceList(request)
+    override suspend fun getInvoices(request: SettlementInvoiceRequest) = getInvoiceList(request)
 
     override suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>? {
         validateSettlementDocumentInput(request)
@@ -541,7 +542,7 @@ open class SettlementServiceImpl : SettlementService {
      * @return ResponseList
      */
     private suspend fun getInvoiceDocumentList(
-        request: SettlementDocumentRequest
+        request: SettlementInvoiceRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         var query: String? = null
@@ -663,7 +664,7 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
+    private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<Invoice> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val response = getInvoiceDocumentList(request)
         val invoiceList = documentConverter.convertToInvoice(response.list)

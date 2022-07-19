@@ -14,6 +14,7 @@ import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -59,7 +60,7 @@ class SettlementController {
      * @return: List
      */
     @Get("/invoices{?request*}")
-    suspend fun getInvoices(@Valid request: SettlementDocumentRequest): ResponseList<Invoice>? {
+    suspend fun getInvoices(@Valid request: SettlementInvoiceRequest): ResponseList<Invoice>? {
         return Response<ResponseList<Invoice>?>().ok(settlementService.getInvoices(request))
     }
 
