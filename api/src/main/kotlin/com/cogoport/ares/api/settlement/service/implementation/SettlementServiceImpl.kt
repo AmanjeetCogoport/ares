@@ -104,6 +104,7 @@ open class SettlementServiceImpl : SettlementService {
      * - convenience fee entry [like EXC/TDS] for accounting of payment
      * - update utilization table with balance or status
      */
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
         val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
