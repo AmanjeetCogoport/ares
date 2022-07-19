@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
+import java.util.UUID
 
 @Introspected
 @ReflectiveAccess
@@ -15,6 +16,10 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonIgnoreType
 @JsonInclude
 data class CogoBanksDetails(
+    @JsonProperty("id")
+    var id: UUID,
+    @JsonProperty("entity_code")
+    var entityCode: Int,
     @JsonProperty("bank_details")
     var bankDetails: List<BankDetails>? = null
 )
