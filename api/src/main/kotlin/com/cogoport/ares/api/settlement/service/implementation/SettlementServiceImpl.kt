@@ -3,6 +3,8 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.models.BankDetails
+import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
@@ -20,8 +22,10 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.InvoiceStatus
 import com.cogoport.ares.model.payment.InvoiceType
@@ -100,8 +104,25 @@ open class SettlementServiceImpl : SettlementService {
      * - convenience fee entry [like EXC/TDS] for accounting of payment
      * - update utilization table with balance or status
      */
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
 
+        val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
+        var cogoEntity: CogoBanksDetails? = null
+        var selectedBank: BankDetails? = null
+        for (bank in cogoEntities.bankList) {
+            val banksDetails = bank.bankDetails?.filter { it.accountNumber == request.cogoAccountNo }
+            if (banksDetails?.size!! >= 1) {
+                cogoEntity = bank
+                selectedBank = banksDetails.get(0)
+            }
+        }
+
+        if (cogoEntity == null || selectedBank == null) {
+            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
+        }
+
+        logger().info(cogoEntities.toString())
         val invoiceUtilization =
             accountUtilizationRepository.findRecordByDocumentValue(
                 documentValue = request.invoiceNumber,
@@ -112,6 +133,10 @@ open class SettlementServiceImpl : SettlementService {
         val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
         payment.organizationId = invoiceUtilization.organizationId
         payment.organizationName = invoiceUtilization.organizationName
+        payment.bankId = selectedBank.id
+        payment.entityCode = cogoEntity.entityCode
+        payment.bankName = selectedBank.beneficiaryName
+
         payment.exchangeRate =
             getExchangeRate(
                 payment.currency,
@@ -232,7 +257,7 @@ open class SettlementServiceImpl : SettlementService {
             settledAmount * invoiceUtilization.amountLoc / invoiceUtilization.amountCurr
         val settledAmtFromRec = settledAmount * payment.exchangeRate!!
 
-        if (settledAmtLed != settledAmtFromRec) {
+        if ((settledAmtLed - settledAmtFromRec) != BigDecimal.ZERO) {
             settlements.add(
                 Settlement(
                     id = null,
@@ -407,12 +432,12 @@ open class SettlementServiceImpl : SettlementService {
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo, request.settlementType)
         val invoiceIds = settlements.map { it.destinationId.toString() }
-        val invoideSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
+        val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     val settled = settledInvoiceConverter.convertToModel(settlement)
-                    settled.sid = invoideSids?.find { it.invoiceId == settled.documentNo }?.jobNumber
+                    settled.sid = invoiceSids?.find { it.invoiceId == settled.documentNo }?.jobNumber
                     when (settled.balanceAmount) {
                         BigDecimal.ZERO -> settled.status = InvoiceStatus.PAID.value
                         settled.documentAmount -> settled.status = InvoiceStatus.UNPAID.value
@@ -475,6 +500,58 @@ open class SettlementServiceImpl : SettlementService {
                 request.startDate,
                 request.endDate,
                 "%${request.query}%"
+            )
+        for (doc in documentModel) {
+            doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.settledTds = BigDecimal.ZERO
+            doc.allocationAmount = doc.balanceAmount
+            doc.balanceAfterAllocation = BigDecimal.ZERO
+        }
+        return ResponseList(
+            list = documentModel,
+            totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
+            totalRecords = total,
+            pageNo = request.page
+        )
+    }
+
+    /**
+     * Get List of Documents from OpenSearch index_account_utilization
+     * @param SettlementDocumentRequest
+     * @return ResponseList
+     */
+    private suspend fun getInvoiceDocumentList(
+        request: SettlementDocumentRequest
+    ): ResponseList<Document> {
+        val offset = (request.pageLimit * request.page) - request.pageLimit
+        var query: String? = null
+        if (request.query != null) {
+            query = "%${request.query}%"
+        }
+        val documentEntity =
+            accountUtilizationRepository.getInvoiceDocumentList(
+                request.pageLimit,
+                offset,
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                query,
+                request.status.toString()
+            )
+        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val total =
+            accountUtilizationRepository.getInvoiceDocumentCount(
+                request.accType,
+                request.orgId,
+                request.entityCode,
+                request.startDate,
+                request.endDate,
+                query,
+                request.status.toString()
             )
         for (doc in documentModel) {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
@@ -570,8 +647,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        request.accType = AccountType.SINV
-        val response = getDocumentList(request)
+        val response = getInvoiceDocumentList(request)
         val invoiceList = documentConverter.convertToInvoice(response.list)
         return ResponseList(
             list = invoiceList,
