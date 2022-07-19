@@ -381,7 +381,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 OFFSET :offset
         """
     )
-    suspend fun getDocumentList1(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<Document?>
+    suspend fun getInvoiceDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<Document?>
 
     @Query(
         """

@@ -499,12 +499,12 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getDocumentList1(
+    private suspend fun getInvoiceDocumentList(
         request: SettlementDocumentRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val documentEntity =
-            accountUtilizationRepository.getDocumentList1(
+            accountUtilizationRepository.getInvoiceDocumentList(
                 request.pageLimit,
                 offset,
                 request.accType,
@@ -604,7 +604,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
-        val response = getDocumentList1(request)
+        val response = getInvoiceDocumentList(request)
         val invoiceList = documentConverter.convertToInvoice(response.list)
         return ResponseList(
             list = invoiceList,
