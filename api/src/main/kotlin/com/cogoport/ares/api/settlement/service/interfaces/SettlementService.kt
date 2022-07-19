@@ -11,6 +11,7 @@ import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -25,7 +26,7 @@ interface SettlementService {
 
     suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>?
     suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document>?
-    suspend fun getInvoices(request: SettlementDocumentRequest): ResponseList<Invoice>
+    suspend fun getInvoices(request: SettlementInvoiceRequest): ResponseList<Invoice>
     suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse
 
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
