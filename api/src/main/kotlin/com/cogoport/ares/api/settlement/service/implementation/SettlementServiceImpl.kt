@@ -525,8 +525,8 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementDocumentRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
-        var query:String? = null
-        if(request.query != null){
+        var query: String? = null
+        if (request.query != null) {
             query = "%${request.query}%"
         }
         val documentEntity =
