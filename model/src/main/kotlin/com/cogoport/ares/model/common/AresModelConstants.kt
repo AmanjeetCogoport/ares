@@ -14,6 +14,8 @@ object AresModelConstants {
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
     const val ORG_ID = "orgId"
+    const val IMPORTER_EXPORTER_ID = "importerExporterId"
+    const val SERVICE_PROVIDER_ID = "serviceProviderId"
     const val START_DATE = "startDate"
     const val END_DATE = "endDate"
     const val ENTITY_TYPE = "entityType"

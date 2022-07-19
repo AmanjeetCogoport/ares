@@ -11,7 +11,8 @@ import java.util.UUID
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementDocumentRequest(
-    @QueryValue(AresModelConstants.ORG_ID) val orgId: List<UUID> = emptyList(),
+    @QueryValue(AresModelConstants.IMPORTER_EXPORTER_ID) val importerExporterId: UUID?,
+    @QueryValue(AresModelConstants.SERVICE_PROVIDER_ID) val serviceProviderId: UUID?,
     @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,

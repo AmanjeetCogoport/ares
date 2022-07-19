@@ -471,12 +471,13 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementDocumentRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
+        val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
                 offset,
                 request.accType,
-                request.orgId,
+                orgId,
                 request.entityCode,
                 request.startDate,
                 request.endDate,
@@ -485,7 +486,7 @@ open class SettlementServiceImpl : SettlementService {
         calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
-        request.orgId.forEach {
+        orgId.forEach {
             try {
                 tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
             } catch (_: Exception) { }
@@ -501,7 +502,7 @@ open class SettlementServiceImpl : SettlementService {
         val total =
             accountUtilizationRepository.getDocumentCount(
                 request.accType,
-                request.orgId,
+                orgId,
                 request.entityCode,
                 request.startDate,
                 request.endDate,
@@ -520,6 +521,15 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private fun getOrgIds(importerExporterId: UUID?, serviceProviderId: UUID?): List<UUID> {
+        var orgId = mutableListOf<UUID>()
+        if(importerExporterId != null)
+            orgId.add(importerExporterId)
+        if(serviceProviderId != null)
+            orgId.add(serviceProviderId)
+        return orgId
     }
 
     private fun calculateSettledTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>) {
@@ -608,7 +618,8 @@ open class SettlementServiceImpl : SettlementService {
      */
     private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
         if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.importerExporterId == null && request.serviceProviderId == null)
+            throw AresException(AresError.ERR_1003, "importerExporterId and serviceProviderId")
     }
 
     /**
