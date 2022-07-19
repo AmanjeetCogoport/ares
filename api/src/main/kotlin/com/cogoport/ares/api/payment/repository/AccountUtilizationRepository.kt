@@ -303,7 +303,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            id, 
+            id,
+            organization_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -313,7 +314,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr as document_amount, 
             amount_loc as document_led_amount, 
             taxable_amount, 
-            (taxable_amount * 0.02) as tds,
+            0 as tds,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
@@ -345,6 +346,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             id, 
             document_no, 
             document_value, 
+            organization_id,
             acc_type as document_type,
             acc_type as account_type,
             transaction_date as document_date,
@@ -409,6 +411,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sign_flag
                 FROM account_utilizations 
                 WHERE amount_curr <> 0
+                    AND pay_curr <> 0
                     AND organization_id in (:orgId)
                     AND document_status = 'FINAL'
                     AND (:accType is null OR acc_type::varchar = :accType)
@@ -428,8 +431,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             count(id)
                 FROM account_utilizations
                 WHERE 
-                    amount_curr <> 0
-                    AND (amount_curr - pay_curr) <> 0 
+                    amount_curr <> 0 
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
@@ -472,6 +474,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             count(id)
                 FROM account_utilizations
                 WHERE amount_curr <> 0
+                    AND pay_curr <> 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
@@ -487,7 +490,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
             SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
                 FROM account_utilizations
-                WHERE entity_code = :entityCode
+                WHERE document_status = 'FINAL'
+                    AND entity_code = :entityCode
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)

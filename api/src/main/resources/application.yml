@@ -1,3 +1,4 @@
+environment: ${MICRONAUT_ENVIRONMENTS:local}
 micronaut:
   application:
     name: ares
@@ -22,6 +23,9 @@ r2dbc:
       username: postgres
       password: postgres123
       dialect: POSTGRES
+
+services:
+  service: https://api.dev.cogoport.io
 
 kafka:
   bootstrap:
