@@ -46,7 +46,7 @@ dependencies {
 
     //Plutus Client
     implementation("com.cogoport.plutus:plutus-client:0.1.4")
-    implementation("com.cogoport.plutus:plutus-model:0.1.6")
+    implementation("com.cogoport.plutus:plutus-model:0.1.7-beta")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
