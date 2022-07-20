@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -1195,6 +1196,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         accountUtilizationRepository.update(paymentUtilization)
+        OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
     }
 
     private suspend fun createSettlement(
@@ -1344,8 +1346,10 @@ open class SettlementServiceImpl : SettlementService {
             InvoiceStatus.PAID.value
         } else if (afterTdsAmount.compareTo(balanceAmount) != 0) {
             InvoiceStatus.PARTIAL_PAID.value
-        } else {
+        } else if (afterTdsAmount.compareTo(balanceAmount) == 0) {
             InvoiceStatus.UNPAID.value
+        } else {
+            throw AresException(AresError.ERR_1504, "")
         }
     }
 
