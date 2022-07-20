@@ -679,8 +679,8 @@ open class SettlementServiceImpl : SettlementService {
         for(doc in invoiceList){
             val d = invoiceSids?.find { it.invoiceId == doc?.invoiceNo }
             doc?.sid = d?.jobNumber
-            doc?.shipmentType = "fcl freight"   //d?.shipmentType
-            doc?.pdfUrl = "No URL"    //d?.pdfUrl
+            doc?.shipmentType = d?.shipmentType
+            doc?.pdfUrl = d?.pdfUrl
         }
         return ResponseList(
             list = invoiceList,
