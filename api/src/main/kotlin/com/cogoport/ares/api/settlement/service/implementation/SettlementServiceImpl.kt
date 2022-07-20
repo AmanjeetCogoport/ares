@@ -112,7 +112,6 @@ open class SettlementServiceImpl : SettlementService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-
         val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
         var cogoEntity: CogoBanksDetails? = null
         var selectedBank: BankDetails? = null

@@ -22,7 +22,7 @@ data class SettlementKnockoffRequest(
     val fee: BigDecimal,
     val tax: BigDecimal,
 
-    var accMode: AccMode = AccMode.AR,
+//    var accMode: AccMode = AccMode.AR,
 
     val email: String, // narration or audits
 )
