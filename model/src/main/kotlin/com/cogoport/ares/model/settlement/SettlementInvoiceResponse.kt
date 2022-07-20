@@ -1,12 +1,11 @@
 package com.cogoport.ares.model.settlement
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import jdk.jfr.Percentage
 import java.math.BigDecimal
 import java.util.*
 
 @JsonInclude
-class SettlementInvoiceResponse (
+class SettlementInvoiceResponse(
     var id: Long?,
     var invoiceNo: Long,
     var invoiceValue: String,

@@ -36,7 +36,6 @@ import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -676,7 +675,7 @@ open class SettlementServiceImpl : SettlementService {
         val invoiceIds = invoiceList.map { it?.invoiceNo }
         val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds as List<String>) else null
 
-        for(doc in invoiceList){
+        for (doc in invoiceList) {
             val d = invoiceSids?.find { it.invoiceId == doc?.invoiceNo }
             doc?.sid = d?.jobNumber
             doc?.shipmentType = d?.shipmentType
