@@ -2,7 +2,7 @@ package com.cogoport.ares.model.settlement
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
-import java.util.*
+import java.util.Date
 
 @JsonInclude
 class SettlementInvoiceResponse(
