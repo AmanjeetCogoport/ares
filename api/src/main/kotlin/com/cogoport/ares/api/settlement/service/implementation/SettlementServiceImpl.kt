@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
+import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -35,10 +36,11 @@ import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -93,6 +95,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var plutusClient: PlutusClient
 
+    @Inject
+    lateinit var invoiceDocumentConverter: InvoiceDocumentMapper
+
     /**
      * *
      * - add entry into payments table
@@ -106,7 +111,6 @@ open class SettlementServiceImpl : SettlementService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-
         val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
         var cogoEntity: CogoBanksDetails? = null
         var selectedBank: BankDetails? = null
@@ -301,7 +305,7 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    override suspend fun getInvoices(request: SettlementDocumentRequest) = getInvoiceList(request)
+    override suspend fun getInvoices(request: SettlementInvoiceRequest) = getInvoiceList(request)
 
     override suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>? {
         validateSettlementDocumentInput(request)
@@ -477,6 +481,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
         request.orgId.forEach {
@@ -505,7 +510,6 @@ open class SettlementServiceImpl : SettlementService {
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
             doc.settledAllocation = BigDecimal.ZERO
-            doc.settledTds = BigDecimal.ZERO
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
@@ -517,13 +521,29 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
+    private fun calculateSettledTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>) {
+        documentEntity.forEach {
+            if (!it?.tdsCurrency.isNullOrBlank() && (it?.currency != it?.tdsCurrency)) {
+                if (it?.ledCurrency == it?.tdsCurrency) {
+                    it?.settledTds = it?.settledTds?.let { amt ->
+                        getExchangeValue(amt, it.exchangeRate, true)
+                    }!!
+                } else {
+                    //                    val sourceDoc = accountUtilizationRepository.findRecord(it?.sourceId!!)
+                    val rate = it?.tdsCurrency?.let { it1 -> getExchangeRate(it1, it.currency) }
+                    it?.settledTds = rate?.let { it1 -> getExchangeValue(it.settledTds, it1) }!!
+                }
+            }
+        }
+    }
+
     /**
      * Get List of Documents from OpenSearch index_account_utilization
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
     private suspend fun getInvoiceDocumentList(
-        request: SettlementDocumentRequest
+        request: SettlementInvoiceRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         var query: String? = null
@@ -542,7 +562,8 @@ open class SettlementServiceImpl : SettlementService {
                 query,
                 request.status.toString()
             )
-        val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
+        val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
+
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -613,6 +634,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(
@@ -645,10 +667,20 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getInvoiceList(request: SettlementDocumentRequest): ResponseList<Invoice> {
+    private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val response = getInvoiceDocumentList(request)
-        val invoiceList = documentConverter.convertToInvoice(response.list)
+        val invoiceList = documentConverter.convertToSettlementInvoice(response.list)
+
+        val invoiceIds = invoiceList.map { it?.invoiceNo }
+        val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds as List<String>) else null
+
+        for (doc in invoiceList) {
+            val d = invoiceSids?.find { it.invoiceId == doc?.invoiceNo }
+            doc?.sid = d?.jobNumber
+            doc?.shipmentType = d?.shipmentType
+            doc?.pdfUrl = d?.pdfUrl
+        }
         return ResponseList(
             list = invoiceList,
             totalPages = response.totalPages,
@@ -938,7 +970,8 @@ open class SettlementServiceImpl : SettlementService {
                         tdsAmount = payment.tds!!,
                         tdsLedAmount = getExchangeValue(payment.tds!!, payment.exchangeRate),
                         settlementDate = request.settlementDate,
-                        signFlag = 1
+                        signFlag = 1,
+                        createdBy = request.createdBy
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1068,7 +1101,8 @@ open class SettlementServiceImpl : SettlementService {
             payment.ledCurrency,
             (paidLedAmount + paymentTdsLed),
             1,
-            request.settlementDate
+            request.settlementDate,
+            request.createdBy
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             createTdsRecord(
@@ -1080,7 +1114,8 @@ open class SettlementServiceImpl : SettlementService {
                 tdsAmount = paymentTds,
                 tdsLedAmount = paymentTdsLed,
                 settlementDate = request.settlementDate,
-                signFlag = -1
+                signFlag = -1,
+                createdBy = request.createdBy
             )
             invoice.settledTds += invoiceTds
         }
@@ -1108,7 +1143,8 @@ open class SettlementServiceImpl : SettlementService {
                 invoice.ledCurrency,
                 excLedAmount.abs(),
                 exSign.toShort(),
-                request.settlementDate
+                request.settlementDate,
+                request.createdBy
             )
         }
         val paymentUtilized =
@@ -1129,7 +1165,8 @@ open class SettlementServiceImpl : SettlementService {
         tdsAmount: BigDecimal,
         tdsLedAmount: BigDecimal,
         signFlag: Short,
-        settlementDate: Timestamp
+        settlementDate: Timestamp,
+        createdBy: UUID?
     ) {
         val tdsType =
             if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
@@ -1147,7 +1184,8 @@ open class SettlementServiceImpl : SettlementService {
             ledCurrency,
             tdsLedAmount,
             signFlag,
-            settlementDate
+            settlementDate,
+            createdBy
         )
     }
 
@@ -1179,7 +1217,8 @@ open class SettlementServiceImpl : SettlementService {
         ledCurrency: String,
         ledAmount: BigDecimal,
         signFlag: Short,
-        transactionDate: Timestamp
+        transactionDate: Timestamp,
+        createdBy: UUID?
     ) {
         val settledDoc =
             Settlement(
@@ -1194,9 +1233,9 @@ open class SettlementServiceImpl : SettlementService {
                 ledAmount,
                 signFlag,
                 transactionDate,
-                null,
+                createdBy,
                 Timestamp.from(Instant.now()),
-                null,
+                createdBy,
                 Timestamp.from(Instant.now())
             )
         settlementRepository.save(settledDoc)
