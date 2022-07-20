@@ -36,11 +36,11 @@ import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
+import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
@@ -111,7 +111,6 @@ open class SettlementServiceImpl : SettlementService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-
         val cogoEntities = cogoClient.getCogoBank(CogoEntitiesRequest())
         var cogoEntity: CogoBanksDetails? = null
         var selectedBank: BankDetails? = null
@@ -564,6 +563,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.status.toString()
             )
         val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
+
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -667,10 +667,20 @@ open class SettlementServiceImpl : SettlementService {
      * @param SettlementDocumentRequest
      * @return ResponseList
      */
-    private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<Invoice> {
+    private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse> {
         if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
         val response = getInvoiceDocumentList(request)
-        val invoiceList = documentConverter.convertToInvoice(response.list)
+        val invoiceList = documentConverter.convertToSettlementInvoice(response.list)
+
+        val invoiceIds = invoiceList.map { it?.invoiceNo }
+        val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds as List<String>) else null
+
+        for (doc in invoiceList) {
+            val d = invoiceSids?.find { it.invoiceId == doc?.invoiceNo }
+            doc?.sid = d?.jobNumber
+            doc?.shipmentType = d?.shipmentType
+            doc?.pdfUrl = d?.pdfUrl
+        }
         return ResponseList(
             list = invoiceList,
             totalPages = response.totalPages,
