@@ -520,6 +520,7 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         for (doc in documentModel) {
+            doc.tds -= doc.settledTds!!
             doc.currentBalance -= doc.settledTds ?: BigDecimal.ZERO
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
@@ -1378,7 +1379,10 @@ open class SettlementServiceImpl : SettlementService {
             if (doc.documentNo == 0.toLong())
                 throw AresException(AresError.ERR_1003, "Document Number")
         }
-        request.stackDetails.forEach { it.settledAllocation = BigDecimal.ZERO }
+        request.stackDetails.forEach {
+            it.settledAllocation = BigDecimal.ZERO
+            it.settledTds = BigDecimal.ZERO
+        }
     }
 
     private fun businessValidation(
