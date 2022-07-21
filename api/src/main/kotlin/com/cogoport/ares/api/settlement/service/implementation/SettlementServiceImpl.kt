@@ -7,10 +7,13 @@ import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
+import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
@@ -57,7 +60,11 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.IsoFields
+import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -98,6 +105,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var invoiceDocumentConverter: InvoiceDocumentMapper
+
+    @Inject
+    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     /**
      * *
@@ -1219,7 +1229,50 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         accountUtilizationRepository.update(paymentUtilization)
-        OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
+        try {
+            OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
+            emitDashboardAndOutstandingEvent(paymentUtilization)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
+    }
+
+    private fun emitDashboardAndOutstandingEvent(
+        accUtilizationRequest: AccountUtilization
+    ) {
+        emitDashboardData(accUtilizationRequest)
+        if (accUtilizationRequest.accMode == AccMode.AR) {
+            emitOutstandingData(accUtilizationRequest)
+        }
+    }
+
+    private fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
+        val date: Date = accUtilizationRequest.transactionDate!!
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
+                    quarter = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                        .get(IsoFields.QUARTER_OF_YEAR),
+                    year = date.toInstant().atZone(ZoneId.systemDefault())
+                        .toLocalDate().year,
+                    accMode = accUtilizationRequest.accMode
+                )
+            )
+        )
+    }
+
+    private fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
+        aresKafkaEmitter.emitOutstandingData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = accUtilizationRequest.zoneCode,
+                    orgId = accUtilizationRequest.organizationId.toString(),
+                    orgName = accUtilizationRequest.organizationName
+                )
+            )
+        )
     }
 
     private suspend fun createSettlement(
