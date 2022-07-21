@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -327,9 +328,10 @@ open class SettlementServiceImpl : SettlementService {
      * @return SummaryResponse
      */
     override suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse {
+        val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
         val amount =
             accountUtilizationRepository.getAccountBalance(
-                request.orgId!!,
+                orgId,
                 request.entityCode!!,
                 request.startDate,
                 request.endDate
@@ -470,12 +472,13 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementDocumentRequest
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
+        val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
                 offset,
                 request.accType,
-                request.orgId,
+                orgId,
                 request.entityCode,
                 request.startDate,
                 request.endDate,
@@ -484,7 +487,7 @@ open class SettlementServiceImpl : SettlementService {
         calculateSettledTds(documentEntity)
         val documentModel = documentEntity.map { documentConverter.convertToModel(it!!) }
         val tdsStyles = mutableListOf<TdsStylesResponse>()
-        request.orgId.forEach {
+        orgId.forEach {
             try {
                 tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
             } catch (_: Exception) { }
@@ -500,13 +503,14 @@ open class SettlementServiceImpl : SettlementService {
         val total =
             accountUtilizationRepository.getDocumentCount(
                 request.accType,
-                request.orgId,
+                orgId,
                 request.entityCode,
                 request.startDate,
                 request.endDate,
                 "%${request.query}%"
             )
         for (doc in documentModel) {
+            doc.currentBalance -= doc.settledTds ?: BigDecimal.ZERO
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getInvoiceStatus(doc.afterTdsAmount, doc.balanceAmount)
             doc.settledAllocation = BigDecimal.ZERO
@@ -519,6 +523,15 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private fun getOrgIds(importerExporterId: UUID?, serviceProviderId: UUID?): List<UUID> {
+        var orgId = mutableListOf<UUID>()
+        if (importerExporterId != null)
+            orgId.add(importerExporterId)
+        if (serviceProviderId != null)
+            orgId.add(serviceProviderId)
+        return orgId
     }
 
     private fun calculateSettledTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>) {
@@ -608,7 +621,8 @@ open class SettlementServiceImpl : SettlementService {
      */
     private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
         if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.importerExporterId == null && request.serviceProviderId == null)
+            throw AresException(AresError.ERR_1003, "importerExporterId and serviceProviderId")
     }
 
     /**
@@ -726,7 +740,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.settlementType!!
             )
         val tdsDoc =
-            doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
+            doc.find { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
                 ?: throw AresException(AresError.ERR_1503, "TDS")
         val sourceDoc =
             doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!) }
@@ -1205,6 +1219,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         accountUtilizationRepository.update(paymentUtilization)
+        OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
     }
 
     private suspend fun createSettlement(
@@ -1354,8 +1369,10 @@ open class SettlementServiceImpl : SettlementService {
             InvoiceStatus.PAID.value
         } else if (afterTdsAmount.compareTo(balanceAmount) != 0) {
             InvoiceStatus.PARTIAL_PAID.value
-        } else {
+        } else if (afterTdsAmount.compareTo(balanceAmount) == 0) {
             InvoiceStatus.UNPAID.value
+        } else {
+            throw AresException(AresError.ERR_1504, "")
         }
     }
 

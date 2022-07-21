@@ -259,7 +259,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             acc_type,
             amount_curr as amount,
             currency as currency,
-            amount_loc-pay_loc as current_balance,
+            amount_curr-pay_curr as current_balance,
             led_currency,
             amount_loc as led_amount,
             taxable_amount,
@@ -267,7 +267,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sign_flag,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
-            pay_loc as utilized_amount,
+            pay_curr as utilized_amount,
             updated_at as last_edited_date
             FROM account_utilizations
                 WHERE amount_curr <> 0
