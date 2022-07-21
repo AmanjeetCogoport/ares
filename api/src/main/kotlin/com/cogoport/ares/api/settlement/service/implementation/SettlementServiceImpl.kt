@@ -739,10 +739,10 @@ open class SettlementServiceImpl : SettlementService {
                 request.settlementType!!
             )
         val tdsDoc =
-            doc.first { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
+            doc.find { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
                 ?: throw AresException(AresError.ERR_1503, "TDS")
         val sourceDoc =
-            doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!) }
+            doc.find { it.sourceType in fetchSettlingDocs(it?.destinationType!!) }
                 ?: throw AresException(AresError.ERR_1503, "PAYMENT")
         val sourceLedgerRate =
             Utilities.binaryOperation(sourceDoc.ledAmount, sourceDoc.amount!!, Operator.DIVIDE)
@@ -890,6 +890,7 @@ open class SettlementServiceImpl : SettlementService {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
                 ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
+//        if (accUtil.payCurr < amount) throw  AresException()
         accUtil.payCurr -= amount
         accUtil.payLoc -=
             ledAmount
