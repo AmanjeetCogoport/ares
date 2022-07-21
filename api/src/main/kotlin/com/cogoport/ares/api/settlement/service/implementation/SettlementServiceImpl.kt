@@ -525,9 +525,9 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun getOrgIds(importerExporterId: UUID?, serviceProviderId: UUID?): List<UUID> {
         var orgId = mutableListOf<UUID>()
-        if(importerExporterId != null)
+        if (importerExporterId != null)
             orgId.add(importerExporterId)
-        if(serviceProviderId != null)
+        if (serviceProviderId != null)
             orgId.add(serviceProviderId)
         return orgId
     }
