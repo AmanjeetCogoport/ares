@@ -1,7 +1,9 @@
 package com.cogoport.ares.model.settlement
 
+import com.cogoport.ares.model.common.AresModelConstants
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.http.annotation.QueryValue
 import java.sql.Timestamp
 import java.util.UUID
 import javax.validation.constraints.NotNull
@@ -11,8 +13,10 @@ import javax.validation.constraints.NotNull
 data class SummaryRequest(
     @field:NotNull(message = "entityCode cannot be null")
     val entityCode: Int?,
-    @field: NotNull(message = "orgId cannot be null")
-    val orgId: List<UUID>?,
+    @field: NotNull(message = "importerExporterId cannot be null")
+    @QueryValue(AresModelConstants.IMPORTER_EXPORTER_ID) val importerExporterId: UUID? = null,
+    @field: NotNull(message = "serviceProviderId cannot be null")
+    @QueryValue(AresModelConstants.SERVICE_PROVIDER_ID) val serviceProviderId: UUID? = null,
     val startDate: Timestamp? = null,
     val endDate: Timestamp? = null
 )
