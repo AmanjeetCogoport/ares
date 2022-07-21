@@ -19,6 +19,7 @@ data class InvoiceDocument(
     var documentLedAmount: BigDecimal,
     var taxableAmount: BigDecimal,
     var tds: BigDecimal,
+    var tdsPercentage: BigDecimal? = null,
     var afterTdsAmount: BigDecimal,
     var settledAmount: BigDecimal,
     var balanceAmount: BigDecimal,

@@ -363,6 +363,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_loc as document_led_amount, 
             taxable_amount, 
             (taxable_amount * 0.02) as tds,
+            2 as tds_percentage,
             amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr as balance_amount,

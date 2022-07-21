@@ -20,6 +20,7 @@ data class Document(
     var ledgerAmount: BigDecimal,
     var taxableAmount: BigDecimal,
     var tds: BigDecimal,
+    var tdsPercentage: BigDecimal? = null,
     var afterTdsAmount: BigDecimal,
     var allocationAmount: BigDecimal?,
     var balanceAfterAllocation: BigDecimal?,

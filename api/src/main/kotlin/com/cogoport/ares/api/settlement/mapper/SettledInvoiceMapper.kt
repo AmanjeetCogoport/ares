@@ -9,6 +9,7 @@ import org.mapstruct.ReportingPolicy
 
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface SettledInvoiceMapper {
+    @Mapping(target = "accMode", expression = "java(AccMode.AR)")
     fun convertKnockoffRequestToEntity(request: SettlementKnockoffRequest): Payment
 
     @Mapping(source = "destinationId", target = "documentNo")
