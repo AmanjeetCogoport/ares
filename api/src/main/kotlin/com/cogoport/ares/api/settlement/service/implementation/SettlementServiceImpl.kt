@@ -31,8 +31,8 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
-import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.InvoiceType
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -521,7 +521,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         for (doc in documentModel) {
             doc.tds =
-                if(doc.tds >= doc.settledTds!!) doc.tds - doc.settledTds!!
+                if (doc.tds >= doc.settledTds!!) doc.tds - doc.settledTds!!
                 else if (doc.settledTds!!.compareTo(BigDecimal.ZERO) == 0) doc.tds
                 else BigDecimal.ZERO
             doc.afterTdsAmount -= doc.tds
@@ -877,7 +877,7 @@ open class SettlementServiceImpl : SettlementService {
             val settledDoc =
                 debits.value.filter { it?.sourceType == settlementType }
             if (settledDoc.isEmpty()) throw AresException(AresError.ERR_1501, "")
-            for (source in settledDoc){
+            for (source in settledDoc) {
                 val payment =
                     accountUtilizationRepository.findRecord(
                         source!!.sourceId!!,
@@ -918,7 +918,8 @@ open class SettlementServiceImpl : SettlementService {
                     AccountType.valueOf(source.destinationType.toString()),
                     settledCurr
                 )
-        }}
+            }
+        }
         settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
         return documentNo
     }
