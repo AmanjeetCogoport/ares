@@ -1,6 +1,5 @@
-package com.cogoport.ares.api.common.client
+package com.cogoport.ares.api.gateway
 
-import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.common.models.ExchangeResponse
 import io.micronaut.http.HttpHeaders

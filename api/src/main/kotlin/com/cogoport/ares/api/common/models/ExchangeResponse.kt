@@ -20,5 +20,5 @@ data class ExchangeResponse(
     @JsonProperty("exchange_rate")
     var exchangeRate: BigDecimal,
     @JsonProperty("exchange_rate_date")
-    var exchangeRateDate: Date
+    var exchangeRateDate: String
 )
