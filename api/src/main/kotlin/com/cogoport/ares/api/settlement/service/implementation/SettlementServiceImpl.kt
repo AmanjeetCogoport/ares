@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ExchangeRequest
+import com.cogoport.ares.api.common.models.ExchangeResponse
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -1332,8 +1333,20 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
+    /**
+     * Get Exchange Rate from AWS Lambda.
+     * @param: from
+     * @param: to
+     * @param: transactionDate
+     * @return: BgDecimal
+     */
     private suspend fun getExchangeRate(from: String, to: String, transactionDate: String): BigDecimal {
-        return exchangeClient.getExchangeRate(ExchangeRequest(from,to,transactionDate)).exchangeRate
+        try{
+            return exchangeClient.getExchangeRate(ExchangeRequest(from,to,transactionDate)).exchangeRate
+        }catch (e: Exception){
+            logger().error("Exchange Rate not found in for {} to {} for date: ", from, to, transactionDate)
+            throw AresException(AresError.ERR_1505, "$from to $to")
+        }
     }
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
