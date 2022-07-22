@@ -950,6 +950,7 @@ open class SettlementServiceImpl : SettlementService {
         request: CheckRequest,
         performDbOperation: Boolean
     ): List<CheckDocument> {
+        val settledTdsCopy = storeSettledTds(request)
         sanitizeInput(request)
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
@@ -985,6 +986,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         businessValidation(source, dest)
         val settledList = settleDocuments(request, source, dest, performDbOperation)
+        settledList.forEach { it.settledTds = settledTdsCopy[it.id]!! }
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
 
@@ -1402,6 +1404,14 @@ open class SettlementServiceImpl : SettlementService {
                 emptyList()
             }
         }
+    }
+
+    private fun storeSettledTds(request: CheckRequest): MutableMap<Long, BigDecimal> {
+        val settledTdsCopy = mutableMapOf<Long, BigDecimal>()
+        request.stackDetails.forEach {
+            settledTdsCopy.put(it.id, it.settledTds)
+        }
+        return settledTdsCopy
     }
 
     private fun sanitizeInput(request: CheckRequest) {
