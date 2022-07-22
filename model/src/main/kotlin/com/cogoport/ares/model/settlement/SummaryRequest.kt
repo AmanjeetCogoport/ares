@@ -13,9 +13,7 @@ import javax.validation.constraints.NotNull
 data class SummaryRequest(
     @field:NotNull(message = "entityCode cannot be null")
     val entityCode: Int?,
-    @field: NotNull(message = "importerExporterId cannot be null")
     @QueryValue(AresModelConstants.IMPORTER_EXPORTER_ID) val importerExporterId: UUID? = null,
-    @field: NotNull(message = "serviceProviderId cannot be null")
     @QueryValue(AresModelConstants.SERVICE_PROVIDER_ID) val serviceProviderId: UUID? = null,
     val startDate: Timestamp? = null,
     val endDate: Timestamp? = null
