@@ -26,7 +26,8 @@ enum class AresError(
     ERR_1501("ERR_1501", "No credit document found", HttpStatus.BAD_REQUEST),
     ERR_1502("ERR_1502", "No debit document found", HttpStatus.BAD_REQUEST),
     ERR_1503("ERR_1503", "Document does not exist : ", HttpStatus.BAD_REQUEST),
-    ERR_1504("ERR_1504", "Document Overpaid", HttpStatus.NOT_MODIFIED);
+    ERR_1504("ERR_1504", "Document Overpaid", HttpStatus.NOT_MODIFIED),
+    ERR_1505("ERR_1503", "Exchange Rate not found for : ", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
