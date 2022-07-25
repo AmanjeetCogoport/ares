@@ -531,17 +531,26 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 
     @Query(
-        """
-        select 
-            organization_id,
-            led_currency as currency,
-            case when acc_type = 'SINV' then sum(amount_loc - pay_loc) end as receivables,
-            case when acc_type = 'PINV' then sum(amount_loc - pay_loc) end as payables
-                from account_utilizations
-                where acc_type in ('SINV','PINV')
-                and organization_id = :orgId
-                group by organization_id, led_currency, acc_type
-        """
+    """
+        SELECT 
+            :orgId as organization_id,
+            MAX(ledger_currency) as ledger_currency,
+            SUM(COALESCE(open_receivables,0) + COALESCE(on_account_receivables,0)) as receivables,
+            SUM(COALESCE(open_payables,0) + COALESCE(on_account_payables,0)) as payables
+        FROM (
+            SELECT
+                MAX(led_currency) as ledger_currency,
+                CASE WHEN acc_type in('SINV','SCN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_receivables,
+                CASE WHEN acc_type in('PINV','PDN','PCN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables,
+                CASE WHEN acc_type in('REC') then SUM(sign_flag*(amount_loc-pay_loc)) end as on_account_receivables,
+                CASE WHEN acc_type in('PAY') then SUM(sign_flag*(amount_loc-pay_loc)) end as on_account_payables
+            FROM account_utilizations
+            WHERE 
+                acc_type in ('PDN','SCN','REC','PINV','PCN','SINV','PAY')
+                AND organization_id = :orgId
+            GROUP BY  acc_type
+        ) A
+    """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
 }
