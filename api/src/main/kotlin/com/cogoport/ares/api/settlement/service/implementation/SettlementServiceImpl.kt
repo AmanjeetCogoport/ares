@@ -513,11 +513,15 @@ open class SettlementServiceImpl : SettlementService {
         return if (invoiceCurrency != paymentCurrency) {
             val rate = if (paymentLedCurrency == invoiceCurrency) {
                 paymentRepository.getPaymentExchangeRate(paymentDocumentNo)
-                    ?: getExchangeRate(paymentCurrency, invoiceCurrency,
-                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate))
+                    ?: getExchangeRate(
+                        paymentCurrency, invoiceCurrency,
+                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
+                    )
             } else {
-                getExchangeRate(paymentCurrency, invoiceCurrency,
-                    SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate))
+                getExchangeRate(
+                    paymentCurrency, invoiceCurrency,
+                    SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
+                )
             }
 
             Utilities.binaryOperation(
@@ -641,8 +645,12 @@ open class SettlementServiceImpl : SettlementService {
                 getExchangeValue(doc.settledTds, doc.exchangeRate, true)
             } else {
                 //  val sourceDoc = accountUtilizationRepository.findRecord(it?.sourceId!!)
-                val rate = doc.tdsCurrency?.let { it -> getExchangeRate(it, doc.currency,
-                    SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.documentDate)) } ?: BigDecimal.ZERO
+                val rate = doc.tdsCurrency?.let { it ->
+                    getExchangeRate(
+                        it, doc.currency,
+                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.documentDate)
+                    )
+                } ?: BigDecimal.ZERO
                 getExchangeValue(doc.settledTds, rate)
             }
         } else {
