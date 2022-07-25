@@ -844,7 +844,6 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
-        if (request.newTds!! > request.oldTds) throw AresException(AresError.ERR_1505, "")
         val doc =
             settlementRepository.findByDestIdAndDestType(
                 request.documentNo!!,
