@@ -5,7 +5,7 @@ import java.math.BigDecimal
 @MappedEntity
 data class OrgStatsResponse(
     val organizationId: String,
-    val currency: String,
+    val ledgerCurrency: String?,
     val receivables: BigDecimal?,
     val payables: BigDecimal?
 )

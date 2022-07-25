@@ -99,7 +99,7 @@ class SettlementController {
         return Response<List<CheckDocument>>().ok(settlementService.edit(request))
     }
 
-    @Post("/editTds")
+    @Post("/edit-tds")
     suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
         return Response<Long>().ok(settlementService.editTds(request))
     }

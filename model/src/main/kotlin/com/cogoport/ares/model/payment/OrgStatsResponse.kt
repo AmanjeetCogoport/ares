@@ -6,6 +6,6 @@ import java.math.BigDecimal
 data class OrgStatsResponse(
     val organizationId: String,
     val receivables: BigDecimal?,
-    val currency: String,
+    val ledgerCurrency: String?,
     val payables: BigDecimal?
 )
