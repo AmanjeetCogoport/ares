@@ -5,12 +5,14 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
+import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -109,6 +111,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
 
+    @Inject
+    lateinit var exchangeClient: ExchangeClient
+
     /**
      * *
      * - add entry into payments table
@@ -155,7 +160,8 @@ open class SettlementServiceImpl : SettlementService {
         payment.exchangeRate =
             getExchangeRate(
                 payment.currency,
-                invoiceUtilization.ledCurrency
+                invoiceUtilization.ledCurrency,
+                SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(payment.transactionDate)
             )
         payment.ledCurrency = invoiceUtilization.ledCurrency
         payment.accMode = AccMode.AR
@@ -208,7 +214,8 @@ open class SettlementServiceImpl : SettlementService {
                 payment.amount *
                 getExchangeRate(
                     request.currency,
-                    invoiceUtilization.currency
+                    invoiceUtilization.currency,
+                    SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(payment.transactionDate)
                 )
         }
 
@@ -230,7 +237,7 @@ open class SettlementServiceImpl : SettlementService {
                 ledCurrency = invoiceUtilization.ledCurrency,
                 ledAmount =
                 settledAmount *
-                    payment.exchangeRate!!, // getExchangeRate(invoiceUtilization.ledCurrency,invoiceUtilization.currency,payment.transactionDate!!),
+                    payment.exchangeRate!!,
                 signFlag = 1,
                 settlementDate = Timestamp.from(Instant.now()),
                 createdAt = Timestamp.from(Instant.now()),
@@ -256,7 +263,8 @@ open class SettlementServiceImpl : SettlementService {
                     tds *
                         getExchangeRate(
                             invoiceUtilization.ledCurrency,
-                            invoiceUtilization.currency
+                            invoiceUtilization.currency,
+                            SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(invoiceUtilization.transactionDate)
                         ),
                     signFlag = 1,
                     settlementDate = Timestamp.from(Instant.now()),
@@ -450,7 +458,8 @@ open class SettlementServiceImpl : SettlementService {
                             paymentCurrency = settlement.paymentCurrency!!,
                             paymentLedCurrency = settlement.ledCurrency,
                             paymentAmount = settlement.settledTds,
-                            paymentDocumentNo = request.documentNo
+                            paymentDocumentNo = request.documentNo,
+                            exchangeDate = settlement.transactionDate
                         )
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
@@ -459,7 +468,8 @@ open class SettlementServiceImpl : SettlementService {
                             paymentCurrency = settlement.paymentCurrency,
                             paymentLedCurrency = settlement.ledCurrency,
                             paymentAmount = settlement.settledAmount!!,
-                            paymentDocumentNo = request.documentNo
+                            paymentDocumentNo = request.documentNo,
+                            exchangeDate = settlement.transactionDate!!
                         )
 
                     // Convert To Model
@@ -497,14 +507,21 @@ open class SettlementServiceImpl : SettlementService {
         paymentCurrency: String,
         paymentLedCurrency: String,
         paymentDocumentNo: Long,
-        paymentAmount: BigDecimal
+        paymentAmount: BigDecimal,
+        exchangeDate: Date
     ): BigDecimal {
         return if (invoiceCurrency != paymentCurrency) {
             val rate = if (paymentLedCurrency == invoiceCurrency) {
                 paymentRepository.getPaymentExchangeRate(paymentDocumentNo)
-                    ?: getExchangeRate(paymentCurrency, invoiceCurrency)
+                    ?: getExchangeRate(
+                        paymentCurrency, invoiceCurrency,
+                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
+                    )
             } else {
-                getExchangeRate(paymentCurrency, invoiceCurrency)
+                getExchangeRate(
+                    paymentCurrency, invoiceCurrency,
+                    SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
+                )
             }
 
             Utilities.binaryOperation(
@@ -599,7 +616,7 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
+    private suspend fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
         return documentEntity.groupBy { it!!.id }.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
                 if (doc != null) {
@@ -622,13 +639,18 @@ open class SettlementServiceImpl : SettlementService {
         return orgId
     }
 
-    private fun calculateSettledTds(doc: com.cogoport.ares.api.settlement.entity.Document): BigDecimal {
+    private suspend fun calculateSettledTds(doc: com.cogoport.ares.api.settlement.entity.Document): BigDecimal {
         return if (!doc.tdsCurrency.isNullOrBlank() && (doc.currency != doc.tdsCurrency)) {
             if (doc.ledCurrency == doc.tdsCurrency) {
                 getExchangeValue(doc.settledTds, doc.exchangeRate, true)
             } else {
                 //  val sourceDoc = accountUtilizationRepository.findRecord(it?.sourceId!!)
-                val rate = doc.tdsCurrency?.let { it1 -> getExchangeRate(it1, doc.currency) } ?: BigDecimal.ZERO
+                val rate = doc.tdsCurrency?.let { it ->
+                    getExchangeRate(
+                        it, doc.currency,
+                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.documentDate)
+                    )
+                } ?: BigDecimal.ZERO
                 getExchangeValue(doc.settledTds, rate)
             }
         } else {
@@ -862,7 +884,7 @@ open class SettlementServiceImpl : SettlementService {
                 if (sourceDoc.ledCurrency == request.currency) {
                     sourceLedgerRate
                 } else {
-                    accountUtilizationRepository.findRecord(
+                    val accUt = accountUtilizationRepository.findRecord(
                         sourceDoc.sourceId!!,
                         sourceDoc.sourceType.toString()
                     )
@@ -872,7 +894,8 @@ open class SettlementServiceImpl : SettlementService {
                         )
                     getExchangeRate(
                         sourceDoc.currency!!,
-                        request.currency!!
+                        request.currency!!,
+                        SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(accUt.transactionDate)
                     )
                 }
             currNewTds = getExchangeValue(request.newTds!!, rate, true)
@@ -977,7 +1000,8 @@ open class SettlementServiceImpl : SettlementService {
                         } else {
                             getExchangeRate(
                                 payment.currency,
-                                invoice.currency
+                                invoice.currency,
+                                SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(payment.transactionDate)
                             )
                         }
                     settledCurr = getExchangeValue(settledCurr, rate)
@@ -1134,7 +1158,8 @@ open class SettlementServiceImpl : SettlementService {
                     } else {
                         getExchangeRate(
                             payment.currency,
-                            invoice.currency
+                            invoice.currency,
+                            SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(payment.transactionDate)
                         )
                     }
                 amount = getExchangeValue(availableAmount, rate)
@@ -1424,18 +1449,19 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun
-    getExchangeRate(from: String, to: String): BigDecimal {
-        return if (from == "USD" && to == "INR") {
-            70.toBigDecimal()
-        } else if (from == "INR" && to == "USD") {
-            0.0142857142857.toBigDecimal()
-        } else if (from == "USD" && to == "EUR") {
-            0.5.toBigDecimal()
-        } else if (from == "EUR" && to == "USD") {
-            2.toBigDecimal()
-        } else {
-            1.toBigDecimal()
+    /**
+     * Get Exchange Rate from AWS Lambda.
+     * @param: from
+     * @param: to
+     * @param: transactionDate
+     * @return: BgDecimal
+     */
+    private suspend fun getExchangeRate(from: String, to: String, transactionDate: String): BigDecimal {
+        try {
+            return exchangeClient.getExchangeRate(ExchangeRequest(from, to, transactionDate)).exchangeRate
+        } catch (e: Exception) {
+            logger().error("Exchange Rate not found in for {} to {} for date: ", from, to, transactionDate)
+            throw AresException(AresError.ERR_1505, "$from to $to")
         }
     }
 
