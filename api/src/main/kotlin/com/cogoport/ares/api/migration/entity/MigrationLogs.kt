@@ -7,9 +7,9 @@ import io.micronaut.data.annotation.MappedEntity
 
 @MappedEntity(value = "payments")
 class MigrationLogs(
-        @field:Id @GeneratedValue
-        var id: Long?,
-        val paymentId: String? = null,
-        val status: MigrationStatus? = null,
-        val errorMessage: String? = null
+    @field:Id @GeneratedValue
+    var id: Long?,
+    val paymentId: String? = null,
+    val status: MigrationStatus? = null,
+    val errorMessage: String? = null
 )
