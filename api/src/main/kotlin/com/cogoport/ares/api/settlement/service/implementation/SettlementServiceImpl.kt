@@ -704,7 +704,7 @@ open class SettlementServiceImpl : SettlementService {
         tdsProfile: TdsStylesResponse?
     ): BigDecimal {
         return if (tdsProfile?.tdsDeductionType == "no_deduction") {
-            AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+            AresConstants.NO_DEDUCTION_RATE.toBigDecimal()
         } else {
             tdsProfile?.tdsDeductionRate ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
         }
