@@ -450,7 +450,7 @@ open class SettlementServiceImpl : SettlementService {
                             paymentCurrency = settlement.paymentCurrency!!,
                             paymentLedCurrency = settlement.ledCurrency,
                             paymentAmount = settlement.settledAmount!!,
-                            paymentLedAmount = settlement.ledAmount,
+                            paymentDocumentNo = request.documentNo
                         )
                     // Fetch Organization Tds Profile
                     val tdsProfile = getOrgTdsProfile(settlement.organizationId)
@@ -490,31 +490,28 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun calculateSettledAmount(
+    private suspend fun calculateSettledAmount(
         invoiceCurrency: String,
         paymentCurrency: String,
         paymentLedCurrency: String,
-        paymentAmount: BigDecimal,
-        paymentLedAmount: BigDecimal
+        paymentDocumentNo: Long,
+        paymentAmount: BigDecimal
     ): BigDecimal {
-        if (invoiceCurrency != paymentCurrency) {
+        return if (invoiceCurrency != paymentCurrency) {
             val rate = if (paymentLedCurrency == invoiceCurrency) {
-                Utilities.binaryOperation(
-                    operandOne = paymentLedAmount,
-                    operandTwo = paymentAmount,
-                    operation = Operator.DIVIDE
-                )
+                paymentRepository.getPaymentExchangeRate(paymentDocumentNo)
+                    ?: getExchangeRate(paymentCurrency, invoiceCurrency)
             } else {
                 getExchangeRate(paymentCurrency, invoiceCurrency)
             }
 
-            return Utilities.binaryOperation(
+            Utilities.binaryOperation(
                 operandOne = paymentAmount,
                 operandTwo = rate,
                 operation = Operator.MULTIPLY
             )
         } else {
-            return paymentAmount
+            paymentAmount
         }
     }
 
