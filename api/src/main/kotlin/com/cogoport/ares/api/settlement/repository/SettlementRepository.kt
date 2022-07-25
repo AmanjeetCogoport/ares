@@ -68,10 +68,12 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.destination_id,
             au.document_value,
             s.destination_type,
+            au.organization_id,
 			au.acc_type::varchar,
             au.amount_curr - au.pay_curr as current_balance,
-            s.currency,
-            s.amount,
+            au.currency,
+            au.amount_curr as document_amount,
+            s.amount as settled_amount,
             s.led_currency,
             s.led_amount,
             au.sign_flag,
@@ -80,15 +82,20 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             au.transaction_date,
             au.amount_loc/au.amount_curr as exchange_rate,
             s.settlement_date,
-            '' as status
+            '' as status,
+            coalesce(s1.amount, 0) as settled_tds
             FROM settlements s
             join account_utilizations au 
+            LEFT JOIN settlements s1 on 
+            s1.destination_id = au.document_no 
+            AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
+            AND s1.source_type IN ('CTDS','VTDS')
+            AND s1.source_id = :sourceId
             ON s.destination_id = au.document_no
             AND s.destination_type::varchar = au.acc_type::varchar 
                 WHERE au.amount_curr <> 0 
                 AND s.source_id = :sourceId 
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
-                AND s.destination_type::varchar  NOT IN ('SECH', 'PECH', 'CTSD', 'VTDS') 
                 OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -99,7 +106,6 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             FROM settlements 
             WHERE source_id = :sourceId 
             AND source_type = :sourceType::SETTLEMENT_TYPE
-            AND destination_type::varchar NOT IN ('SECH', 'PECH', 'CTSD', 'VTDS')
         """
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long

@@ -4,6 +4,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
+import java.util.UUID
 
 @MappedEntity
 data class SettledInvoice(
@@ -11,10 +12,12 @@ data class SettledInvoice(
     val destinationId: Long,
     val documentValue: String,
     val destinationType: SettlementType,
+    val organizationId: UUID,
     val accType: String?,
     val currency: String?,
     val currentBalance: BigDecimal?,
-    val amount: BigDecimal?,
+    val documentAmount: BigDecimal,
+    val settledAmount: BigDecimal?,
     val ledCurrency: String,
     val ledAmount: BigDecimal,
     val taxableAmount: BigDecimal,
@@ -23,5 +26,6 @@ data class SettledInvoice(
     var signFlag: Short,
     val settlementDate: Date,
     val exchangeRate: BigDecimal,
-    var status: String?
+    var status: String?,
+    var settledTds: BigDecimal
 )

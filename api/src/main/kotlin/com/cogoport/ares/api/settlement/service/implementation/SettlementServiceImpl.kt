@@ -368,21 +368,13 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate
             )
         val totalRecords =
-            if (request.accountType == "All") {
                 accountUtilizationRepository.countHistoryDocument(
                     request.orgId,
-                    listOf(AccountType.PCN, AccountType.REC),
+                    accountTypes,
                     request.startDate,
                     request.endDate
                 )
-            } else {
-                accountUtilizationRepository.countHistoryDocument(
-                    request.orgId,
-                    listOf(AccountType.valueOf(request.accountType)),
-                    request.startDate,
-                    request.endDate
-                )
-            }
+
         val historyDocuments = mutableListOf<HistoryDocument>()
         documents.forEach { doc ->
             historyDocuments.add(historyDocumentConverter.convertToModel(doc))
@@ -444,7 +436,6 @@ open class SettlementServiceImpl : SettlementService {
             }
             else -> {}
         }
-
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo, request.settlementType)
         val invoiceIds = settlements.map { it.destinationId.toString() }
@@ -452,14 +443,31 @@ open class SettlementServiceImpl : SettlementService {
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
-                    val settled = settledInvoiceConverter.convertToModel(settlement)
-                    settled.sid = invoiceSids?.find { it.invoiceId == settled.documentNo }?.jobNumber
-                    when (settled.balanceAmount) {
-                        BigDecimal.ZERO -> settled.status = DocStatus.PAID.value
-                        settled.documentAmount -> settled.status = DocStatus.UNPAID.value
-                        else -> settled.status = DocStatus.PARTIAL_PAID.value
+                    // Fetch Organization Tds Profile
+                    val tdsProfile = getOrgTdsProfile(settlement.organizationId)
+                    // Fetch Rate From Profile
+                    val rate = getTdsRate(tdsProfile)
+                    // Convert To Model
+                    val settledDoc = settledInvoiceConverter.convertToModel(settlement)
+                    // Calculate Tds Amount
+                    settledDoc.tds = calculateTds(
+                        rate = rate,
+                        settledTds = settledDoc.settledTds!!,
+                        taxableAmount = settledDoc.taxableAmount
+                    )
+                    settledDoc.balanceAmount = settledDoc.currentBalance - settledDoc.tds
+                    settledDoc.allocationAmount = (settledDoc.balanceAmount + settledDoc.settledAmount!! - settledDoc.settledTds!!)
+                    settledDoc.afterTdsAmount -= (settledDoc.tds + settledDoc.settledTds!!)
+
+                    // Assign Sid
+                    settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo }?.jobNumber
+                    // Assign Status
+                    when (settledDoc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO)) {
+                        BigDecimal.ZERO.setScale(AresConstants.ROUND_DECIMAL_TO) -> settledDoc.status = DocStatus.PAID.value
+                        settledDoc.documentAmount?.setScale(AresConstants.ROUND_DECIMAL_TO) -> settledDoc.status = DocStatus.UNPAID.value
+                        else -> settledDoc.status = DocStatus.PARTIAL_PAID.value
                     }
-                    settledDocuments.add(settled)
+                    settledDocuments.add(settledDoc)
                 }
                 else -> {}
             }
@@ -471,6 +479,20 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = totalRecords,
             pageNo = request.page
         )
+    }
+
+    private fun calculateTds(rate: BigDecimal, settledTds: BigDecimal, taxableAmount: BigDecimal): BigDecimal {
+        val tds =
+            taxableAmount * Utilities.binaryOperation(
+                rate, 100.toBigDecimal(), Operator.DIVIDE
+            ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
+        return if (tds >= settledTds) {
+            tds - settledTds
+        }
+        else if (settledTds.compareTo(BigDecimal.ZERO) == 0) {
+            tds
+        }
+        else BigDecimal.ZERO
     }
 
     /**
@@ -496,20 +518,7 @@ open class SettlementServiceImpl : SettlementService {
             )
 
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
-        val tdsStyles = mutableListOf<TdsStylesResponse>()
-        orgId.forEach {
-            try {
-                tdsStyles.add(cogoClient.getOrgTdsStyles(it.toString()).data)
-            } catch (_: Exception) { }
-        }
-        documentModel.forEach { doc ->
-            val rate = getTdsRate(tdsStyles, doc.organizationId)
-            doc.tds = (
-                doc.taxableAmount * Utilities.binaryOperation(
-                    rate, 100.toBigDecimal(), Operator.DIVIDE
-                )
-                ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
-        }
+        val tdsProfiles = orgId.map { getOrgTdsProfile(it) }
         val total =
             accountUtilizationRepository.getDocumentCount(
                 request.accType,
@@ -520,11 +529,14 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         for (doc in documentModel) {
-            doc.tds =
-                if (doc.tds >= doc.settledTds!!) doc.tds - doc.settledTds!!
-                else if (doc.settledTds!!.compareTo(BigDecimal.ZERO) == 0) doc.tds
-                else BigDecimal.ZERO
-            doc.afterTdsAmount -= doc.tds
+            val tdsElement = tdsProfiles.find { it?.id == doc.organizationId }
+            val rate = getTdsRate(tdsElement)
+            doc.tds = calculateTds(
+                rate = rate,
+                settledTds = doc.settledTds!!,
+                taxableAmount = doc.taxableAmount
+            )
+            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
             doc.currentBalance -= doc.tds
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
@@ -543,6 +555,14 @@ open class SettlementServiceImpl : SettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private suspend fun getOrgTdsProfile(orgId: UUID): TdsStylesResponse? {
+        return try {
+            cogoClient.getOrgTdsStyles(orgId.toString()).data
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
@@ -646,11 +666,15 @@ open class SettlementServiceImpl : SettlementService {
      * @return BigDecimat
      */
     private fun getTdsRate(
-        tdsStyles: MutableList<TdsStylesResponse>,
-        orgId: UUID
-    ) =
-        tdsStyles.find { it.id == orgId }?.tdsDeductionRate
-            ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+        tdsProfile: TdsStylesResponse?
+    ): BigDecimal {
+        return if (tdsProfile?.tdsDeductionType == "no_deduction") {
+            AresConstants.NO_DEDUCTION_RATE.toBigDecimal()
+        }
+        else {
+            tdsProfile?.tdsDeductionRate ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+        }
+    }
 
     /**
      * Validate input for list of documents
@@ -696,12 +720,24 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         for (doc in documentModel) {
+            // Fetch Organization Tds Profile
+            val tdsProfile = getOrgTdsProfile(doc.organizationId)
+            // Fetch Rate From Profile
+            val rate = getTdsRate(tdsProfile)
+
             doc.documentType = getInvoiceType(AccountType.valueOf(doc.documentType))
             doc.status = getDocumentStatus(
                 afterTdsAmount = doc.afterTdsAmount,
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType)
             )
+            doc.tds = calculateTds(
+                rate = rate,
+                settledTds = doc.settledTds!!,
+                taxableAmount = doc.taxableAmount
+            )
+            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
+            doc.balanceAmount -= doc.tds
         }
         return ResponseList(
             list = documentModel,
@@ -774,6 +810,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
+        if (request.newTds!! > request.oldTds) throw AresException(AresError.ERR_1505, "")
         val doc =
             settlementRepository.findByDestIdAndDestType(
                 request.documentNo!!,
@@ -1054,7 +1091,7 @@ open class SettlementServiceImpl : SettlementService {
     ): BigDecimal {
         var amount = availableAmount
         val toSettleAmount = invoice.allocationAmount - invoice.settledAllocation
-        if (toSettleAmount != 0.0.toBigDecimal()) {
+        if (toSettleAmount.setScale(AresConstants.ROUND_DECIMAL_TO).compareTo(BigDecimal.ZERO) != 0) {
             var rate = 1.toBigDecimal()
             val ledgerRate = payment.exchangeRate
             var updateDoc = true
@@ -1355,7 +1392,8 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun getExchangeRate(from: String, to: String): BigDecimal {
+    private fun
+            getExchangeRate(from: String, to: String): BigDecimal {
         return if (from == "USD" && to == "INR") {
             70.toBigDecimal()
         } else if (from == "INR" && to == "USD") {

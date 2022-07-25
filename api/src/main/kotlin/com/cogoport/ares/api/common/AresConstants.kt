@@ -51,4 +51,5 @@ object AresConstants {
     const val DEFAULT_TDS_RATE = 2
     const val DECIMAL_NUMBER_UPTO = 12
     const val ROUND_DECIMAL_TO = 4
+    const val NO_DEDUCTION_RATE = 0
 }

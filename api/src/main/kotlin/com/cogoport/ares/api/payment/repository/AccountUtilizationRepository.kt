@@ -299,7 +299,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND (:endDate is null or transaction_date <= :endDate::date)
         """
     )
-    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
+    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<String>, startDate: String?, endDate: String?): Long
 
     @Query(
         """
@@ -322,7 +322,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr as after_tds_amount, 
             pay_curr as settled_amount, 
             amount_curr - pay_curr as balance_amount,
-            amount_curr - pay_curr as current_balance,
             null as status, 
             au.currency, 
             au.led_currency, 
@@ -413,10 +412,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_loc as document_led_amount, 
             taxable_amount, 
             0 as tds,
-            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            amount_curr as after_tds_amount, 
             pay_curr as settled_amount, 
-            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
-            amount_curr - pay_curr as current_balance,
+            amount_curr - pay_curr as balance_amount,
             null as status, 
             au.currency, 
             au.led_currency, 
