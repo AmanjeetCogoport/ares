@@ -531,7 +531,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 
     @Query(
-    """
+        """
         SELECT 
             :orgId as organization_id,
             MAX(ledger_currency) as ledger_currency,

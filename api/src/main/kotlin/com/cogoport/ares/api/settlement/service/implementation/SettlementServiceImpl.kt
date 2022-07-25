@@ -368,12 +368,12 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate
             )
         val totalRecords =
-                accountUtilizationRepository.countHistoryDocument(
-                    request.orgId,
-                    accountTypes,
-                    request.startDate,
-                    request.endDate
-                )
+            accountUtilizationRepository.countHistoryDocument(
+                request.orgId,
+                accountTypes,
+                request.startDate,
+                request.endDate
+            )
 
         val historyDocuments = mutableListOf<HistoryDocument>()
         documents.forEach { doc ->
@@ -443,6 +443,15 @@ open class SettlementServiceImpl : SettlementService {
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
+                    // Calculate Settled Amount in Invoice Currency
+                    settlement.settledAmount =
+                        calculateSettledAmount(
+                            invoiceCurrency = settlement.invoiceCurrency!!,
+                            paymentCurrency = settlement.paymentCurrency!!,
+                            paymentLedCurrency = settlement.ledCurrency,
+                            paymentAmount = settlement.settledAmount!!,
+                            paymentLedAmount = settlement.ledAmount,
+                        )
                     // Fetch Organization Tds Profile
                     val tdsProfile = getOrgTdsProfile(settlement.organizationId)
                     // Fetch Rate From Profile
@@ -481,6 +490,34 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
+    private fun calculateSettledAmount(
+        invoiceCurrency: String,
+        paymentCurrency: String,
+        paymentLedCurrency: String,
+        paymentAmount: BigDecimal,
+        paymentLedAmount: BigDecimal
+    ): BigDecimal {
+        if (invoiceCurrency != paymentCurrency) {
+            val rate = if (paymentLedCurrency == invoiceCurrency) {
+                Utilities.binaryOperation(
+                    operandOne = paymentLedAmount,
+                    operandTwo = paymentAmount,
+                    operation = Operator.DIVIDE
+                )
+            } else {
+                getExchangeRate(paymentCurrency, invoiceCurrency)
+            }
+
+            return Utilities.binaryOperation(
+                operandOne = paymentAmount,
+                operandTwo = rate,
+                operation = Operator.MULTIPLY
+            )
+        } else {
+            return paymentAmount
+        }
+    }
+
     private fun calculateTds(rate: BigDecimal, settledTds: BigDecimal, taxableAmount: BigDecimal): BigDecimal {
         val tds =
             taxableAmount * Utilities.binaryOperation(
@@ -488,11 +525,9 @@ open class SettlementServiceImpl : SettlementService {
             ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
         return if (tds >= settledTds) {
             tds - settledTds
-        }
-        else if (settledTds.compareTo(BigDecimal.ZERO) == 0) {
+        } else if (settledTds.compareTo(BigDecimal.ZERO) == 0) {
             tds
-        }
-        else BigDecimal.ZERO
+        } else BigDecimal.ZERO
     }
 
     /**
@@ -669,9 +704,8 @@ open class SettlementServiceImpl : SettlementService {
         tdsProfile: TdsStylesResponse?
     ): BigDecimal {
         return if (tdsProfile?.tdsDeductionType == "no_deduction") {
-            AresConstants.NO_DEDUCTION_RATE.toBigDecimal()
-        }
-        else {
+            AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+        } else {
             tdsProfile?.tdsDeductionRate ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
         }
     }
@@ -1393,7 +1427,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun
-            getExchangeRate(from: String, to: String): BigDecimal {
+    getExchangeRate(from: String, to: String): BigDecimal {
         return if (from == "USD" && to == "INR") {
             70.toBigDecimal()
         } else if (from == "INR" && to == "USD") {
