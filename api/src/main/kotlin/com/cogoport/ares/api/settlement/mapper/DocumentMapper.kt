@@ -28,5 +28,6 @@ interface DocumentMapper {
     @Mapping(target = "settledAllocation", expression = "java(null)")
     @Mapping(source = "documentLedAmount", target = "ledgerAmount")
     @Mapping(source = "documentDate", target = "transactionDate")
+    @Mapping(source = "balanceAmount", target = "currentBalance")
     fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
 }

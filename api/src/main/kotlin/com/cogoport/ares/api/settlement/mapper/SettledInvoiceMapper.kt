@@ -15,15 +15,12 @@ interface SettledInvoiceMapper {
     @Mapping(source = "destinationId", target = "documentNo")
     @Mapping(source = "destinationType", target = "documentType")
     @Mapping(source = "accType", target = "accountType")
-    @Mapping(source = "amount", target = "documentAmount")
     @Mapping(source = "ledAmount", target = "ledgerAmount")
-    @Mapping(source = "amount", target = "afterTdsAmount")
+    @Mapping(source = "documentAmount", target = "afterTdsAmount")
     @Mapping(target = "allocationAmount", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(target = "balanceAfterAllocation", expression = "java(java.math.BigDecimal.ZERO)")
-    @Mapping(target = "settledAmount", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(target = "settledAllocation", expression = "java(java.math.BigDecimal.ZERO)")
-    @Mapping(target = "settledTds", expression = "java(java.math.BigDecimal.ZERO)")
-    @Mapping(source = "currentBalance", target = "balanceAmount")
+    @Mapping(target = "balanceAmount", expression = "java(java.math.BigDecimal.ZERO)")
     fun convertToModel(
         historyDocument: SettledInvoice?
     ): com.cogoport.ares.model.settlement.SettledInvoice
