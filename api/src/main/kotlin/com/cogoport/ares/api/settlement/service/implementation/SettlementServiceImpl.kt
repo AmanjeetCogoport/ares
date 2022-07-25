@@ -443,27 +443,29 @@ open class SettlementServiceImpl : SettlementService {
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
-                    // Calculate Settled Amount in Invoice Currency
-                    settlement.settledAmount =
-                        calculateSettledAmount(
+                    // Calculate Settled Tds in Invoice Currency
+                    settlement.settledTds =
+                        convertPaymentCurrToInvoiceCurr(
                             invoiceCurrency = settlement.invoiceCurrency!!,
                             paymentCurrency = settlement.paymentCurrency!!,
+                            paymentLedCurrency = settlement.ledCurrency,
+                            paymentAmount = settlement.settledTds,
+                            paymentDocumentNo = request.documentNo
+                        )
+                    // Calculate Settled Amount in Invoice Currency
+                    settlement.settledAmount =
+                        convertPaymentCurrToInvoiceCurr(
+                            invoiceCurrency = settlement.invoiceCurrency,
+                            paymentCurrency = settlement.paymentCurrency,
                             paymentLedCurrency = settlement.ledCurrency,
                             paymentAmount = settlement.settledAmount!!,
                             paymentDocumentNo = request.documentNo
                         )
-                    // Fetch Organization Tds Profile
-                    val tdsProfile = getOrgTdsProfile(settlement.organizationId)
-                    // Fetch Rate From Profile
-                    val rate = getTdsRate(tdsProfile)
+
                     // Convert To Model
                     val settledDoc = settledInvoiceConverter.convertToModel(settlement)
-                    // Calculate Tds Amount
-                    settledDoc.tds = calculateTds(
-                        rate = rate,
-                        settledTds = settledDoc.settledTds!!,
-                        taxableAmount = settledDoc.taxableAmount
-                    )
+
+                    settledDoc.tds = settledDoc.settledTds!!
                     settledDoc.balanceAmount = settledDoc.currentBalance - settledDoc.tds
                     settledDoc.allocationAmount = (settledDoc.balanceAmount + settledDoc.settledAmount!! - settledDoc.settledTds!!)
                     settledDoc.afterTdsAmount -= (settledDoc.tds + settledDoc.settledTds!!)
@@ -490,7 +492,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun calculateSettledAmount(
+    private suspend fun convertPaymentCurrToInvoiceCurr(
         invoiceCurrency: String,
         paymentCurrency: String,
         paymentLedCurrency: String,
