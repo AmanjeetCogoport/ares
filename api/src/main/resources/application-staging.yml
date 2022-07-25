@@ -44,6 +44,6 @@ opensearch:
   pass: ${OPENSEARCH_PASS}
 
 cogoport:
-  api_url: https://api-mustangs1.dev.cogoport.io
+  api_url: https://api-staging.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
 

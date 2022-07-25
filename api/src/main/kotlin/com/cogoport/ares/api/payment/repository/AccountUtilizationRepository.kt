@@ -69,7 +69,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              zone_code as zone,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
+             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
              group by ageing_duration, zone
              order by 1
           """
@@ -299,7 +299,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND (:endDate is null or transaction_date <= :endDate::date)
         """
     )
-    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<AccountType>, startDate: String?, endDate: String?): Long
+    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<String>, startDate: String?, endDate: String?): Long
 
     @Query(
         """
@@ -319,10 +319,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_loc as document_led_amount, 
             taxable_amount, 
             0 as tds,
-            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            amount_curr as after_tds_amount, 
             pay_curr as settled_amount, 
-            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
-            amount_curr - pay_curr as current_balance,
+            amount_curr - pay_curr as balance_amount,
             null as status, 
             au.currency, 
             au.led_currency, 
@@ -413,10 +412,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_loc as document_led_amount, 
             taxable_amount, 
             0 as tds,
-            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
+            amount_curr as after_tds_amount, 
             pay_curr as settled_amount, 
-            amount_curr - pay_curr - (taxable_amount * 0.02) as balance_amount,
-            amount_curr - pay_curr as current_balance,
+            amount_curr - pay_curr as balance_amount,
             null as status, 
             au.currency, 
             au.led_currency, 
@@ -534,16 +532,25 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        select 
-            organization_id,
-            led_currency as currency,
-            case when acc_type = 'SINV' then sum(amount_loc - pay_loc) end as receivables,
-            case when acc_type = 'PINV' then sum(amount_loc - pay_loc) end as payables
-                from account_utilizations
-                where acc_type in ('SINV','PINV')
-                and organization_id = :orgId
-                group by organization_id, led_currency, acc_type
-        """
+        SELECT 
+            :orgId as organization_id,
+            MAX(ledger_currency) as ledger_currency,
+            SUM(COALESCE(open_receivables,0) + COALESCE(on_account_receivables,0)) as receivables,
+            SUM(COALESCE(open_payables,0) + COALESCE(on_account_payables,0)) as payables
+        FROM (
+            SELECT
+                MAX(led_currency) as ledger_currency,
+                CASE WHEN acc_type in('SINV','SCN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_receivables,
+                CASE WHEN acc_type in('PINV','PDN','PCN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables,
+                CASE WHEN acc_type in('REC') then SUM(sign_flag*(amount_loc-pay_loc)) end as on_account_receivables,
+                CASE WHEN acc_type in('PAY') then SUM(sign_flag*(amount_loc-pay_loc)) end as on_account_payables
+            FROM account_utilizations
+            WHERE 
+                acc_type in ('PDN','SCN','REC','PINV','PCN','SINV','PAY')
+                AND organization_id = :orgId
+            GROUP BY  acc_type
+        ) A
+    """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
 }
