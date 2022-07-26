@@ -203,7 +203,7 @@ class OpenSearchClient {
     ): List<AccountUtilizationResponse?>? {
         return Client.search(
             { s ->
-                s.index("index_account_utilization").size(10000).query { q ->
+                s.index(AresConstants.ACCOUNT_UTILIZATION_INDEX).size(10000).query { q ->
                     q.bool { b ->
                         b.must {
                             it.match { it.field("accMode").query(FieldValue.of("AP")) }
