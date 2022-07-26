@@ -15,7 +15,7 @@ CREATE TYPE public."account_type" AS ENUM (
 CREATE TYPE public."document_status" AS ENUM (
 	'FINAL',
 	'CANCELLED',
-	'PROFORMA'
+	'PROFORMA',
 	'DELETED');
 
 CREATE TYPE public."payment_mode" AS ENUM (
