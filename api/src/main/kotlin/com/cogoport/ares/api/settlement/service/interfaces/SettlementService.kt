@@ -24,10 +24,10 @@ import java.util.UUID
 
 interface SettlementService {
 
-    suspend fun getDocuments(request: SettlementDocumentRequest): ResponseList<Document>?
+    suspend fun getDocuments(settlementDocumentRequest: SettlementDocumentRequest): ResponseList<Document>?
     suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document>?
-    suspend fun getInvoices(request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>
-    suspend fun getAccountBalance(request: SummaryRequest): SummaryResponse
+    suspend fun getInvoices(settlementInvoiceRequest: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>
+    suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse
 
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
 

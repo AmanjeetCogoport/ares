@@ -12,8 +12,6 @@ import java.util.UUID
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
-    suspend fun listOrderByCreatedAtDesc(): MutableList<Payment>
-
     @Query(
         """
         SELECT exchange_rate 
