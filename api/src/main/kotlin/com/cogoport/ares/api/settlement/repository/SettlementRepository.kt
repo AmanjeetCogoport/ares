@@ -65,6 +65,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
          SELECT 
             s.id,
+            s1.source_id as payment_document_no,
+            s1.source_type::varchar as payment_source_type,
             s.destination_id,
             au.document_value,
             s.destination_type,
@@ -72,28 +74,27 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 			au.acc_type::varchar,
             au.amount_curr - au.pay_curr as current_balance,
             au.currency as invoice_currency,
-            s.currency as payment_currency,
+            s1.currency as payment_currency,
             au.amount_curr as document_amount,
             s.amount as settled_amount,
-            s.led_currency,
+            s1.led_currency,
             s.led_amount,
             au.sign_flag,
             au.taxable_amount,
-            0 as tds,
+            coalesce(s1.amount, 0) as tds,
             au.transaction_date,
             au.amount_loc/au.amount_curr as exchange_rate,
             s.settlement_date,
             '' as status,
             coalesce(s1.amount, 0) as settled_tds
             FROM settlements s
-            join account_utilizations au 
+            join account_utilizations au
+                ON s.destination_id = au.document_no
+                AND s.destination_type::varchar = au.acc_type::varchar
             LEFT JOIN settlements s1 on 
             s1.destination_id = au.document_no 
             AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
             AND s1.source_type IN ('CTDS','VTDS')
-            AND s1.source_id = :sourceId
-            ON s.destination_id = au.document_no
-            AND s.destination_type::varchar = au.acc_type::varchar 
                 WHERE au.amount_curr <> 0 
                 AND s.source_id = :sourceId 
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE

@@ -9,6 +9,8 @@ import java.util.UUID
 @MappedEntity
 data class SettledInvoice(
     val id: Long?,
+    val paymentDocumentNo: Long,
+    val paymentSourceType: String,
     val destinationId: Long,
     val documentValue: String,
     val destinationType: SettlementType,
@@ -22,7 +24,7 @@ data class SettledInvoice(
     val ledCurrency: String,
     val ledAmount: BigDecimal,
     val taxableAmount: BigDecimal,
-    val tds: BigDecimal? = BigDecimal.ZERO,
+    var tds: BigDecimal? = BigDecimal.ZERO,
     val transactionDate: Date,
     var signFlag: Short,
     val settlementDate: Date,

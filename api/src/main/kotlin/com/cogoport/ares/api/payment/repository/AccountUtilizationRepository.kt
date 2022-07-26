@@ -304,52 +304,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            au.id,
-            s.source_id,
-            coalesce(s.amount,0) as settled_tds,
-            s.currency as tds_currency,
-            organization_id,
-            document_no, 
-            document_value, 
-            acc_type as document_type,
-            acc_type as account_type,
-            transaction_date as document_date,
-            due_date, 
-            amount_curr as document_amount, 
-            amount_loc as document_led_amount, 
-            taxable_amount, 
-            0 as tds,
-            amount_curr as after_tds_amount, 
-            pay_curr as settled_amount, 
-            amount_curr - pay_curr as balance_amount,
-            null as status, 
-            au.currency, 
-            au.led_currency, 
-            (amount_loc / amount_curr) as exchange_rate,
-            au.sign_flag
-                FROM account_utilizations au
-                LEFT JOIN settlements s ON 
-                    s.destination_id = au.document_no 
-                    AND s.destination_type::varchar = au.acc_type::varchar 
-                    AND s.source_type::varchar in ('CTDS','VTDS')
-                WHERE amount_curr <> 0 
-                    AND (amount_curr - pay_curr) <> 0
-                    AND organization_id in (:orgId)
-                    AND document_status = 'FINAL'
-                    AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:entityCode is null OR entity_code = :entityCode)
-                    AND (:startDate is null OR transaction_date >= :startDate::date)
-                    AND (:endDate is null OR transaction_date <= :endDate::date)
-                    AND document_value ilike :query
-                LIMIT :limit
-                OFFSET :offset
-        """
-    )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
-
-    @Query(
-        """
-        SELECT 
             id, 
             document_no, 
             document_value, 
@@ -396,17 +350,33 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
+        WITH FILTERS AS (
+            SELECT id 
+            FROM account_utilizations
+            WHERE amount_curr <> 0 
+                AND (amount_curr - pay_curr) <> 0
+                AND organization_id in (:orgId)
+                AND document_status = 'FINAL'
+                AND (:accType is null OR acc_type::varchar = :accType)
+                AND (:entityCode is null OR entity_code = :entityCode)
+                AND (:startDate is null OR transaction_date >= :startDate::date)
+                AND (:endDate is null OR transaction_date <= :endDate::date)
+                AND document_value ilike :query
+            ORDER BY transaction_date DESC
+            LIMIT :limit
+            OFFSET :offset
+        ) 
         SELECT 
             au.id,
             s.source_id,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
-            organization_id,
+            au.organization_id,
             document_no, 
             document_value, 
             acc_type as document_type,
             acc_type as account_type,
-            transaction_date as document_date,
+            au.transaction_date as document_date,
             due_date, 
             amount_curr as document_amount, 
             amount_loc as document_led_amount, 
@@ -418,24 +388,81 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             null as status, 
             au.currency, 
             au.led_currency, 
-            (amount_loc / amount_curr) as exchange_rate,
-            au.sign_flag
-                FROM account_utilizations au
-                LEFT JOIN settlements s ON 
-                    s.destination_id = au.document_no 
-                    AND s.destination_type::varchar = au.acc_type::varchar 
-                    AND s.source_type::varchar in ('CTDS','VTDS')
-                WHERE amount_curr <> 0
-                    AND pay_curr <> 0
-                    AND organization_id in (:orgId)
-                    AND document_status = 'FINAL'
-                    AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
-                    AND (:startDate is null OR transaction_date >= :startDate::date)
-                    AND (:endDate is null OR transaction_date <= :endDate::date)
-                    AND document_value ilike :query
-                LIMIT :limit
-                OFFSET :offset
+            au.sign_flag,
+            CASE WHEN 
+                (p.exchange_rate is not null) 
+                THEN p.exchange_rate 
+                ELSE (amount_loc / amount_curr) 
+                END AS exchange_rate
+            FROM account_utilizations au
+            LEFT JOIN payments p ON 
+                p.payment_num = au.document_no
+            LEFT JOIN settlements s ON 
+                s.destination_id = au.document_no 
+                AND s.destination_type::varchar = au.acc_type::varchar 
+                AND s.source_type::varchar in ('CTDS','VTDS')
+            WHERE au.id in (
+                SELECT id from FILTERS
+            )
+        """
+    )
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+
+    @Query(
+        """
+        WITH FILTERS AS (
+            SELECT id 
+            FROM account_utilizations
+            WHERE amount_curr <> 0 
+                AND pay_curr <> 0
+                AND organization_id in (:orgId)
+                AND document_status = 'FINAL'
+                AND (:accType is null OR acc_type::varchar = :accType)
+                AND (:startDate is null OR transaction_date >= :startDate::date)
+                AND (:endDate is null OR transaction_date <= :endDate::date)
+                AND document_value ilike :query
+            ORDER BY transaction_date DESC
+            LIMIT :limit
+            OFFSET :offset
+        ) 
+        SELECT 
+            au.id,
+            s.source_id,
+            coalesce(s.amount,0) as settled_tds,
+            s.currency as tds_currency,
+            au.organization_id,
+            document_no, 
+            document_value, 
+            acc_type as document_type,
+            acc_type as account_type,
+            au.transaction_date as document_date,
+            due_date, 
+            amount_curr as document_amount, 
+            amount_loc as document_led_amount, 
+            taxable_amount, 
+            0 as tds,
+            amount_curr as after_tds_amount, 
+            pay_curr as settled_amount, 
+            amount_curr - pay_curr as balance_amount,
+            null as status, 
+            au.currency, 
+            au.led_currency, 
+            au.sign_flag,
+            CASE WHEN 
+                (p.exchange_rate is not null) 
+                THEN p.exchange_rate 
+                ELSE (amount_loc / amount_curr) 
+                END AS exchange_rate
+            FROM account_utilizations au
+            LEFT JOIN payments p ON 
+                p.payment_num = au.document_no
+            LEFT JOIN settlements s ON 
+                s.destination_id = au.document_no 
+                AND s.destination_type::varchar = au.acc_type::varchar 
+                AND s.source_type::varchar in ('CTDS','VTDS')
+            WHERE au.id in (
+                SELECT id from FILTERS
+            )
         """
     )
     suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
@@ -447,6 +474,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
+                    AND (amount_curr - pay_curr) <> 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
