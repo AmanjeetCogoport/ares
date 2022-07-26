@@ -2,6 +2,7 @@ package com.cogoport.ares.api.events
 
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
+import com.cogoport.ares.model.settlement.InvoiceBalanceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
 
@@ -20,4 +21,7 @@ interface AresKafkaEmitter {
 
     @Topic("payables-bill-status")
     fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
+
+    @Topic("update-invoice-balance")
+    fun emitInvoiceBalance(invoiceBalanceEvent: InvoiceBalanceEvent)
 }
