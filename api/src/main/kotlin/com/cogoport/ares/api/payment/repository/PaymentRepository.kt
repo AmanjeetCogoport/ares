@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.api.payment.entity.PaymentDate
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -10,8 +11,6 @@ import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
-
-    suspend fun listOrderByCreatedAtDesc(): MutableList<Payment>
 
     @Query(
         """
@@ -39,4 +38,11 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     """
     )
     suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
+
+    @Query(
+        """
+            SELECT payment_num,transaction_date::timestamp AS transaction_datefrom payments WHERE payment_num IN (:paymentNums)
+        """
+    )
+    suspend fun findByPaymentNumIn(paymentNums: List<Long>): List<PaymentDate>
 }
