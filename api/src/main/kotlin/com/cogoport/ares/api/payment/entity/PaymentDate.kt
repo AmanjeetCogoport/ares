@@ -6,7 +6,7 @@ import java.sql.Timestamp
 
 @MappedEntity
 data class PaymentDate(
-    var paymentNum: Long?,
+    var documentNo: Long?,
     var transactionDate: Timestamp?,
     var exchangeRate: BigDecimal?
 )

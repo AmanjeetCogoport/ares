@@ -94,16 +94,16 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             '' as status,
             coalesce(s1.amount, 0) as settled_tds
             FROM settlements s
-                JOIN account_utilizations au
-                ON s.destination_id = au.document_no
-                AND s.destination_type::varchar = au.acc_type::varchar
-                LEFT JOIN settlements s1 on 
-                s1.destination_id = au.document_no 
-                AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
-                AND s1.source_type IN ('CTDS','VTDS')
+                JOIN account_utilizations au ON
+                    s.destination_id = au.document_no
+                    AND s.destination_type::varchar = au.acc_type::varchar
+                LEFT JOIN settlements s1 ON 
+                    s1.destination_id = au.document_no 
+                    AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
+                    AND s1.source_type IN ('CTDS','VTDS')
                 WHERE au.amount_curr <> 0 
-                AND s.source_id = :sourceId 
-                AND s.source_type = :sourceType::SETTLEMENT_TYPE
+                    AND s.source_id = :sourceId 
+                    AND s.source_type = :sourceType::SETTLEMENT_TYPE
                 OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )

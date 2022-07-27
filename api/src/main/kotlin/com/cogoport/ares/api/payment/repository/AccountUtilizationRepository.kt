@@ -11,6 +11,7 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
+import com.cogoport.ares.api.payment.entity.PaymentDate
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
@@ -253,28 +254,33 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         value = """
         Select
-            id,
+            au.id,
             document_no,
             document_value,
             acc_type,
             amount_curr as amount,
-            currency as currency,
+            au.currency as currency,
             amount_curr-pay_curr as current_balance,
-            led_currency,
+            au.led_currency,
             amount_loc as led_amount,
             taxable_amount,
             transaction_date,
-            sign_flag,
+            au.sign_flag,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
             pay_curr as utilized_amount,
-            updated_at as last_edited_date
-            FROM account_utilizations
-                WHERE amount_curr <> 0
+            au.updated_at as last_edited_date,
+            COALESCE(sum(s.amount), 0) as settled_tds
+            FROM account_utilizations au
+            LEFT JOIN settlements s ON
+				s.destination_id = au.document_no
+				AND s.destination_type::varchar = au.acc_type::varchar        	
+            WHERE amount_curr <> 0
                 AND organization_id in (:orgIds)
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
+            GROUP BY au.id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -417,7 +423,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND pay_curr <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
-                AND acc_type::varchar in (:accType)
+                AND (:accType is null OR acc_type::varchar = :accType)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
@@ -581,4 +587,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
+
+    @Query(
+        """
+        SELECT 
+            document_no,
+            transaction_date::timestamp AS transaction_date, 
+            null as exchange_rate
+        FROM account_utilizations
+        WHERE acc_type = 'PCN' 
+        AND document_no in (:documentNo)
+    """
+    )
+    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentDate>
 }

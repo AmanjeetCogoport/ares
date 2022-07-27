@@ -15,6 +15,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.PaymentDate
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -463,7 +464,12 @@ open class SettlementServiceImpl : SettlementService {
                 if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
             }
         }
-        val payments = paymentRepository.findByPaymentNumIn(paymentIds)
+        var payments = listOf<PaymentDate>()
+        payments = if (request.settlementType == SettlementType.REC) {
+            paymentRepository.findByPaymentNumIn(paymentIds)
+        } else {
+            accountUtilizationRepository.getPaymentDetails(paymentIds)
+        }
         settlements = settlementGrouped.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
                 if (!doc.tdsCurrency.isNullOrBlank()) {
@@ -472,8 +478,8 @@ open class SettlementServiceImpl : SettlementService {
                         fromCurrency = doc.tdsCurrency,
                         fromLedCurrency = doc.ledCurrency,
                         amount = doc.settledTds,
-                        exchangeRate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.exchangeRate,
-                        exchangeDate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.transactionDate!!
+                        exchangeRate = payments.find { it.documentNo == doc.tdsDocumentNo }?.exchangeRate,
+                        exchangeDate = payments.find { it.documentNo == doc.tdsDocumentNo }?.transactionDate!!
                     )
                 } else {
                     BigDecimal.ZERO
@@ -492,8 +498,8 @@ open class SettlementServiceImpl : SettlementService {
                             fromCurrency = settlement.paymentCurrency,
                             fromLedCurrency = settlement.ledCurrency,
                             amount = settlement.settledAmount!!,
-                            exchangeRate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.exchangeRate,
-                            exchangeDate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.transactionDate!!
+                            exchangeRate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.exchangeRate,
+                            exchangeDate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.transactionDate!!
                         )
 
                     settlement.tds =
@@ -502,8 +508,8 @@ open class SettlementServiceImpl : SettlementService {
                             fromCurrency = settlement.paymentCurrency,
                             fromLedCurrency = settlement.ledCurrency,
                             amount = settlement.tds!!,
-                            exchangeRate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.exchangeRate,
-                            exchangeDate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.transactionDate!!
+                            exchangeRate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.exchangeRate,
+                            exchangeDate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.transactionDate!!
                         )
 
                     // Convert To Model
@@ -947,13 +953,8 @@ open class SettlementServiceImpl : SettlementService {
             currNewTds = getExchangeValue(request.newTds!!, rate, true)
         }
         if (currNewTds > tdsDoc.amount!!) {
-            val paymentTdsDiff = currNewTds - tdsDoc.amount!!
-            reduceAccountUtilization(
-                sourceDoc.sourceId!!,
-                AccountType.valueOf(sourceDoc.sourceType.toString()),
-                paymentTdsDiff,
-                Utilities.binaryOperation(paymentTdsDiff, sourceLedgerRate, Operator.MULTIPLY)
-            )
+            // TODO("Generate Credit Note")
+            return tdsDoc.destinationId
         } else if (currNewTds < tdsDoc.amount) {
             val invoiceTdsDiff = request.oldTds!! - request.newTds!!
             val paymentTdsDiff = tdsDoc.amount!! - currNewTds
