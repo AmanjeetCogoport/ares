@@ -21,8 +21,7 @@ env:
   DB_USER: ${{ secrets.STAGE_DB_USER }}
   DB_PASS: ${{ secrets.STAGE_DB_PASS }}
 
-permissions:
-  contents: read
+permissions: read-all|write-all
 
 jobs:
   start-runner:
