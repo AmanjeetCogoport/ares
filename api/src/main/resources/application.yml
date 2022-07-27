@@ -30,17 +30,6 @@ services:
 kafka:
   bootstrap:
     servers: localhost:29092
-#    servers: b-1.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098,b-2.cogoport-staging.ulogbt.c2.kafka.ap-south-1.amazonaws.com:9098
-#  security:
-#    protocol: SASL_SSL
-#  sasl:
-#    mechanism: AWS_MSK_IAM
-#    jaas:
-#      config: software.amazon.msk.auth.iam.IAMLoginModule required;
-#    client:
-#      callback:
-#        handler:
-#          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
@@ -56,4 +45,6 @@ sentry:
 cogoport:
   api_url: https://api-mustangs1.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
-  exchange_api_url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws
+  exchange_api:
+    url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
+    version: v1
