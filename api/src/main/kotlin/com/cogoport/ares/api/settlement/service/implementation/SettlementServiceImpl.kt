@@ -734,7 +734,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (importerExporterId != null) {
             listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN)
         } else {
-            listOf(AccountType.PINV, AccountType.PCN, AccountType.PAY, AccountType.PDN)
+            listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN)
         }
     }
 
