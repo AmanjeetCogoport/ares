@@ -16,7 +16,7 @@ env:
   CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
   MICRONAUT_ENVIRONMENTS: staging
   GITHUB_USERNAME: $GH_CR_USER
-  GITHUB_TOKEN: ${{ secrets.COGOPORT_DEV_ADMIN_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
   DB_URL: ${{ secrets.STAGE_DB_URL }}
   DB_USER: ${{ secrets.STAGE_DB_USER }}
   DB_PASS: ${{ secrets.STAGE_DB_PASS }}
@@ -44,7 +44,7 @@ jobs:
         uses: machulav/ec2-github-runner@v2
         with:
           mode: start
-          github-token: ${{ env.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PERSONAL_TOKEN }}
           ec2-image-id: ami-07793eef0fa960ccd
           ec2-instance-type: t3.2xlarge
           subnet-id: subnet-05f1c897b9994c200
@@ -133,6 +133,6 @@ jobs:
         uses: machulav/ec2-github-runner@v2
         with:
           mode: stop
-          github-token: ${{ env.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PERSONAL_TOKEN }}
           label: ${{ needs.start-runner.outputs.label }}
           ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
