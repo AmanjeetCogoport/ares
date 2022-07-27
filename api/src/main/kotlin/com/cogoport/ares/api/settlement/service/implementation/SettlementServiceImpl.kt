@@ -438,8 +438,33 @@ open class SettlementServiceImpl : SettlementService {
     ): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo)
-        var payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
-        var settlements = settlementGrouped.map { docList ->
+        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
+        val settlements = getSettledInvoices(settlementGrouped, payments)
+        // Fetch Sid for invoices
+        val invoiceSids = getSidsForInvoices(settlements)
+        val settledDocuments = populateSettledDocuments(settlements, request, payments, invoiceSids)
+
+        // Pagination Data
+        val totalRecords =
+            settlementRepository.countSettlement(request.documentNo, request.settlementType)
+        return ResponseList(
+            list = settledDocuments,
+            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = request.page
+        )
+    }
+
+    private suspend fun getSidsForInvoices(settlements: MutableList<SettledInvoice>): List<SidResponse>? {
+        val invoiceIds = settlements.map { it.destinationId.toString() }
+        return if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
+    }
+
+    private suspend fun getSettledInvoices(
+        settlementGrouped: Map<Long?, List<SettledInvoice>>,
+        payments: List<PaymentData>
+    ): MutableList<SettledInvoice> {
+        val settlements = settlementGrouped.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
                 if (!doc.tdsCurrency.isNullOrBlank()) {
                     convertPaymentCurrToInvoiceCurr(
@@ -457,20 +482,7 @@ open class SettlementServiceImpl : SettlementService {
             docList.value.map { it.settledTds = settledTds }
             docList.value.first()
         }.toMutableList()
-        // Fetch Sid for invoices
-        val invoiceIds = settlements.map { it.destinationId.toString() }
-        val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
-        val settledDocuments = populateSettledDocuments(settlements, request, payments, invoiceSids)
-
-        // Pagination Data
-        val totalRecords =
-            settlementRepository.countSettlement(request.documentNo, request.settlementType)
-        return ResponseList(
-            list = settledDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
-            totalRecords = totalRecords,
-            pageNo = request.page
-        )
+        return settlements
     }
 
     private suspend fun populateSettledDocuments(
@@ -546,7 +558,7 @@ open class SettlementServiceImpl : SettlementService {
                 if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
             }
         }
-        var payments = if (settlementType == SettlementType.REC) {
+        val payments = if (settlementType == SettlementType.REC) {
             paymentRepository.findByPaymentNumIn(paymentIds)
         } else {
             accountUtilizationRepository.getPaymentDetails(paymentIds)
@@ -554,15 +566,11 @@ open class SettlementServiceImpl : SettlementService {
         return payments
     }
 
-    private suspend fun getPaymentDataFromDB(
-        request: SettlementRequest,
-        paymentIds: MutableList<Long>
-    ) = if (request.settlementType == SettlementType.REC) {
-        paymentRepository.findByPaymentNumIn(paymentIds)
-    } else {
-        accountUtilizationRepository.getPaymentDetails(paymentIds)
-    }
-
+    /**
+     * Get settled document from DB for the payment in request.
+     * @param: request
+     * @return: Map<Long?, List<SettledInvoice>>
+     */
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
@@ -579,8 +587,7 @@ open class SettlementServiceImpl : SettlementService {
             else -> {}
         }
         // Group Invoices And Calculate settled Tds
-        val settlementGrouped = settlements.groupBy { it.id }
-        return settlementGrouped
+        return settlements.groupBy { it.id }
     }
 
     private suspend fun convertPaymentCurrToInvoiceCurr(
