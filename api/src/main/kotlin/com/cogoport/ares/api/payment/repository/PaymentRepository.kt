@@ -46,7 +46,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 transaction_date::timestamp AS transaction_date, 
                 exchange_rate AS exchange_rate
                 FROM payments 
-                WHERE payment_num IN (:paymentNums)
+                WHERE payment_code = 'REC' 
+                AND payment_num IN (:paymentNums)
         """
     )
     suspend fun findByPaymentNumIn(paymentNums: List<Long>): List<PaymentDate>
