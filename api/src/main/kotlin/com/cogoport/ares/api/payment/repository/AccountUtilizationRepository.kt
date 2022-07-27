@@ -268,7 +268,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.sign_flag,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
-            pay_curr as utilized_amount,
+            pay_curr as settled_amount,
             au.updated_at as last_edited_date,
             COALESCE(sum(s.amount), 0) as settled_tds
             FROM account_utilizations au
