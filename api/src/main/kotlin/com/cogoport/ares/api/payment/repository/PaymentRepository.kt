@@ -44,7 +44,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             SELECT 
                 payment_num,
                 transaction_date::timestamp AS transaction_date, 
-                COALESCE(exchange_rate,0) AS exchange_rate
+                exchange_rate AS exchange_rate
                 FROM payments WHERE payment_num IN (:paymentNums)
         """
     )

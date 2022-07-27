@@ -357,7 +357,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (amount_curr - pay_curr) <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
-                AND (:accType is null OR acc_type::varchar = :accType)
+                AND acc_type::varchar in (:accType)
                 AND (:entityCode is null OR entity_code = :entityCode)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
@@ -406,7 +406,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
     @Query(
         """
@@ -417,7 +417,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND pay_curr <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
-                AND (:accType is null OR acc_type::varchar = :accType)
+                AND acc_type::varchar in (:accType)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
@@ -477,14 +477,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (amount_curr - pay_curr) <> 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
-                    AND (:accType is null OR acc_type::varchar = :accType)
+                    AND acc_type::varchar in (:accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
     """
     )
-    suspend fun getDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+    suspend fun getDocumentCount(accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
     @Query(
         """

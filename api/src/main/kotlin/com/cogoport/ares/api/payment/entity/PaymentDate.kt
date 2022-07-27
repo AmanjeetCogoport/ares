@@ -8,5 +8,5 @@ import java.sql.Timestamp
 data class PaymentDate(
     var paymentNum: Long?,
     var transactionDate: Timestamp?,
-    var exchangeRate: BigDecimal
+    var exchangeRate: BigDecimal?
 )

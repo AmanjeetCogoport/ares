@@ -15,7 +15,6 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.PaymentDate
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -467,7 +466,7 @@ open class SettlementServiceImpl : SettlementService {
         val payments = paymentRepository.findByPaymentNumIn(paymentIds)
         settlements = settlementGrouped.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
-                if (!doc.tdsCurrency.isNullOrBlank()){
+                if (!doc.tdsCurrency.isNullOrBlank()) {
                     convertPaymentCurrToInvoiceCurr(
                         toCurrency = doc.currency!!,
                         fromCurrency = doc.tdsCurrency,
@@ -476,8 +475,7 @@ open class SettlementServiceImpl : SettlementService {
                         exchangeRate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.exchangeRate,
                         exchangeDate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.transactionDate!!
                     )
-                }
-                else {
+                } else {
                     BigDecimal.ZERO
                 }
             }
@@ -594,11 +592,12 @@ open class SettlementServiceImpl : SettlementService {
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
+        val accType = getAccountType(request.importerExporterId, request.serviceProviderId)
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
                 offset,
-                request.accType,
+                accType,
                 orgId,
                 request.entityCode,
                 request.startDate,
@@ -610,7 +609,7 @@ open class SettlementServiceImpl : SettlementService {
         val tdsProfiles = orgId.map { getOrgTdsProfile(it) }
         val total =
             accountUtilizationRepository.getDocumentCount(
-                request.accType,
+                accType,
                 orgId,
                 request.entityCode,
                 request.startDate,
@@ -675,6 +674,16 @@ open class SettlementServiceImpl : SettlementService {
         if (serviceProviderId != null)
             orgId.add(serviceProviderId)
         return orgId
+    }
+
+    private fun getAccountType(importerExporterId: UUID?, serviceProviderId: UUID?): List<AccountType> {
+        return if (importerExporterId != null && serviceProviderId != null) {
+            listOf(AccountType.SINV, AccountType.PINV)
+        } else if (importerExporterId != null) {
+            listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN)
+        } else {
+            listOf(AccountType.PINV, AccountType.PCN, AccountType.PAY, AccountType.PDN)
+        }
     }
 
     private suspend fun calculateSettledTds(doc: com.cogoport.ares.api.settlement.entity.Document): BigDecimal {
