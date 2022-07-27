@@ -406,7 +406,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
 
     @Query(
         """
@@ -484,7 +484,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_value ilike :query
     """
     )
-    suspend fun getDocumentCount(accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
+    suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
     @Query(
         """
