@@ -15,7 +15,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.PaymentDate
+import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -57,6 +57,7 @@ import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -435,42 +436,35 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun getSettlement(
         request: SettlementRequest
     ): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
-        val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
-        var settlements = mutableListOf<SettledInvoice>()
-        when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN -> {
-                @Suppress("UNCHECKED_CAST")
-                settlements =
-                    settlementRepository.findSettlement(
-                    request.documentNo,
-                    request.settlementType,
-                    request.page,
-                    request.pageLimit
-                ) as MutableList<SettledInvoice>
-            }
-            else -> {}
-        }
+        val settlementGrouped = getSettlementFromDB(request)
+        val paymentIds = mutableListOf(request.documentNo)
+        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
+        val settlements = getSettledInvoices(settlementGrouped, payments)
+        // Fetch Sid for invoices
+        val invoiceSids = getSidsForInvoices(settlements)
+        val settledDocuments = populateSettledDocuments(settlements, request, payments, invoiceSids)
+
         // Pagination Data
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo, request.settlementType)
-        // Fetch Sid for invoices
+        return ResponseList(
+            list = settledDocuments,
+            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = request.page
+        )
+    }
+
+    private suspend fun getSidsForInvoices(settlements: MutableList<SettledInvoice>): List<SidResponse>? {
         val invoiceIds = settlements.map { it.destinationId.toString() }
-        val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
-        // Group Invoices And Calculate settled Tds
-        val settlementGrouped = settlements.groupBy { it.id }
-        val paymentIds = mutableListOf(request.documentNo)
-        settlementGrouped.forEach { docList ->
-            docList.value.forEach {
-                if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
-            }
-        }
-        var payments = listOf<PaymentDate>()
-        payments = if (request.settlementType == SettlementType.REC) {
-            paymentRepository.findByPaymentNumIn(paymentIds)
-        } else {
-            accountUtilizationRepository.getPaymentDetails(paymentIds)
-        }
-        settlements = settlementGrouped.map { docList ->
+        return if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
+    }
+
+    private suspend fun getSettledInvoices(
+        settlementGrouped: Map<Long?, List<SettledInvoice>>,
+        payments: List<PaymentData>
+    ): MutableList<SettledInvoice> {
+        val settlements = settlementGrouped.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
                 if (!doc.tdsCurrency.isNullOrBlank()) {
                     convertPaymentCurrToInvoiceCurr(
@@ -488,6 +482,16 @@ open class SettlementServiceImpl : SettlementService {
             docList.value.map { it.settledTds = settledTds }
             docList.value.first()
         }.toMutableList()
+        return settlements
+    }
+
+    private suspend fun populateSettledDocuments(
+        settlements: MutableList<SettledInvoice>,
+        request: SettlementRequest,
+        payments: List<PaymentData>,
+        invoiceSids: List<SidResponse>?
+    ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
+        val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
@@ -535,13 +539,55 @@ open class SettlementServiceImpl : SettlementService {
                 else -> {}
             }
         }
+        return settledDocuments
+    }
 
-        return ResponseList(
-            list = settledDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
-            totalRecords = totalRecords,
-            pageNo = request.page
-        )
+    /**
+     * Get Payment date, exchange rate for the settled TDS.
+     * @param: settlementGrouped
+     * @param: paymentIds
+     * @param: settlementType
+     */
+    private suspend fun getPaymentDataForSettledInvoices(
+        settlementGrouped: Map<Long?, List<SettledInvoice>>,
+        paymentIds: MutableList<Long>,
+        settlementType: SettlementType
+    ): List<PaymentData> {
+        settlementGrouped.forEach { docList ->
+            docList.value.forEach {
+                if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
+            }
+        }
+        val payments = if (settlementType == SettlementType.REC) {
+            paymentRepository.findByPaymentNumIn(paymentIds)
+        } else {
+            accountUtilizationRepository.getPaymentDetails(paymentIds)
+        }
+        return payments
+    }
+
+    /**
+     * Get settled document from DB for the payment in request.
+     * @param: request
+     * @return: Map<Long?, List<SettledInvoice>>
+     */
+    private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
+        var settlements = mutableListOf<SettledInvoice>()
+        when (request.settlementType) {
+            SettlementType.REC, SettlementType.PCN -> {
+                @Suppress("UNCHECKED_CAST")
+                settlements =
+                    settlementRepository.findSettlement(
+                    request.documentNo,
+                    request.settlementType,
+                    request.page,
+                    request.pageLimit
+                ) as MutableList<SettledInvoice>
+            }
+            else -> {}
+        }
+        // Group Invoices And Calculate settled Tds
+        return settlements.groupBy { it.id }
     }
 
     private suspend fun convertPaymentCurrToInvoiceCurr(
@@ -688,7 +734,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (importerExporterId != null) {
             listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN)
         } else {
-            listOf(AccountType.PINV, AccountType.PCN, AccountType.PAY, AccountType.PDN)
+            listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN)
         }
     }
 

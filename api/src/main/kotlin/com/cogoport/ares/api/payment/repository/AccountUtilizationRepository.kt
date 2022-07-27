@@ -11,7 +11,7 @@ import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.payment.entity.PaymentDate
+import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
@@ -599,5 +599,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentDate>
+    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
 }
