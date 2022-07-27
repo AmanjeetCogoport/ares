@@ -41,7 +41,11 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
     @Query(
         """
-            SELECT payment_num,transaction_date::timestamp AS transaction_date from payments WHERE payment_num IN (:paymentNums)
+            SELECT 
+                payment_num,
+                transaction_date::timestamp AS transaction_date, 
+                COALESCE(exchange_rate,0) AS exchange_rate
+                FROM payments WHERE payment_num IN (:paymentNums)
         """
     )
     suspend fun findByPaymentNumIn(paymentNums: List<Long>): List<PaymentDate>

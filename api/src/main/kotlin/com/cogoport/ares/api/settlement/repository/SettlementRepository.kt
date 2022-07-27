@@ -64,24 +64,30 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
          SELECT 
-            s.id,
+            au.id,
             s.source_id as payment_document_no,
-            s.source_type::varchar as payment_source_type,
-            s.destination_id,
+            s1.source_id as tds_document_no,
+            s1.source_type::varchar as payment_source_type,
+            s1.destination_id,
             au.document_value,
             s.destination_type,
             au.organization_id,
 			au.acc_type::varchar,
             au.amount_curr - au.pay_curr as current_balance,
-            au.currency as invoice_currency,
+            au.currency as currency,
             s.currency as payment_currency,
+            s1.currency as tds_currency,
             au.amount_curr as document_amount,
             s.amount as settled_amount,
             s.led_currency,
             s.led_amount,
             au.sign_flag,
             au.taxable_amount,
-            coalesce(s1.amount, 0) as tds,
+            CASE WHEN 
+                s1.source_id = :sourceId
+            THEN 
+                coalesce(s1.amount, 0) 
+            ELSE 0 END as tds,
             au.transaction_date,
             au.amount_loc/au.amount_curr as exchange_rate,
             s.settlement_date,

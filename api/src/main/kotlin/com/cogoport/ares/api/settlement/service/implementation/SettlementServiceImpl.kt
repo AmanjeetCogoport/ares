@@ -15,6 +15,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.PaymentDate
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -449,30 +450,39 @@ open class SettlementServiceImpl : SettlementService {
             }
             else -> {}
         }
+        // Pagination Data
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo, request.settlementType)
+        // Fetch Sid for invoices
         val invoiceIds = settlements.map { it.destinationId.toString() }
         val invoiceSids = if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
+        // Group Invoices And Calculate settled Tds
         val settlementGrouped = settlements.groupBy { it.id }
         val paymentIds = mutableListOf(request.documentNo)
         settlementGrouped.forEach { docList ->
-            docList.value.forEach { paymentIds.add(it.paymentDocumentNo) }
+            docList.value.forEach {
+                if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
+            }
         }
         val payments = paymentRepository.findByPaymentNumIn(paymentIds)
         settlements = settlementGrouped.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
-
-                convertPaymentCurrToInvoiceCurr(
-                    invoiceCurrency = doc.invoiceCurrency!!,
-                    paymentCurrency = doc.paymentCurrency!!,
-                    paymentLedCurrency = doc.ledCurrency,
-                    paymentAmount = doc.settledTds,
-                    paymentDocumentNo = doc.paymentDocumentNo,
-                    exchangeDate = payments.first { it.paymentNum == doc.paymentDocumentNo }.transactionDate!!
-                )
+                if (!doc.tdsCurrency.isNullOrBlank()){
+                    convertPaymentCurrToInvoiceCurr(
+                        toCurrency = doc.currency!!,
+                        fromCurrency = doc.tdsCurrency,
+                        fromLedCurrency = doc.ledCurrency,
+                        amount = doc.settledTds,
+                        exchangeRate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.exchangeRate,
+                        exchangeDate = payments.find { it.paymentNum == doc.tdsDocumentNo }?.transactionDate!!
+                    )
+                }
+                else {
+                    BigDecimal.ZERO
+                }
             }
             docList.value.map { it.settledTds = settledTds }
-            docList.value.first { it.paymentDocumentNo == request.documentNo }
+            docList.value.first()
         }.toMutableList()
         settlements.forEach { settlement ->
             when (request.settlementType) {
@@ -480,21 +490,21 @@ open class SettlementServiceImpl : SettlementService {
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
                         convertPaymentCurrToInvoiceCurr(
-                            invoiceCurrency = settlement.invoiceCurrency!!,
-                            paymentCurrency = settlement.paymentCurrency!!,
-                            paymentLedCurrency = settlement.ledCurrency,
-                            paymentAmount = settlement.settledAmount!!,
-                            paymentDocumentNo = settlement.paymentDocumentNo,
+                            toCurrency = settlement.currency!!,
+                            fromCurrency = settlement.paymentCurrency,
+                            fromLedCurrency = settlement.ledCurrency,
+                            amount = settlement.settledAmount!!,
+                            exchangeRate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.exchangeRate,
                             exchangeDate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.transactionDate!!
                         )
 
                     settlement.tds =
                         convertPaymentCurrToInvoiceCurr(
-                            invoiceCurrency = settlement.invoiceCurrency,
-                            paymentCurrency = settlement.paymentCurrency,
-                            paymentLedCurrency = settlement.ledCurrency,
-                            paymentAmount = settlement.tds!!,
-                            paymentDocumentNo = settlement.paymentDocumentNo,
+                            toCurrency = settlement.currency,
+                            fromCurrency = settlement.paymentCurrency,
+                            fromLedCurrency = settlement.ledCurrency,
+                            amount = settlement.tds!!,
+                            exchangeRate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.exchangeRate,
                             exchangeDate = payments.find { it.paymentNum == settlement.paymentDocumentNo }?.transactionDate!!
                         )
 
@@ -531,34 +541,34 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun convertPaymentCurrToInvoiceCurr(
-        invoiceCurrency: String,
-        paymentCurrency: String,
-        paymentLedCurrency: String,
-        paymentDocumentNo: Long,
-        paymentAmount: BigDecimal,
+        toCurrency: String,
+        fromCurrency: String,
+        fromLedCurrency: String,
+        exchangeRate: BigDecimal?,
+        amount: BigDecimal,
         exchangeDate: Date
     ): BigDecimal {
-        return if (invoiceCurrency != paymentCurrency) {
-            val rate = if (paymentLedCurrency == invoiceCurrency) {
-                paymentRepository.getPaymentExchangeRate(paymentDocumentNo)
+        return if (toCurrency != fromCurrency) {
+            val rate = if (fromLedCurrency == toCurrency) {
+                exchangeRate
                     ?: getExchangeRate(
-                        paymentCurrency, invoiceCurrency,
+                        fromCurrency, toCurrency,
                         SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
                     )
             } else {
                 getExchangeRate(
-                    paymentCurrency, invoiceCurrency,
+                    fromCurrency, toCurrency,
                     SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(exchangeDate)
                 )
             }
 
             Utilities.binaryOperation(
-                operandOne = paymentAmount,
+                operandOne = amount,
                 operandTwo = rate,
                 operation = Operator.MULTIPLY
             )
         } else {
-            paymentAmount
+            amount
         }
     }
 
@@ -1174,7 +1184,7 @@ open class SettlementServiceImpl : SettlementService {
     ): BigDecimal {
         var amount = availableAmount
         val toSettleAmount = invoice.allocationAmount - invoice.settledAllocation
-        if (toSettleAmount.setScale(AresConstants.ROUND_DECIMAL_TO).compareTo(BigDecimal.ZERO) != 0) {
+        if (toSettleAmount.compareTo(BigDecimal.ZERO) != 0) {
             var rate = 1.toBigDecimal()
             val ledgerRate = payment.exchangeRate
             var updateDoc = true
@@ -1281,7 +1291,7 @@ open class SettlementServiceImpl : SettlementService {
             (paidLedAmount + paymentTdsLed),
             1,
             request.settlementDate,
-            request.createdBy
+            request.createdBy,
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             createTdsRecord(
