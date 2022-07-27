@@ -16,7 +16,7 @@ env:
   CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
   MICRONAUT_ENVIRONMENTS: staging
   GITHUB_USERNAME: $GH_CR_USER
-  GITHUB_TOKEN: ${{ secrets.RW_PACKAGE_TOKEN_COGOPORT_DEV }}
+  GITHUB_TOKEN: ${{ $secrets.COGOPORT_DEV_ADMIN_TOKEN }}
   DB_URL: ${{ secrets.STAGE_DB_URL }}
   DB_USER: ${{ secrets.STAGE_DB_USER }}
   DB_PASS: ${{ secrets.STAGE_DB_PASS }}
