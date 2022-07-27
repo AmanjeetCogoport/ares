@@ -578,11 +578,11 @@ open class SettlementServiceImpl : SettlementService {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(
-                        request.documentNo,
-                        request.settlementType,
-                        request.page,
-                        request.pageLimit
-                    ) as MutableList<SettledInvoice>
+                    request.documentNo,
+                    request.settlementType,
+                    request.page,
+                    request.pageLimit
+                ) as MutableList<SettledInvoice>
             }
             else -> {}
         }
