@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 
 @MappedEntity
-data class PaymentDate(
+data class PaymentData(
     var documentNo: Long?,
     var transactionDate: Timestamp?,
     var exchangeRate: BigDecimal?
