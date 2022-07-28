@@ -20,6 +20,7 @@ import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
+import com.cogoport.ares.api.settlement.mapper.SummaryMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
@@ -100,6 +101,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
 
+    @Inject
+    lateinit var summaryMapper: SummaryMapper
+
     /**
      * Get documents for Given Business partner/partners in input request.
      * @param settlementDocumentRequest
@@ -126,14 +130,14 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = getOrgIds(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
-        val amount =
+        val summary =
             accountUtilizationRepository.getAccountBalance(
                 orgId,
                 summaryRequest.entityCode!!,
                 summaryRequest.startDate,
                 summaryRequest.endDate
             )
-        return SummaryResponse(amount)
+        return summaryMapper.convertToModel(summary)
     }
 
     /**

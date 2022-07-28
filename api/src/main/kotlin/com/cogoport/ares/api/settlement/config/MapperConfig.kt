@@ -6,6 +6,7 @@ import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.mapper.SettlementMapper
+import com.cogoport.ares.api.settlement.mapper.SummaryMapper
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import org.mapstruct.factory.Mappers
@@ -40,5 +41,10 @@ class MapperConfig {
     @Bean
     fun tdsDocumentConverter(): InvoiceDocumentMapper {
         return Mappers.getMapper(InvoiceDocumentMapper::class.java)
+    }
+
+    @Bean
+    fun summaryResponseConverter(): SummaryMapper {
+        return Mappers.getMapper(SummaryMapper::class.java)
     }
 }

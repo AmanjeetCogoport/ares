@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
+import com.cogoport.ares.api.settlement.entity.SummaryResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.Query
@@ -537,16 +538,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
-                FROM account_utilizations
-                WHERE document_status = 'FINAL'
-                    AND entity_code = :entityCode
-                    AND organization_id in (:orgId)
-                    AND (:startDate is null or transaction_date >= :startDate)
-                    AND (:endDate is null or transaction_date <= :endDate)
+            SELECT 
+                coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount,
+                CASE 
+                    WHEN :entityCode = 101 THEN 'INR'
+                    WHEN :entityCode = 201 THEN 'EUR'
+                    WHEN :entityCode = 301 THEN 'INR'
+                    WHEN :entityCode = 401 THEN 'GBP'
+                END AS ledger_currency      
+            FROM account_utilizations
+            WHERE document_status = 'FINAL'
+                AND entity_code = :entityCode
+                AND organization_id in (:orgId)
+                AND (:startDate is null or transaction_date >= :startDate)
+                AND (:endDate is null or transaction_date <= :endDate)
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): SummaryResponse
 
     @Query(
         """
