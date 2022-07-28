@@ -19,32 +19,17 @@ class SettlementServiceHelper {
     @Inject
     lateinit var exchangeClient: ExchangeClient
 
-    fun getInvoiceType(accType: AccountType): String {
+    fun getDocumentType(accType: AccountType): String {
         return when (accType) {
-            AccountType.SINV -> {
-                InvoiceType.SINV.value
-            }
-            AccountType.SCN -> {
-                InvoiceType.SCN.value
-            }
-            AccountType.SDN -> {
-                InvoiceType.SDN.value
-            }
-            AccountType.REC -> {
-                InvoiceType.REC.value
-            }
-            AccountType.PINV -> {
-                InvoiceType.PINV.value
-            }
-            AccountType.PCN -> {
-                InvoiceType.PCN.value
-            }
-            AccountType.PDN -> {
-                InvoiceType.PDN.value
-            }
-            AccountType.PAY -> {
-                InvoiceType.PAY.value
-            }
+            AccountType.SINV -> InvoiceType.SINV.value
+            AccountType.SCN -> InvoiceType.SCN.value
+            AccountType.SDN -> InvoiceType.SDN.value
+            AccountType.REC -> InvoiceType.REC.value
+            AccountType.PINV -> InvoiceType.PINV.value
+            AccountType.PCN -> InvoiceType.PCN.value
+            AccountType.PDN -> InvoiceType.PDN.value
+            AccountType.PAY -> InvoiceType.PAY.value
+            else -> throw AresException(AresError.ERR_1009, "accountType")
         }
     }
 

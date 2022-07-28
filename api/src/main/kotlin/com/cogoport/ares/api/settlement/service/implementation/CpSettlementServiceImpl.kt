@@ -8,7 +8,6 @@ import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -62,9 +61,6 @@ class CpSettlementServiceImpl : CpSettlementService {
 
     @Inject
     lateinit var cogoClient: AuthClient
-
-    @Inject
-    lateinit var exchangeClient: ExchangeClient
 
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
@@ -352,7 +348,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         for (doc in documentModel) {
-            doc.documentType = settlementServiceHelper.getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
                 afterTdsAmount = doc.afterTdsAmount,
                 balanceAmount = doc.balanceAmount,

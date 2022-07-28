@@ -451,7 +451,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
             doc.currentBalance -= doc.tds
-            doc.documentType = settlementServiceHelper.getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
                 afterTdsAmount = doc.afterTdsAmount,
                 balanceAmount = doc.balanceAmount,
@@ -593,7 +593,7 @@ open class SettlementServiceImpl : SettlementService {
             // Fetch Rate From Profile
             val rate = getTdsRate(tdsProfile)
 
-            doc.documentType = settlementServiceHelper.getInvoiceType(AccountType.valueOf(doc.documentType))
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
                 afterTdsAmount = doc.afterTdsAmount,
                 balanceAmount = doc.balanceAmount,
