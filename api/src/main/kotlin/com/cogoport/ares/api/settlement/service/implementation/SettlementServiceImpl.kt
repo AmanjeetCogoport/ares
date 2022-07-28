@@ -1154,7 +1154,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun updateExternalSystemInvoice(accountUtilization: AccountUtilization) {
         when (accountUtilization.accType) {
             AccountType.PINV -> emitPayableBillStatus(accountUtilization)
-            AccountType.SINV -> updateTaxableAmount(accountUtilization)
+            AccountType.SINV -> updateBalanceAmount(accountUtilization)
             else -> {}
         }
     }
@@ -1163,7 +1163,7 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private fun updateTaxableAmount(accountUtilization: AccountUtilization) {
+    private fun updateBalanceAmount(accountUtilization: AccountUtilization) {
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
@@ -1179,12 +1179,12 @@ open class SettlementServiceImpl : SettlementService {
      * @param: accountUtilization
      */
     private fun emitPayableBillStatus(accountUtilization: AccountUtilization) {
-        val status = if (accountUtilization.amountCurr.minus(accountUtilization.payCurr) > BigDecimal.ZERO)
-            "PARTIAL"
-        else if (accountUtilization.amountCurr.minus(accountUtilization.payCurr) <= BigDecimal.ZERO)
-            "FULL"
-        else
+        val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"
+        else if (accountUtilization.amountCurr > accountUtilization.payCurr)
+            "PARTIAL"
+        else
+            "FULL"
 
         aresKafkaEmitter.emitBillPaymentStatus(
             PayableKnockOffProduceEvent(
