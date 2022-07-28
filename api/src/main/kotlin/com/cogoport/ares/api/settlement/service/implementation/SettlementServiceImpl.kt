@@ -35,7 +35,6 @@ import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -45,6 +44,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.receivables.SidResponse
@@ -291,7 +291,7 @@ open class SettlementServiceImpl : SettlementService {
                     // Convert To Model
                     val settledDoc = settledInvoiceConverter.convertToModel(settlement)
                     settledDoc.balanceAmount = settledDoc.currentBalance - settledDoc.tds
-                    settledDoc.allocationAmount = settledDoc.balanceAmount
+                    settledDoc.allocationAmount = settledDoc.settledAmount
                     settledDoc.afterTdsAmount -= (settledDoc.tds + settledDoc.settledTds!!)
 
                     // Assign Sid
@@ -1168,7 +1168,7 @@ open class SettlementServiceImpl : SettlementService {
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
-                    taxableAmount = accountUtilization.amountCurr.minus(accountUtilization.payCurr),
+                    balanceAmount = accountUtilization.amountCurr.minus(accountUtilization.payCurr)
                 )
             )
         )
