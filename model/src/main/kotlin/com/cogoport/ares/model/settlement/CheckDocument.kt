@@ -29,5 +29,6 @@ data class CheckDocument(
     var ledCurrency: String = "INR",
     var exchangeRate: BigDecimal,
     var transactionDate: Timestamp = Timestamp.from(Instant.now()),
-    var settledTds: BigDecimal = 0.toBigDecimal()
+    var settledTds: BigDecimal = 0.toBigDecimal(),
+    var settledAmount: BigDecimal?
 )

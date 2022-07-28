@@ -68,7 +68,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.source_id as payment_document_no,
             s1.source_id as tds_document_no,
             s1.source_type::varchar as payment_source_type,
-            s1.destination_id,
+            s.destination_id,
             au.document_value,
             s.destination_type,
             au.organization_id,
