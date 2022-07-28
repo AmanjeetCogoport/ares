@@ -444,22 +444,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             acc_type as account_type,
             au.transaction_date as document_date,
             due_date, 
-            amount_curr as document_amount, 
-            amount_loc as document_led_amount, 
-            taxable_amount, 
-            0 as tds,
-            amount_curr as after_tds_amount, 
-            pay_curr as settled_amount, 
-            amount_curr - pay_curr as balance_amount,
-            null as status, 
+            COALESCE(amount_curr, 0) as document_amount, 
+            COALESCE(amount_loc, 0) as document_led_amount, 
+            COALESCE(taxable_amount, 0) as taxable_amount, 
+            COALESCE(amount_curr, 0) as after_tds_amount, 
+            COALESCE(pay_curr, 0) as settled_amount, 
+            COALESCE(amount_curr - pay_curr, 0) as balance_amount,
+            COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
-            CASE WHEN 
-                (p.exchange_rate is not null) 
+            COALESCE(
+                CASE WHEN 
+                    (p.exchange_rate is not null) 
                 THEN p.exchange_rate 
                 ELSE (amount_loc / amount_curr) 
-                END AS exchange_rate
+                END
+                , 1) AS exchange_rate
             FROM account_utilizations au
             LEFT JOIN payments p ON 
                 p.payment_num = au.document_no
