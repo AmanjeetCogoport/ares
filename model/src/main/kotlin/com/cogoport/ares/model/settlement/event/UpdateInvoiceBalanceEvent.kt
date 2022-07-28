@@ -1,4 +1,4 @@
-package com.cogoport.ares.model.settlement
+package com.cogoport.ares.model.settlement.event
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected

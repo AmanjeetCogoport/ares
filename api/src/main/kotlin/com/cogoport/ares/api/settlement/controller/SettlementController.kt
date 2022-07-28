@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
@@ -44,6 +45,9 @@ class SettlementController {
     @Inject
     lateinit var settlementService: SettlementService
 
+    @Inject
+    lateinit var cpSettlementService: CpSettlementService
+
     @Get("/documents{?request*}")
     suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
@@ -61,7 +65,7 @@ class SettlementController {
      */
     @Get("/invoices{?request*}")
     suspend fun getInvoices(@Valid request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>? {
-        return Response<ResponseList<SettlementInvoiceResponse>?>().ok(settlementService.getInvoices(request))
+        return Response<ResponseList<SettlementInvoiceResponse>?>().ok(cpSettlementService.getInvoices(request))
     }
 
     @Get("/account-balance{?request*}")
@@ -81,7 +85,7 @@ class SettlementController {
 
     @Post("/knockoff")
     suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-        return Response<SettlementKnockoffResponse>().ok(settlementService.knockoff(request))
+        return Response<SettlementKnockoffResponse>().ok(cpSettlementService.knockoff(request))
     }
 
     @Post("/check")
