@@ -29,5 +29,7 @@ interface DocumentMapper {
     @Mapping(source = "documentLedAmount", target = "ledgerAmount")
     @Mapping(source = "documentDate", target = "transactionDate")
     @Mapping(source = "balanceAmount", target = "currentBalance")
+    @Mapping(source = "documentLedBalance", target = "ledgerBalance")
+    @Mapping(target = "tds", expression = "java(java.math.BigDecimal.ZERO)")
     fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
 }
