@@ -10,10 +10,6 @@ import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
-import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
-import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
-import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
-import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -25,14 +21,15 @@ import java.util.UUID
 interface SettlementService {
 
     suspend fun getDocuments(settlementDocumentRequest: SettlementDocumentRequest): ResponseList<Document>?
+
     suspend fun getTDSDocuments(request: TdsSettlementDocumentRequest): ResponseList<Document>?
-    suspend fun getInvoices(settlementInvoiceRequest: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>
+
     suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse
 
     suspend fun getHistory(request: SettlementHistoryRequest): ResponseList<HistoryDocument?>
 
     suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledInvoice?>
-    suspend fun knockoff(request: SettlementKnockoffRequest): SettlementKnockoffResponse
+
     suspend fun check(request: CheckRequest): List<CheckDocument>
 
     suspend fun settle(request: CheckRequest): List<CheckDocument>

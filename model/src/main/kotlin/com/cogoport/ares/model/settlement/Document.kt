@@ -18,6 +18,7 @@ data class Document(
     var dueDate: Date?,
     var documentAmount: BigDecimal,
     var ledgerAmount: BigDecimal,
+    var ledgerBalance: BigDecimal,
     var taxableAmount: BigDecimal,
     var tds: BigDecimal,
     var tdsPercentage: BigDecimal? = null,
