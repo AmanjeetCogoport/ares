@@ -290,9 +290,9 @@ open class SettlementServiceImpl : SettlementService {
 
                     // Convert To Model
                     val settledDoc = settledInvoiceConverter.convertToModel(settlement)
-                    settledDoc.balanceAmount = settledDoc.currentBalance - settledDoc.tds
+                    settledDoc.balanceAmount = settledDoc.currentBalance
                     settledDoc.allocationAmount = settledDoc.settledAmount
-                    settledDoc.afterTdsAmount -= (settledDoc.tds + settledDoc.settledTds!!)
+                    settledDoc.afterTdsAmount -= settledDoc.settledTds!!
 
                     // Assign Sid
                     settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo }?.jobNumber
@@ -807,6 +807,10 @@ open class SettlementServiceImpl : SettlementService {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
                 ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
+
+        if (accUtil.payCurr < amount.setScale(0,RoundingMode.HALF_DOWN)) {
+            throw AresException(AresError.ERR_1504, " Document No: ${accUtil.documentValue}")
+        }
         accUtil.payCurr -= amount
         accUtil.payLoc -=
             ledAmount
@@ -826,7 +830,7 @@ open class SettlementServiceImpl : SettlementService {
         performDbOperation: Boolean
     ): List<CheckDocument> {
         val settledTdsCopy = storeSettledTds(request)
-        sanitizeInput(request)
+         sanitizeInput(request)
         val source = mutableListOf<CheckDocument>()
         val dest = mutableListOf<CheckDocument>()
         val creditType =
@@ -1135,6 +1139,9 @@ open class SettlementServiceImpl : SettlementService {
                     AresError.ERR_1503,
                     "${document.documentNo}_${document.accountType}"
                 )
+        if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount) {
+            throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
+        }
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
