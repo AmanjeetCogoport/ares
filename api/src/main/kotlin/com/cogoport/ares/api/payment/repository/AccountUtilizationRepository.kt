@@ -400,7 +400,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     THEN p.exchange_rate 
                     ELSE (amount_loc / amount_curr) 
                     END,
-                 0) AS exchange_rate
+                 1) AS exchange_rate
             FROM account_utilizations au
             LEFT JOIN payments p ON 
                 p.payment_num = au.document_no
