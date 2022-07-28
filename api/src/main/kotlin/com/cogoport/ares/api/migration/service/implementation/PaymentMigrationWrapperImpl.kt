@@ -17,8 +17,10 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate)
         logger().info("Total number of payment record to process : ${paymentRecords.size}")
+        var count = 0
         for (paymentRecord in paymentRecords) {
             paymentMigration.migratePayment(paymentRecord)
+            logger().info("Migrated ${count++} / ${paymentRecords.size} payments")
         }
         return paymentRecords.size
     }

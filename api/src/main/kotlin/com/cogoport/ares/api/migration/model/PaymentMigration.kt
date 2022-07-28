@@ -1,0 +1,134 @@
+package com.cogoport.ares.api.migration.model
+
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.PayMode
+import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.ServiceType
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.util.UUID
+import javax.validation.constraints.Min
+import javax.validation.constraints.NotNull
+
+@JsonInclude
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PaymentMigration(
+    @JsonProperty("id")
+    var id: Long? = 0,
+
+    @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
+    var entityType: Int? = 0,
+
+    @JsonProperty("fileId")
+    var fileId: Long? = null,
+
+    @JsonProperty("orgSerialId")
+    var orgSerialId: Long? = null,
+
+    @JsonProperty("sageOrganizationId")
+    var sageOrganizationId: String? = null,
+
+    @JsonProperty("customerId")
+    @field:NotNull(message = "UUID of the organization is required")
+    var organizationId: UUID?,
+
+    @JsonProperty("customerName")
+    var organizationName: String? = "",
+
+    @JsonProperty("accCode")
+    var accCode: Int? = 0,
+
+    @JsonProperty("accMode")
+    var accMode: AccMode? = AccMode.AR,
+
+    @JsonProperty("signFlag")
+    var signFlag: Short? = 1,
+
+    @JsonProperty("currency") @field:NotNull(message = "Currency  is required")
+    var currency: String? = "",
+
+    @field:NotNull(message = "Currency amount is required")
+    @JsonProperty("amount")
+    var amount: BigDecimal? = 0.toBigDecimal(),
+
+    @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger currency is required")
+    var ledCurrency: String? = "INR",
+
+    @JsonProperty("ledAmount") @field:NotNull(message = "Ledger amount is required")
+    var ledAmount: BigDecimal? = 0.toBigDecimal(),
+
+    @JsonProperty("paymentMode")
+    @field:NotNull(message = "Payment mode is required")
+    var payMode: PayMode? = null,
+
+    @JsonProperty("remarks")
+    var remarks: String? = null,
+
+    @JsonProperty("utr")
+    var utr: String? = "",
+
+    @JsonProperty("refPaymentId")
+    var refPaymentId: Long? = 0,
+
+    @JsonProperty("transactionDate")
+    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+
+    @JsonProperty("isPosted")
+    var isPosted: Boolean? = false,
+
+    @JsonProperty("isDeleted")
+    var isDeleted: Boolean? = false,
+
+    @JsonProperty("createdAt")
+    var createdAt: Timestamp? = null,
+
+    @JsonProperty("createdBy")
+    var createdBy: String? = "",
+
+    @JsonProperty("updatedAt")
+    var updatedAt: Timestamp? = null,
+
+    @JsonProperty("bankAccountNumber")
+    var bankAccountNumber: String? = "",
+
+    @JsonProperty("zone")
+    var zone: String? = "",
+
+    @JsonProperty("serviceType")
+    var serviceType: ServiceType?,
+
+    @JsonProperty("paymentCode")
+    var paymentCode: PaymentCode? = PaymentCode.REC,
+
+    @JsonProperty("paymentDate")
+    var paymentDate: String? = "",
+
+    @JsonProperty("uploadedBy")
+    var uploadedBy: String? = "",
+
+    @JsonProperty("bankName")
+    var bankName: String? = "",
+
+    @JsonProperty("exchangeRate")
+    @Min(value = 1, message = "Minimum value for exchange rate is 1")
+    var exchangeRate: BigDecimal? = BigDecimal.ONE,
+
+    @JsonProperty("receiptNumber")
+    var paymentNum: Long?,
+
+    @JsonProperty("receiptParam")
+    var paymentNumValue: String?,
+
+    @JsonProperty("bankId")
+    var bankId: UUID? = null,
+
+)

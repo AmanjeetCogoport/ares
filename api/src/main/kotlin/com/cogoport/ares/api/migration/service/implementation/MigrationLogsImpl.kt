@@ -10,11 +10,14 @@ class MigrationLogsImpl : MigrationLogService {
 
     @Inject lateinit var migrationLogsRepository: MigrationLogsRepository
 
-    override suspend fun saveMigrationLogs(id: String?) {
-        migrationLogsRepository.save(MigrationLogs(null, id, MigrationStatus.MIGRATED, null))
+    override suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, paymentNum: Long?) {
+        if (paymentId == null && accUtilId == null) {
+            migrationLogsRepository.save(MigrationLogs(null, null, null, paymentNum, MigrationStatus.NOT_MIGRATED, null))
+        }
+        migrationLogsRepository.save(MigrationLogs(null, paymentId, accUtilId, paymentNum, MigrationStatus.MIGRATED, null))
     }
 
-    override suspend fun saveMigrationLogs(id: String?, ex: Exception?) {
-        migrationLogsRepository.save(MigrationLogs(null, id, MigrationStatus.FAILED, ex?.stackTraceToString()))
+    override suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, ex: String?, paymentNum: Long?) {
+        migrationLogsRepository.save(MigrationLogs(null, paymentId, accUtilId, paymentNum, MigrationStatus.FAILED, ex))
     }
 }

@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.mapper
 
-import com.cogoport.ares.api.migration.entity.PaymentMigration
+import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
+import com.cogoport.ares.api.migration.model.PaymentMigration
 import com.cogoport.ares.model.payment.AccUtilizationRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
@@ -13,10 +14,10 @@ interface PaymentMapper {
     @Mapping(source = "remarks", target = "narration")
     @Mapping(source = "utr", target = "transRefNumber")
     @Mapping(source = "bankAccountNumber", target = "cogoAccountNo")
-    fun convertToEntity(payment: com.cogoport.ares.model.payment.Payment): PaymentMigration
+    fun convertToEntity(payment: PaymentMigration): PaymentMigrationEntity
 
     @Mapping(source = "amount", target = "currencyAmount")
     fun convertPaymentToAccUtilizationRequest(
-        accUtilization: PaymentMigration
+        accUtilization: PaymentMigrationEntity
     ): AccUtilizationRequest
 }

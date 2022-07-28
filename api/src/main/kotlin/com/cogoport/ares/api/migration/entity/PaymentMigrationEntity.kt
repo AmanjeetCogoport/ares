@@ -11,7 +11,7 @@ import java.sql.Timestamp
 import java.util.UUID
 
 @MappedEntity(value = "payments")
-data class PaymentMigration(
+data class PaymentMigrationEntity(
     @field:Id @GeneratedValue var id: Long?,
     var entityCode: Int,
     var orgSerialId: Long?,

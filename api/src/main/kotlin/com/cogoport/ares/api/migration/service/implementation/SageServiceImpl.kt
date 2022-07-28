@@ -36,7 +36,7 @@ class SageServiceImpl : SageService {
             ,GC.RATMLT_0 as exchange_rate
             from $sageSchema.PAYMENTH P  LEFT JOIN $sageSchema.GACCENTRY GC on P.NUM_0 = GC.REF_0
             LEFT JOIN $sageSchema.GACCDUDATE G on GC.NUM_0 = G.NUM_0
-            where P.ACCDAT_0 BETWEEN $startDate and $endDate order by P.ACCDAT_0 ASC """
+            where P.BPRSAC_0 = 'AR' and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
 
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)

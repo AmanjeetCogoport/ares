@@ -2,6 +2,8 @@ package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
+import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
+import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
@@ -28,4 +30,6 @@ interface AuthClient {
 
     @Get("/get_organization_finance_detail")
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
+    @Get("/get_organization_details_by_sage_org_id{?request*}")
+    suspend fun getOrgDetailsBySageOrgId(request: GetOrgDetailsRequest): GetOrgDetailsResponse
 }

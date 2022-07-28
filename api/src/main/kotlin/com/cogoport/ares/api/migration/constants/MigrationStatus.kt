@@ -1,5 +1,5 @@
 package com.cogoport.ares.api.migration.constants
 
 enum class MigrationStatus {
-    MIGRATED, FAILED
+    MIGRATED, FAILED, NOT_MIGRATED
 }

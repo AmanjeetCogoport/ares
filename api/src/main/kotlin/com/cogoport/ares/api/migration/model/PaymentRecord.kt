@@ -15,7 +15,7 @@ data class PaymentRecord(
     @JsonProperty("org_serial_id")
     val organizationSerialId: UUID? = null,
     @JsonProperty("sage_organization_id")
-    val sageOrganizationId: Short? = null,
+    val sageOrganizationId: String? = null,
     @JsonProperty("organization_id")
     val organizationId: UUID? = null,
     @JsonProperty("organization_name")
