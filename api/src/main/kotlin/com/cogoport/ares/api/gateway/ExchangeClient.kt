@@ -8,7 +8,7 @@ import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
 import io.micronaut.http.client.annotation.Client
 
-@Client(value = "\${cogoport.exchange_api_url}")
+@Client(value = "\${cogoport.exchange_api.url}" + "\${cogoport.exchange_api.version}")
 @Headers(
     Header(name = HttpHeaders.ACCEPT, value = "application/json"),
     Header(name = HttpHeaders.CONTENT_TYPE, value = "application/json"),

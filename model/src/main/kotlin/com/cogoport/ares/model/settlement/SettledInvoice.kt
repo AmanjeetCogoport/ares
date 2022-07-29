@@ -3,15 +3,17 @@ package com.cogoport.ares.model.settlement
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date
+import java.util.UUID
 
 @JsonInclude
 data class SettledInvoice(
     val id: Long?,
+    val organizationId: UUID?,
     val documentNo: Long,
     var documentValue: String,
     val documentType: SettlementType,
     var accountType: String,
-    val invoiceCurrency: String?,
+    val currency: String?,
     val paymentCurrency: String?,
     var balanceAmount: BigDecimal,
     var currentBalance: BigDecimal,

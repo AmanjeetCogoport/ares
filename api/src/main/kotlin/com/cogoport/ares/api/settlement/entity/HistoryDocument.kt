@@ -19,7 +19,8 @@ data class HistoryDocument(
     val transactionDate: Date,
     var signFlag: Short,
     val exchangeRate: BigDecimal,
-    val utilizedAmount: BigDecimal,
+    val settledAmount: BigDecimal,
     val lastEditedDate: Date,
-    var status: String?
+    var status: String?,
+    val settledTds: BigDecimal
 )

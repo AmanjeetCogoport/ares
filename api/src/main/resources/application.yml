@@ -56,7 +56,9 @@ sentry:
 cogoport:
   api_url: https://api-mustangs1.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
-  exchange_api_url: https://32swvm7va56xueg3geyhzt4nae0wiihy.lambda-url.ap-south-1.on.aws
+  exchange_api:
+    url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
+    version: v1
 
 sage:
   soapUrl: http://13.232.139.45:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC

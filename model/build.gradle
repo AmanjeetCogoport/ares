@@ -17,7 +17,7 @@ jar {
 }
 
 group = "com.cogoport.ares"
-version = "0.1.33-beta"
+version = "0.1.34-beta"
 
 dependencies {
     implementation("io.micronaut:micronaut-runtime")
