@@ -822,7 +822,14 @@ open class SettlementServiceImpl : SettlementService {
                         Operator.DIVIDE
                     )
                 )
-        accountUtilizationRepository.update(accUtil)
+        val accUtilObj = accountUtilizationRepository.update(accUtil)
+        try {
+            updateExternalSystemInvoice(accUtilObj)
+            OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
+            emitDashboardAndOutstandingEvent(accUtilObj)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 
     private suspend fun runSettlement(
