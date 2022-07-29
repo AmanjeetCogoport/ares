@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.MigrationConstants
@@ -23,6 +24,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.util.UUID
@@ -79,7 +81,7 @@ class PaymentMigrationImpl : PaymentMigration {
             id = null,
             entityType = paymentRecord.entityCode,
             fileId = 12345, // NEED TO CHANGE
-            orgSerialId = RorOrgDetails.organizationSerialId?.toLong(), // NEED TO CHANGE
+            orgSerialId = RorOrgDetails.organizationSerialId?.toLong(),
             sageOrganizationId = paymentRecord.sageOrganizationId,
             organizationId = UUID.fromString(RorOrgDetails.organizationId),
             organizationName = paymentRecord.organizationName,
@@ -192,13 +194,13 @@ class PaymentMigrationImpl : PaymentMigration {
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-//        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-//
-//        try {
-//            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-//        } catch (ex: Exception) {
-//            logger().error(ex.stackTraceToString())
-//        }
+        //Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
+
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+        }
         return OnAccountApiCommonResponseMigration(paymentId = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true, accUtilId = accUtilRes.id!!)
     }
 

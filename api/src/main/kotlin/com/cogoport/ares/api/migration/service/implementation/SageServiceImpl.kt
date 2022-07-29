@@ -34,7 +34,7 @@ class SageServiceImpl : SageService {
             ,GC.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
-            from $sageSchema.PAYMENTH P  LEFT JOIN $sageSchema.GACCENTRY GC on P.NUM_0 = GC.REF_0
+            from $sageSchema.PAYMENTH P INNER JOIN $sageSchema.GACCENTRY GC on P.NUM_0 = GC.REF_0
             LEFT JOIN $sageSchema.GACCDUDATE G on GC.NUM_0 = G.NUM_0
             where P.BPRSAC_0 = 'AR' and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
 
