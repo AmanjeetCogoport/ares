@@ -623,6 +623,13 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun check(request: CheckRequest): List<CheckDocument> =
         runSettlement(request, false)
 
+    override suspend fun editCheck(request: CheckRequest): List<CheckDocument> {
+        adjustBalanceAmount(type = "add", documents = request.stackDetails)
+        val checkResponse = check(request)
+        adjustBalanceAmount(type = "subtract", documents = request.stackDetails)
+        return checkResponse
+    }
+
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settle(request: CheckRequest): List<CheckDocument> =
         runSettlement(request, true)
@@ -822,7 +829,14 @@ open class SettlementServiceImpl : SettlementService {
                         Operator.DIVIDE
                     )
                 )
-        accountUtilizationRepository.update(accUtil)
+        val accUtilObj = accountUtilizationRepository.update(accUtil)
+        try {
+            updateExternalSystemInvoice(accUtilObj)
+            OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
+            emitDashboardAndOutstandingEvent(accUtilObj)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 
     private suspend fun runSettlement(
@@ -1389,5 +1403,15 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun decimalRound(amount: BigDecimal): BigDecimal {
         return Utilities.decimalRound(amount)
+    }
+
+    private fun adjustBalanceAmount(type: String, documents: List<CheckDocument>): List<CheckDocument> {
+        if (type == "add") {
+            documents.forEach { it.balanceAmount += it.settledAmount ?: BigDecimal.ZERO }
+        }
+        if (type == "subtract") {
+            documents.forEach { it.balanceAmount -= it.settledAmount ?: BigDecimal.ZERO }
+        }
+        return documents
     }
 }
