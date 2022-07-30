@@ -86,7 +86,6 @@ open class KnockoffServiceImpl : KnockoffService {
         val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
         accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
-        // TODO to write settlement code and to remove invoicePaymentMapping flow
 
         saveSettlements(knockOffRecord, false, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
         saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
