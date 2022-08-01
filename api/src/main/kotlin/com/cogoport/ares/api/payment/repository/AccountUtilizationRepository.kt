@@ -380,7 +380,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET :offset
         ) 
         SELECT 
-            ai.id,
+            au.id,
             s.source_id,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
