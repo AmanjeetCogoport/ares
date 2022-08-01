@@ -6,6 +6,7 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
@@ -22,6 +23,7 @@ import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
@@ -97,7 +99,7 @@ open class KnockoffServiceImpl : KnockoffService {
         )
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
-        // saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
+        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
 
         /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
         if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
@@ -105,7 +107,7 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
 
             val savedTDSPaymentRecord = savePayment(paymentEntity, isTDSEntry = true)
-            // saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true)
+            saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true)
         }
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
@@ -150,24 +152,24 @@ open class KnockoffServiceImpl : KnockoffService {
         return paymentRepository.save(paymentEntity)
     }
 
-//    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean) {
-//        var invoicePayMap = PaymentInvoiceMapping(
-//            id = null,
-//            accountMode = AccMode.AP,
-//            documentNo = knockOffRecord.documentNo,
-//            paymentId = paymentId,
-//            mappingType = if (!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
-//            currency = knockOffRecord.currency,
-//            ledCurrency = knockOffRecord.ledgerCurrency,
-//            signFlag = SignSuffix.PAY.sign,
-//            amount = if (!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
-//            ledAmount = if (!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
-//            transactionDate = knockOffRecord.transactionDate,
-//            createdAt = Timestamp.from(Instant.now()),
-//            updatedAt = Timestamp.from(Instant.now())
-//        )
-//        invoicePayMappingRepo.save(invoicePayMap)
-//    }
+    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean) {
+        var invoicePayMap = PaymentInvoiceMapping(
+            id = null,
+            accountMode = AccMode.AP,
+            documentNo = knockOffRecord.documentNo,
+            paymentId = paymentId,
+            mappingType = if (!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
+            currency = knockOffRecord.currency,
+            ledCurrency = knockOffRecord.ledgerCurrency,
+            signFlag = SignSuffix.PAY.sign,
+            amount = if (!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
+            ledAmount = if (!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
+            transactionDate = knockOffRecord.transactionDate,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now())
+        )
+        invoicePayMappingRepo.save(invoicePayMap)
+    }
 
     private suspend fun saveAccountUtilization(
         paymentNum: Long,
