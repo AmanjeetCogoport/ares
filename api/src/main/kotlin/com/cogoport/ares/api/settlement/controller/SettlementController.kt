@@ -114,8 +114,8 @@ class SettlementController {
     }
 
     @Delete
-    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Long {
-        return Response<Long>().ok(settlementService.delete(documentNo, settlementType))
+    suspend fun delete(@QueryValue documentNo: String, @QueryValue settlementType: SettlementType): String {
+        return Response<String>().ok(settlementService.delete(documentNo, settlementType))
     }
 
     @Get("/org-summary")

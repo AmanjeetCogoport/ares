@@ -22,6 +22,7 @@ import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.utils.Hashids
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
@@ -100,6 +101,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
 
+    @Inject
+    private lateinit var hashId: Hashids
+
     /**
      * Get documents for Given Business partner/partners in input request.
      * @param settlementDocumentRequest
@@ -166,6 +170,7 @@ open class SettlementServiceImpl : SettlementService {
         documents.forEach { doc ->
             historyDocuments.add(historyDocumentConverter.convertToModel(doc))
         }
+        historyDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = historyDocuments,
             totalPages = getTotalPages(totalRecords, request.pageLimit),
@@ -208,8 +213,9 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun getSettlement(
         request: SettlementRequest
     ): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
+        request.documentNo = hashId.decode(request.documentNo)[0].toString()
         val settlementGrouped = getSettlementFromDB(request)
-        val paymentIds = mutableListOf(request.documentNo)
+        val paymentIds = mutableListOf(request.documentNo.toLong())
         val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments)
         // Fetch Sid for invoices
@@ -218,7 +224,8 @@ open class SettlementServiceImpl : SettlementService {
 
         // Pagination Data
         val totalRecords =
-            settlementRepository.countSettlement(request.documentNo, request.settlementType)
+            settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
+        settledDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = settledDocuments,
             totalPages = getTotalPages(totalRecords, request.pageLimit),
@@ -295,7 +302,7 @@ open class SettlementServiceImpl : SettlementService {
                     settledDoc.afterTdsAmount -= settledDoc.settledTds!!
 
                     // Assign Sid
-                    settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo }?.jobNumber
+                    settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo.toLong() }?.jobNumber
                     // Assign Status
                     when (
                         settledDoc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
@@ -350,7 +357,7 @@ open class SettlementServiceImpl : SettlementService {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(
-                    request.documentNo,
+                    request.documentNo.toLong(),
                     request.settlementType,
                     request.page,
                     request.pageLimit
@@ -430,6 +437,7 @@ open class SettlementServiceImpl : SettlementService {
             )
 
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
+        documentModel.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         val tdsProfiles = orgId.map { getOrgTdsProfile(it) }
         val total =
             accountUtilizationRepository.getDocumentCount(
@@ -641,7 +649,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun editTds(request: EditTdsRequest) = editInvoiceTds(request)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun delete(documentNo: Long, settlementType: SettlementType) =
+    override suspend fun delete(documentNo: String, settlementType: SettlementType) =
         deleteSettlement(documentNo, settlementType)
 
     override suspend fun getOrgSummary(
@@ -736,7 +744,8 @@ open class SettlementServiceImpl : SettlementService {
         return runSettlement(request, true)
     }
 
-    private suspend fun deleteSettlement(documentNo: Long, settlementType: SettlementType): Long {
+    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType): String {
+        val documentNo = hashId.decode(documentNo)[0]
         val sourceType =
             if (settlementType == SettlementType.REC)
                 listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH)
@@ -802,7 +811,7 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
-        return documentNo
+        return hashId.encode(documentNo)
     }
 
     private suspend fun reduceAccountUtilization(
@@ -814,10 +823,6 @@ open class SettlementServiceImpl : SettlementService {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
                 ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
-
-        if (accUtil.payCurr < amount.setScale(0, RoundingMode.HALF_DOWN)) {
-            throw AresException(AresError.ERR_1504, " Document No: ${accUtil.documentValue}")
-        }
         accUtil.payCurr -= amount
         accUtil.payLoc -=
             ledAmount
@@ -879,7 +884,10 @@ open class SettlementServiceImpl : SettlementService {
         }
         businessValidation(source, dest)
         val settledList = settleDocuments(request, source, dest, performDbOperation)
-        settledList.forEach { it.settledTds = settledTdsCopy[it.id]!! }
+        settledList.forEach {
+            it.documentNo = hashId.encode(it.documentNo.toLong())
+            it.settledTds = settledTdsCopy[it.id]!!
+        }
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
 
@@ -912,8 +920,8 @@ open class SettlementServiceImpl : SettlementService {
                     performDbOperation
                 ) {
                     createTdsRecord(
-                        sourceId = invoice.documentNo,
-                        destId = payment.documentNo,
+                        sourceId = invoice.documentNo.toLong(),
+                        destId = payment.documentNo.toLong(),
                         destType = payment.accountType,
                         currency = payment.currency,
                         ledCurrency = payment.ledCurrency,
@@ -1043,9 +1051,9 @@ open class SettlementServiceImpl : SettlementService {
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
         createSettlement(
-            payment.documentNo,
+            payment.documentNo.toLong(),
             payment.accountType,
-            invoice.documentNo,
+            invoice.documentNo.toLong(),
             invoice.accountType,
             payment.currency,
             (paidAmount + paymentTds),
@@ -1057,8 +1065,8 @@ open class SettlementServiceImpl : SettlementService {
         )
         if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
             createTdsRecord(
-                sourceId = payment.documentNo,
-                destId = invoice.documentNo,
+                sourceId = payment.documentNo.toLong(),
+                destId = invoice.documentNo.toLong(),
                 destType = invoice.accountType,
                 currency = payment.currency,
                 ledCurrency = payment.ledCurrency,
@@ -1085,9 +1093,9 @@ open class SettlementServiceImpl : SettlementService {
                         1
                     }
             createSettlement(
-                payment.documentNo,
+                payment.documentNo.toLong(),
                 exType,
-                invoice.documentNo,
+                invoice.documentNo.toLong(),
                 invoice.accountType,
                 null,
                 null,
@@ -1146,7 +1154,7 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         val paymentUtilization =
             accountUtilizationRepository.findRecord(
-                document.documentNo,
+                document.documentNo.toLong(),
                 document.accountType.toString()
             )
                 ?: throw AresException(
@@ -1351,11 +1359,8 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun sanitizeInput(request: CheckRequest) {
-        for (doc in request.stackDetails) {
-            if (doc.documentNo == 0.toLong())
-                throw AresException(AresError.ERR_1003, "Document Number")
-        }
         request.stackDetails.forEach {
+            it.documentNo = hashId.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
             it.settledTds = BigDecimal.ZERO
         }

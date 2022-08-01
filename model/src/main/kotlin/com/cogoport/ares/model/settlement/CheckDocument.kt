@@ -12,7 +12,7 @@ import java.time.Instant
 @Introspected
 data class CheckDocument(
     var id: Long,
-    var documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     var accountType: SettlementType,
     var documentAmount: BigDecimal = 0.toBigDecimal(),

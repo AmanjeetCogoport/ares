@@ -9,7 +9,7 @@ import java.util.UUID
 data class SettledInvoice(
     val id: Long?,
     val organizationId: UUID?,
-    val documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     val documentType: SettlementType,
     var accountType: String,
