@@ -38,7 +38,7 @@ interface SettlementService {
 
     suspend fun edit(request: CheckRequest): List<CheckDocument>
 
-    suspend fun editTds(request: EditTdsRequest): Long
+    suspend fun editTds(request: EditTdsRequest): String
 
     suspend fun delete(documentNo: String, settlementType: SettlementType): String
 

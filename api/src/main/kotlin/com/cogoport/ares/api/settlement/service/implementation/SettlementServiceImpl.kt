@@ -615,6 +615,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
         }
+        documentModel.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = documentModel,
             totalPages = ceil(total?.toDouble()?.div(request.pageLimit!!) ?: 0.0).toLong(),
@@ -665,10 +666,11 @@ open class SettlementServiceImpl : SettlementService {
         return responseModel
     }
 
-    private suspend fun editInvoiceTds(request: EditTdsRequest): Long {
+    private suspend fun editInvoiceTds(request: EditTdsRequest): String {
+        request.documentNo = hashId.decode(request.documentNo!!)[0].toString()
         val doc =
             settlementRepository.findByDestIdAndDestType(
-                request.documentNo!!,
+                request.documentNo!!.toLong(),
                 request.settlementType!!
             )
         val tdsDoc =
@@ -703,7 +705,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         if (currNewTds > tdsDoc.amount!!) {
             // TODO("Generate Credit Note")
-            return tdsDoc.destinationId
+            return hashId.encode(tdsDoc.destinationId)
         } else if (currNewTds < tdsDoc.amount) {
             val invoiceTdsDiff = request.oldTds!! - request.newTds!!
             val paymentTdsDiff = tdsDoc.amount!! - currNewTds
@@ -732,7 +734,7 @@ open class SettlementServiceImpl : SettlementService {
         tdsDoc.ledAmount =
             Utilities.binaryOperation(currNewTds, sourceLedgerRate, Operator.MULTIPLY)
         settlementRepository.update(tdsDoc)
-        return tdsDoc.destinationId
+        return hashId.encode(tdsDoc.destinationId)
     }
 
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {

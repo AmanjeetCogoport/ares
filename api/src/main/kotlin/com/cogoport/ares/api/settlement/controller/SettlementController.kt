@@ -109,8 +109,8 @@ class SettlementController {
     }
 
     @Post("/edit-tds")
-    suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
-        return Response<Long>().ok(settlementService.editTds(request))
+    suspend fun editTds(@Valid @Body request: EditTdsRequest): String {
+        return Response<String>().ok(settlementService.editTds(request))
     }
 
     @Delete
