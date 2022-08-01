@@ -36,5 +36,7 @@ data class AccountPayablesFile(
     var transRefNumber: String,
     var transactionDate: Timestamp,
     var bankName: String?,
-    var isPosted: Boolean
+    var isPosted: Boolean,
+    var createdBy: UUID?,
+    var updatedBy: UUID?
 )
