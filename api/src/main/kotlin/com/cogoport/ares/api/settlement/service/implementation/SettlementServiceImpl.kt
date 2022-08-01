@@ -883,6 +883,9 @@ open class SettlementServiceImpl : SettlementService {
         return request.stackDetails.map { r -> settledList.filter { it.id == r.id }[0] }
     }
 
+    /**
+     * Settle documents: source to destination.
+     */
     private suspend fun settleDocuments(
         request: CheckRequest,
         source: MutableList<CheckDocument>,
@@ -1361,6 +1364,11 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
+    /**
+     * Run business Validations on source and destination document list.
+     * @param: source
+     * @param: dest
+     */
     private fun businessValidation(
         source: MutableList<CheckDocument>,
         dest: MutableList<CheckDocument>
