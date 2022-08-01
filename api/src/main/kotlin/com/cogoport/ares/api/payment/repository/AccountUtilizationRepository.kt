@@ -310,7 +310,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            id, 
+            au.id, 
             document_no, 
             document_value, 
             organization_id,
@@ -318,6 +318,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             acc_type as account_type,
             transaction_date as document_date,
             due_date, 
+            document_status as invoice_status,
             amount_curr as document_amount, 
             amount_loc as document_led_amount, 
             taxable_amount, 
@@ -328,14 +329,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             amount_curr - pay_curr as balance_amount,
             amount_curr - pay_curr as current_balance,
             null as status, 
-            currency, 
-            led_currency, 
+            au.currency, 
+            au.led_currency, 
             (amount_loc / amount_curr) as exchange_rate,
-            sign_flag
-                FROM account_utilizations 
+            au.sign_flag,
+            COALESCE(sum(s.amount),0) as settled_tds
+                FROM account_utilizations au
+                LEFT JOIN settlements s ON 
+                    s.destination_id = au.document_no 
+                    AND s.destination_type::varchar = au.acc_type::varchar
+                    AND s.source_type = 'CTDS'
                 WHERE amount_curr <> 0 
                     AND organization_id in (:orgId)
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL', 'PROFORMA')
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -348,6 +354,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                         END
                         )
                     AND (:query is null OR document_value ilike :query)
+                GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset
         """
@@ -373,7 +380,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET :offset
         ) 
         SELECT 
-            au.id,
+            ai.id,
             s.source_id,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
@@ -501,7 +508,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL','PROFORMA')
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)

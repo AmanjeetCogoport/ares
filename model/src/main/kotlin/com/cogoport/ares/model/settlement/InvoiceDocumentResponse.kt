@@ -1,12 +1,14 @@
-package com.cogoport.ares.api.settlement.entity
+package com.cogoport.ares.model.settlement
 
-import io.micronaut.data.annotation.MappedEntity
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 
-@MappedEntity
-data class InvoiceDocument(
+@JsonInclude
+@Introspected
+data class InvoiceDocumentResponse(
     var id: Long,
     var documentNo: Long,
     var organizationId: UUID,

@@ -23,7 +23,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
@@ -317,7 +317,7 @@ class CpSettlementServiceImpl : CpSettlementService {
      */
     private suspend fun getInvoiceDocumentList(
         request: SettlementInvoiceRequest
-    ): ResponseList<Document> {
+    ): ResponseList<InvoiceDocumentResponse> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         var query: String? = null
         if (request.query != null) {
@@ -336,7 +336,10 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
-
+        documentModel.forEach {
+            it.tds -= it.settledTds
+            it.balanceAmount -= it.tds
+        }
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -354,10 +357,6 @@ class CpSettlementServiceImpl : CpSettlementService {
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType)
             )
-            doc.settledAllocation = BigDecimal.ZERO
-            doc.settledTds = BigDecimal.ZERO
-            doc.allocationAmount = doc.balanceAmount
-            doc.balanceAfterAllocation = BigDecimal.ZERO
         }
         return ResponseList(
             list = documentModel,
