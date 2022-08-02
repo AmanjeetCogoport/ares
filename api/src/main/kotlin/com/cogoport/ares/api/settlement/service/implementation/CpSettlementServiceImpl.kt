@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -32,10 +33,12 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -289,7 +292,7 @@ class CpSettlementServiceImpl : CpSettlementService {
      * @return ResponseList
      */
     private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse> {
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        validateInvoiceRequest(request)
         val response = getInvoiceDocumentList(request)
         val invoiceList = documentConverter.convertToSettlementInvoice(response.list)
 
@@ -308,6 +311,13 @@ class CpSettlementServiceImpl : CpSettlementService {
             totalRecords = response.totalRecords,
             pageNo = request.page
         )
+    }
+
+    private fun validateInvoiceRequest(request: SettlementInvoiceRequest) {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.status == null) throw AresException(AresError.ERR_1003, "status")
+        if (request.accType == null) throw AresException(AresError.ERR_1003, "accType")
+        if (request.accType !in listOf(AccountType.SINV, AccountType.PINV)) throw AresException(AresError.ERR_1202, "")
     }
 
     /**
@@ -336,9 +346,22 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
-        documentModel.forEach {
-            it.tds -= it.settledTds
-            it.balanceAmount -= it.tds
+        val tdsStyles = fetchTdsStyles(request.orgId)
+        documentModel.forEach { doc ->
+            doc.tdsPercentage = getTdsRate(
+                tdsProfile = tdsStyles,
+                orgId = doc.organizationId
+            )
+
+            doc.tds = doc.taxableAmount.multiply(
+                doc.tdsPercentage!!.divide(100.toBigDecimal())
+            ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.settledTds)
+
+            doc.afterTdsAmount =
+                doc.documentAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.tds!!)
+
+            doc.balanceAmount =
+                doc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.tds!!)
         }
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
@@ -351,11 +374,10 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         for (doc in documentModel) {
-            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount,
+                afterTdsAmount = doc.afterTdsAmount!!,
                 balanceAmount = doc.balanceAmount,
-                docType = SettlementType.valueOf(doc.accountType)
+                docType = SettlementType.valueOf(doc.accountType.dbValue)
             )
         }
         return ResponseList(
@@ -364,5 +386,30 @@ class CpSettlementServiceImpl : CpSettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private suspend fun fetchTdsStyles(orgIds: List<UUID>): MutableList<TdsStylesResponse> {
+        val tdsStyles = mutableListOf<TdsStylesResponse>()
+        for (orgId in orgIds) {
+            try {
+                tdsStyles.add(cogoClient.getOrgTdsStyles(orgId.toString()).data)
+            } catch (e: Exception) {
+                logger().error("Tds Style Not Found for organization id: {}", orgId)
+                continue
+            }
+        }
+        return tdsStyles
+    }
+
+    private fun getTdsRate(
+        tdsProfile: List<TdsStylesResponse>,
+        orgId: UUID
+    ): BigDecimal {
+        val tdsStyle = tdsProfile.find { it.id == orgId }
+        return if (tdsStyle?.tdsDeductionType == "no_deduction") {
+            AresConstants.NO_DEDUCTION_RATE.toBigDecimal()
+        } else {
+            tdsStyle?.tdsDeductionRate ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+        }
     }
 }

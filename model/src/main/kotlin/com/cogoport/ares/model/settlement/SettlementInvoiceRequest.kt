@@ -13,7 +13,7 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementInvoiceRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: List<UUID> = emptyList(),
-    @QueryValue(AresModelConstants.STATUS) val status: DocStatus,
+    @QueryValue(AresModelConstants.STATUS) val status: DocStatus? = null,
     @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,
