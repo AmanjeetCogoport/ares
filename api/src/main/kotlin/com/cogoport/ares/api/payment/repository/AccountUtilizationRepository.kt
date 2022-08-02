@@ -312,32 +312,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            id, 
+            au.id, 
             document_no, 
             document_value, 
-            organization_id,
-            acc_type as document_type,
             acc_type as account_type,
+            organization_id,
             transaction_date as document_date,
             due_date, 
-            amount_curr as document_amount, 
-            amount_loc as document_led_amount, 
-            taxable_amount, 
-            (taxable_amount * 0.02) as tds,
-            2 as tds_percentage,
-            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
-            pay_curr as settled_amount, 
-            amount_curr - pay_curr as balance_amount,
-            amount_curr - pay_curr as current_balance,
-            null as status, 
-            currency, 
-            led_currency, 
-            (amount_loc / amount_curr) as exchange_rate,
-            sign_flag
-                FROM account_utilizations 
+            document_status as invoice_status,
+            COALESCE(amount_curr,0) as document_amount, 
+            COALESCE(taxable_amount,0) as taxable_amount, 
+            COALESCE(pay_curr,0) as settled_amount, 
+            COALESCE(amount_curr - pay_curr,0) as balance_amount,
+            au.currency, 
+            COALESCE(sum(s.amount),0) as settled_tds
+                FROM account_utilizations au
+                LEFT JOIN settlements s ON 
+                    s.destination_id = au.document_no 
+                    AND s.destination_type::varchar = au.acc_type::varchar
+                    AND s.source_type = 'CTDS'
                 WHERE amount_curr <> 0 
                     AND organization_id in (:orgId)
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL', 'PROFORMA')
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -350,6 +346,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                         END
                         )
                     AND (:query is null OR document_value ilike :query)
+                GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset
         """
@@ -503,7 +500,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL','PROFORMA')
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
