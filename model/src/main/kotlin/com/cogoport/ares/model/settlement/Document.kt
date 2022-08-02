@@ -9,7 +9,7 @@ import java.util.UUID
 data class Document(
 
     var id: Long,
-    var documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     var organizationId: UUID,
     var accountType: String,
