@@ -6,13 +6,13 @@ import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.settlement.CheckDocument
-import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse

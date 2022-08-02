@@ -32,12 +32,12 @@ import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.CheckDocument
-import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
