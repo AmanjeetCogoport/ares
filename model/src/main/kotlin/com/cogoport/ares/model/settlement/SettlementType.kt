@@ -17,7 +17,7 @@ enum class SettlementType(val dbValue: String) {
     CTDS("CTDS");
 
     open operator fun contains(value: String?): Boolean {
-        for (c in AccountType.values()) {
+        for (c in SettlementType.values()) {
             if (c.equals(value)) {
                 return true
             }
