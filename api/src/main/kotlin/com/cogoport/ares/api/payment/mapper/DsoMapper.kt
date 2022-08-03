@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.mapper
 
 import com.cogoport.ares.api.payment.entity.Dso
-import com.cogoport.ares.model.payment.DsoResponse
+import com.cogoport.ares.model.payment.response.DsoResponse
 import org.mapstruct.Mapper
 
 @Mapper
