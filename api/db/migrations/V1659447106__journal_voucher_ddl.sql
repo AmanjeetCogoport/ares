@@ -1,6 +1,19 @@
-CREATE TYPE public."jv_category" AS ENUM ( 'EXCH', 'NOSTRO', 'WOFF', 'ROFF', 'OUTST' );
+CREATE TYPE public."jv_category" AS ENUM (
+ 'EXCH',
+ 'NOSTRO',
+ 'WOFF',
+ 'ROFF',
+ 'OUTST');
 
-CREATE CAST (varchar AS jv_category) WITH INOUT AS IMPLICIT;
+CREATE TYPE public."jv_status" AS ENUM (
+	'PENDING',
+	'APPROVED',
+	'REJECTED',
+	'DELETED');
+
+
+CREATE CAST (varchar AS JV_CATEGORY) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar AS JV_STATUS WITH INOUT AS IMPLICIT;
 
 create table public.journal_vouchers (
     id bigserial constraint settlement_PK primary key,
