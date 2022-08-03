@@ -19,11 +19,11 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
+import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
@@ -190,6 +190,8 @@ open class KnockoffServiceImpl : KnockoffService {
             category = knockOffRecord.category,
             sageOrganizationId = null,
             organizationId = knockOffRecord.organizationId!!,
+            taggedOrganizationId = knockOffRecord.taggedOrganizationId,
+            tradePartyMappingId = knockOffRecord.tradePartyMappingId,
             organizationName = knockOffRecord.organizationName,
             accCode = AresModelConstants.AP_ACCOUNT_CODE,
             accType = knockOffRecord.accType,
