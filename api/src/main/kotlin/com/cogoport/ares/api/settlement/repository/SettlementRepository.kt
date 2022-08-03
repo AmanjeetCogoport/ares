@@ -67,32 +67,46 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             au.id,
             s.source_id as payment_document_no,
             s1.source_id as tds_document_no,
-            s1.source_type::varchar as payment_source_type,
             s.destination_id,
             au.document_value,
             s.destination_type,
             au.organization_id,
 			au.acc_type::varchar,
-            au.amount_curr - au.pay_curr as current_balance,
+            COALESCE(au.amount_curr - au.pay_curr,0) as current_balance,
             au.currency as currency,
             s.currency as payment_currency,
             s1.currency as tds_currency,
-            au.amount_curr as document_amount,
-            s.amount as settled_amount,
+            COALESCE(au.amount_curr,0) as document_amount,
+            COALESCE(s.amount,0) as settled_amount,
             s.led_currency,
-            s.led_amount,
+            COALESCE(s.led_amount,0) as led_amount,
             au.sign_flag,
-            au.taxable_amount,
-            CASE WHEN 
-                s1.source_id = :sourceId
-            THEN 
-                coalesce(s1.amount, 0) 
-            ELSE 0 END as tds,
+            COALESCE(au.taxable_amount,0) as taxable_amount,
+            SUM(
+                CASE WHEN 
+                    s1.source_id = :sourceId AND s1.source_type in ('CTDS','VTDS')
+                THEN 
+                    COALESCE(s1.amount, 0) 
+                ELSE 0 END
+            ) as tds,
+            SUM(
+                CASE WHEN
+                    s1.source_id = :sourceId AND s1.source_type = 'NOSTRO'
+                THEN
+                    COALESCE(s1.amount, 0)
+                ELSE 0 END
+            ) as nostro_amount,
             au.transaction_date,
             au.amount_loc/au.amount_curr as exchange_rate,
             s.settlement_date,
             '' as status,
-            coalesce(s1.amount, 0) as settled_tds
+            SUM(
+                CASE WHEN 
+                    s1.source_id = :sourceId AND s1.source_type in ('CTDS','VTDS')
+                THEN
+                    COALESCE(s1.amount, 0)
+                ELSE 0 END
+            ) as settled_tds
             FROM settlements s
                 JOIN account_utilizations au ON
                     s.destination_id = au.document_no
@@ -100,10 +114,13 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 LEFT JOIN settlements s1 ON 
                     s1.destination_id = au.document_no 
                     AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
-                    AND s1.source_type IN ('CTDS','VTDS')
+                    AND s1.source_type IN ('CTDS','VTDS','NOSTRO')
                 WHERE au.amount_curr <> 0 
                     AND s.source_id = :sourceId 
                     AND s.source_type = :sourceType::SETTLEMENT_TYPE
+                GROUP BY 
+                    au.id, s.source_id, s1.source_id, s.destination_id, s.destination_type, s.currency, s1.currency,
+                    s.amount, s.led_currency, s.led_amount, s.settlement_date
                 OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
