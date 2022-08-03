@@ -119,7 +119,7 @@ class OpenSearchClient {
         val response =
             Client.search(
                 { s ->
-                    s.index("index_ares_on_account_payment")
+                    s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX)
                         .query { q ->
                             q.bool { b ->
                                 b.must { t ->
