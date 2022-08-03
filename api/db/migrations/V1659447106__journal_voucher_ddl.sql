@@ -13,10 +13,10 @@ CREATE TYPE public."jv_status" AS ENUM (
 
 
 CREATE CAST (varchar AS JV_CATEGORY) WITH INOUT AS IMPLICIT;
-CREATE CAST (varchar AS JV_STATUS WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar AS JV_STATUS) WITH INOUT AS IMPLICIT;
 
 create table public.journal_vouchers (
-    id bigserial constraint settlement_PK primary key,
+    id bigserial constraint journal_PK primary key,
     entity_id uuid default NULL,
     entity_code int2 default NULL,
     jv_num varchar(25) not null,
