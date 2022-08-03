@@ -40,6 +40,8 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.CogoOrganizationTradePartyDetailRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -104,7 +106,8 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.signFlag = SignSuffix.REC.sign
 
         setPaymentAmounts(receivableRequest)
-        setOrganizations(receivableRequest)
+//        setOrganizations(receivableRequest)
+        setTradePartyOrganizations(receivableRequest)
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
@@ -203,7 +206,8 @@ open class OnAccountServiceImpl : OnAccountService {
             val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
             val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
 
-            setOrganizations(receivableRequest)
+//            setOrganizations(receivableRequest)
+            setTradePartyOrganizations(receivableRequest)
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
@@ -356,6 +360,24 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
         receivableRequest.organizationId = clientResponse.organizationId
+    }
+
+    private suspend fun setTradePartyOrganizations(receivableRequest: Payment) {
+        val clientResponse: TradePartyOrganizationResponse?
+
+        val reqBody = CogoOrganizationTradePartyDetailRequest(
+                receivableRequest.organizationId?.toString()
+        )
+
+        clientResponse = authClient.getTradePartyDetailInfo(reqBody)
+
+        if (clientResponse.organizationTradePartySerialId == null) {
+            throw AresException(AresError.ERR_1207, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
+        receivableRequest.organizationName = clientResponse.organizationTradePartyName
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
     override suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?> {
