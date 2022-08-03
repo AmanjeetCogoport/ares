@@ -825,17 +825,22 @@ open class SettlementServiceImpl : SettlementService {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
                 ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
-        accUtil.payCurr -= amount
-        accUtil.payLoc -=
-            ledAmount
-                ?: getExchangeValue(
-                    amount,
-                    Utilities.binaryOperation(
-                        accUtil.amountLoc,
-                        accUtil.amountCurr,
-                        Operator.DIVIDE
+        if ((accUtil.payCurr - amount).compareTo(BigDecimal.ZERO) == 0) {
+            accUtil.payCurr = BigDecimal.ZERO
+            accUtil.payLoc = BigDecimal.ZERO
+        } else {
+            accUtil.payCurr -= amount
+            accUtil.payLoc -=
+                ledAmount
+                    ?: getExchangeValue(
+                        amount,
+                        Utilities.binaryOperation(
+                            accUtil.amountLoc,
+                            accUtil.amountCurr,
+                            Operator.DIVIDE
+                        )
                     )
-                )
+        }
         val accUtilObj = accountUtilizationRepository.update(accUtil)
         try {
             updateExternalSystemInvoice(accUtilObj)
