@@ -14,7 +14,9 @@ enum class SettlementType(val dbValue: String) {
     SECH("SECH"),
     PECH("PECH"),
     VTDS("VTDS"),
-    CTDS("CTDS");
+    CTDS("CTDS"),
+    NOSTRO("NOSTRO")
+    ;
 
     open operator fun contains(value: String?): Boolean {
         for (c in AccountType.values()) {

@@ -750,8 +750,8 @@ open class SettlementServiceImpl : SettlementService {
         val documentNo = hashId.decode(documentNo)[0]
         val sourceType =
             if (settlementType == SettlementType.REC)
-                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH)
-            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH)
+                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr =
@@ -825,17 +825,22 @@ open class SettlementServiceImpl : SettlementService {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
                 ?: throw AresException(AresError.ERR_1503, "${accType}_$docId")
-        accUtil.payCurr -= amount
-        accUtil.payLoc -=
-            ledAmount
-                ?: getExchangeValue(
-                    amount,
-                    Utilities.binaryOperation(
-                        accUtil.amountLoc,
-                        accUtil.amountCurr,
-                        Operator.DIVIDE
+        if ((accUtil.payCurr - amount).compareTo(BigDecimal.ZERO) == 0) {
+            accUtil.payCurr = BigDecimal.ZERO
+            accUtil.payLoc = BigDecimal.ZERO
+        } else {
+            accUtil.payCurr -= amount
+            accUtil.payLoc -=
+                ledAmount
+                    ?: getExchangeValue(
+                        amount,
+                        Utilities.binaryOperation(
+                            accUtil.amountLoc,
+                            accUtil.amountCurr,
+                            Operator.DIVIDE
+                        )
                     )
-                )
+        }
         val accUtilObj = accountUtilizationRepository.update(accUtil)
         try {
             updateExternalSystemInvoice(accUtilObj)
@@ -1050,25 +1055,40 @@ open class SettlementServiceImpl : SettlementService {
         payment: CheckDocument,
         invoice: CheckDocument
     ) {
+        /** Invoice Amount in payment currency */
         val paidAmount = getExchangeValue(toSettleAmount, exchangeRate, true)
+        /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
+        /** Tds Amount in Invoice currency */
         val invoiceTds = invoice.tds!! - invoice.settledTds
+        /** Tds Amount in Payment currency */
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
+        /** Payment Tds ledger Amount */
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
+        /** Nostro Amount in Invoice currency */
+        val invoiceNostro = invoice.nostroAmount!! - invoice.settledNostro!!
+        /** Nostro Amount in payment currency */
+        val paymentNostro = getExchangeValue(invoiceNostro, exchangeRate, true)
+        /** Payment Nostro Ledger Amount */
+        val paymentNostroLed = getExchangeValue(paymentNostro, ledgerRate) //
+
+        // Create Documents Settlement Entry
         createSettlement(
             payment.documentNo.toLong(),
             payment.accountType,
             invoice.documentNo.toLong(),
             invoice.accountType,
             payment.currency,
-            (paidAmount + paymentTds),
+            (paidAmount + paymentTds + paymentNostro),
             payment.ledCurrency,
-            (paidLedAmount + paymentTdsLed),
+            (paidLedAmount + paymentTdsLed + paymentNostroLed),
             1,
             request.settlementDate,
             request.createdBy,
         )
-        if (paymentTds.compareTo(0.toBigDecimal()) != 0) {
+
+        // Create TDS Entry
+        if (paymentTds.compareTo(BigDecimal.ZERO) != 0) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
@@ -1083,6 +1103,26 @@ open class SettlementServiceImpl : SettlementService {
             )
             invoice.settledTds += invoiceTds
         }
+
+        // Create Nostro Entry
+        if (paymentNostro.compareTo(BigDecimal.ZERO) != 0) {
+            createSettlement(
+                sourceId = payment.documentNo.toLong(),
+                sourceType = SettlementType.NOSTRO,
+                destId = invoice.documentNo.toLong(),
+                destType = invoice.accountType,
+                currency = payment.currency,
+                amount = paymentNostro,
+                ledCurrency = payment.ledCurrency,
+                ledAmount = paymentNostroLed,
+                signFlag = -1,
+                transactionDate = request.settlementDate,
+                createdBy = request.createdBy
+            )
+            invoice.settledNostro = invoice.settledNostro!! + invoiceNostro
+        }
+
+        // Create Exchange Loss Gain Entry
         if (payment.ledCurrency != invoice.currency) {
             val excLedAmount =
                 getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
@@ -1111,13 +1151,15 @@ open class SettlementServiceImpl : SettlementService {
                 request.createdBy
             )
         }
+
+        // Update Documents in Account Utilization
         val paymentUtilized =
             paidAmount +
                 if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
                     payment.tds!!
                 else 0.toBigDecimal()
-        updateAccountUtilization(payment, paymentUtilized)
-        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds))
+        updateAccountUtilization(payment, paymentUtilized) // Update Payment
+        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro)) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1368,6 +1410,8 @@ open class SettlementServiceImpl : SettlementService {
             it.documentNo = hashId.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
             it.settledTds = BigDecimal.ZERO
+            it.settledNostro = BigDecimal.ZERO
+            if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
         }
     }
 
