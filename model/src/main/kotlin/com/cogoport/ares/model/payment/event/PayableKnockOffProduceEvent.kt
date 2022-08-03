@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.payment.event
 
-import com.cogoport.ares.model.payment.AccountPayableFileResponse
+import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
