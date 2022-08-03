@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
+import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.model.settlement.JournalVoucher
 import com.cogoport.ares.model.settlement.request.JvListRequest
@@ -11,7 +12,7 @@ class JournalVoucherServiceImpl: JournalVoucherService {
 
     @Inject
 
-    override suspend fun getJournalVouchers(jvListRequest: JvListRequest) {
+    override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucher> {
         TODO("Not yet implemented")
     }
 

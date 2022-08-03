@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.settlement.enums.JVCategory
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -18,6 +19,8 @@ data class JournalVoucher(
     val validityDate: Date?,
     val amount: BigDecimal?,
     val currency: String?,
+    val status: JVStatus,
+    val exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
     val tradePartnerName: String?,
     var createdBy: UUID?,
