@@ -31,6 +31,7 @@ import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.BulkPaymentResponse
 import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.CogoOrganizationRequest
+import com.cogoport.ares.model.payment.CogoOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
@@ -41,7 +42,6 @@ import com.cogoport.ares.model.payment.PaymentResponse
 import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
-import com.cogoport.ares.model.payment.CogoOrganizationTradePartyDetailRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -366,7 +366,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val clientResponse: TradePartyOrganizationResponse?
 
         val reqBody = CogoOrganizationTradePartyDetailRequest(
-                receivableRequest.organizationId?.toString()
+            receivableRequest.organizationId?.toString()
         )
 
         clientResponse = authClient.getTradePartyDetailInfo(reqBody)

@@ -8,15 +8,15 @@ import java.util.UUID
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class TradePartyOrganizationResponse(
 
-        @JsonProperty("organization_trade_party_detail_id")
-        var organizationTradePartyDetailId: UUID?,
+    @JsonProperty("organization_trade_party_detail_id")
+    var organizationTradePartyDetailId: UUID?,
 
-        @JsonProperty("organization_trade_party_name")
-        var organizationTradePartyName: String?,
+    @JsonProperty("organization_trade_party_name")
+    var organizationTradePartyName: String?,
 
-        @JsonProperty("organization_trade_party_serial_id")
-        var organizationTradePartySerialId: Long?,
+    @JsonProperty("organization_trade_party_serial_id")
+    var organizationTradePartySerialId: Long?,
 
-        @JsonProperty("organization_trade_party_zone")
-        var organizationTradePartyZone: String?
+    @JsonProperty("organization_trade_party_zone")
+    var organizationTradePartyZone: String?
 )
