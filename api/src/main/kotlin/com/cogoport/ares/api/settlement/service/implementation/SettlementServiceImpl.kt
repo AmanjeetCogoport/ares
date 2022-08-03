@@ -236,7 +236,14 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun getSidsForInvoices(settlements: MutableList<SettledInvoice>): List<SidResponse>? {
         val invoiceIds = settlements.map { it.destinationId.toString() }
-        return if (invoiceIds.isNotEmpty()) plutusClient.getSidsForInvoiceIds(invoiceIds) else null
+        return if (invoiceIds.isNotEmpty()) {
+            try {
+                plutusClient.getSidsForInvoiceIds(invoiceIds)
+            } catch (e: Exception) {
+                logger().error(e.stackTraceToString())
+                null
+            }
+        } else null
     }
 
     private suspend fun getSettledInvoices(
@@ -275,31 +282,20 @@ open class SettlementServiceImpl : SettlementService {
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     // Calculate Settled Amount in Invoice Currency
-                    settlement.settledAmount =
-                        convertPaymentCurrToInvoiceCurr(
-                            toCurrency = settlement.currency!!,
-                            fromCurrency = settlement.paymentCurrency,
-                            fromLedCurrency = settlement.ledCurrency,
-                            amount = settlement.settledAmount!!,
-                            exchangeRate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.exchangeRate,
-                            exchangeDate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.transactionDate!!
-                        )
-
-                    settlement.tds =
-                        convertPaymentCurrToInvoiceCurr(
-                            toCurrency = settlement.currency,
-                            fromCurrency = settlement.paymentCurrency,
-                            fromLedCurrency = settlement.ledCurrency,
-                            amount = settlement.tds!!,
-                            exchangeRate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.exchangeRate,
-                            exchangeDate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.transactionDate!!
-                        )
+                    settlement.settledAmount = getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
+                    // Calculate Tds in Invoice Currency
+                    settlement.tds = getAmountInInvoiceCurrency(settlement, payments, settlement.tds)
+                    // Calculate Nostro in Invoice Currency
+                    settlement.nostroAmount = getAmountInInvoiceCurrency(settlement, payments, settlement.nostroAmount)
 
                     // Convert To Model
                     val settledDoc = settledInvoiceConverter.convertToModel(settlement)
+                    settledDoc.settledAmount -= (settledDoc.tds + settledDoc.nostroAmount)
                     settledDoc.balanceAmount = settledDoc.currentBalance
                     settledDoc.allocationAmount = settledDoc.settledAmount
-                    settledDoc.afterTdsAmount -= settledDoc.settledTds!!
+                    settledDoc.afterTdsAmount -= settledDoc.settledTds
+                    settledDoc.currentBalance += (settledDoc.tds + settledDoc.nostroAmount)
+                    settledDoc.settledTds -= settledDoc.tds
 
                     // Assign Sid
                     settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo.toLong() }?.jobNumber
@@ -308,7 +304,7 @@ open class SettlementServiceImpl : SettlementService {
                         settledDoc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
                     ) {
                         BigDecimal.ZERO -> settledDoc.status = DocStatus.PAID.value
-                        settledDoc.documentAmount?.setScale(
+                        settledDoc.documentAmount.setScale(
                             AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN
                         ) -> settledDoc.status = DocStatus.UNPAID.value
                         else -> settledDoc.status = DocStatus.PARTIAL_PAID.value
@@ -320,6 +316,19 @@ open class SettlementServiceImpl : SettlementService {
         }
         return settledDocuments
     }
+
+    private suspend fun getAmountInInvoiceCurrency(
+        settlement: SettledInvoice,
+        payments: List<PaymentData>,
+        amountPaymentCurr: BigDecimal
+    ) = convertPaymentCurrToInvoiceCurr(
+        toCurrency = settlement.currency!!,
+        fromCurrency = settlement.paymentCurrency,
+        fromLedCurrency = settlement.ledCurrency,
+        amount = amountPaymentCurr,
+        exchangeRate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.exchangeRate,
+        exchangeDate = payments.find { it.documentNo == settlement.paymentDocumentNo }?.transactionDate!!
+    )
 
     /**
      * Get Payment date, exchange rate for the settled TDS.
@@ -341,6 +350,10 @@ open class SettlementServiceImpl : SettlementService {
             paymentRepository.findByPaymentNumIn(paymentIds)
         } else {
             accountUtilizationRepository.getPaymentDetails(paymentIds)
+        }
+        payments.forEach {
+            if (it.documentNo == null) throw AresException(AresError.ERR_1503, "")
+            if (it.transactionDate == null) throw AresException(AresError.ERR_1005, "transactionDate")
         }
         return payments
     }
@@ -458,7 +471,6 @@ open class SettlementServiceImpl : SettlementService {
             )
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
-            doc.currentBalance -= doc.tds
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
                 afterTdsAmount = doc.afterTdsAmount,
@@ -728,11 +740,15 @@ open class SettlementServiceImpl : SettlementService {
                         Operator.MULTIPLY
                     )
                 )
+            sourceDoc.updatedBy = request.updatedBy
+            sourceDoc.updatedAt = Timestamp.from(Instant.now())
             settlementRepository.update(sourceDoc)
         }
         tdsDoc.amount = currNewTds
         tdsDoc.ledAmount =
             Utilities.binaryOperation(currNewTds, sourceLedgerRate, Operator.MULTIPLY)
+        tdsDoc.updatedBy = request.updatedBy
+        tdsDoc.updatedAt = Timestamp.from(Instant.now())
         settlementRepository.update(tdsDoc)
         return hashId.encode(tdsDoc.destinationId)
     }
@@ -841,6 +857,7 @@ open class SettlementServiceImpl : SettlementService {
                         )
                     )
         }
+        accUtil.updatedAt = Timestamp.from(Instant.now())
         val accUtilObj = accountUtilizationRepository.update(accUtil)
         try {
             updateExternalSystemInvoice(accUtilObj)
@@ -1213,6 +1230,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
+        paymentUtilization.updatedAt = Timestamp.from(Instant.now())
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         try {
             updateExternalSystemInvoice(accountUtilization)
@@ -1412,6 +1430,7 @@ open class SettlementServiceImpl : SettlementService {
             it.settledTds = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
             if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
+            if (it.tds == null) it.tds = BigDecimal.ZERO
         }
     }
 
@@ -1466,10 +1485,14 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun adjustBalanceAmount(type: String, documents: List<CheckDocument>): List<CheckDocument> {
         if (type == "add") {
-            documents.forEach { it.balanceAmount += it.settledAmount ?: BigDecimal.ZERO }
+            documents.forEach {
+                it.balanceAmount += (it.settledAmount) ?: BigDecimal.ZERO
+            }
         }
         if (type == "subtract") {
-            documents.forEach { it.balanceAmount -= it.settledAmount ?: BigDecimal.ZERO }
+            documents.forEach {
+                it.balanceAmount -= (it.settledAmount) ?: BigDecimal.ZERO
+            }
         }
         return documents
     }
