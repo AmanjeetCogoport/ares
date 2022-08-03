@@ -34,6 +34,7 @@ data class Document(
     var ledCurrency: String,
     var settledTds: BigDecimal?,
     var exchangeRate: BigDecimal,
-    var signFlag: Short
+    var signFlag: Short,
+    var nostroAmount: BigDecimal
 
 )
