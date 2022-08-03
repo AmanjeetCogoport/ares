@@ -248,8 +248,10 @@ open class OnAccountServiceImpl : OnAccountService {
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
 
         /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel,
-            true)
+        Client.addDocument(
+            AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel,
+            true
+        )
 
         try {
             /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
