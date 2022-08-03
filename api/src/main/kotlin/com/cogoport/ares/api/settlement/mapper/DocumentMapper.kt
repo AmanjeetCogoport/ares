@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.mapper
 
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
@@ -33,4 +34,6 @@ interface DocumentMapper {
     @Mapping(source = "documentLedBalance", target = "ledgerBalance")
     @Mapping(target = "tds", expression = "java(java.math.BigDecimal.ZERO)")
     fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
+
+    fun convertToIncidentModel(document: CheckDocument): com.cogoport.hades.model.incident.request.CheckDocument
 }

@@ -33,6 +33,7 @@ import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
@@ -103,6 +104,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var hashId: Hashids
+
+    @Inject
+    lateinit var hadesClient: HadesClient
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -652,6 +656,38 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(documentNo: String, settlementType: SettlementType) =
         deleteSettlement(documentNo, settlementType)
+
+    override suspend fun sendForApproval(request: CreateIncidentRequest): String {
+        val docList = request.stackDetails!!.map {
+            documentConverter.convertToIncidentModel(it)
+        }
+        val incidentData =
+            IncidentData(
+                organization = Organization(
+                    id = request.orgId,
+                    businessName = request.orgName
+                ),
+                settlementRequest = com.cogoport.hades.model.incident.Settlement(
+                    entityCode = request.entityCode!!,
+                    list = docList
+                ),
+                tdsRequest = null,
+                bankRequest = null
+            )
+        val res = hadesClient.createIncident(
+            com.cogoport.hades.model.incident.request.CreateIncidentRequest(
+                id = null,
+                type = IncidentType.SETTLEMENT_APPROVAL,
+                description = "Settlement Approval For Cross Currency Settle",
+                data = incidentData,
+                status = IncidentStatus.REQUESTED,
+                closedOn = null,
+                remark = null,
+                createdBy = request.createdBy!!
+            )
+        )
+        return res.data.toString()
+    }
 
     override suspend fun getOrgSummary(
         orgId: UUID,
