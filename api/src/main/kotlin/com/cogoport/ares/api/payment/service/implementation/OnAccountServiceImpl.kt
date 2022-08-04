@@ -25,10 +25,13 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.TradePartyDetailRequest
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
@@ -104,7 +107,9 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.signFlag = SignSuffix.REC.sign
 
         setPaymentAmounts(receivableRequest)
-        setOrganizations(receivableRequest)
+//        setOrganizations(receivableRequest)
+//        setTradePartyOrganizations(receivableRequest)
+        setTradePartyInfo(receivableRequest)
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
@@ -146,6 +151,29 @@ open class OnAccountServiceImpl : OnAccountService {
             logger().error(ex.stackTraceToString())
         }
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
+    }
+
+    /**
+     *
+     */
+    private suspend fun setTradePartyOrganizations(receivableRequest: Payment) {
+        val clientResponse: TradePartyOrganizationResponse?
+
+        val reqBody = TradePartyDetailRequest(
+            receivableRequest.organizationId?.toString(),
+            receivableRequest.orgSerialId,
+            AresConstants.PAYING_PARTY
+        )
+
+        clientResponse = authClient.getTradePartyDetailInfo(reqBody)
+
+        if (clientResponse.organizationTradePartySerialId == null) {
+            throw AresException(AresError.ERR_1207, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
+        receivableRequest.organizationName = clientResponse.organizationTradePartyName
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
     /**
@@ -203,7 +231,9 @@ open class OnAccountServiceImpl : OnAccountService {
             val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
             val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
 
-            setOrganizations(receivableRequest)
+//            setOrganizations(receivableRequest)
+//            setTradePartyOrganizations(receivableRequest)
+            setTradePartyInfo(receivableRequest)
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
@@ -388,5 +418,23 @@ open class OnAccountServiceImpl : OnAccountService {
         if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         val response = accountUtilizationRepository.getOrgStats(orgId) ?: throw AresException(AresError.ERR_1005, "")
         return orgStatsConverter.convertToModel(response)
+    }
+
+    private suspend fun setTradePartyInfo(receivableRequest: Payment) {
+        val clientResponse: TradePartyOrganizationResponse?
+
+        val reqBody = MappingIdDetailRequest(
+            receivableRequest?.organizationId.toString()
+        )
+
+        clientResponse = authClient.getTradePartyInfo(reqBody)
+
+        if (clientResponse.organizationTradePartySerialId == null) {
+            throw AresException(AresError.ERR_1207, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
+        receivableRequest.organizationName = clientResponse.organizationTradePartyName
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 }
