@@ -25,11 +25,11 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
@@ -161,8 +161,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val reqBody = TradePartyDetailRequest(
             receivableRequest.organizationId?.toString(),
-                receivableRequest.orgSerialId,
-                AresConstants.PAYING_PARTY
+            receivableRequest.orgSerialId,
+            AresConstants.PAYING_PARTY
         )
 
         clientResponse = authClient.getTradePartyDetailInfo(reqBody)
@@ -424,7 +424,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val clientResponse: TradePartyOrganizationResponse?
 
         val reqBody = MappingIdDetailRequest(
-                receivableRequest?.organizationId.toString()
+            receivableRequest?.organizationId.toString()
         )
 
         clientResponse = authClient.getTradePartyInfo(reqBody)
