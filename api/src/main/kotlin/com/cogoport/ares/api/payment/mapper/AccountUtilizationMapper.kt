@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.mapper
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.model.payment.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.mapstruct.ReportingPolicy

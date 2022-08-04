@@ -1,11 +1,11 @@
 package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.model.payment.AccountCollectionRequest
-import com.cogoport.ares.model.payment.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.LedgerSummaryRequest
-import com.cogoport.ares.model.payment.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue

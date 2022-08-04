@@ -2,9 +2,9 @@ package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
-import com.cogoport.ares.model.payment.CogoEntitiesRequest
-import com.cogoport.ares.model.payment.CogoOrganizationRequest
-import com.cogoport.ares.model.payment.PlatformOrganizationResponse
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
+import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header

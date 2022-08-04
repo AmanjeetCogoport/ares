@@ -8,13 +8,13 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.InvoiceListRequest
 import com.cogoport.ares.model.payment.ListInvoiceResponse
-import com.cogoport.ares.model.payment.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequest
+import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
