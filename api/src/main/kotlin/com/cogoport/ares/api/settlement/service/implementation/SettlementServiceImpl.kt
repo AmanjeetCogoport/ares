@@ -277,8 +277,8 @@ open class SettlementServiceImpl : SettlementService {
                 it.settledAmount = settledAmount
                 it.ledAmount = ledgerAmount
             }
-            val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency }
-            if (settledInvoice != null) settlements.add(settledInvoice)
+            val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency } ?: docList.value.first()
+            settlements.add(settledInvoice)
         }
         return settlements
     }
