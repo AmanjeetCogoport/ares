@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment
 
+import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude

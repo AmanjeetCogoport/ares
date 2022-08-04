@@ -22,8 +22,8 @@ import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
@@ -150,6 +150,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 orgSerialId = invoiceUtilization.orgSerialId,
                 sageOrganizationId = invoiceUtilization.sageOrganizationId,
                 organizationId = invoiceUtilization.organizationId,
+                taggedOrganizationId = invoiceUtilization.taggedOrganizationId,
+                tradePartyMappingId = invoiceUtilization.tradePartyMappingId,
                 organizationName = invoiceUtilization.organizationName,
                 accType = AccountType.REC,
                 accCode = invoiceUtilization.accCode,

@@ -23,25 +23,23 @@ import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.AccountCollectionRequest
-import com.cogoport.ares.model.payment.AccountCollectionResponse
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.CogoEntitiesRequest
-import com.cogoport.ares.model.payment.CogoOrganizationRequest
-import com.cogoport.ares.model.payment.CogoOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.LedgerSummaryRequest
-import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
-import com.cogoport.ares.model.payment.PaymentResponse
-import com.cogoport.ares.model.payment.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.response.AccountCollectionResponse
+import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.BulkPaymentResponse
+import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.response.PaymentResponse
+import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -106,8 +104,7 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.signFlag = SignSuffix.REC.sign
 
         setPaymentAmounts(receivableRequest)
-//        setOrganizations(receivableRequest)
-        setTradePartyOrganizations(receivableRequest)
+        setOrganizations(receivableRequest)
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
@@ -141,7 +138,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest, true)
 
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
@@ -206,8 +203,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
             val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
 
-//            setOrganizations(receivableRequest)
-            setTradePartyOrganizations(receivableRequest)
+            setOrganizations(receivableRequest)
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
@@ -252,7 +248,10 @@ open class OnAccountServiceImpl : OnAccountService {
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
 
         /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel)
+        Client.addDocument(
+            AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel,
+            true
+        )
 
         try {
             /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
@@ -360,24 +359,6 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.organizationName = clientResponse.organizationName
         receivableRequest.zone = clientResponse.zone?.uppercase()
         receivableRequest.organizationId = clientResponse.organizationId
-    }
-
-    private suspend fun setTradePartyOrganizations(receivableRequest: Payment) {
-        val clientResponse: TradePartyOrganizationResponse?
-
-        val reqBody = CogoOrganizationTradePartyDetailRequest(
-            receivableRequest.organizationId?.toString()
-        )
-
-        clientResponse = authClient.getTradePartyDetailInfo(reqBody)
-
-        if (clientResponse.organizationTradePartySerialId == null) {
-            throw AresException(AresError.ERR_1207, "")
-        }
-        receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
-        receivableRequest.organizationName = clientResponse.organizationTradePartyName
-        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
-        receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
     override suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?> {
