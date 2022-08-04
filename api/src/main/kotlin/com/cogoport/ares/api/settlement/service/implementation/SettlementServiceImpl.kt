@@ -250,24 +250,36 @@ open class SettlementServiceImpl : SettlementService {
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
         payments: List<PaymentData>
     ): MutableList<SettledInvoice> {
-        val settlements = settlementGrouped.map { docList ->
+        val settlements = mutableListOf<SettledInvoice>()
+        for (docList in settlementGrouped) {
             val settledTds = docList.value.sumOf { doc ->
                 if (!doc.tdsCurrency.isNullOrBlank()) {
+                    val rate = payments.find { it.documentNo == doc.tdsDocumentNo }?.exchangeRate
+                        ?: throw AresException(AresError.ERR_1503, "${doc.tdsDocumentNo}")
+                    val date = payments.find { it.documentNo == doc.tdsDocumentNo }?.transactionDate
+                        ?: throw AresException(AresError.ERR_1503, "${doc.tdsDocumentNo}")
                     convertPaymentCurrToInvoiceCurr(
                         toCurrency = doc.currency!!,
                         fromCurrency = doc.tdsCurrency,
                         fromLedCurrency = doc.ledCurrency,
                         amount = doc.settledTds,
-                        exchangeRate = payments.find { it.documentNo == doc.tdsDocumentNo }?.exchangeRate,
-                        exchangeDate = payments.find { it.documentNo == doc.tdsDocumentNo }?.transactionDate!!
+                        exchangeRate = rate,
+                        exchangeDate = date
                     )
                 } else {
                     BigDecimal.ZERO
                 }
             }
-            docList.value.map { it.settledTds = settledTds }
-            docList.value.first()
-        }.toMutableList()
+            val settledAmount = docList.value.sumOf { it.settledAmount }
+            val ledgerAmount = docList.value.sumOf { it.ledAmount }
+            docList.value.map {
+                it.settledTds = settledTds
+                it.settledAmount = settledAmount
+                it.ledAmount = ledgerAmount
+            }
+            val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency } ?: docList.value.first()
+            settlements.add(settledInvoice)
+        }
         return settlements
     }
 
@@ -282,11 +294,13 @@ open class SettlementServiceImpl : SettlementService {
             when (request.settlementType) {
                 SettlementType.REC, SettlementType.PCN -> {
                     // Calculate Settled Amount in Invoice Currency
-                    settlement.settledAmount = getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
+                    settlement.settledAmount =
+                        getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
                     // Calculate Tds in Invoice Currency
                     settlement.tds = getAmountInInvoiceCurrency(settlement, payments, settlement.tds)
                     // Calculate Nostro in Invoice Currency
-                    settlement.nostroAmount = getAmountInInvoiceCurrency(settlement, payments, settlement.nostroAmount)
+                    settlement.nostroAmount =
+                        getAmountInInvoiceCurrency(settlement, payments, settlement.nostroAmount)
 
                     // Convert To Model
                     val settledDoc = settledInvoiceConverter.convertToModel(settlement)
@@ -300,14 +314,13 @@ open class SettlementServiceImpl : SettlementService {
                     // Assign Sid
                     settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo.toLong() }?.jobNumber
                     // Assign Status
-                    when (
-                        settledDoc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN)
-                    ) {
-                        BigDecimal.ZERO -> settledDoc.status = DocStatus.PAID.value
-                        settledDoc.documentAmount.setScale(
-                            AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN
-                        ) -> settledDoc.status = DocStatus.UNPAID.value
-                        else -> settledDoc.status = DocStatus.PARTIAL_PAID.value
+                    val paid = (settledDoc.documentAmount - (settledDoc.settledAmount + settledDoc.tds + settledDoc.nostroAmount))
+                    if (paid.compareTo(BigDecimal.ZERO) == 0) {
+                        settledDoc.status = DocStatus.KNOCKED_OFF.value
+                    } else if (paid.compareTo(settledDoc.documentAmount) == 0) {
+                        settledDoc.status = DocStatus.UNPAID.value
+                    } else {
+                        settledDoc.status = DocStatus.PARTIAL_PAID.value
                     }
                     settledDocuments.add(settledDoc)
                 }
@@ -1143,30 +1156,37 @@ open class SettlementServiceImpl : SettlementService {
         if (payment.ledCurrency != invoice.currency) {
             val excLedAmount =
                 getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
-            val exType =
-                if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
-                    SettlementType.SECH
-                else SettlementType.PECH
-            val exSign =
-                excLedAmount.signum() *
-                    if (payment.accountType in listOf(SettlementType.SCN, SettlementType.REC, SettlementType.SINV)) {
-                        -1
-                    } else {
-                        1
-                    }
-            createSettlement(
-                payment.documentNo.toLong(),
-                exType,
-                invoice.documentNo.toLong(),
-                invoice.accountType,
-                null,
-                null,
-                invoice.ledCurrency,
-                excLedAmount.abs(),
-                exSign.toShort(),
-                request.settlementDate,
-                request.createdBy
-            )
+            if (excLedAmount.compareTo(BigDecimal.ZERO) != 0) {
+                val exType =
+                    if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
+                        SettlementType.SECH
+                    else SettlementType.PECH
+                val exSign =
+                    excLedAmount.signum() *
+                        if (payment.accountType in listOf(
+                                SettlementType.SCN,
+                                SettlementType.REC,
+                                SettlementType.SINV
+                            )
+                        ) {
+                            -1
+                        } else {
+                            1
+                        }
+                createSettlement(
+                    payment.documentNo.toLong(),
+                    exType,
+                    invoice.documentNo.toLong(),
+                    invoice.accountType,
+                    null,
+                    null,
+                    invoice.ledCurrency,
+                    excLedAmount.abs(),
+                    exSign.toShort(),
+                    request.settlementDate,
+                    request.createdBy
+                )
+            }
         }
 
         // Update Documents in Account Utilization

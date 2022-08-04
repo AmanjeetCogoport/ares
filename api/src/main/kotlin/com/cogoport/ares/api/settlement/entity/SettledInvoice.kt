@@ -23,14 +23,12 @@ data class SettledInvoice(
     val documentAmount: BigDecimal,
     var settledAmount: BigDecimal,
     val ledCurrency: String,
-    val ledAmount: BigDecimal,
+    var ledAmount: BigDecimal,
     val taxableAmount: BigDecimal,
     var tds: BigDecimal,
     val transactionDate: Date?,
     var signFlag: Short,
-    val settlementDate: Date,
     val exchangeRate: BigDecimal,
-    var status: String?,
     var settledTds: BigDecimal,
     var nostroAmount: BigDecimal
 )
