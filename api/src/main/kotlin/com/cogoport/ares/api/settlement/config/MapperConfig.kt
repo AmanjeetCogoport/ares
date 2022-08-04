@@ -1,11 +1,6 @@
 package com.cogoport.ares.api.settlement.config
 
-import com.cogoport.ares.api.settlement.mapper.DocumentMapper
-import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
-import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
-import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
-import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
-import com.cogoport.ares.api.settlement.mapper.SettlementMapper
+import com.cogoport.ares.api.settlement.mapper.*
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import org.mapstruct.factory.Mappers
@@ -40,5 +35,10 @@ class MapperConfig {
     @Bean
     fun tdsDocumentConverter(): InvoiceDocumentMapper {
         return Mappers.getMapper(InvoiceDocumentMapper::class.java)
+    }
+
+    @Bean
+    fun JournalVoucherMapper(): JournalVoucherMapper {
+        return Mappers.getMapper(JournalVoucherMapper::class.java)
     }
 }

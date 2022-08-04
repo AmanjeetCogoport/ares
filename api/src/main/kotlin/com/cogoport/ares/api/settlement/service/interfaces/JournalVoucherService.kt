@@ -9,5 +9,5 @@ interface JournalVoucherService {
 
     suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse>
 
-    suspend fun createJournalVouchers(journalVoucher: JournalVoucher)
+    suspend fun createJournalVouchers(journalVoucher: JournalVoucher): JournalVoucher
 }

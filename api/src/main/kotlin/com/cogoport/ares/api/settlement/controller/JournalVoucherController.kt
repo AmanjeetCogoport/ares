@@ -25,10 +25,10 @@ class JournalVoucherController {
     lateinit var journalVoucherService: JournalVoucherService
 
     @Post
-    suspend fun createJv(@Body journalVoucher: JournalVoucher) {
+    suspend fun createJv(@Body journalVoucher: JournalVoucher): JournalVoucher {
+        return Response<JournalVoucher>().ok(journalVoucherService.createJournalVouchers(journalVoucher))
     }
-
-    @Get("/list")
+    @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
     }
