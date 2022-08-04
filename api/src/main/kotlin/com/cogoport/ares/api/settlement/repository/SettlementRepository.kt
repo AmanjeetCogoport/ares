@@ -109,7 +109,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             T.tds_document_no, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
             COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency
         FROM INVOICES I
-        JOIN TAX T ON T.destination_id = I.destination_id
+        LEFT JOIN TAX T ON T.destination_id = I.destination_id
         """
     )
     suspend fun findSettlement(sourceId: Long, sourceType: SettlementType, pageIndex: Int, pageSize: Int): List<SettledInvoice?>
