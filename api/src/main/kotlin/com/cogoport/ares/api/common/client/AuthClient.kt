@@ -2,11 +2,11 @@ package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
+import com.cogoport.ares.model.payment.TradePartyDetailRequest
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
-import com.cogoport.ares.model.payment.CogoOrganizationTradePartyDetailRequest
-import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
@@ -32,5 +32,5 @@ interface AuthClient {
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
 
     @Get("/get_organization_trade_party_details{?request*}")
-    suspend fun getTradePartyDetailInfo(request: CogoOrganizationTradePartyDetailRequest): TradePartyOrganizationResponse
+    suspend fun getTradePartyDetailInfo(request: TradePartyDetailRequest): TradePartyOrganizationResponse
 }

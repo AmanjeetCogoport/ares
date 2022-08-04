@@ -29,6 +29,8 @@ import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.TradePartyDetailRequest
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
@@ -105,6 +107,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         setPaymentAmounts(receivableRequest)
         setOrganizations(receivableRequest)
+        setTradePartyOrganizations(receivableRequest)
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
@@ -146,6 +149,28 @@ open class OnAccountServiceImpl : OnAccountService {
             logger().error(ex.stackTraceToString())
         }
         return OnAccountApiCommonResponse(id = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true)
+    }
+
+    /**
+     *
+     */
+    private suspend fun setTradePartyOrganizations(receivableRequest: Payment) {
+        val clientResponse: TradePartyOrganizationResponse?
+
+        val reqBody = TradePartyDetailRequest(
+            receivableRequest.organizationId?.toString(),
+            null
+        )
+
+        clientResponse = authClient.getTradePartyDetailInfo(reqBody)
+
+        if (clientResponse.organizationTradePartySerialId == null) {
+            throw AresException(AresError.ERR_1207, "")
+        }
+        receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
+        receivableRequest.organizationName = clientResponse.organizationTradePartyName
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
     /**
