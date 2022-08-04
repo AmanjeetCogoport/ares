@@ -876,7 +876,7 @@ open class SettlementServiceImpl : SettlementService {
             updateExternalSystemInvoice(accUtilObj)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
-        } catch (e: Error) {
+        } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
     }
