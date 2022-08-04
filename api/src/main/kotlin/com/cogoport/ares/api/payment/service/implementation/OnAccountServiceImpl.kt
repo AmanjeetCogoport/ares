@@ -424,7 +424,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val clientResponse: TradePartyOrganizationResponse?
 
         val reqBody = MappingIdDetailRequest(
-            receivableRequest?.organizationId.toString()
+            receivableRequest?.tradePartyMappingId.toString()
         )
 
         clientResponse = authClient.getTradePartyInfo(reqBody)

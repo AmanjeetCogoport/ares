@@ -51,5 +51,5 @@ object AresConstants {
     const val ROUND_DECIMAL_TO = 4
     const val NO_DEDUCTION_RATE = 0
 
-    const val PAYING_PARTY = "self, paying_party"
+    const val PAYING_PARTY = "self,paying_party"
 }
