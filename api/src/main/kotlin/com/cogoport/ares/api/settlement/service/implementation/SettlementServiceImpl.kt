@@ -255,7 +255,6 @@ open class SettlementServiceImpl : SettlementService {
             val settledTds = docList.value.sumOf { doc ->
                 if (!doc.tdsCurrency.isNullOrBlank()) {
                     val rate = payments.find { it.documentNo == doc.tdsDocumentNo }?.exchangeRate
-                        ?: throw AresException(AresError.ERR_1503, "${doc.tdsDocumentNo}")
                     val date = payments.find { it.documentNo == doc.tdsDocumentNo }?.transactionDate
                         ?: throw AresException(AresError.ERR_1503, "${doc.tdsDocumentNo}")
                     convertPaymentCurrToInvoiceCurr(
