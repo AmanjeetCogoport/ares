@@ -93,6 +93,11 @@ class SettlementController {
         return Response<List<CheckDocument>>().ok(settlementService.check(request))
     }
 
+    @Post("/edit-check")
+    suspend fun editCheck(@Body request: CheckRequest): List<CheckDocument> {
+        return Response<List<CheckDocument>>().ok(settlementService.editCheck(request))
+    }
+
     @Post("/settle")
     suspend fun settle(@Body request: CheckRequest): List<CheckDocument> {
         return Response<List<CheckDocument>>().ok(settlementService.settle(request))
@@ -104,13 +109,13 @@ class SettlementController {
     }
 
     @Post("/edit-tds")
-    suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
-        return Response<Long>().ok(settlementService.editTds(request))
+    suspend fun editTds(@Valid @Body request: EditTdsRequest): String {
+        return Response<String>().ok(settlementService.editTds(request))
     }
 
     @Delete
-    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Long {
-        return Response<Long>().ok(settlementService.delete(documentNo, settlementType))
+    suspend fun delete(@QueryValue documentNo: String, @QueryValue settlementType: SettlementType): String {
+        return Response<String>().ok(settlementService.delete(documentNo, settlementType))
     }
 
     @Get("/org-summary")

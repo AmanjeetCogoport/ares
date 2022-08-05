@@ -32,7 +32,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
            ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) """
@@ -41,7 +41,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
            ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) """
@@ -229,7 +229,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null and(:orgId is null or organization_id = :orgId::uuid)
+        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
+        and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
+        and (:orgId is null or organization_id = :orgId::uuid) and  acc_type = 'SINV'
         group by organization_id
         """
     )
@@ -310,32 +312,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         SELECT 
-            id, 
+            au.id, 
             document_no, 
             document_value, 
-            organization_id,
-            acc_type as document_type,
             acc_type as account_type,
+            organization_id,
             transaction_date as document_date,
             due_date, 
-            amount_curr as document_amount, 
-            amount_loc as document_led_amount, 
-            taxable_amount, 
-            (taxable_amount * 0.02) as tds,
-            2 as tds_percentage,
-            amount_curr - (taxable_amount * 0.02) as after_tds_amount, 
-            pay_curr as settled_amount, 
-            amount_curr - pay_curr as balance_amount,
-            amount_curr - pay_curr as current_balance,
-            null as status, 
-            currency, 
-            led_currency, 
-            (amount_loc / amount_curr) as exchange_rate,
-            sign_flag
-                FROM account_utilizations 
+            document_status as invoice_status,
+            COALESCE(amount_curr,0) as document_amount, 
+            COALESCE(taxable_amount,0) as taxable_amount, 
+            COALESCE(pay_curr,0) as settled_amount, 
+            COALESCE(amount_curr - pay_curr,0) as balance_amount,
+            au.currency, 
+            COALESCE(sum(s.amount),0) as settled_tds
+                FROM account_utilizations au
+                LEFT JOIN settlements s ON 
+                    s.destination_id = au.document_no 
+                    AND s.destination_type::varchar = au.acc_type::varchar
+                    AND s.source_type = 'CTDS'
                 WHERE amount_curr <> 0 
                     AND organization_id in (:orgId)
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL', 'PROFORMA')
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -348,6 +346,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                         END
                         )
                     AND (:query is null OR document_value ilike :query)
+                GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset
         """
@@ -501,7 +500,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0
-                    AND document_status = 'FINAL'
+                    AND document_status in ('FINAL','PROFORMA')
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
                     AND (:entityCode is null OR entity_code = :entityCode)

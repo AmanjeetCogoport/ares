@@ -32,13 +32,15 @@ interface SettlementService {
 
     suspend fun check(request: CheckRequest): List<CheckDocument>
 
+    suspend fun editCheck(request: CheckRequest): List<CheckDocument>
+
     suspend fun settle(request: CheckRequest): List<CheckDocument>
 
     suspend fun edit(request: CheckRequest): List<CheckDocument>
 
-    suspend fun editTds(request: EditTdsRequest): Long
+    suspend fun editTds(request: EditTdsRequest): String
 
-    suspend fun delete(documentNo: Long, settlementType: SettlementType): Long
+    suspend fun delete(documentNo: String, settlementType: SettlementType): String
 
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse
 }

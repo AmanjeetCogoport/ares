@@ -8,7 +8,7 @@ import io.micronaut.http.annotation.QueryValue
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementRequest(
-    @QueryValue(AresModelConstants.DOCUMENT_NO) val documentNo: Long,
+    @QueryValue(AresModelConstants.DOCUMENT_NO) var documentNo: String,
     @QueryValue(AresModelConstants.SETTLEMENT_TYPE) val settlementType: SettlementType,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,

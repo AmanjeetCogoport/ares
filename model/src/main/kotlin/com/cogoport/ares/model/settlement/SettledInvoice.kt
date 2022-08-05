@@ -9,7 +9,7 @@ import java.util.UUID
 data class SettledInvoice(
     val id: Long?,
     val organizationId: UUID?,
-    val documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     val documentType: SettlementType,
     var accountType: String,
@@ -17,7 +17,7 @@ data class SettledInvoice(
     val paymentCurrency: String?,
     var balanceAmount: BigDecimal,
     var currentBalance: BigDecimal,
-    val documentAmount: BigDecimal?,
+    val documentAmount: BigDecimal,
     val ledCurrency: String,
     val ledgerAmount: BigDecimal,
     var taxableAmount: BigDecimal,
@@ -25,12 +25,13 @@ data class SettledInvoice(
     var afterTdsAmount: BigDecimal,
     var allocationAmount: BigDecimal? = BigDecimal.ZERO,
     var balanceAfterAllocation: BigDecimal? = BigDecimal.ZERO,
-    var settledAmount: BigDecimal? = BigDecimal.ZERO,
+    var settledAmount: BigDecimal,
     var settledAllocation: BigDecimal? = BigDecimal.ZERO,
-    val transactionDate: Date,
+    val transactionDate: Date?,
     var status: String?,
-    var settledTds: BigDecimal? = BigDecimal.ZERO,
+    var settledTds: BigDecimal,
     var exchangeRate: BigDecimal,
     var signFlag: Short,
-    var sid: Long?
+    var sid: Long?,
+    var nostroAmount: BigDecimal
 )

@@ -4,7 +4,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
-import com.cogoport.ares.model.payment.KnockOffUtilizationEvent
+import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener

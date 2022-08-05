@@ -5,10 +5,10 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.InvoiceListRequest
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequest
+import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable

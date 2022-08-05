@@ -24,7 +24,11 @@ data class AccountUtilization(
     var category: String?,
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
+    // Trader partner details id
     var organizationId: UUID?,
+    // Organization id of customer/service provider
+    var taggedOrganizationId: UUID?,
+    var tradePartyMappingId: UUID?,
     var organizationName: String?,
     var accCode: Int,
     var accType: AccountType,

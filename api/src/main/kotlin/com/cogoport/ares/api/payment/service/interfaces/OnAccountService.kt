@@ -1,13 +1,13 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.model.payment.AccountCollectionRequest
-import com.cogoport.ares.model.payment.AccountCollectionResponse
-import com.cogoport.ares.model.payment.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.BulkPaymentResponse
-import com.cogoport.ares.model.payment.LedgerSummaryRequest
-import com.cogoport.ares.model.payment.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.response.AccountCollectionResponse
+import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.BulkPaymentResponse
+import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import java.util.UUID
 
 interface OnAccountService {

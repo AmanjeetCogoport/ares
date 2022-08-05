@@ -1,8 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
-import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
