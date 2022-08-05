@@ -19,6 +19,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
@@ -138,9 +139,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         return listResponse[0]
     }
 
-    override suspend fun delete(data: MutableList<Pair<Long, String>>, performedBy: UUID?, performedByUserType: String?): Boolean {
+    override suspend fun delete(request: DeleteInvoiceRequest): Boolean {
         var result = false
-        for (obj in data) {
+        for (obj in request.data) {
 
             val accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
                 ?: throw AresException(AresError.ERR_1005, obj.first.toString())
@@ -158,8 +159,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     objectId = accountUtilization.id,
                     actionName = AresConstants.DELETE,
                     data = accountUtilization,
-                    performedBy = performedBy.toString(),
-                    performedByUserType = performedByUserType
+                    performedBy = request.performedBy.toString(),
+                    performedByUserType = request.performedByUserType
                 )
             )
             Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())

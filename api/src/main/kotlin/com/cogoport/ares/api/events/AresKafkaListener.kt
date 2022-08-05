@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
@@ -46,8 +47,8 @@ class AresKafkaListener {
 
     /*For deleting the invoices*/
     @Topic("delete-account-utilization")
-    fun listenDeleteAccountUtilization(data: MutableList<Pair<Long, String>>, performedBy: UUID? = null, performedByUserType: String? = null) = runBlocking {
-        accountUtilService.delete(data, performedBy, performedByUserType)
+    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
     }
 
     @Topic("receivables-dashboard-data")
