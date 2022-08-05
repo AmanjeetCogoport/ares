@@ -39,7 +39,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
+      
       - name: Start EC2 runner
         id: start-ec2-runner
         uses: machulav/ec2-github-runner@v2
@@ -50,7 +50,7 @@ jobs:
           ec2-instance-type: t3.2xlarge
           subnet-id: subnet-05f1c897b9994c200
           security-group-id: sg-01bf1ea2e2b45a7cf
-
+  
   deploy_staging:
     name: Start deployment
     needs:
@@ -92,9 +92,7 @@ jobs:
           IMAGE_TAG: ${{ steps.image_name.outputs.sha_short }}
         run: |
           echo $IMAGE_TAG
-          docker build -t ${{ env.REPO_URL }}:latest-staging .
-          docker push ${{ env.REPO_URL }}:latest-staging
-          docker tag ${{ env.REPO_URL }}:latest-staging ${{ env.REPO_URL }}:$IMAGE_TAG
+          docker build -t ${{ env.REPO_URL }}:$IMAGE_TAG .
           docker push ${{ env.REPO_URL }}:$IMAGE_TAG
 
       - name: Configure AWS credentials
@@ -108,10 +106,18 @@ jobs:
         run: |
           aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --query taskDefinition > task-definition.json
 
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.REPO_URL }}:${{ steps.image_name.outputs.sha_short }}
+
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: task-definition.json
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: false

@@ -29,7 +29,7 @@ interface AuthClient {
     @Get("/get_organization_zone_details{?request*}")
     suspend fun getCogoOrganization(request: CogoOrganizationRequest): PlatformOrganizationResponse
 
-    @Get("/get_organization_finance_detail")
+    @Get("/get_organization_trade_party_finance_detail")
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
 
     @Get("/get_organization_trade_party_zone_details{?request*}")
