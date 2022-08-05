@@ -34,7 +34,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
 import java.util.Date
-import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton

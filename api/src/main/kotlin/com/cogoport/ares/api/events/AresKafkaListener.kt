@@ -14,7 +14,6 @@ import io.micronaut.configuration.kafka.annotation.OffsetStrategy
 import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
-import java.util.UUID
 
 @KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "5000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD)
 class AresKafkaListener {
