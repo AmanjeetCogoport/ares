@@ -19,7 +19,7 @@ object AresConstants {
     const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
     const val KEY_DELIMITER = "_"
 
-    const val ROLE_ZONE_HEAD = "ZoneHead"
+    const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
 
     const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
