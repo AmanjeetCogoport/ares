@@ -11,9 +11,11 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
@@ -30,6 +32,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
+import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
@@ -103,6 +106,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var hashId: Hashids
+
+    @Inject
+    lateinit var auditService: AuditService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -675,8 +681,8 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun editTds(request: EditTdsRequest) = editInvoiceTds(request)
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun delete(documentNo: String, settlementType: SettlementType) =
-        deleteSettlement(documentNo, settlementType)
+    override suspend fun delete(request: DeleteSettlementRequest) =
+        deleteSettlement(request.documentNo, request.settlementType, request.deletedBy)
 
     override suspend fun getOrgSummary(
         orgId: UUID,
@@ -733,16 +739,15 @@ open class SettlementServiceImpl : SettlementService {
             return hashId.encode(tdsDoc.destinationId)
         } else if (currNewTds < tdsDoc.amount) {
             val invoiceTdsDiff = request.oldTds!! - request.newTds!!
+            val invoiceTdsDiffLed = Utilities.binaryOperation(invoiceTdsDiff, request.exchangeRate!!, Operator.MULTIPLY)
             val paymentTdsDiff = tdsDoc.amount!! - currNewTds
+
             reduceAccountUtilization(
-                tdsDoc.destinationId,
-                AccountType.valueOf(tdsDoc.destinationType.toString()),
-                invoiceTdsDiff,
-                Utilities.binaryOperation(
-                    invoiceTdsDiff,
-                    request.exchangeRate!!,
-                    Operator.MULTIPLY
-                )
+                docId = tdsDoc.destinationId,
+                accType = AccountType.valueOf(tdsDoc.destinationType.toString()),
+                amount = invoiceTdsDiff,
+                ledAmount = invoiceTdsDiffLed,
+                updatedBy = request.updatedBy!!
             )
             sourceDoc.amount = sourceDoc.amount?.minus(paymentTdsDiff)
             sourceDoc.ledAmount =
@@ -756,6 +761,16 @@ open class SettlementServiceImpl : SettlementService {
             sourceDoc.updatedBy = request.updatedBy
             sourceDoc.updatedAt = Timestamp.from(Instant.now())
             settlementRepository.update(sourceDoc)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SETTLEMENT,
+                    objectId = sourceDoc.id,
+                    actionName = AresConstants.UPDATE,
+                    data = sourceDoc,
+                    performedBy = request.updatedBy.toString(),
+                    performedByUserType = null
+                )
+            )
         }
         tdsDoc.amount = currNewTds
         tdsDoc.ledAmount =
@@ -763,6 +778,16 @@ open class SettlementServiceImpl : SettlementService {
         tdsDoc.updatedBy = request.updatedBy
         tdsDoc.updatedAt = Timestamp.from(Instant.now())
         settlementRepository.update(tdsDoc)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.SETTLEMENT,
+                objectId = tdsDoc.id,
+                actionName = AresConstants.UPDATE,
+                data = tdsDoc,
+                performedBy = request.updatedBy.toString(),
+                performedByUserType = null
+            )
+        )
         return hashId.encode(tdsDoc.destinationId)
     }
 
@@ -771,11 +796,11 @@ open class SettlementServiceImpl : SettlementService {
             request.stackDetails.first {
                 it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
             }
-        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType)
+        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy)
         return runSettlement(request, true)
     }
 
-    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType): String {
+    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?): String {
         val documentNo = hashId.decode(documentNo)[0]
         val sourceType =
             if (settlementType == SettlementType.REC)
@@ -789,9 +814,10 @@ open class SettlementServiceImpl : SettlementService {
                     ?: BigDecimal.ZERO
             }
         reduceAccountUtilization(
-            documentNo,
-            AccountType.valueOf(settlementType.toString()),
-            sourceCurr
+            docId = documentNo,
+            accType = AccountType.valueOf(settlementType.toString()),
+            amount = sourceCurr,
+            updatedBy = deletedBy
         )
         for (debits in debitDoc) {
             val settledDoc =
@@ -835,13 +861,28 @@ open class SettlementServiceImpl : SettlementService {
                     settledCurr = getExchangeValue(settledCurr, rate)
                 }
                 reduceAccountUtilization(
-                    source.destinationId,
-                    AccountType.valueOf(source.destinationType.toString()),
-                    settledCurr
+                    docId = source.destinationId,
+                    accType = AccountType.valueOf(source.destinationType.toString()),
+                    amount = settledCurr,
+                    updatedBy = deletedBy
                 )
             }
         }
+        val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
         settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
+        for (settlementDoc in settlements) {
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SETTLEMENT,
+                    objectId = settlementDoc.id,
+                    actionName = AresConstants.DELETE,
+                    data = settlementDoc,
+                    performedBy = deletedBy.toString(),
+                    performedByUserType = null
+                )
+            )
+        }
+
         return hashId.encode(documentNo)
     }
 
@@ -849,7 +890,8 @@ open class SettlementServiceImpl : SettlementService {
         docId: Long,
         accType: AccountType,
         amount: BigDecimal,
-        ledAmount: BigDecimal? = null
+        ledAmount: BigDecimal? = null,
+        updatedBy: UUID?
     ) {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
@@ -873,6 +915,16 @@ open class SettlementServiceImpl : SettlementService {
         accUtil.updatedAt = Timestamp.from(Instant.now())
         val accUtilObj = accountUtilizationRepository.update(accUtil)
         try {
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accUtilObj.id,
+                    actionName = AresConstants.UPDATE,
+                    data = accUtilObj,
+                    performedBy = updatedBy.toString(),
+                    performedByUserType = null
+                )
+            )
             updateExternalSystemInvoice(accUtilObj)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
@@ -1195,8 +1247,8 @@ open class SettlementServiceImpl : SettlementService {
                 if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
                     payment.tds!!
                 else 0.toBigDecimal()
-        updateAccountUtilization(payment, paymentUtilized) // Update Payment
-        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro)) // Update Invoice
+        updateAccountUtilization(payment, paymentUtilized, request.createdBy) // Update Payment
+        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1234,7 +1286,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun updateAccountUtilization(
         document: CheckDocument,
-        utilizedAmount: BigDecimal
+        utilizedAmount: BigDecimal,
+        updatedBy: UUID?
     ) {
         val paymentUtilization =
             accountUtilizationRepository.findRecord(
@@ -1253,6 +1306,16 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         try {
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accountUtilization.id,
+                    actionName = AresConstants.UPDATE,
+                    data = accountUtilization,
+                    performedBy = updatedBy.toString(),
+                    performedByUserType = null
+                )
+            )
             updateExternalSystemInvoice(accountUtilization)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
@@ -1382,7 +1445,17 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy,
                 Timestamp.from(Instant.now())
             )
-        settlementRepository.save(settledDoc)
+        val settleDoc = settlementRepository.save(settledDoc)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.SETTLEMENT,
+                objectId = settleDoc.id,
+                actionName = AresConstants.CREATE,
+                data = settleDoc,
+                performedBy = createdBy.toString(),
+                performedByUserType = null
+            )
+        )
     }
 
     private fun getExchangeValue(

@@ -14,8 +14,7 @@ import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
-import com.cogoport.ares.api.payment.model.AuditPaymentRequest
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -124,7 +123,16 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
 
         val savedPayment = paymentRepository.save(payment)
-        auditService.auditPayment(AuditPaymentRequest(payment, AresConstants.CREATE, receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = savedPayment.id,
+                actionName = AresConstants.CREATE,
+                data = savedPayment,
+                performedBy = receivableRequest.createdBy,
+                performedByUserType = receivableRequest.performedByUserType
+            )
+        )
         receivableRequest.id = savedPayment.id
         receivableRequest.isPosted = false
         receivableRequest.isDeleted = false
@@ -149,7 +157,16 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accUtilEntity, "create", receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilRes.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilRes,
+                performedBy = receivableRequest.createdBy,
+                performedByUserType = receivableRequest.performedByUserType
+            )
+        )
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest, true)
 
         try {
@@ -277,14 +294,32 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
         val paymentDetails = paymentRepository.update(paymentEntity)
-        auditService.auditPayment(AuditPaymentRequest(paymentEntity, AresConstants.UPDATE, receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = paymentEntity.id,
+                actionName = AresConstants.UPDATE,
+                data = paymentEntity,
+                performedBy = receivableRequest.createdBy.toString(),
+                performedByUserType = receivableRequest.performedByUserType
+            )
+        )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
         openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
         openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
-        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilizationEntity, "update", receivableRequest.createdBy, receivableRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilizationEntity.id,
+                actionName = AresConstants.UPDATE,
+                data = accountUtilizationEntity,
+                performedBy = receivableRequest.createdBy.toString(),
+                performedByUserType = receivableRequest.performedByUserType
+            )
+        )
         /*UPDATE THE OPEN SEARCH WITH UPDATED PAYMENT ENTRY*/
         Client.addDocument(
             AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentDetails.id.toString(), openSearchPaymentModel,
@@ -313,7 +348,16 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.isDeleted = true
         /*MARK THE PAYMENT AS DELETED IN DATABASE*/
         val paymentResponse = paymentRepository.update(payment)
-        auditService.auditPayment(AuditPaymentRequest(payment, AresConstants.DELETE, deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = payment.id,
+                actionName = AresConstants.DELETE,
+                data = payment,
+                performedBy = deletePaymentRequest.performedById,
+                performedByUserType = deletePaymentRequest.performedByUserType
+            )
+        )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
 
@@ -322,7 +366,16 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilization)
-        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "delete", deletePaymentRequest.performedById, deletePaymentRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization.id,
+                actionName = AresConstants.DELETE,
+                data = accountUtilization,
+                performedBy = deletePaymentRequest.performedById,
+                performedByUserType = deletePaymentRequest.performedByUserType
+            )
+        )
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
 

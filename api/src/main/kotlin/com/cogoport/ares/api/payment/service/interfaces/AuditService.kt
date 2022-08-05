@@ -1,10 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
-import com.cogoport.ares.api.payment.model.AuditPaymentRequest
+import com.cogoport.ares.api.payment.model.AuditRequest
 
 interface AuditService {
-    suspend fun auditPayment(request: AuditPaymentRequest)
-
-    suspend fun auditAccountUtilization(request: AuditAccountUtilizationRequest)
+    suspend fun createAudit(request: AuditRequest)
 }

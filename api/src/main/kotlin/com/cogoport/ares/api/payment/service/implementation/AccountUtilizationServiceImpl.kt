@@ -7,7 +7,7 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
-import com.cogoport.ares.api.payment.model.AuditAccountUtilizationRequest
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
@@ -98,7 +98,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 acUtilization.accCode = AresModelConstants.AR_ACCOUNT_CODE
             }
             val accUtilRes = accUtilRepository.save(acUtilization)
-            auditService.auditAccountUtilization(AuditAccountUtilizationRequest(acUtilization, "create", accUtilizationRequest.performedBy.toString(), accUtilizationRequest.performedByType))
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accUtilRes.id,
+                    actionName = AresConstants.CREATE,
+                    data = accUtilRes,
+                    performedBy = accUtilizationRequest.performedBy.toString(),
+                    performedByUserType = accUtilizationRequest.performedByType
+                )
+            )
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             responseList.add(
                 CreateInvoiceResponse(
@@ -143,7 +152,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 throw AresException(AresError.ERR_1204, obj.first.toString())
             }
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
-            auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "delete", performedBy.toString(), performedByUserType))
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accountUtilization.id,
+                    actionName = AresConstants.DELETE,
+                    data = accountUtilization,
+                    performedBy = performedBy.toString(),
+                    performedByUserType = performedByUserType
+                )
+            )
             Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
             val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
             try {
@@ -176,9 +194,14 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
         accUtilRepository.update(accountUtilization)
-        auditService.auditAccountUtilization(
-            AuditAccountUtilizationRequest(
-                accountUtilization, "update", updateInvoiceRequest.performedBy.toString(), updateInvoiceRequest.performedByType
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization.id,
+                actionName = AresConstants.UPDATE,
+                data = accountUtilization,
+                performedBy = updateInvoiceRequest.performedBy.toString(),
+                performedByUserType = updateInvoiceRequest.performedByType
             )
         )
         Client.addDocument(
@@ -235,7 +258,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
 
         accUtilRepository.update(accountUtilization)
-        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "update", updateInvoiceStatusRequest.performedBy.toString(), updateInvoiceStatusRequest.performedByUserType))
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization.id,
+                actionName = AresConstants.UPDATE,
+                data = accountUtilization,
+                performedBy = updateInvoiceStatusRequest.performedBy.toString(),
+                performedByUserType = updateInvoiceStatusRequest.performedByUserType
+            )
+        )
         val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             Client.addDocument(
