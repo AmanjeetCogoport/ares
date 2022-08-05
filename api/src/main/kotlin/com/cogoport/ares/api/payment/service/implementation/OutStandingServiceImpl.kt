@@ -8,17 +8,18 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.InvoiceListRequest
 import com.cogoport.ares.model.payment.ListInvoiceResponse
-import com.cogoport.ares.model.payment.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.OutstandingList
-import com.cogoport.ares.model.payment.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequest
+import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.util.UUID
 import kotlin.math.ceil
 
 @Singleton
@@ -30,14 +31,20 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
-    private fun validateInput(zone: String?, role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
+    private fun validateInput(request: OutstandingListRequest) {
+        try {
+            if (request.orgId != null)
+                UUID.fromString(request.orgId)
+        } catch (exception: IllegalArgumentException) {
+            throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
+        }
+        if (AresConstants.ROLE_ZONE_HEAD == request.role && request.zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
     }
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
-        validateInput(request.zone, request.role)
+        validateInput(request)
         val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()

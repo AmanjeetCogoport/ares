@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
@@ -44,6 +45,9 @@ class SettlementController {
     @Inject
     lateinit var settlementService: SettlementService
 
+    @Inject
+    lateinit var cpSettlementService: CpSettlementService
+
     @Get("/documents{?request*}")
     suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
@@ -61,7 +65,7 @@ class SettlementController {
      */
     @Get("/invoices{?request*}")
     suspend fun getInvoices(@Valid request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>? {
-        return Response<ResponseList<SettlementInvoiceResponse>?>().ok(settlementService.getInvoices(request))
+        return Response<ResponseList<SettlementInvoiceResponse>?>().ok(cpSettlementService.getInvoices(request))
     }
 
     @Get("/account-balance{?request*}")
@@ -81,12 +85,17 @@ class SettlementController {
 
     @Post("/knockoff")
     suspend fun knockoff(@Valid @Body request: SettlementKnockoffRequest): SettlementKnockoffResponse {
-        return Response<SettlementKnockoffResponse>().ok(settlementService.knockoff(request))
+        return Response<SettlementKnockoffResponse>().ok(cpSettlementService.knockoff(request))
     }
 
     @Post("/check")
     suspend fun check(@Body request: CheckRequest): List<CheckDocument> {
         return Response<List<CheckDocument>>().ok(settlementService.check(request))
+    }
+
+    @Post("/edit-check")
+    suspend fun editCheck(@Body request: CheckRequest): List<CheckDocument> {
+        return Response<List<CheckDocument>>().ok(settlementService.editCheck(request))
     }
 
     @Post("/settle")
@@ -99,14 +108,14 @@ class SettlementController {
         return Response<List<CheckDocument>>().ok(settlementService.edit(request))
     }
 
-    @Post("/editTds")
-    suspend fun editTds(@Valid @Body request: EditTdsRequest): Long {
-        return Response<Long>().ok(settlementService.editTds(request))
+    @Post("/edit-tds")
+    suspend fun editTds(@Valid @Body request: EditTdsRequest): String {
+        return Response<String>().ok(settlementService.editTds(request))
     }
 
     @Delete
-    suspend fun delete(@QueryValue documentNo: Long, @QueryValue settlementType: SettlementType): Long {
-        return Response<Long>().ok(settlementService.delete(documentNo, settlementType))
+    suspend fun delete(@QueryValue documentNo: String, @QueryValue settlementType: SettlementType): String {
+        return Response<String>().ok(settlementService.delete(documentNo, settlementType))
     }
 
     @Get("/org-summary")

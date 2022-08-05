@@ -11,7 +11,7 @@ import java.util.Date
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class HistoryDocument(
     val id: Long?,
-    val documentNo: Long,
+    var documentNo: String,
     val documentValue: String,
     val accountType: String?,
     val currency: String?,
@@ -29,7 +29,7 @@ data class HistoryDocument(
     val transactionDate: Date,
     var signFlag: Short,
     val exchangeRate: BigDecimal,
-    val utilizedAmount: BigDecimal,
+    val settledAmount: BigDecimal,
     val lastEditedDate: Date,
     var status: String?
 )

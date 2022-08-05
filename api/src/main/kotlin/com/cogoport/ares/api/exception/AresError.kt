@@ -16,6 +16,7 @@ enum class AresError(
     ERR_1005("ERR_1005", "Data not found", HttpStatus.NO_CONTENT),
     ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST),
     ERR_1007("ERR_1007", "Record already deleted", HttpStatus.BAD_REQUEST),
+    ERR_1009("ERR_1009", "Invalid ", HttpStatus.BAD_REQUEST),
     ERR_1201("ERR_12101", "Document number already exists", HttpStatus.BAD_REQUEST),
     ERR_1203("ERR_1203", "Invalid date format", HttpStatus.BAD_REQUEST),
     ERR_1202("ERR_1202", "Invalid account type for invoice", HttpStatus.BAD_REQUEST),
@@ -26,7 +27,8 @@ enum class AresError(
     ERR_1501("ERR_1501", "No credit document found", HttpStatus.BAD_REQUEST),
     ERR_1502("ERR_1502", "No debit document found", HttpStatus.BAD_REQUEST),
     ERR_1503("ERR_1503", "Document does not exist : ", HttpStatus.BAD_REQUEST),
-    ERR_1504("ERR_1504", "Document Overpaid", HttpStatus.NOT_MODIFIED);
+    ERR_1504("ERR_1504", "Document Overpaid", HttpStatus.NOT_MODIFIED),
+    ERR_1505("ERR_1503", "Exchange Rate not found for : ", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

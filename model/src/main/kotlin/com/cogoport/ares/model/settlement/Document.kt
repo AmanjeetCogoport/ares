@@ -9,7 +9,7 @@ import java.util.UUID
 data class Document(
 
     var id: Long,
-    var documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     var organizationId: UUID,
     var accountType: String,
@@ -18,6 +18,7 @@ data class Document(
     var dueDate: Date?,
     var documentAmount: BigDecimal,
     var ledgerAmount: BigDecimal,
+    var ledgerBalance: BigDecimal,
     var taxableAmount: BigDecimal,
     var tds: BigDecimal,
     var tdsPercentage: BigDecimal? = null,
@@ -33,6 +34,7 @@ data class Document(
     var ledCurrency: String,
     var settledTds: BigDecimal?,
     var exchangeRate: BigDecimal,
-    var signFlag: Short
+    var signFlag: Short,
+    var nostroAmount: BigDecimal
 
 )
