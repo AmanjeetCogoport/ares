@@ -116,5 +116,11 @@ data class PaymentResponse(
     var paymentNumValue: String? = "",
 
     @JsonProperty("bankId")
-    var bankId: UUID?
+    var bankId: UUID?,
+
+    @JsonProperty("taggedOrganizationId")
+    var taggedOrganizationId: UUID? = null,
+
+    @JsonProperty("tradePartyMappingId")
+    var tradePartyMappingId: UUID? = null
 )
