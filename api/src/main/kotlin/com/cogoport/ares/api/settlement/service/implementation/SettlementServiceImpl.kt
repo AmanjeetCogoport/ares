@@ -682,7 +682,7 @@ open class SettlementServiceImpl : SettlementService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(request: DeleteSettlementRequest) =
-        deleteSettlement(request.documentNo, request.settlementType, request.deletedBy)
+        deleteSettlement(request.documentNo, request.settlementType, request.deletedBy, request.deletedByUserType)
 
     override suspend fun getOrgSummary(
         orgId: UUID,
@@ -747,7 +747,8 @@ open class SettlementServiceImpl : SettlementService {
                 accType = AccountType.valueOf(tdsDoc.destinationType.toString()),
                 amount = invoiceTdsDiff,
                 ledAmount = invoiceTdsDiffLed,
-                updatedBy = request.updatedBy!!
+                updatedBy = request.updatedBy!!,
+                updatedByUserType = request.updatedByUserType
             )
             sourceDoc.amount = sourceDoc.amount?.minus(paymentTdsDiff)
             sourceDoc.ledAmount =
@@ -768,7 +769,7 @@ open class SettlementServiceImpl : SettlementService {
                     actionName = AresConstants.UPDATE,
                     data = sourceDoc,
                     performedBy = request.updatedBy.toString(),
-                    performedByUserType = null
+                    performedByUserType = request.updatedByUserType
                 )
             )
         }
@@ -785,7 +786,7 @@ open class SettlementServiceImpl : SettlementService {
                 actionName = AresConstants.UPDATE,
                 data = tdsDoc,
                 performedBy = request.updatedBy.toString(),
-                performedByUserType = null
+                performedByUserType = request.updatedByUserType
             )
         )
         return hashId.encode(tdsDoc.destinationId)
@@ -796,11 +797,11 @@ open class SettlementServiceImpl : SettlementService {
             request.stackDetails.first {
                 it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
             }
-        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy)
+        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy, request.createdByUserType)
         return runSettlement(request, true)
     }
 
-    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?): String {
+    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?, deletedByUserType: String?): String {
         val documentNo = hashId.decode(documentNo)[0]
         val sourceType =
             if (settlementType == SettlementType.REC)
@@ -817,7 +818,8 @@ open class SettlementServiceImpl : SettlementService {
             docId = documentNo,
             accType = AccountType.valueOf(settlementType.toString()),
             amount = sourceCurr,
-            updatedBy = deletedBy
+            updatedBy = deletedBy,
+            updatedByUserType = deletedByUserType
         )
         for (debits in debitDoc) {
             val settledDoc =
@@ -864,7 +866,8 @@ open class SettlementServiceImpl : SettlementService {
                     docId = source.destinationId,
                     accType = AccountType.valueOf(source.destinationType.toString()),
                     amount = settledCurr,
-                    updatedBy = deletedBy
+                    updatedBy = deletedBy,
+                    updatedByUserType = deletedByUserType
                 )
             }
         }
@@ -878,7 +881,7 @@ open class SettlementServiceImpl : SettlementService {
                     actionName = AresConstants.DELETE,
                     data = settlementDoc,
                     performedBy = deletedBy.toString(),
-                    performedByUserType = null
+                    performedByUserType = deletedByUserType
                 )
             )
         }
@@ -891,7 +894,8 @@ open class SettlementServiceImpl : SettlementService {
         accType: AccountType,
         amount: BigDecimal,
         ledAmount: BigDecimal? = null,
-        updatedBy: UUID?
+        updatedBy: UUID?,
+        updatedByUserType: String?
     ) {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
@@ -922,7 +926,7 @@ open class SettlementServiceImpl : SettlementService {
                     actionName = AresConstants.UPDATE,
                     data = accUtilObj,
                     performedBy = updatedBy.toString(),
-                    performedByUserType = null
+                    performedByUserType = updatedByUserType
                 )
             )
             updateExternalSystemInvoice(accUtilObj)
@@ -1021,7 +1025,8 @@ open class SettlementServiceImpl : SettlementService {
                         tdsLedAmount = getExchangeValue(payment.tds!!, payment.exchangeRate),
                         settlementDate = request.settlementDate,
                         signFlag = 1,
-                        createdBy = request.createdBy
+                        createdBy = request.createdBy,
+                        createdByUserType = request.createdByUserType
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1167,6 +1172,7 @@ open class SettlementServiceImpl : SettlementService {
             1,
             request.settlementDate,
             request.createdBy,
+            request.createdByUserType
         )
 
         // Create TDS Entry
@@ -1181,7 +1187,8 @@ open class SettlementServiceImpl : SettlementService {
                 tdsLedAmount = paymentTdsLed,
                 settlementDate = request.settlementDate,
                 signFlag = -1,
-                createdBy = request.createdBy
+                createdBy = request.createdBy,
+                createdByUserType = request.createdByUserType
             )
             invoice.settledTds += invoiceTds
         }
@@ -1199,7 +1206,8 @@ open class SettlementServiceImpl : SettlementService {
                 ledAmount = paymentNostroLed,
                 signFlag = -1,
                 transactionDate = request.settlementDate,
-                createdBy = request.createdBy
+                createdBy = request.createdBy,
+                createdByUserType = request.createdByUserType
             )
             invoice.settledNostro = invoice.settledNostro!! + invoiceNostro
         }
@@ -1236,7 +1244,8 @@ open class SettlementServiceImpl : SettlementService {
                     excLedAmount.abs(),
                     exSign.toShort(),
                     request.settlementDate,
-                    request.createdBy
+                    request.createdBy,
+                    request.createdByUserType
                 )
             }
         }
@@ -1247,8 +1256,8 @@ open class SettlementServiceImpl : SettlementService {
                 if (payment.accountType in listOf(SettlementType.PCN, SettlementType.SCN))
                     payment.tds!!
                 else 0.toBigDecimal()
-        updateAccountUtilization(payment, paymentUtilized, request.createdBy) // Update Payment
-        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy) // Update Invoice
+        updateAccountUtilization(payment, paymentUtilized, request.createdBy, request.createdByUserType) // Update Payment
+        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy, request.createdByUserType) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1261,7 +1270,8 @@ open class SettlementServiceImpl : SettlementService {
         tdsLedAmount: BigDecimal,
         signFlag: Short,
         settlementDate: Timestamp,
-        createdBy: UUID?
+        createdBy: UUID?,
+        createdByUserType: String?
     ) {
         val tdsType =
             if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
@@ -1280,14 +1290,16 @@ open class SettlementServiceImpl : SettlementService {
             tdsLedAmount,
             signFlag,
             settlementDate,
-            createdBy
+            createdBy,
+            createdByUserType
         )
     }
 
     private suspend fun updateAccountUtilization(
         document: CheckDocument,
         utilizedAmount: BigDecimal,
-        updatedBy: UUID?
+        updatedBy: UUID?,
+        updatedByUserType: String?
     ) {
         val paymentUtilization =
             accountUtilizationRepository.findRecord(
@@ -1313,7 +1325,7 @@ open class SettlementServiceImpl : SettlementService {
                     actionName = AresConstants.UPDATE,
                     data = accountUtilization,
                     performedBy = updatedBy.toString(),
-                    performedByUserType = null
+                    performedByUserType = updatedByUserType
                 )
             )
             updateExternalSystemInvoice(accountUtilization)
@@ -1425,7 +1437,8 @@ open class SettlementServiceImpl : SettlementService {
         ledAmount: BigDecimal,
         signFlag: Short,
         transactionDate: Timestamp,
-        createdBy: UUID?
+        createdBy: UUID?,
+        createdByUserType: String?
     ) {
         val settledDoc =
             Settlement(
@@ -1453,7 +1466,7 @@ open class SettlementServiceImpl : SettlementService {
                 actionName = AresConstants.CREATE,
                 data = settleDoc,
                 performedBy = createdBy.toString(),
-                performedByUserType = null
+                performedByUserType = createdByUserType
             )
         )
     }

@@ -8,12 +8,17 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Singleton
 class AuditServiceImpl : AuditService {
     @Inject
     lateinit var auditRepository: AuditRepository
     override suspend fun createAudit(request: AuditRequest) {
+        var performedById: UUID? = null
+        try {
+            performedById = UUID.fromString(request.performedBy)
+        } catch (_: Exception) {}
         auditRepository.save(
             Audit(
                 id = null,
@@ -21,7 +26,7 @@ class AuditServiceImpl : AuditService {
                 objectId = request.objectId,
                 actionName = request.actionName,
                 data = request.data,
-                performedBy = request.performedBy,
+                performedBy = performedById,
                 performedByUserType = request.performedByUserType,
                 createdAt = Timestamp.valueOf(LocalDateTime.now())
             )

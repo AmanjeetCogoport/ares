@@ -9,6 +9,7 @@ import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 @MappedEntity("audits")
 data class Audit(
@@ -19,7 +20,7 @@ data class Audit(
     @field:TypeDef(type = DataType.JSON)
     @JsonProperty("data")
     var data: Any?,
-    var performedBy: String?,
+    var performedBy: UUID?,
     var performedByUserType: String?,
     @DateCreated var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now())
 )

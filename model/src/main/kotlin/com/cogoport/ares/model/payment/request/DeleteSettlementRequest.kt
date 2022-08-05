@@ -7,5 +7,6 @@ import java.util.UUID
 data class DeleteSettlementRequest(
     @QueryValue("documentNo") val documentNo: String,
     @QueryValue("settlementType") val settlementType: SettlementType,
-    @QueryValue("deletedBy") val deletedBy: UUID?
+    @QueryValue("deletedBy") val deletedBy: UUID?,
+    @QueryValue("deletedByUserType") val deletedByUserType: String?
 )
