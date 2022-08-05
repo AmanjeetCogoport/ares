@@ -10,16 +10,19 @@ import io.micronaut.http.exceptions.HttpStatusException
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import io.sentry.Sentry
 import jakarta.inject.Singleton
+import org.slf4j.MDC
 import javax.validation.ConstraintViolationException
 import javax.validation.ValidationException
-import org.slf4j.MDC
 
 @Singleton
 class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorResponse>> {
     private val logger = logger()
 
     @Error(global = true, exception = Exception::class)
-    override fun handle(request: HttpRequest<*>?, exception: Exception?): HttpResponse<ErrorResponse> {
+    override fun handle(
+        request: HttpRequest<*>?,
+        exception: Exception?
+    ): HttpResponse<ErrorResponse> {
 
         sendToSentry(exception)
         logger.error(request.toString(), exception)
@@ -27,37 +30,37 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
 
         when (exception) {
             is AresException -> {
-                errorMessage = exception?.error?.let {
-                    ErrorResponse(
-                        it.code,
-                        it.getMessage(exception.context),
-                        it.httpStatus
-                    )
-                }!!
+                errorMessage =
+                    exception.error.let {
+                        ErrorResponse(it.code, it.getMessage(exception.context), it.httpStatus)
+                    }
             }
             is HttpStatusException -> {
-                errorMessage = ErrorResponse(
-                    AresError.ERR_1000.code,
-                    exception.message,
-                    HttpStatus.SERVICE_UNAVAILABLE
-                )
+                errorMessage =
+                    ErrorResponse(
+                        AresError.ERR_1000.code,
+                        exception.message,
+                        HttpStatus.SERVICE_UNAVAILABLE
+                    )
             }
             is ConstraintViolationException, is ValidationException -> {
-                errorMessage = ErrorResponse(
-                    AresError.ERR_1001.code,
-                    exception.message,
-                    HttpStatus.BAD_REQUEST
-                )
+                errorMessage =
+                    ErrorResponse(
+                        AresError.ERR_1001.code,
+                        exception.message,
+                        HttpStatus.BAD_REQUEST
+                    )
             }
             else -> {
-                errorMessage = ErrorResponse(
-                    AresError.ERR_1001.code,
-                    exception?.message,
-                    HttpStatus.INTERNAL_SERVER_ERROR
-                )
+                errorMessage =
+                    ErrorResponse(
+                        AresError.ERR_1001.code,
+                        exception?.message,
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                    )
             }
         }
-        return getResponse(errorMessage?.httpStatus, errorMessage)
+        return getResponse(errorMessage.httpStatus, errorMessage)
     }
 
     private fun sendToSentry(exception: Exception?) {
@@ -76,7 +79,10 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
      * @param HttpStatus, ErrorResponse
      * @return HttpResponse<ErrorResponse>
      */
-    private fun getResponse(httpStatus: HttpStatus?, errorMessage: ErrorResponse): HttpResponse<ErrorResponse> {
+    private fun getResponse(
+        httpStatus: HttpStatus?,
+        errorMessage: ErrorResponse
+    ): HttpResponse<ErrorResponse> {
         return if (httpStatus?.equals(HttpStatus.BAD_REQUEST) == true)
             HttpResponse.badRequest(errorMessage)
         else if (httpStatus?.equals(HttpStatus.SERVICE_UNAVAILABLE) == true)
@@ -85,12 +91,13 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
             HttpResponse.serverError(errorMessage)
         else if (httpStatus?.equals(HttpStatus.NOT_FOUND) == true)
             HttpResponse.notFound(errorMessage)
-        else
-            HttpResponse.serverError(errorMessage)
+        else HttpResponse.serverError(errorMessage)
     }
 
     @Error(status = HttpStatus.NOT_FOUND, global = true)
-    fun notFound(request: HttpRequest<*>?): HttpResponse<ErrorResponse> {
+    fun notFound(
+        @Suppress("UNUSED_PARAMETER") request: HttpRequest<*>?
+    ): HttpResponse<ErrorResponse> {
         return HttpResponse.notFound(
             ErrorResponse(
                 AresError.ERR_1008.code,

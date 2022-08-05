@@ -1,9 +1,9 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.model.payment.AccUtilizationRequest
-import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import java.util.UUID
 
 interface AccountUtilizationService {

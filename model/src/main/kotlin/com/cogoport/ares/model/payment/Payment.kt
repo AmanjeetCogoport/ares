@@ -1,8 +1,8 @@
 package com.cogoport.ares.model.payment
 
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -33,9 +33,17 @@ data class Payment(
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
 
+    // Trader partner details id
     @JsonProperty("customerId")
     @field:NotNull(message = "UUID of the organization is required")
     var organizationId: UUID?,
+
+    // Organization id of customer/service provider
+    @JsonProperty("taggedOrganizationId")
+    var taggedOrganizationId: UUID?,
+
+    @JsonProperty("tradePartyMappingId")
+    var tradePartyMappingId: UUID?,
 
     @JsonProperty("customerName")
     var organizationName: String? = "",

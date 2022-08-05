@@ -20,7 +20,10 @@ enum class ServiceType {
     ADDITIONAL_CHARGE,
     FCL_CFS,
     ORIGIN_SERVICES,
-    DESTINATION_SERVICES
+    DESTINATION_SERVICES,
+    FCL_CUSTOMS_FREIGHT,
+    LCL_CUSTOMS_FREIGHT,
+    AIR_CUSTOMS_FREIGHT
 }
 
 enum class ZoneCode {
@@ -33,4 +36,12 @@ enum class AllCurrencyTypes {
 
 enum class PaymentInvoiceMappingType {
     TDS, INVOICE, BILL
+}
+
+enum class DocStatus(val value: String) {
+    PAID("Paid"), UNPAID("Unpaid"), PARTIAL_PAID("Partially Paid"), KNOCKED_OFF("Knocked Off"), UTILIZED("Utilized"), UNUTILIZED("Unutilized"), PARTIAL_UTILIZED("Partially Utilized")
+}
+
+enum class InvoiceType(val value: String) {
+    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"), PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment")
 }

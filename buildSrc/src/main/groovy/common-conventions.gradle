@@ -46,7 +46,3 @@ tasks {
         }
     }
 }
-
-ktlint {
-    disabledRules = ["import-ordering"]
-}

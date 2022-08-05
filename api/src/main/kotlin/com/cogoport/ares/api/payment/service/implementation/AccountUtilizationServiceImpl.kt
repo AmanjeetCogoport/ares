@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoClient
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -18,12 +17,12 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccUtilizationRequest
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -50,9 +49,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     lateinit var accountUtilizationConverter: AccountUtilizationMapper
 
     @Inject
-    lateinit var cogoClient: CogoClient
-
-    @Inject
     lateinit var auditService: AuditService
 
     /**
@@ -66,11 +62,29 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         for (accUtilizationRequest in accUtilizationRequestList) {
 
             if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
-                responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1202.message))
+                responseList.add(
+                    CreateInvoiceResponse(
+                        0L,
+                        accUtilizationRequest.documentNo,
+                        false,
+                        AresError.ERR_1202.message
+                    )
+                )
                 continue
             }
-            if (accUtilRepository.isDocumentNumberExists(accUtilizationRequest.documentNo, accUtilizationRequest.accType!!.name)) {
-                responseList.add(CreateInvoiceResponse(0L, accUtilizationRequest.documentNo, false, AresError.ERR_1201.message))
+            if (accUtilRepository.isDocumentNumberExists(
+                    accUtilizationRequest.documentNo,
+                    accUtilizationRequest.accType!!.name
+                )
+            ) {
+                responseList.add(
+                    CreateInvoiceResponse(
+                        0L,
+                        accUtilizationRequest.documentNo,
+                        false,
+                        AresError.ERR_1201.message
+                    )
+                )
                 continue
             }
 
@@ -86,7 +100,14 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             val accUtilRes = accUtilRepository.save(acUtilization)
             auditService.auditAccountUtilization(AuditAccountUtilizationRequest(acUtilization, "create", accUtilizationRequest.performedBy.toString(), accUtilizationRequest.performedByType))
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            responseList.add(CreateInvoiceResponse(accUtilRes.id!!, accUtilizationRequest.documentNo, true, Messages.SUCCESS_INVOICE_CREATION))
+            responseList.add(
+                CreateInvoiceResponse(
+                    accUtilRes.id!!,
+                    accUtilizationRequest.documentNo,
+                    true,
+                    Messages.SUCCESS_INVOICE_CREATION
+                )
+            )
         }
         return responseList
     }
@@ -97,7 +118,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * @return CreateInvoiceResponse
      */
     override suspend fun add(accUtilizationRequest: AccUtilizationRequest): CreateInvoiceResponse {
-        var accUtilizationList = mutableListOf<AccUtilizationRequest>()
+        val accUtilizationList = mutableListOf<AccUtilizationRequest>()
         accUtilizationList.add(accUtilizationRequest)
         val listResponse = add(accUtilizationList)
         try {
@@ -112,11 +133,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var result = false
         for (obj in data) {
 
-            var accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
+            val accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
+                ?: throw AresException(AresError.ERR_1005, obj.first.toString())
 
-            if (accountUtilization == null) {
-                throw AresException(AresError.ERR_1005, obj.first.toString())
-            }
             if (Utilities.isPayAccountType(accountUtilization.accType)) {
                 throw AresException(AresError.ERR_1202, obj.first.toString())
             }
@@ -126,7 +145,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
             auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "delete", performedBy.toString(), performedByUserType))
             Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
-            var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
+            val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
             try {
                 emitDashboardAndOutstandingEvent(accUtilizationRequest)
             } catch (e: Exception) {
@@ -143,11 +162,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      */
     override suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest) {
 
-        var accountUtilization = accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
-
-        if (accountUtilization == null) {
-            throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
-        }
+        val accountUtilization =
+            accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
+                ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
 
         accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
         accountUtilization.dueDate = updateInvoiceRequest.dueDate
@@ -159,9 +176,17 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
         accUtilRepository.update(accountUtilization)
-        auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "update", updateInvoiceRequest.performedBy.toString(), updateInvoiceRequest.performedByType))
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
-        var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
+        auditService.auditAccountUtilization(
+            AuditAccountUtilizationRequest(
+                accountUtilization, "update", updateInvoiceRequest.performedBy.toString(), updateInvoiceRequest.performedByType
+            )
+        )
+        Client.addDocument(
+            AresConstants.ACCOUNT_UTILIZATION_INDEX,
+            accountUtilization.id.toString(),
+            accountUtilization
+        )
+        val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
         } catch (e: Exception) {
@@ -174,18 +199,24 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * @param : updateInvoiceStatusRequest
      */
     override suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest) {
-        var accountUtilization = accUtilRepository.findRecord(updateInvoiceStatusRequest.oldDocumentNo, updateInvoiceStatusRequest.accType.name)
+        val accountUtilization = accUtilRepository.findRecord(
+            updateInvoiceStatusRequest.oldDocumentNo,
+            updateInvoiceStatusRequest.accType.name
+        ) ?: throw AresException(AresError.ERR_1005, updateInvoiceStatusRequest.oldDocumentNo.toString())
+
         var proformaDate: Date? = null
-        val proformaQuarter = accountUtilization?.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
-        val invoiceQuarter = updateInvoiceStatusRequest.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
+        val proformaQuarter =
+            accountUtilization.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                .get(IsoFields.QUARTER_OF_YEAR)
+
+        val invoiceQuarter =
+            updateInvoiceStatusRequest.transactionDate!!.toInstant().atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate().get(IsoFields.QUARTER_OF_YEAR)
 
         if (proformaQuarter != invoiceQuarter) {
             proformaDate = accountUtilization.transactionDate
         }
 
-        if (accountUtilization == null) {
-            throw AresException(AresError.ERR_1005, updateInvoiceStatusRequest.oldDocumentNo.toString())
-        }
         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
             throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
         }
@@ -194,18 +225,24 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
         accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+
         if (updateInvoiceStatusRequest.transactionDate != null) {
             accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate
         }
+
         if (updateInvoiceStatusRequest.dueDate != null) {
             accountUtilization.dueDate = updateInvoiceStatusRequest.dueDate
         }
 
         accUtilRepository.update(accountUtilization)
         auditService.auditAccountUtilization(AuditAccountUtilizationRequest(accountUtilization, "update", updateInvoiceStatusRequest.performedBy.toString(), updateInvoiceStatusRequest.performedByUserType))
-        var accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
+        val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization!!.id.toString(), accountUtilization)
+            Client.addDocument(
+                AresConstants.ACCOUNT_UTILIZATION_INDEX,
+                accountUtilization.id.toString(),
+                accountUtilization
+            )
             emitDashboardAndOutstandingEvent(accUtilizationRequest, proformaDate)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -216,7 +253,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+    private fun emitDashboardAndOutstandingEvent(
+        accUtilizationRequest: AccUtilizationRequest,
+        proformaDate: Date? = null
+    ) {
         if (proformaDate != null) {
             emitDashboardData(accUtilizationRequest, proformaDate)
         }
