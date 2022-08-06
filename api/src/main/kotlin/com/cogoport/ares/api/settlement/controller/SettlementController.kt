@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.Document
@@ -19,7 +20,6 @@ import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementRequest
-import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
@@ -113,9 +113,9 @@ class SettlementController {
         return Response<String>().ok(settlementService.editTds(request))
     }
 
-    @Delete
-    suspend fun delete(@QueryValue documentNo: String, @QueryValue settlementType: SettlementType): String {
-        return Response<String>().ok(settlementService.delete(documentNo, settlementType))
+    @Delete("{?request*}")
+    suspend fun delete(request: DeleteSettlementRequest): String {
+        return Response<String>().ok(settlementService.delete(request))
     }
 
     @Get("/org-summary")

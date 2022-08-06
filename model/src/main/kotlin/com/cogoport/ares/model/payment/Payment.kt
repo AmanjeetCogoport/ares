@@ -133,5 +133,8 @@ data class Payment(
     var paymentNumValue: String?,
 
     @JsonProperty("bankId")
-    var bankId: UUID?
+    var bankId: UUID?,
+
+    @JsonProperty("performedByUserType")
+    val performedByUserType: String? = null
 )
