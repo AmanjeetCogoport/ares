@@ -200,7 +200,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId).also {
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, null).also {
+            updateOrgOutstanding(null, request.orgName, request.orgId, it)
+        }
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
@@ -220,7 +223,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
         val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null)
-        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
+        val docId = if (zone != null) "${orgId}_$zone" else "${orgId}_ALL"
+        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, docId, orgOutstanding)
     }
 
     private fun validateDueAmount(data: MutableList<DueAmount>) {

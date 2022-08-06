@@ -248,11 +248,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type <> 'REC' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type <> 'REC' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and organization_id = :orgId::uuid 
+        where acc_type in ('SINV','SCN','SDN','REC') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) 
         group by organization_id, currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
     @Query(
         value = """
         Select

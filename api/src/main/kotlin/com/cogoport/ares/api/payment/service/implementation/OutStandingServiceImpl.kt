@@ -49,7 +49,8 @@ class OutStandingServiceImpl : OutStandingService {
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            orgId.add(ageing.organizationId!!)
+            val docId = if (request.zone != null) "${ageing.organizationId}_${request.zone}" else "${ageing.organizationId}_ALL"
+            orgId.add(docId)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
         val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId, offset = (request.page - 1) * request.pageLimit, limit = request.pageLimit)
@@ -115,7 +116,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?> {
         val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
-        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = "${orgId}_ALL")
 
         customerOutstanding?.hits()?.hits()?.map {
             it.source()?.let {
