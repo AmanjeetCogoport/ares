@@ -5,20 +5,21 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
-import com.cogoport.ares.model.payment.InvoiceListRequest
-import com.cogoport.ares.model.payment.OutstandingListRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.ListInvoiceResponse
-import com.cogoport.ares.model.payment.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.OutstandingAgeingResponse
+import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.request.InvoiceListRequest
+import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.util.UUID
 import kotlin.math.ceil
 
 @Singleton
@@ -30,19 +31,26 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
-    private fun validateInput(zone: String?, role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
+    private fun validateInput(request: OutstandingListRequest) {
+        try {
+            if (request.orgId != null)
+                UUID.fromString(request.orgId)
+        } catch (exception: IllegalArgumentException) {
+            throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
+        }
+        if (AresConstants.ROLE_ZONE_HEAD == request.role && request.zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
         }
     }
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
-        validateInput(request.zone, request.role)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, request.queryName + "%", request.orgId, request.page, request.pageLimit)
+        validateInput(request)
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            orgId.add(ageing.organizationId!!)
+            val docId = if (request.zone != null) "${ageing.organizationId}_${request.zone}" else "${ageing.organizationId}_ALL"
+            orgId.add(docId)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
         val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId, offset = (request.page - 1) * request.pageLimit, limit = request.pageLimit)
@@ -66,7 +74,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return OutstandingList(
-            list = listOrganization,
+            list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
             totalPage = ceil(total / request.pageLimit.toDouble()).toInt(),
             totalRecords = total.toInt(),
             page = request.page
@@ -108,7 +116,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?> {
         val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
-        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = "${orgId}_ALL")
 
         customerOutstanding?.hits()?.hits()?.map {
             it.source()?.let {

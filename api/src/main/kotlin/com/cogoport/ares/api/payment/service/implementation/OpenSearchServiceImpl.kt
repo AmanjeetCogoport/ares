@@ -15,15 +15,17 @@ import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.CollectionTrendResponse
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -53,47 +55,72 @@ class OpenSearchServiceImpl : OpenSearchService {
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
 
+    /**
+     * @param: OpenSearchRequest
+     */
     override suspend fun pushDashboardData(request: OpenSearchRequest) {
+        when (request.accMode) {
+            AccMode.AR -> { updateReceivables(request) }
+            AccMode.AP -> { updatePayable(request) }
+            else -> {
+                updateReceivables(request)
+                updatePayable(request)
+            }
+        }
+    }
+
+    private suspend fun updateReceivables(request: OpenSearchRequest) {
         val zone = request.zone
         val quarter = request.quarter
         val date = request.date
         val year = request.year
-
         /** Collection Trend */
+        logger().info("Updating Collection Trend document")
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse)
         val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year)
         updateCollectionTrend(null, quarter, year, collectionResponseAll)
 
         /** Overall Stats */
+        logger().info("Updating Overall Stats document")
         val statsZoneData = accountUtilizationRepository.generateOverallStats(zone)
         updateOverallStats(zone, statsZoneData)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null)
         updateOverallStats(null, statsAllData)
 
         /** Monthly Outstanding */
+        logger().info("Updating Monthly Outstanding document")
         val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone)
         updateMonthlyTrend(zone, monthlyTrendZoneData)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null)
         updateMonthlyTrend(null, monthlyTrendAllData)
 
         /** Quarterly Outstanding */
+        logger().info("Updating Quarterly Outstanding document")
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone)
         updateQuarterlyTrend(zone, quarterlyTrendZoneData)
         val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null)
         updateQuarterlyTrend(null, quarterlyTrendAllData)
 
         /** Daily Sales Outstanding */
+        logger().info("Updating Daily Sales Outstanding document")
         val dailySalesZoneData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date)
         updateDailySalesOutstanding(zone, year, dailySalesZoneData)
         val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date)
         updateDailySalesOutstanding(null, year, dailySalesAllData)
+    }
 
-        /** Daily Payables Outstanding */
-        val dailyPayablesZoneData = accountUtilizationRepository.generateDailyPayablesOutstanding(zone, date)
-        updateDailyPayablesOutstanding(zone, year, dailyPayablesZoneData)
-        val dailyPayablesAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, date)
-        updateDailyPayablesOutstanding(null, year, dailyPayablesAllData)
+    /**
+     * This updates the data for Daily Payables Outstanding graph on OpenSearch on receipt of new Bill
+     * @param : OpenSearchRequest
+     */
+    private suspend fun updatePayable(request: OpenSearchRequest) {
+        /** Daily Payable Outstanding */
+        logger().info("Updating Payable Outstanding document")
+        val dailyPayableZoneData = accountUtilizationRepository.generateDailyPayablesOutstanding(request.zone, request.date)
+        updateDailyPayablesOutstanding(request.zone, request.year, dailyPayableZoneData)
+        val dailyPayableAllData = accountUtilizationRepository.generateDailyPayablesOutstanding(null, request.date)
+        updateDailyPayablesOutstanding(null, request.year, dailyPayableAllData)
     }
 
     private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?) {
@@ -172,20 +199,21 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun pushOutstandingData(request: OpenSearchRequest) {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
-        } else if (request.zone.isNullOrBlank()) {
-            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        }
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, null).also {
+            updateOrgOutstanding(null, request.orgName, request.orgId, it)
         }
         accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
-            updateOrgOutstanding(request.zone, request.orgId, it)
+            updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
 
-    private fun updateOrgOutstanding(zone: String?, orgId: String?, data: List<OrgOutstanding>) {
+    private fun updateOrgOutstanding(zone: String?, orgName: String?, orgId: String?, data: List<OrgOutstanding>) {
         if (data.isEmpty()) return
         val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
         val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount.toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, 0) }.toMutableList()
+        val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
         val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
         val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
         val invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount!! }
@@ -194,14 +222,16 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(invoicesDues)
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
-        val orgOutstanding = CustomerOutstanding(orgId, data[0].organizationName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues), InvoiceStats(0, outstandingLedAmount, outstandingDues), null)
-        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
+        val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null)
+        val docId = if (zone != null) "${orgId}_$zone" else "${orgId}_ALL"
+        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, docId, orgOutstanding)
     }
 
     private fun validateDueAmount(data: MutableList<DueAmount>) {
+        data.forEach { if (it.amount == 0.toBigDecimal()) it.amount = 0.0.toBigDecimal() }
         listOf("INR", "USD").forEach { curr ->
             if (curr !in data.groupBy { it.currency }) {
-                data.add(DueAmount(curr, 0.toBigDecimal(), 0))
+                data.add(DueAmount(curr, 0.0.toBigDecimal(), 0))
             }
         }
     }

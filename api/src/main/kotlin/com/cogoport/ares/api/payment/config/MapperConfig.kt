@@ -1,17 +1,18 @@
 package com.cogoport.ares.api.payment.config
 
+import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.CollectionTrendMapper
 import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.InvoiceMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
+import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
 import com.cogoport.ares.api.payment.mapper.PayableFileToAccountUtilMapper
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
-import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
@@ -79,5 +80,10 @@ class MapperConfig {
     @Bean
     fun getAccUtilizationConverter(): AccUtilizationToPaymentMapper {
         return Mappers.getMapper(AccUtilizationToPaymentMapper::class.java)
+    }
+
+    @Bean
+    fun orgStatsConverter(): OrgStatsMapper {
+        return Mappers.getMapper(OrgStatsMapper::class.java)
     }
 }

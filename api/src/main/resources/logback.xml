@@ -8,8 +8,8 @@
             </pattern>
         </encoder>
     </appender>
-
-    <root level="info">
+    <logger name="io.micronaut.data.query" level="error"/>
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 

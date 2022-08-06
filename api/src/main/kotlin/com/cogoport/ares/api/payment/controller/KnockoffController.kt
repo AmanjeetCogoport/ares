@@ -1,8 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
-import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
+import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -18,7 +18,7 @@ class KnockoffController {
     lateinit var knockoffService: KnockoffService
 
     @Post("/payables")
-    suspend fun knockOffPayables(@Valid @Body payableList: List<AccountPayablesFile>): MutableList<AccountPayableFileResponse> {
+    suspend fun knockOffPayables(@Valid @Body payableList: AccountPayablesFile): AccountPayableFileResponse {
         return knockoffService.uploadBillPayment(payableList)
     }
 }

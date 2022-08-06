@@ -4,7 +4,7 @@ if [ -z "$1" ]
     exit 1
 fi
 
-folder_name='api/db/migrations/'
+folder_name='../api/db/migrations/'
 file_name=${1}
 while getopts :s opt
 do
@@ -15,7 +15,7 @@ do
           echo "-> Please provide file name"
           exit 1
       fi
-      folder_name='api/db/seed/'
+      folder_name='../api/db/seed/'
       file_name=${2}
   esac
 done

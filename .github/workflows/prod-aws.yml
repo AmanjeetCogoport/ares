@@ -11,8 +11,8 @@ env:
   GH_CR_USER: cogoport-dev            # set this to your GitHub username
   AWS_REGION: ap-south-1              # set this to your preferred AWS region, e.g. us-west-1
   ECS_SERVICE: ares                   # set this to your Amazon ECS service name
-  ECS_CLUSTER: Cogoport               # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: ares-td        # set this to your task definition name
+  ECS_CLUSTER: CogoportEcsCluster               # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: AresTaskDefinition        # set this to your task definition name
   CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
   MICRONAUT_ENVIRONMENTS: prod
   GITHUB_USERNAME: $GH_CR_USER
@@ -44,11 +44,11 @@ jobs:
         uses: machulav/ec2-github-runner@v2
         with:
           mode: start
-          github-token: ${{ secrets.GH_PERSONAL_TOKEN }}
+          github-token: ${{ env.GITHUB_TOKEN }}
           ec2-image-id: ami-07793eef0fa960ccd
           ec2-instance-type: t3.2xlarge
-          subnet-id: subnet-0dccd8ea53050bf9b
-          security-group-id: sg-00e6129c917589a6a
+          subnet-id: subnet-09da324b7914394f1
+          security-group-id: sg-0a476b8f086d3abd1
   deploy_prod:
     name: Start deployment
     needs:
@@ -90,9 +90,7 @@ jobs:
           IMAGE_TAG: ${{ steps.image_name.outputs.sha_short }}
         run: |
           echo $IMAGE_TAG
-          docker build -t ${{ env.REPO_URL }}:latest-prod .
-          docker push ${{ env.REPO_URL }}:latest-prod
-          docker tag ${{ env.REPO_URL }}:latest-prod ${{ env.REPO_URL }}:$IMAGE_TAG
+          docker build -t ${{ env.REPO_URL }}:$IMAGE_TAG .
           docker push ${{ env.REPO_URL }}:$IMAGE_TAG
 
       - name: Configure AWS credentials
@@ -105,11 +103,19 @@ jobs:
       - name: Download task definition json
         run: |
           aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --query taskDefinition > task-definition.json
-      
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.REPO_URL }}:${{ steps.image_name.outputs.sha_short }}
+
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: task-definition.json
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: false
@@ -133,6 +139,6 @@ jobs:
         uses: machulav/ec2-github-runner@v2
         with:
           mode: stop
-          github-token: ${{ secrets.GH_PERSONAL_TOKEN }}
+          github-token: ${{ env.GITHUB_TOKEN }}
           label: ${{ needs.start-runner.outputs.label }}
           ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}

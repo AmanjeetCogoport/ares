@@ -1,23 +1,27 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.model.payment.CollectionRequest
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.OverallStatsRequest
-import com.cogoport.ares.model.payment.MonthlyOutstandingRequest
-import com.cogoport.ares.model.payment.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.ReceivableRequest
-import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.CollectionResponse
+import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.DailySalesOutstanding
+import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.OverallStatsResponse
+import com.cogoport.ares.model.payment.OrgPayableRequest
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.request.CollectionRequest
+import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
+import com.cogoport.ares.model.payment.request.OverallStatsRequest
+import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
+import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.OrgPayableResponse
+import com.cogoport.ares.model.payment.response.OutstandingResponse
+import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
@@ -66,6 +70,16 @@ class DashboardController {
     @Get("/receivables-by-age{?request*}")
     suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
         return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
+    }
+
+    @Get("/org-collection{?request*}")
+    suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse> {
+        return Response<List<OutstandingResponse>>().ok(dashboardService.getOrgCollection(request))
+    }
+
+    @Get("/org-payables-stats{?request*}")
+    suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse {
+        return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
     }
 
     /** To be Deleted */

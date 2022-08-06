@@ -9,8 +9,8 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
 import java.util.Date
+import java.util.UUID
 
 @MappedEntity(value = "account_utilizations")
 data class AccountUtilization(
@@ -24,16 +24,21 @@ data class AccountUtilization(
     var category: String?,
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
+    // Trader partner details id
     var organizationId: UUID?,
+    // Organization id of customer/service provider
+    var taggedOrganizationId: UUID?,
+    var tradePartyMappingId: UUID?,
     var organizationName: String?,
     var accCode: Int,
     var accType: AccountType,
     var accMode: AccMode,
     var signFlag: Short,
     var currency: String = "INR",
-    val ledCurrency: String = "INR",
+    var ledCurrency: String = "INR",
     var amountCurr: BigDecimal,
     var amountLoc: BigDecimal,
+    var taxableAmount: BigDecimal? = BigDecimal.ZERO,
     var payCurr: BigDecimal = 0.toBigDecimal(),
     var payLoc: BigDecimal = 0.toBigDecimal(),
     var dueDate: Date?,

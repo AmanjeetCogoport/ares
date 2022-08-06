@@ -2,7 +2,7 @@ application:
   name: ares
 server:
   port: 8086
-  context-path: /payment
+  context-path: /payments
 router:
   static-resources:
     swagger:
@@ -46,3 +46,6 @@ opensearch:
 sentry:
   enabled: ${SENTRY_ENABLED:true}
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
+
+cogoport:
+  api_url: https://newapi.cogoport.com
