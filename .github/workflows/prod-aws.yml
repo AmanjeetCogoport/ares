@@ -11,8 +11,8 @@ env:
   GH_CR_USER: cogoport-dev            # set this to your GitHub username
   AWS_REGION: ap-south-1              # set this to your preferred AWS region, e.g. us-west-1
   ECS_SERVICE: ares                   # set this to your Amazon ECS service name
-  ECS_CLUSTER: Cogoport               # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: ares-td        # set this to your task definition name
+  ECS_CLUSTER: CogoportEcsCluster               # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: AresTaskDefinition        # set this to your task definition name
   CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
   MICRONAUT_ENVIRONMENTS: prod
   GITHUB_USERNAME: $GH_CR_USER
@@ -47,8 +47,8 @@ jobs:
           github-token: ${{ env.GITHUB_TOKEN }}
           ec2-image-id: ami-07793eef0fa960ccd
           ec2-instance-type: t3.2xlarge
-          subnet-id: subnet-0dccd8ea53050bf9b
-          security-group-id: sg-00e6129c917589a6a
+          subnet-id: subnet-09da324b7914394f1
+          security-group-id: sg-0a476b8f086d3abd1
   deploy_prod:
     name: Start deployment
     needs:
