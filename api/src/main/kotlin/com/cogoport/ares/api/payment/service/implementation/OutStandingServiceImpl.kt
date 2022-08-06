@@ -116,7 +116,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?> {
         val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
-        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId)
+        val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = "${orgId}_ALL")
 
         customerOutstanding?.hits()?.hits()?.map {
             it.source()?.let {
