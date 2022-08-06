@@ -208,6 +208,13 @@ class OpenSearchClient {
                         b.must {
                             it.match { it.field("accMode").query(FieldValue.of("AP")) }
                         }
+                        b.must { m ->
+                            m.script { s ->
+                                s.script { s1 ->
+                                    s1.inline { it.source("(doc['amountCurr'].value - doc['payCurr'].value) != 0") }
+                                }
+                            }
+                        }
                         b.mustNot {
                             it.match {
                                 it.field("documentStatus")
