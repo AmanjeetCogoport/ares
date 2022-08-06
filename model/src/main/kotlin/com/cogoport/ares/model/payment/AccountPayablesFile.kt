@@ -41,5 +41,6 @@ data class AccountPayablesFile(
     var bankName: String?,
     var isPosted: Boolean,
     var createdBy: UUID?,
-    var updatedBy: UUID?
+    var updatedBy: UUID?,
+    var performedByType: String?
 )

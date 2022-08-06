@@ -13,6 +13,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     suspend fun deleteByIdIn(ids: List<Long>)
 
+    suspend fun findByIdIn(ids: List<Long>): List<Settlement>
+
     @Query(
         """
             SELECT 

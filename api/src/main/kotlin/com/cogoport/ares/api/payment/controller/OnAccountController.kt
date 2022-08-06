@@ -48,7 +48,7 @@ class OnAccountController {
 
     @Delete
     suspend fun deleteOnAccountReceivables(@Body deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
-        return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(deletePaymentRequest.paymentId))
+        return Response<OnAccountApiCommonResponse>().ok(onAccountService.deletePaymentEntry(deletePaymentRequest))
     }
 
     @Post("/bulk-create")
