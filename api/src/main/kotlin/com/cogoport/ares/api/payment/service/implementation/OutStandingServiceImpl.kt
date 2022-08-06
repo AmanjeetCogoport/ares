@@ -49,7 +49,8 @@ class OutStandingServiceImpl : OutStandingService {
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            orgId.add(ageing.organizationId!!)
+            val docId = if (request.zone != null) "${ageing.organizationId}_${request.zone}" else "${ageing.organizationId}_ALL"
+            orgId.add(docId)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
         val response = OpenSearchClient().listApi(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = orgId, offset = (request.page - 1) * request.pageLimit, limit = request.pageLimit)
