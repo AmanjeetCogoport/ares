@@ -25,5 +25,5 @@ ALTER TYPE public."account_type" ADD VALUE 'INTER';
 ALTER TYPE public."account_type" ADD VALUE 'MTC';
 ALTER TYPE public."account_type" ADD VALUE 'MTCCV';
 
-ALTER TYPE public."payment_code" ADD VALUE "APRE";
-ALTER TYPE public."payment_code" ADD VALUE "CPRE";
+ALTER TYPE public."payment_code" ADD VALUE 'APRE';
+ALTER TYPE public."payment_code" ADD VALUE 'CPRE';
