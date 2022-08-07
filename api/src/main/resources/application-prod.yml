@@ -16,6 +16,9 @@ netty:
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
+services:
+  namespace: ${DNS_NAMESPACE:cogoport.prod}
+
 r2dbc:
   datasources:
     default:

@@ -4,5 +4,6 @@ import io.micronaut.context.annotation.ConfigurationProperties
 
 @ConfigurationProperties("services")
 class Services {
-    public var service: String? = null
+    var service: String? = null
+    var namespace: String? = null
 }
