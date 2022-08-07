@@ -46,7 +46,7 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 
-@Client(id = "ares-service")
+@Client(id = "ares")
 interface AresClient {
     @Get("/payments/dashboard/overall-stats{?request*}")
     public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?

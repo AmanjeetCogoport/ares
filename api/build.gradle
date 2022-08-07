@@ -45,7 +45,7 @@ dependencies {
     implementation("com.cogoport.brahma.opensearch:client:0.1.2-beta")
 
     //Plutus Client
-    implementation("com.cogoport.plutus:plutus-client:0.1.4")
+    implementation("com.cogoport.plutus:plutus-client:0.1.8")
     implementation("com.cogoport.plutus:plutus-model:0.1.7-beta")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
