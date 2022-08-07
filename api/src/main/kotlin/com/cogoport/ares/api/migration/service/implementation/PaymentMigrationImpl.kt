@@ -144,7 +144,7 @@ class PaymentMigrationImpl : PaymentMigration {
             if (utr == null || utr.isEmpty()) {
                 return null
             }
-            if (utr.length> 30) {
+            if (utr.length > 30) {
                 utr = utr.substring(0, 30)
             }
         } catch (e: Exception) {
