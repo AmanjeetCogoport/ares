@@ -19,7 +19,7 @@ jackson:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?preparedStatementCacheQueries=0
       username: ${DB_USER}
       password: ${DB_PASSWORD}
       dialect: POSTGRES
