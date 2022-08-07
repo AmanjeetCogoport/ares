@@ -51,5 +51,5 @@ sentry:
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
 
 cogoport:
-  api_url: https://newapi.cogoport.com
+  api_url: https://api.cogoport.com
   bearer_token: 0b1848788c34b1099d33baa18f5e413744373abfdc193c69016bfe0e107f7532fc68487c243d90086a6034faea960efa4134395f5b06d1d77329a4b7c2759d15
