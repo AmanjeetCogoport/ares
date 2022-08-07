@@ -9,7 +9,6 @@ import io.micronaut.context.annotation.Value
 import zipkin2.reporter.brave.AsyncZipkinSpanHandler
 import zipkin2.reporter.xray_udp.XRayUDPReporter
 
-
 class CustomXRayTracing {
     fun getCustomXRayTracing(@Value("\${micronaut.application.name}") serviceName: String): Tracing? {
         return Tracing.newBuilder().localServiceName(serviceName)
