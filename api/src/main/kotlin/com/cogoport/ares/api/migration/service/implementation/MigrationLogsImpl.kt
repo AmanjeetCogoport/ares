@@ -22,12 +22,18 @@ class MigrationLogsImpl : MigrationLogService {
         ledgerAmount: BigDecimal?,
         bankPayAmount: BigDecimal?,
         accountUtilCurrAmount: BigDecimal?,
-        accountUtilLedAmount: BigDecimal?
+        accountUtilLedAmount: BigDecimal?,
+        errorMessage: String?
     ) {
+        var migrationStatus = MigrationStatus.MIGRATED
+
+        if (!errorMessage.isNullOrEmpty()) {
+            migrationStatus = MigrationStatus.NOT_MIGRATED
+        }
         migrationLogsRepository.save(
             MigrationLogs(
                 null, paymentId, accUtilId, paymentNum, currency, currencyAmount, ledgerAmount, bankPayAmount,
-                accountUtilCurrAmount, accountUtilLedAmount, MigrationStatus.NOT_MIGRATED, null, Timestamp.from(Instant.now())
+                accountUtilCurrAmount, accountUtilLedAmount, migrationStatus, errorMessage, Timestamp.from(Instant.now())
             )
         )
     }
