@@ -12,7 +12,8 @@ interface MigrationLogService {
         ledgerAmount: BigDecimal?,
         bankPayAmount: BigDecimal?,
         accountUtilCurrAmount: BigDecimal?,
-        accountUtilLedAmount: BigDecimal?
+        accountUtilLedAmount: BigDecimal?,
+        errorMessage: String?
     )
     suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, ex: String?, paymentNum: String?)
 }

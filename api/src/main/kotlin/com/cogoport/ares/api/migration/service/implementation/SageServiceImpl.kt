@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
@@ -52,10 +54,52 @@ class SageServiceImpl : SageService {
             from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on P.NUM_0 = GC.REF_0
             INNER JOIN COGO2.GACCDUDATE G on GC.NUM_0 = G.NUM_0
             where P.BPRSAC_0 in('AR','SC') 
-            and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC  """
-
+            and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
+             """
+        //  -- and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
+        return payments.recordSets!![0]
+    }
+
+    override suspend fun getJournalVoucherFromSage(
+        startDate: String?,
+        endDate: String?
+    ): ArrayList<JournalVoucherRecord> {
+        val sqlQuery = """
+         SELECT   G.FCY_0 as entity_code 
+            ,G.BPR_0 as sage_organization_id 
+            ,case when G.SAC_0='AR' then 
+            (select BPCNAM_0 from COGO2.BPCUSTOMER where BPCNUM_0=G.BPR_0)
+            else (select BPSNAM_0 from COGO2.BPSUPPLIER where BPSNUM_0=G.BPR_0) end as organization_name
+            ,case when G.SAC_0='AR' then 223000 else 321000 end as acc_code
+            ,case when G.SAC_0='SC' then 'AP' else 'AR' end as acc_mode
+            ,case when G.PAM_0='BNK' then 'BANK'
+                  when G.PAM_0='CSH' then 'CASH'
+                  else G.PAM_0 end as pay_mode 
+            ,GC.DESVCR_0 as narration
+            ,GC.ACCDAT_0 as transaction_date 
+            ,G.DUDDAT_0 as due_date
+            ,GC.CREDATTIM_0 as created_at
+            ,GC.UPDDATTIM_0 as updated_at
+            ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
+            ,G.NUM_0 as payment_num
+            ,G.AMTCUR_0 as account_util_amt_curr
+            ,G.AMTLOC_0 as account_util_amt_led
+            ,G.PAYCUR_0 as account_util_pay_curr
+            ,G.PAYLOC_0 as account_util_pay_led
+            ,G.SNS_0 as sign_flag
+            ,G.CUR_0 as currency
+            ,GC.CURLED_0 as led_currency
+            ,G.TYP_0 as account_type
+            from  COGO2.GACCENTRY GC 
+            INNER JOIN COGO2.GACCDUDATE G on GC.NUM_0 = G.NUM_0
+            where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
+            and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC 
+             """
+
+        val journalRecords = Client.sqlQuery(sqlQuery)
+        val payments = ObjectMapper().readValue(journalRecords, JournalVoucherRecordManager::class.java)
         return payments.recordSets!![0]
     }
 }
