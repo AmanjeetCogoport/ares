@@ -52,4 +52,12 @@ object AresConstants {
     const val NO_DEDUCTION_RATE = 0
 
     const val PAYING_PARTY = "self,paying_party"
+
+    const val PAYMENTS = "payments"
+    const val ACCOUNT_UTILIZATIONS = "account_utilizations"
+    const val SETTLEMENT = "settlement"
+
+    const val CREATE = "CREATE"
+    const val UPDATE = "UPDATE"
+    const val DELETE = "DELETE"
 }

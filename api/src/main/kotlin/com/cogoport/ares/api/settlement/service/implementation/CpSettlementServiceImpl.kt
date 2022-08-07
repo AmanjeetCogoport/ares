@@ -10,9 +10,11 @@ import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
@@ -73,6 +75,9 @@ class CpSettlementServiceImpl : CpSettlementService {
 
     @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
+
+    @Inject
+    lateinit var auditService: AuditService
 
     /**
      * Get invoices for Given CP orgId.
@@ -281,10 +286,55 @@ class CpSettlementServiceImpl : CpSettlementService {
         // 2% tds on taxable amount only if tds is not deducted already
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        paymentRepository.save(payment)
-        accountUtilizationRepository.update(invoiceUtilization)
-        accountUtilizationRepository.save(accountUtilization)
-        settlements.forEach { settlement -> settlementRepository.save(settlement) }
+
+        val paymentObj = paymentRepository.save(payment)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = paymentObj.id,
+                actionName = AresConstants.CREATE,
+                data = paymentObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+
+        val invUtilObj = accountUtilizationRepository.update(invoiceUtilization)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = invUtilObj.id,
+                actionName = AresConstants.UPDATE,
+                data = invUtilObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+
+        val accUtilObj = accountUtilizationRepository.save(accountUtilization)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilObj.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+        settlements.forEach { settlement ->
+            val settleObj = settlementRepository.save(settlement)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SETTLEMENT,
+                    objectId = settleObj.id,
+                    actionName = AresConstants.CREATE,
+                    data = settleObj,
+                    performedBy = request.performedBy.toString(),
+                    performedByUserType = request.performedByUserType
+                )
+            )
+        }
         return SettlementKnockoffResponse()
     }
 

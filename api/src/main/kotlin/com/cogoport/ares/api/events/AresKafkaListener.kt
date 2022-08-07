@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
@@ -14,7 +15,7 @@ import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
 
-@KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "5000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD)
+@KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "5000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 2)
 class AresKafkaListener {
     @Inject
     private lateinit var accountUtilService: AccountUtilizationService
@@ -45,8 +46,8 @@ class AresKafkaListener {
 
     /*For deleting the invoices*/
     @Topic("delete-account-utilization")
-    fun listenDeleteAccountUtilization(data: MutableList<Pair<Long, String>>) = runBlocking {
-        accountUtilService.delete(data)
+    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
     }
 
     @Topic("receivables-dashboard-data")
