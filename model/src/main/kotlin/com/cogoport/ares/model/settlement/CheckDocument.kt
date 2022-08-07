@@ -5,30 +5,31 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.sql.Timestamp
-import java.time.Instant
 
 @JsonInclude
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @Introspected
 data class CheckDocument(
     var id: Long,
-    var documentNo: Long,
+    var documentNo: String,
     var documentValue: String,
     var accountType: SettlementType,
-    var documentAmount: BigDecimal = 0.toBigDecimal(),
+    var documentAmount: BigDecimal,
     var tds: BigDecimal?,
-    var afterTdsAmount: BigDecimal = 0.toBigDecimal(),
-    var balanceAmount: BigDecimal = 0.toBigDecimal(),
-    var allocationAmount: BigDecimal = 0.toBigDecimal(),
+    var afterTdsAmount: BigDecimal,
+    var balanceAmount: BigDecimal,
+    var allocationAmount: BigDecimal,
     var currentBalance: BigDecimal?,
-    var balanceAfterAllocation: BigDecimal = 0.toBigDecimal(),
+    var balanceAfterAllocation: BigDecimal,
     var ledgerAmount: BigDecimal,
     var status: String?,
-    var settledAllocation: BigDecimal = 0.toBigDecimal(),
-    var currency: String = "INR",
-    var ledCurrency: String = "INR",
+    var settledAllocation: BigDecimal,
+    var currency: String,
+    var ledCurrency: String,
     var exchangeRate: BigDecimal,
-    var transactionDate: Timestamp = Timestamp.from(Instant.now()),
-    var settledTds: BigDecimal = 0.toBigDecimal(),
-    var settledAmount: BigDecimal?
+    var transactionDate: Timestamp,
+    var settledTds: BigDecimal,
+    var settledAmount: BigDecimal?,
+    var nostroAmount: BigDecimal?,
+    var settledNostro: BigDecimal?
 )

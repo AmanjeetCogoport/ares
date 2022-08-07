@@ -33,9 +33,17 @@ data class Payment(
     @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
 
+    // Trader partner details id
     @JsonProperty("customerId")
     @field:NotNull(message = "UUID of the organization is required")
     var organizationId: UUID?,
+
+    // Organization id of customer/service provider
+    @JsonProperty("taggedOrganizationId")
+    var taggedOrganizationId: UUID?,
+
+    @JsonProperty("tradePartyMappingId")
+    var tradePartyMappingId: UUID?,
 
     @JsonProperty("customerName")
     var organizationName: String? = "",
@@ -125,5 +133,8 @@ data class Payment(
     var paymentNumValue: String?,
 
     @JsonProperty("bankId")
-    var bankId: UUID?
+    var bankId: UUID?,
+
+    @JsonProperty("performedByUserType")
+    val performedByUserType: String? = null
 )

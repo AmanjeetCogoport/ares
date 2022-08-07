@@ -6,12 +6,15 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.InvoiceDocumentMapper
@@ -21,9 +24,9 @@ import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
+import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
@@ -32,10 +35,12 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -70,6 +75,9 @@ class CpSettlementServiceImpl : CpSettlementService {
 
     @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
+
+    @Inject
+    lateinit var auditService: AuditService
 
     /**
      * Get invoices for Given CP orgId.
@@ -147,6 +155,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 orgSerialId = invoiceUtilization.orgSerialId,
                 sageOrganizationId = invoiceUtilization.sageOrganizationId,
                 organizationId = invoiceUtilization.organizationId,
+                taggedOrganizationId = invoiceUtilization.taggedOrganizationId,
+                tradePartyMappingId = invoiceUtilization.tradePartyMappingId,
                 organizationName = invoiceUtilization.organizationName,
                 accType = AccountType.REC,
                 accCode = invoiceUtilization.accCode,
@@ -276,10 +286,55 @@ class CpSettlementServiceImpl : CpSettlementService {
         // 2% tds on taxable amount only if tds is not deducted already
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        paymentRepository.save(payment)
-        accountUtilizationRepository.update(invoiceUtilization)
-        accountUtilizationRepository.save(accountUtilization)
-        settlements.forEach { settlement -> settlementRepository.save(settlement) }
+
+        val paymentObj = paymentRepository.save(payment)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = paymentObj.id,
+                actionName = AresConstants.CREATE,
+                data = paymentObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+
+        val invUtilObj = accountUtilizationRepository.update(invoiceUtilization)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = invUtilObj.id,
+                actionName = AresConstants.UPDATE,
+                data = invUtilObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+
+        val accUtilObj = accountUtilizationRepository.save(accountUtilization)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilObj.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilObj,
+                performedBy = request.performedBy.toString(),
+                performedByUserType = request.performedByUserType
+            )
+        )
+        settlements.forEach { settlement ->
+            val settleObj = settlementRepository.save(settlement)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SETTLEMENT,
+                    objectId = settleObj.id,
+                    actionName = AresConstants.CREATE,
+                    data = settleObj,
+                    performedBy = request.performedBy.toString(),
+                    performedByUserType = request.performedByUserType
+                )
+            )
+        }
         return SettlementKnockoffResponse()
     }
 
@@ -289,7 +344,7 @@ class CpSettlementServiceImpl : CpSettlementService {
      * @return ResponseList
      */
     private suspend fun getInvoiceList(request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse> {
-        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        validateInvoiceRequest(request)
         val response = getInvoiceDocumentList(request)
         val invoiceList = documentConverter.convertToSettlementInvoice(response.list)
 
@@ -310,6 +365,13 @@ class CpSettlementServiceImpl : CpSettlementService {
         )
     }
 
+    private fun validateInvoiceRequest(request: SettlementInvoiceRequest) {
+        if (request.orgId.isEmpty()) throw AresException(AresError.ERR_1003, "orgId")
+        if (request.status == null) throw AresException(AresError.ERR_1003, "status")
+        if (request.accType == null) throw AresException(AresError.ERR_1003, "accType")
+        if (request.accType !in listOf(AccountType.SINV, AccountType.PINV)) throw AresException(AresError.ERR_1202, "")
+    }
+
     /**
      * Get List of Documents from OpenSearch index_account_utilization
      * @param request
@@ -317,7 +379,7 @@ class CpSettlementServiceImpl : CpSettlementService {
      */
     private suspend fun getInvoiceDocumentList(
         request: SettlementInvoiceRequest
-    ): ResponseList<Document> {
+    ): ResponseList<InvoiceDocumentResponse> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         var query: String? = null
         if (request.query != null) {
@@ -336,7 +398,23 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         val documentModel = documentEntity.map { invoiceDocumentConverter.convertToModel(it!!) }
+        val tdsStyles = fetchTdsStyles(request.orgId)
+        documentModel.forEach { doc ->
+            doc.tdsPercentage = getTdsRate(
+                tdsProfile = tdsStyles,
+                orgId = doc.organizationId
+            )
 
+            doc.tds = doc.taxableAmount.multiply(
+                doc.tdsPercentage!!.divide(100.toBigDecimal())
+            ).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.settledTds)
+
+            doc.afterTdsAmount =
+                doc.documentAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.tds!!)
+
+            doc.balanceAmount =
+                doc.balanceAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.HALF_DOWN).minus(doc.tds!!)
+        }
         val total =
             accountUtilizationRepository.getInvoiceDocumentCount(
                 request.accType,
@@ -348,16 +426,11 @@ class CpSettlementServiceImpl : CpSettlementService {
                 request.status.toString()
             )
         for (doc in documentModel) {
-            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType))
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount,
+                afterTdsAmount = doc.afterTdsAmount!!,
                 balanceAmount = doc.balanceAmount,
-                docType = SettlementType.valueOf(doc.accountType)
+                docType = SettlementType.valueOf(doc.accountType.dbValue)
             )
-            doc.settledAllocation = BigDecimal.ZERO
-            doc.settledTds = BigDecimal.ZERO
-            doc.allocationAmount = doc.balanceAmount
-            doc.balanceAfterAllocation = BigDecimal.ZERO
         }
         return ResponseList(
             list = documentModel,
@@ -365,5 +438,30 @@ class CpSettlementServiceImpl : CpSettlementService {
             totalRecords = total,
             pageNo = request.page
         )
+    }
+
+    private suspend fun fetchTdsStyles(orgIds: List<UUID>): MutableList<TdsStylesResponse> {
+        val tdsStyles = mutableListOf<TdsStylesResponse>()
+        for (orgId in orgIds) {
+            try {
+                tdsStyles.add(cogoClient.getOrgTdsStyles(orgId.toString()).data)
+            } catch (e: Exception) {
+                logger().error("Tds Style Not Found for organization id: {}", orgId)
+                continue
+            }
+        }
+        return tdsStyles
+    }
+
+    private fun getTdsRate(
+        tdsProfile: List<TdsStylesResponse>,
+        orgId: UUID
+    ): BigDecimal {
+        val tdsStyle = tdsProfile.find { it.id == orgId }
+        return if (tdsStyle?.tdsDeductionType == "no_deduction") {
+            AresConstants.NO_DEDUCTION_RATE.toBigDecimal()
+        } else {
+            tdsStyle?.tdsDeductionRate ?: AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+        }
     }
 }

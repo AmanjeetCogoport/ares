@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -8,26 +9,32 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
+import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
+import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.Date
 import javax.transaction.Transactional
 
 open class KnockoffServiceImpl : KnockoffService {
@@ -49,6 +56,12 @@ open class KnockoffServiceImpl : KnockoffService {
 
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
+
+    @Inject
+    lateinit var auditService: AuditService
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
     override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
@@ -75,12 +88,27 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
         val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
-        val savedPaymentRecord = savePayment(paymentEntity, isTDSEntry = false)
+        val savedPaymentRecord = savePayment(
+            paymentEntity, isTDSEntry = false, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
+        )
 
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
         val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
         accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization.id,
+                actionName = AresConstants.UPDATE,
+                data = mapOf("pay_curr" to currTotalAmtPaid, "pay_loc" to ledTotalAmtPaid),
+                performedBy = knockOffRecord.updatedBy.toString(),
+                performedByUserType = knockOffRecord.performedByType
+            )
+        )
+
+        saveSettlements(knockOffRecord, false, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
+        saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
         saveAccountUtilization(
@@ -96,7 +124,9 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentEntity.amount = knockOffRecord.currTdsAmount
             paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
 
-            val savedTDSPaymentRecord = savePayment(paymentEntity, isTDSEntry = true)
+            val savedTDSPaymentRecord = savePayment(
+                paymentEntity, isTDSEntry = true, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
+            )
             saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true)
         }
 
@@ -126,7 +156,7 @@ open class KnockoffServiceImpl : KnockoffService {
         aresKafkaEmitter.emitBillPaymentStatus(event)
     }
 
-    private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean): Payment {
+    private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean, performedBy: String? = null, performedByType: String? = null): Payment {
         paymentEntity.paymentCode = if (!isTDSEntry) PaymentCode.PAY else PaymentCode.VTDS
         paymentEntity.accCode = if (!isTDSEntry) AresModelConstants.AP_ACCOUNT_CODE else AresModelConstants.TDS_AP_ACCOUNT_CODE
         paymentEntity.createdAt = Timestamp.from(Instant.now())
@@ -139,7 +169,18 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentEntity.paymentNum
         }
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
-        return paymentRepository.save(paymentEntity)
+        val paymentObj = paymentRepository.save(paymentEntity)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = paymentObj.id,
+                actionName = AresConstants.CREATE,
+                data = paymentObj,
+                performedBy = performedBy,
+                performedByUserType = performedByType
+            )
+        )
+        return paymentObj
     }
 
     private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean) {
@@ -180,6 +221,8 @@ open class KnockoffServiceImpl : KnockoffService {
             category = knockOffRecord.category,
             sageOrganizationId = null,
             organizationId = knockOffRecord.organizationId!!,
+            taggedOrganizationId = knockOffRecord.taggedOrganizationId,
+            tradePartyMappingId = knockOffRecord.tradePartyMappingId,
             organizationName = knockOffRecord.organizationName,
             accCode = AresModelConstants.AP_ACCOUNT_CODE,
             accType = knockOffRecord.accType,
@@ -198,6 +241,61 @@ open class KnockoffServiceImpl : KnockoffService {
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId
         )
-        accountUtilizationRepository.save(accountUtilEntity)
+        val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilObj.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilObj,
+                performedBy = knockOffRecord.updatedBy.toString(),
+                performedByUserType = knockOffRecord.performedByType
+            )
+        )
+    }
+
+    private suspend fun saveSettlements(
+        knockOffRecord: AccountPayablesFile,
+        isTDSEntry: Boolean,
+        destinationId: Long?,
+        sourceId: Long?
+    ) {
+        val settlement = generateSettlementEntity(knockOffRecord, isTDSEntry, destinationId, sourceId)
+        val settleObj = settlementRepository.save(settlement)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.SETTLEMENT,
+                objectId = settleObj.id,
+                actionName = AresConstants.CREATE,
+                data = settleObj,
+                performedBy = knockOffRecord.createdBy.toString(),
+                performedByUserType = knockOffRecord.performedByType
+            )
+        )
+    }
+
+    private fun generateSettlementEntity(
+        knockOffRecord: AccountPayablesFile,
+        isTDSEntry: Boolean,
+        destinationId: Long?,
+        sourceId: Long?
+    ): Settlement {
+        return Settlement(
+            id = null,
+            sourceId = sourceId,
+            sourceType = if (isTDSEntry) SettlementType.VTDS else SettlementType.PAY,
+            destinationId = destinationId!!,
+            destinationType = SettlementType.PINV,
+            ledCurrency = knockOffRecord.ledgerCurrency,
+            ledAmount = if (isTDSEntry) knockOffRecord.ledTdsAmount else knockOffRecord.ledgerAmount,
+            currency = knockOffRecord.currency,
+            amount = if (isTDSEntry) knockOffRecord.currTdsAmount else knockOffRecord.currencyAmount,
+            signFlag = if (isTDSEntry) -1 else 1,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now()),
+            createdBy = knockOffRecord.createdBy,
+            updatedBy = knockOffRecord.updatedBy,
+            settlementDate = Date(Timestamp.from(Instant.now()).time)
+        )
     }
 }

@@ -18,10 +18,11 @@ class SettlementInvoiceResponse(
     var settledAmount: BigDecimal?,
     var balanceAmount: BigDecimal?,
     var status: String,
-
+    var invoiceStatus: String,
     var currency: String,
     var sid: Long?,
     var shipmentType: String? = null,
     var pdfUrl: String? = null,
-    var tdsPercentage: BigDecimal = BigDecimal.ZERO
+    var tdsPercentage: BigDecimal = BigDecimal.ZERO,
+    var settledTds: BigDecimal
 )
