@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.config
 
+import com.cogoport.ares.api.common.models.SageConfig
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import io.micronaut.runtime.event.annotation.EventListener
@@ -16,11 +17,14 @@ class Bootstrap {
 
     @Inject private lateinit var sentryConfig: SentryConfig
 
+    @Inject private lateinit var sageConfig: SageConfig
+
     @EventListener
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         // Add all bootstrap services here
         configureOpenSearch()
         configureSentry()
+        configureSage()
     }
 
     private fun configureOpenSearch() {
@@ -44,5 +48,17 @@ class Bootstrap {
                 options.tracesSampleRate = 0.3
             }
         }
+    }
+
+    private fun configureSage() {
+        com.cogoport.brahma.sage.Client.configure(
+            com.cogoport.brahma.sage.Configuration(
+                soapUrl = sageConfig.soapUrl!!,
+                user = sageConfig.user!!,
+                password = sageConfig.password!!,
+                queryClientUrl = sageConfig.queryClientUrl!!,
+                queryClientPassword = sageConfig.queryClientPassword!!
+            )
+        )
     }
 }
