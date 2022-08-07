@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaClient
@@ -19,4 +20,7 @@ interface AresKafkaEmitter {
 
     @Topic("update-invoice-balance")
     fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent)
+
+    @Topic("sage-payment-migration")
+    fun emitPaymentMigration(paymentRecord: PaymentRecord)
 }
