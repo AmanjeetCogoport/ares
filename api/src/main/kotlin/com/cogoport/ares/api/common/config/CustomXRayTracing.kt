@@ -5,10 +5,7 @@ import brave.context.slf4j.MDCScopeDecorator
 import brave.propagation.ThreadLocalCurrentTraceContext
 import brave.propagation.aws.AWSPropagation
 import brave.sampler.Sampler
-import io.micronaut.context.annotation.Bean
-import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
-import jakarta.inject.Singleton
 import zipkin2.reporter.brave.AsyncZipkinSpanHandler
 import zipkin2.reporter.xray_udp.XRayUDPReporter
 
