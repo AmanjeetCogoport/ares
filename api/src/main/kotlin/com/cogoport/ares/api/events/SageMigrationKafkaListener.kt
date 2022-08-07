@@ -9,7 +9,7 @@ import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
 
-@KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "15000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD)
+@KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "15000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 2)
 class SageMigrationKafkaListener {
     @Inject
     lateinit var paymentMigration: PaymentMigration
