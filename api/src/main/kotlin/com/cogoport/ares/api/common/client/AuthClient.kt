@@ -2,6 +2,10 @@ package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
+import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
+import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
+import com.cogoport.ares.api.migration.model.TradePartyRequest
+import com.cogoport.ares.api.migration.model.TradePartyResponse
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -31,10 +35,15 @@ interface AuthClient {
 
     @Get("/get_organization_trade_party_finance_detail")
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
+    @Get("/get_organization_details_by_sage_org_id{?request*}")
+    suspend fun getOrgDetailsBySageOrgId(request: GetOrgDetailsRequest): GetOrgDetailsResponse
 
     @Get("/get_organization_trade_party_zone_details{?request*}")
     suspend fun getTradePartyDetailInfo(request: TradePartyDetailRequest): TradePartyOrganizationResponse
 
     @Get("/get_organization_trade_party_zone_info{?request*}")
     suspend fun getTradePartyInfo(request: MappingIdDetailRequest): TradePartyOrganizationResponse
+
+    @Get("/get_organization_trade_party_business_finance{?request*}")
+    suspend fun getTradePartyInfo(request: TradePartyRequest): TradePartyResponse
 }
