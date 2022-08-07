@@ -52,7 +52,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
             if (response.organizationId.isNullOrEmpty()) {
-                logger().info("Organization id is null, not migrating payment ${paymentRecord.paymentNum}")
+                logger().info("Organization id is null, not migrating payment ${paymentRecord.paymentNum} ")
                 migrationLogService.saveMigrationLogs(null, null, paymentRecord.paymentNum, null, null, null, null, null, null)
                 return
             }
@@ -67,8 +67,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
             logger().info("Payment with paymentId ${paymentRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
-            logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum}")
-            logger().info("******* Printing Stack trace ******** ${ex.stackTraceToString()}")
+            logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
             migrationLogService.saveMigrationLogs(null, null, ex.stackTraceToString(), paymentRecord.paymentNum)
         }
     }
@@ -111,7 +110,8 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilCurrAmount = paymentRecord.accountUtilAmtCurr,
             accountUtilLedAmount = paymentRecord.accountUtilAmtLed,
             accountUtilPayCurr = paymentRecord.accountUtilPayCurr,
-            accountUtilPayLed = paymentRecord.accountUtilPayLed
+            accountUtilPayLed = paymentRecord.accountUtilPayLed,
+            bankPayAmount = paymentRecord.bankPayAmount
         )
     }
 
@@ -223,7 +223,8 @@ class PaymentMigrationImpl : PaymentMigration {
             exchangeRate = receivableRequest.exchangeRate,
             bankId = receivableRequest.bankId,
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.mappingId != null) tradePartyResponse.mappingId else null,
-            taggedOrganizationId = receivableRequest.organizationId
+            taggedOrganizationId = receivableRequest.organizationId,
+            bankPayAmount = receivableRequest.bankPayAmount
         )
     }
 
@@ -237,7 +238,7 @@ class PaymentMigrationImpl : PaymentMigration {
             documentStatus = DocumentStatus.FINAL,
             entityCode = receivableRequest.entityCode,
             category = null,
-            orgSerialId = paymentEntity.orgSerialId,
+            orgSerialId = paymentEntity.orgSerialId ?: 0L,
             sageOrganizationId = paymentEntity.sageOrganizationId,
             organizationId = paymentEntity.organizationId,
             organizationName = paymentEntity.organizationName,

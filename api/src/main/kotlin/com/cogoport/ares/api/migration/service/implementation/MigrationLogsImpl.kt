@@ -24,18 +24,10 @@ class MigrationLogsImpl : MigrationLogService {
         accountUtilCurrAmount: BigDecimal?,
         accountUtilLedAmount: BigDecimal?
     ) {
-        if (paymentId == null && accUtilId == null) {
-            migrationLogsRepository.save(
-                MigrationLogs(
-                    null, paymentId, accUtilId, paymentNum, currency, currencyAmount, ledgerAmount, bankPayAmount,
-                    accountUtilCurrAmount, accountUtilLedAmount, MigrationStatus.NOT_MIGRATED, null, Timestamp.from(Instant.now())
-                )
-            )
-        }
         migrationLogsRepository.save(
             MigrationLogs(
-                null, paymentId, accUtilId, paymentNum, currency, null, null, null,
-                null, null, MigrationStatus.MIGRATED, null, Timestamp.from(Instant.now())
+                null, paymentId, accUtilId, paymentNum, currency, currencyAmount, ledgerAmount, bankPayAmount,
+                accountUtilCurrAmount, accountUtilLedAmount, MigrationStatus.NOT_MIGRATED, null, Timestamp.from(Instant.now())
             )
         )
     }
@@ -44,7 +36,7 @@ class MigrationLogsImpl : MigrationLogService {
         migrationLogsRepository.save(
             MigrationLogs(
                 null, null, null, paymentNum, null, null, null, null,
-                null, null, MigrationStatus.FAILED, null, Timestamp.from(Instant.now())
+                null, null, MigrationStatus.FAILED, ex, Timestamp.from(Instant.now())
             )
         )
     }

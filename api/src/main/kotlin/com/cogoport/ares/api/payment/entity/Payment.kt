@@ -45,5 +45,6 @@ data class Payment(
     var paymentNum: Long?,
     var paymentNumValue: String?,
     var exchangeRate: BigDecimal?,
-    var bankId: UUID?
+    var bankId: UUID?,
+    var bankPayAmount: BigDecimal?
 )
