@@ -43,5 +43,6 @@ data class PaymentMigrationEntity(
     var exchangeRate: BigDecimal?,
     var bankId: UUID?,
     var tradePartyMappingId: UUID?,
-    var taggedOrganizationId: UUID?
+    var taggedOrganizationId: UUID?,
+    var bankPayAmount: BigDecimal?
 )

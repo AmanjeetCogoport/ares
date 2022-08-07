@@ -111,7 +111,8 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilCurrAmount = paymentRecord.accountUtilAmtCurr,
             accountUtilLedAmount = paymentRecord.accountUtilAmtLed,
             accountUtilPayCurr = paymentRecord.accountUtilPayCurr,
-            accountUtilPayLed = paymentRecord.accountUtilPayLed
+            accountUtilPayLed = paymentRecord.accountUtilPayLed,
+            bankPayAmount = paymentRecord.bankPayAmount
         )
     }
 
@@ -223,7 +224,8 @@ class PaymentMigrationImpl : PaymentMigration {
             exchangeRate = receivableRequest.exchangeRate,
             bankId = receivableRequest.bankId,
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.mappingId != null) tradePartyResponse.mappingId else null,
-            taggedOrganizationId = receivableRequest.organizationId
+            taggedOrganizationId = receivableRequest.organizationId,
+            bankPayAmount = receivableRequest.bankPayAmount
         )
     }
 
@@ -237,7 +239,7 @@ class PaymentMigrationImpl : PaymentMigration {
             documentStatus = DocumentStatus.FINAL,
             entityCode = receivableRequest.entityCode,
             category = null,
-            orgSerialId = paymentEntity.orgSerialId,
+            orgSerialId = paymentEntity.orgSerialId ?: 0L,
             sageOrganizationId = paymentEntity.sageOrganizationId,
             organizationId = paymentEntity.organizationId,
             organizationName = paymentEntity.organizationName,
