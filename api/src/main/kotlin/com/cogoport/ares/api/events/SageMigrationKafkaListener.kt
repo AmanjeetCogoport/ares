@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import io.micronaut.configuration.kafka.annotation.KafkaListener
@@ -15,7 +16,11 @@ class SageMigrationKafkaListener {
     lateinit var paymentMigration: PaymentMigration
 
     @Topic("sage-payment-migration")
-    fun migrateSageBills(paymentRecord: PaymentRecord) = runBlocking {
+    fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
         paymentMigration.migratePayment(paymentRecord)
+    }
+    @Topic("sage-jv-migration")
+    fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
+        paymentMigration.migarteJournalVoucher(journalVoucherRecord)
     }
 }
