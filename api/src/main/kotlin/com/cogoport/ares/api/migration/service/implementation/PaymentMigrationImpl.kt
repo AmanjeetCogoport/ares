@@ -52,7 +52,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
             if (response.organizationId.isNullOrEmpty()) {
-                logger().info("Organization id is null, not migrating payment ${paymentRecord.paymentNum}")
+                logger().info("Organization id is null, not migrating payment ${paymentRecord.paymentNum} ")
                 migrationLogService.saveMigrationLogs(null, null, paymentRecord.paymentNum, null, null, null, null, null, null)
                 return
             }
@@ -67,8 +67,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
             logger().info("Payment with paymentId ${paymentRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
-            logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum}")
-            logger().info("******* Printing Stack trace ******** ${ex.stackTraceToString()}")
+            logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
             migrationLogService.saveMigrationLogs(null, null, ex.stackTraceToString(), paymentRecord.paymentNum)
         }
     }
