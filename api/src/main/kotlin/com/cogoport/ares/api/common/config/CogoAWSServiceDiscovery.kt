@@ -75,7 +75,7 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
     }
 
     private fun buildRequest(serviceName: String?): DiscoverInstancesRequest {
-        return DiscoverInstancesRequest.builder().namespaceName(NAMESPACE_NAME).serviceName(serviceName).build()
+        return DiscoverInstancesRequest.builder().namespaceName(services.namespace).serviceName(serviceName).build()
     }
 
     /**
@@ -106,7 +106,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
     }
 
     companion object {
-        private const val NAMESPACE_NAME = "cogoport.local"
         private const val AWS_INSTANCE_IPV_4_ATTRIBUTE = "AWS_INSTANCE_IPV4"
         private const val AWS_INSTANCE_PORT_ATTRIBUTE = "AWS_INSTANCE_PORT"
         private val RAND = Random(System.currentTimeMillis())
