@@ -12,58 +12,109 @@ import java.util.UUID
 data class PaymentRecord(
     @JsonProperty("entity_code")
     val entityCode: Int? = null,
+
     @JsonProperty("org_serial_id")
     val organizationSerialId: UUID? = null,
+
     @JsonProperty("sage_organization_id")
     val sageOrganizationId: String? = null,
+
     @JsonProperty("organization_id")
     val organizationId: UUID? = null,
+
     @JsonProperty("organization_name")
     val organizationName: String? = null,
+
     @JsonProperty("acc_code")
     val accCode: Int? = null,
+
     @JsonProperty("acc_mode")
     val accMode: String? = null,
-    @JsonProperty("sign_flag")
-    val signFlag: Short? = null,
-    @JsonProperty("currency")
-    val currency: String? = null,
-    @JsonProperty("amount")
-    val amount: BigDecimal? = null,
-    @JsonProperty("led_currency")
-    val ledCurrency: String? = null,
-    @JsonProperty("led_amount")
-    val ledAmount: BigDecimal? = null,
+
     @JsonProperty("pay_mode")
     val paymentMode: String? = null,
+
     @JsonProperty("narration")
     val narration: String? = null,
-    @JsonProperty("cogo_account_no")
-    val CogoAccountNumber: String? = null,
-    @JsonProperty("ref_account_no")
-    val refAccountNumber: String? = null,
-    @JsonProperty("bank_name")
-    val bankName: String? = null,
-    @JsonProperty("trans_ref_number")
-    val transRefNumber: String? = null,
+
     @JsonProperty("transaction_date")
     val transactionDate: Timestamp? = null,
-    @JsonProperty("is_posted")
-    val isPosted: Boolean = true,
-    @JsonProperty("is_deleted")
-    val isDeleted: Boolean = false,
+
+    @JsonProperty("due_date")
+    val dueDate: Timestamp? = null,
+
     @JsonProperty("created_at")
     val createdAt: Timestamp? = null,
+
     @JsonProperty("updated_at")
     val updatedAt: Timestamp? = null,
+
     @JsonProperty("payment_code")
     val paymentCode: String? = null,
+
     @JsonProperty("payment_num")
     val paymentNum: String? = null,
-    @JsonProperty("payment_num_value")
-    val paymentNumValue: String? = null,
+
+    @JsonProperty("account_util_amt_curr")
+    val accountUtilAmtCurr: BigDecimal,
+
+    @JsonProperty("account_util_amt_led")
+    val accountUtilAmtLed: BigDecimal,
+
+    @JsonProperty("account_util_pay_curr")
+    val accountUtilPayCurr: BigDecimal,
+
+    @JsonProperty("account_util_pay_led")
+    val accountUtilPayLed: BigDecimal,
+
+    @JsonProperty("amount")
+    val currencyAmount: BigDecimal,
+
+    @JsonProperty("led_amount")
+    val ledgerAmount: BigDecimal,
+
+    @JsonProperty("bank_pay_amount")
+    val bankPayAmount: BigDecimal? = null,
+
+    @JsonProperty("sign_flag")
+    val signFlag: Short? = null,
+
+    @JsonProperty("currency")
+    val currency: String? = null,
+
+    @JsonProperty("led_currency")
+    val ledgerCurrency: String? = null,
+
     @JsonProperty("exchange_rate")
     val exchangeRate: BigDecimal? = null,
+
+    @JsonProperty("account_type")
+    val accountType: String? = null,
+
+    @JsonProperty("pan_number")
+    val panNumber: String? = null,
+
+    @JsonProperty("cogo_account_no")
+    val cogoAccountNumber: String? = null,
+
+    @JsonProperty("ref_account_no")
+    val refAccountNumber: String? = null,
+
+    @JsonProperty("bank_name")
+    val bankName: String? = null,
+
+    @JsonProperty("trans_ref_number")
+    val transRefNumber: String? = null,
+
+    @JsonProperty("is_posted")
+    val isPosted: Boolean = true,
+
+    @JsonProperty("is_deleted")
+    val isDeleted: Boolean = false,
+
     @JsonProperty("bank_id")
-    val bankId: UUID? = null
+    val bankId: UUID? = null,
+
+    @JsonProperty("bank_short_code")
+    val bankShortCode: String? = null
 )

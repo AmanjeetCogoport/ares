@@ -4,9 +4,8 @@ import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
-import com.cogoport.ares.model.payment.CogoEntitiesRequest
-import com.cogoport.ares.model.payment.CogoOrganizationRequest
-import com.cogoport.ares.model.payment.PlatformOrganizationResponse
+import com.cogoport.ares.api.migration.model.TradePartyRequest
+import com.cogoport.ares.api.migration.model.TradePartyResponse
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -44,4 +43,7 @@ interface AuthClient {
 
     @Get("/get_organization_trade_party_zone_info{?request*}")
     suspend fun getTradePartyInfo(request: MappingIdDetailRequest): TradePartyOrganizationResponse
+
+    @Get("/get_organization_trade_party_business_finance{?request*}")
+    suspend fun getTradePartyInfo(request: TradePartyRequest): TradePartyResponse
 }

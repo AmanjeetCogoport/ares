@@ -16,27 +16,43 @@ class SageServiceImpl : SageService {
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?): ArrayList<PaymentRecord> {
         val sqlQuery = """
-            SELECT P.FCY_0 as entity_code 
+         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
             ,P.BPANAM_0 as organization_name
-            ,P.ACC_0 as acc_code,P.BPRSAC_0 as acc_mode
-            ,P.AMTCUR_0 as amount 
-            ,P.BANPAYTPY_0 as led_amount
-            ,P.PAM_0 as pay_mode 
+            ,P.ACC_0 as acc_code
+            ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
+            ,case when P.PAM_0='BNK' then 'BANK'
+                  when P.PAM_0='CSH' then 'CASH'
+                  else P.PAM_0 end as pay_mode 
             ,P.DES_0 as narration
             ,P.ACCDAT_0 as transaction_date 
+            ,G.DUDDAT_0 as due_date
             ,P.CREDATTIM_0 as created_at
             ,P.UPDDATTIM_0 as updated_at
-            ,P.PAYTYP_0 as payment_code
+            ,case when P.PAYTYP_0 in('TDSC','TDS') and P.BPRSAC_0='AR' then 'CTDS' 
+                  when P.PAYTYP_0 in('TDSC','TDS') and P.BPRSAC_0='SC' then 'VTDS'
+                  else P.PAYTYP_0 end as payment_code
             ,GC.NUM_0 as payment_num
-            ,GC.NUM_0 as payment_num_value
+            ,G.AMTCUR_0 as account_util_amt_curr
+            ,G.AMTLOC_0 as account_util_amt_led
+            ,G.PAYCUR_0 as account_util_pay_curr
+            ,G.PAYLOC_0 as account_util_pay_led
+            ,P.AMTCUR_0 as amount 
+            ,P.AMTCUR_0 * GC.RATMLT_0 as led_amount
+            ,P.BANPAYTPY_0 as bank_pay_amount
             ,G.SNS_0 as sign_flag
             ,GC.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
-            from $sageSchema.PAYMENTH P INNER JOIN $sageSchema.GACCENTRY GC on P.NUM_0 = GC.REF_0
-            LEFT JOIN $sageSchema.GACCDUDATE G on GC.NUM_0 = G.NUM_0
-            where P.BPRSAC_0 = 'AR' and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
+            ,G.TYP_0 as account_type
+            ,case when P.BPRSAC_0='AR' then 
+            (select XX1P4PANNO_0 from COGO2.BPCUSTOMER where BPCNUM_0=P.BPR_0)
+            else (select XX1P4PANNO_0 from COGO2.BPSUPPLIER where BPSNUM_0=P.BPR_0) end as pan_number
+            ,P.BAN_0 as bank_short_code
+            from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on P.NUM_0 = GC.REF_0
+            INNER JOIN COGO2.GACCDUDATE G on GC.NUM_0 = G.NUM_0
+            where P.BPRSAC_0 in('AR','SC') 
+            and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC  """
 
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
