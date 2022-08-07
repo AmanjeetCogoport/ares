@@ -36,7 +36,7 @@ class MigrationLogsImpl : MigrationLogService {
         migrationLogsRepository.save(
             MigrationLogs(
                 null, null, null, paymentNum, null, null, null, null,
-                null, null, MigrationStatus.FAILED, null, Timestamp.from(Instant.now())
+                null, null, MigrationStatus.FAILED, ex, Timestamp.from(Instant.now())
             )
         )
     }
