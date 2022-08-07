@@ -10,7 +10,7 @@ env:
   REPO_URL: ghcr.io/cogoport/ares     # set this to your GitHub package url
   GH_CR_USER: cogoport-dev            # set this to your GitHub username
   AWS_REGION: ap-south-1              # set this to your preferred AWS region, e.g. us-west-1
-  ECS_SERVICE: ares-service           # set this to your Amazon ECS service name
+  ECS_SERVICE: ares                   # set this to your Amazon ECS service name
   ECS_CLUSTER: cogoport               # set this to your Amazon ECS cluster name
   ECS_TASK_DEFINITION: ares-td        # set this to your task definition name
   CONTAINER_NAME: ares                # set this to the name of the container in the containerDefinitions section of your task definition
