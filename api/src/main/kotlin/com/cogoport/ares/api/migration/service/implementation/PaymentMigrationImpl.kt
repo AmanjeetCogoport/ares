@@ -29,14 +29,13 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.time.ZoneId
 import java.time.temporal.IsoFields
-import java.util.*
+import java.util.Date
 import javax.transaction.Transactional
 
 class PaymentMigrationImpl : PaymentMigration {
@@ -113,7 +112,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-                emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!,accUtilRes.transactionDate!!,accUtilRes.zoneCode,accUtilRes.accMode,accUtilRes.organizationId!!,accUtilRes.organizationName!!)
+                emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
             } catch (ex: Exception) {
                 logger().error(ex.stackTraceToString())
             }
@@ -244,7 +243,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!,accUtilRes.transactionDate!!,accUtilRes.zoneCode,accUtilRes.accMode,accUtilRes.organizationId!!,accUtilRes.organizationName!!)
+            emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
@@ -377,7 +376,7 @@ class PaymentMigrationImpl : PaymentMigration {
      * to update Dashboard and Receivables outstanding documents on OpenSearch
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate:Date,zoneCode:String?, accMode:AccMode,organizationId:UUID,organizationName:String) {
+    private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
         aresKafkaEmitter.emitDashboardData(
             OpenSearchEvent(
