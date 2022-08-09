@@ -18,8 +18,9 @@ class SageServiceImpl : SageService {
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?): ArrayList<PaymentRecord> {
         val sqlQuery = """
-         SELECT  P.FCY_0 as entity_code 
+        SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
+            ,GC.NUM_0 as payment_num
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -34,7 +35,6 @@ class SageServiceImpl : SageService {
             ,case when P.PAYTYP_0 in('TDSC','TDS') and P.BPRSAC_0='AR' then 'CTDS' 
                   when P.PAYTYP_0 in('TDSC','TDS') and P.BPRSAC_0='SC' then 'VTDS'
                   else P.PAYTYP_0 end as payment_code
-            ,GC.NUM_0 as payment_num
             ,G.AMTCUR_0 as account_util_amt_curr
             ,G.AMTLOC_0 as account_util_amt_led
             ,G.PAYCUR_0 as account_util_pay_curr
@@ -51,8 +51,14 @@ class SageServiceImpl : SageService {
             (select XX1P4PANNO_0 from COGO2.BPCUSTOMER where BPCNUM_0=P.BPR_0)
             else (select XX1P4PANNO_0 from COGO2.BPSUPPLIER where BPSNUM_0=P.BPR_0) end as pan_number
             ,P.BAN_0 as bank_short_code
-            from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on P.NUM_0 = GC.REF_0
-            INNER JOIN COGO2.GACCDUDATE G on GC.NUM_0 = G.NUM_0
+            from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on (P.NUM_0 = GC.REF_0 and GC.FCY_0=P.FCY_0)
+            INNER JOIN       
+            (
+             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,
+             SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC') 
+             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
+            ) G            
+            on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 in('AR','SC') 
             and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
              """
@@ -69,6 +75,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
          SELECT   G.FCY_0 as entity_code 
             ,G.BPR_0 as sage_organization_id 
+            ,G.NUM_0 as payment_num
             ,case when G.SAC_0='AR' then 
             (select BPCNAM_0 from COGO2.BPCUSTOMER where BPCNUM_0=G.BPR_0)
             else (select BPSNAM_0 from COGO2.BPSUPPLIER where BPSNUM_0=G.BPR_0) end as organization_name
@@ -83,7 +90,6 @@ class SageServiceImpl : SageService {
             ,GC.CREDATTIM_0 as created_at
             ,GC.UPDDATTIM_0 as updated_at
             ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
-            ,G.NUM_0 as payment_num
             ,G.AMTCUR_0 as account_util_amt_curr
             ,G.AMTLOC_0 as account_util_amt_led
             ,G.PAYCUR_0 as account_util_pay_curr
@@ -93,7 +99,10 @@ class SageServiceImpl : SageService {
             ,GC.CURLED_0 as led_currency
             ,G.TYP_0 as account_type
             from  COGO2.GACCENTRY GC 
-            INNER JOIN COGO2.GACCDUDATE G on GC.NUM_0 = G.NUM_0
+            INNER JOIN           
+            (select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV') GROUP by TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0) G 
+            on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
             and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC 
              """
