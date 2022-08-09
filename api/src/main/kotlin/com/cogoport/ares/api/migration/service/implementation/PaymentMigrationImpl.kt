@@ -2,6 +2,8 @@ package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
@@ -17,6 +19,7 @@ import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -26,10 +29,14 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.time.ZoneId
+import java.time.temporal.IsoFields
+import java.util.*
 import javax.transaction.Transactional
 
 class PaymentMigrationImpl : PaymentMigration {
@@ -41,6 +48,9 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var migrationLogService: MigrationLogService
 
     @Inject lateinit var cogoClient: AuthClient
+
+    @Inject
+    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -103,6 +113,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+                emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!,accUtilRes.transactionDate!!,accUtilRes.zoneCode,accUtilRes.accMode,accUtilRes.organizationId!!,accUtilRes.organizationName!!)
             } catch (ex: Exception) {
                 logger().error(ex.stackTraceToString())
             }
@@ -229,14 +240,15 @@ class PaymentMigrationImpl : PaymentMigration {
 
         val accUtilEntity = setAccountUtilizations(receivableRequest, payment)
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!,accUtilRes.transactionDate!!,accUtilRes.zoneCode,accUtilRes.accMode,accUtilRes.organizationId!!,accUtilRes.organizationName!!)
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
+
         return OnAccountApiCommonResponseMigration(paymentId = savedPayment.id!!, message = Messages.PAYMENT_CREATED, isSuccess = true, accUtilId = accUtilRes.id!!)
     }
 
@@ -358,5 +370,34 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error(e.stackTraceToString())
             return null
         }
+    }
+
+    /**
+     * Emit message to Kafka topic receivables-dashboard-data
+     * to update Dashboard and Receivables outstanding documents on OpenSearch
+     * @param accUtilizationRequest
+     */
+    private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate:Date,zoneCode:String?, accMode:AccMode,organizationId:UUID,organizationName:String) {
+        val date = dueDate ?: transactionDate
+        aresKafkaEmitter.emitDashboardData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = zoneCode,
+                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
+                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
+                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
+                    accMode = accMode
+                )
+            )
+        )
+        aresKafkaEmitter.emitOutstandingData(
+            OpenSearchEvent(
+                OpenSearchRequest(
+                    zone = zoneCode,
+                    orgId = organizationId.toString(),
+                    orgName = organizationName
+                )
+            )
+        )
     }
 }
