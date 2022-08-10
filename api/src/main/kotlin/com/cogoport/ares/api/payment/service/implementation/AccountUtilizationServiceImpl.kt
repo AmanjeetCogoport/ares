@@ -24,9 +24,12 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.settlement.event.InvoiceBalance
+import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -117,6 +120,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     Messages.SUCCESS_INVOICE_CREATION
                 )
             )
+            if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && accUtilRes.accType == AccountType.SINV) {
+                aresKafkaEmitter.emitInvoiceBalance(
+                    UpdateInvoiceBalanceEvent(
+                        invoiceBalance = InvoiceBalance(
+                            invoiceId = accUtilRes.documentNo,
+                            balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr)
+                        )
+                    )
+                )
+            }
         }
         return responseList
     }
