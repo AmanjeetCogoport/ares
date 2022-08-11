@@ -19,6 +19,7 @@ data class PaymentMigrationModel(
     var id: Long? = null,
     var entityCode: Int,
     var orgSerialId: Long? = null,
+    var tradePartySerialId: String? = null,
     var sageOrganizationId: String,
     var organizationId: UUID? = null,
     var organizationName: String? = null,
