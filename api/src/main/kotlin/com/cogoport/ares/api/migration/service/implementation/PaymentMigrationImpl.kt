@@ -13,8 +13,8 @@ import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
 import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
-import com.cogoport.ares.api.migration.model.TradePartyRequest
-import com.cogoport.ares.api.migration.model.TradePartyResponse
+import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
+import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
@@ -62,7 +62,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     organizationType = if (paymentRecord.accMode.equals("AR")) "income" else "expense"
                 )
             )
-            if (response.organizationId.isNullOrEmpty()) {
+            if (response == null || response.organizationId.isNullOrEmpty()) {
                 val message = "Organization id is null, not migrating payment ${paymentRecord.paymentNum}"
                 logger().info(message)
                 migrationLogService.saveMigrationLogs(null, null, paymentRecord.paymentNum, null, null, null, null, null, null, message)
@@ -98,7 +98,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     organizationType = if (journalVoucherRecord.accMode.equals("AR")) "income" else "expense"
                 )
             )
-            if (response.organizationId.isNullOrEmpty()) {
+            if (response == null || response.organizationId.isNullOrEmpty()) {
                 val message = "Organization id is null, not migrating journal voucher ${journalVoucherRecord.paymentNum}"
                 logger().info(message)
                 migrationLogService.saveMigrationLogs(
@@ -134,14 +134,14 @@ class PaymentMigrationImpl : PaymentMigration {
         return 1
     }
 
-    private fun getPaymentRequest(paymentRecord: PaymentRecord, RorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
+    private fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
 
         return PaymentMigrationModel(
             id = null,
             entityCode = paymentRecord.entityCode!!,
-            orgSerialId = RorOrgDetails.organizationSerialId?.toLong(),
+            orgSerialId = rorOrgDetails.organizationSerialId?.toLong(),
             sageOrganizationId = paymentRecord.sageOrganizationId!!,
-            organizationId = UUID.fromString(RorOrgDetails.organizationId),
+            organizationId = UUID.fromString(rorOrgDetails.organizationId),
             organizationName = paymentRecord.organizationName,
             accCode = paymentRecord.accCode!!,
             accMode = AccMode.valueOf(paymentRecord.accMode!!),
@@ -152,7 +152,7 @@ class PaymentMigrationImpl : PaymentMigration {
             ledAmount = paymentRecord.ledgerAmount,
             payMode = PayMode.valueOf(paymentRecord.paymentMode!!), // getPaymentMode(paymentRecord)?.let { PaymentModeMapping.getPayMode(it) },
             narration = paymentRecord.narration,
-            transRefNumber = getUTR(paymentRecord.narration!!),
+            transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
             isPosted = true,
@@ -160,7 +160,7 @@ class PaymentMigrationImpl : PaymentMigration {
             createdAt = paymentRecord.createdAt!!,
             updatedAt = paymentRecord.updatedAt!!,
             cogoAccountNo = getCogoAccountNo(paymentRecord.bankShortCode!!),
-            zone = RorOrgDetails.zone?.uppercase(),
+            zone = rorOrgDetails.zone?.uppercase(),
             serviceType = ServiceType.NA,
             paymentCode = PaymentCode.valueOf(paymentRecord.paymentCode!!),
             bankName = getCogoBankName(paymentRecord.bankShortCode) ?: paymentRecord.bankShortCode,
@@ -173,7 +173,8 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilLedAmount = paymentRecord.accountUtilAmtLed,
             accountUtilPayCurr = paymentRecord.accountUtilPayCurr,
             accountUtilPayLed = paymentRecord.accountUtilPayLed,
-            bankPayAmount = paymentRecord.bankPayAmount
+            bankPayAmount = paymentRecord.bankPayAmount,
+            tradePartySerialId = rorOrgDetails.tradePartySerialId
         )
     }
 
@@ -253,13 +254,20 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     private suspend fun setPaymentEntry(receivableRequest: PaymentMigrationModel): PaymentMigrationEntity {
-        val tradePartyResponse = getTradePartyInfo(receivableRequest.organizationId.toString())
+        // val tradePartyResponse = getTradePartyInfo(receivableRequest.organizationId.toString())
+        val serialIdInputs = SerialIdsInput(receivableRequest.orgSerialId!!, receivableRequest.tradePartySerialId!!.toLong())
+
+        val serialIdRequest = SerialIdDetailsRequest(
+            organizationTradePartyMappings = arrayListOf(serialIdInputs)
+        )
+        val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
+
         return PaymentMigrationEntity(
             id = null,
             entityCode = receivableRequest.entityCode,
-            orgSerialId = if (tradePartyResponse != null && tradePartyResponse.tradePartyDetailSerialId != null) tradePartyResponse.tradePartyDetailSerialId else null,
+            orgSerialId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.tradePartySerial != null) tradePartyResponse.get(0)?.tradePartySerial else null,
             sageOrganizationId = receivableRequest.sageOrganizationId,
-            organizationId = if (tradePartyResponse != null && tradePartyResponse.tradePartyDetailId != null) tradePartyResponse.tradePartyDetailId else null,
+            organizationId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.organizationTradePartyDetailId != null) tradePartyResponse.get(0)?.organizationTradePartyDetailId else null,
             organizationName = receivableRequest.organizationName,
             accCode = receivableRequest.accCode,
             accMode = receivableRequest.accMode,
@@ -285,7 +293,7 @@ class PaymentMigrationImpl : PaymentMigration {
             paymentNumValue = receivableRequest.paymentNumValue,
             exchangeRate = receivableRequest.exchangeRate,
             bankId = receivableRequest.bankId,
-            tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.mappingId != null) tradePartyResponse.mappingId else null,
+            tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = receivableRequest.organizationId,
             bankPayAmount = receivableRequest.bankPayAmount
         )
@@ -296,7 +304,7 @@ class PaymentMigrationImpl : PaymentMigration {
             id = null,
             documentNo = receivableRequest.paymentNum,
             documentValue = receivableRequest.paymentNumValue,
-            zoneCode = receivableRequest.zone ?: "EAST",
+            zoneCode = receivableRequest.zone ?: "WEST",
             serviceType = ServiceType.NA.name,
             documentStatus = DocumentStatus.FINAL,
             entityCode = receivableRequest.entityCode,
@@ -327,20 +335,26 @@ class PaymentMigrationImpl : PaymentMigration {
 
     private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse): AccountUtilization {
 
-        val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
+        // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
+        val serialIdInputs = SerialIdsInput(orgDetailsResponse.organizationSerialId!!.toLong(), orgDetailsResponse.tradePartySerialId!!.toLong())
+
+        val serialIdRequest = SerialIdDetailsRequest(
+            organizationTradePartyMappings = arrayListOf(serialIdInputs)
+        )
+        val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
 
         return AccountUtilization(
             id = null,
             documentNo = getPaymentNum(receivableRequest.paymentNum),
             documentValue = receivableRequest.paymentNum,
-            zoneCode = if (orgDetailsResponse.zone == null) "EAST" else orgDetailsResponse.zone.uppercase(),
+            zoneCode = if (orgDetailsResponse.zone == null) "WEST" else orgDetailsResponse.zone.uppercase(),
             serviceType = ServiceType.NA.name,
             documentStatus = DocumentStatus.FINAL,
             entityCode = receivableRequest.entityCode!!,
             category = null,
-            orgSerialId = if (tradePartyResponse != null && tradePartyResponse.tradePartyDetailSerialId != null) tradePartyResponse.tradePartyDetailSerialId else 0,
+            orgSerialId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.tradePartySerial != null) tradePartyResponse.get(0)?.tradePartySerial else 0,
             sageOrganizationId = receivableRequest.sageOrganizationId,
-            organizationId = if (tradePartyResponse != null && tradePartyResponse.tradePartyDetailId != null) tradePartyResponse.tradePartyDetailId else null,
+            organizationId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.organizationTradePartyDetailId != null) tradePartyResponse.get(0)?.organizationTradePartyDetailId else null,
             organizationName = receivableRequest.organizationName,
             accMode = AccMode.valueOf(receivableRequest.accMode!!),
             accCode = receivableRequest.accCode!!,
@@ -356,20 +370,10 @@ class PaymentMigrationImpl : PaymentMigration {
             transactionDate = receivableRequest.transactionDate,
             createdAt = receivableRequest.createdAt,
             updatedAt = receivableRequest.updatedAt,
-            tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.mappingId != null) tradePartyResponse.mappingId else null,
+            tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO
         )
-    }
-
-    private suspend fun getTradePartyInfo(orgId: String): TradePartyResponse? {
-        val request = TradePartyRequest(organizationId = orgId)
-        try {
-            return cogoClient.getTradePartyInfo(request)
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-            return null
-        }
     }
 
     /**

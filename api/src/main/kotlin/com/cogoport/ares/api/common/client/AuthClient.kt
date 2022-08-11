@@ -4,8 +4,8 @@ import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
-import com.cogoport.ares.api.migration.model.TradePartyRequest
-import com.cogoport.ares.api.migration.model.TradePartyResponse
+import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
+import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -13,9 +13,11 @@ import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 
@@ -44,6 +46,6 @@ interface AuthClient {
     @Get("/get_organization_trade_party_zone_info{?request*}")
     suspend fun getTradePartyInfo(request: MappingIdDetailRequest): TradePartyOrganizationResponse
 
-    @Get("/get_organization_trade_party_business_finance{?request*}")
-    suspend fun getTradePartyInfo(request: TradePartyRequest): TradePartyResponse
+    @Post("/get_organization_trade_party_mappings")
+    suspend fun getSerialIdDetails(@Body request: SerialIdDetailsRequest): List<SerialIdDetailsResponse?>?
 }
