@@ -12,5 +12,7 @@ class GetOrgDetailsResponse(
     @JsonProperty("organization_id")
     val organizationId: String? = null,
     @JsonProperty("zone")
-    val zone: String? = null
+    val zone: String? = null,
+    @JsonProperty("trade_party_detail_serial_id")
+    val tradePartySerialId: String? = null
 )
