@@ -161,9 +161,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             if (Utilities.isPayAccountType(accountUtilization.accType)) {
                 throw AresException(AresError.ERR_1202, obj.first.toString())
             }
-            if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-                throw AresException(AresError.ERR_1204, obj.first.toString())
-            }
+//            if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+//                throw AresException(AresError.ERR_1204, obj.first.toString())
+//            }
             accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
             auditService.createAudit(
                 AuditRequest(
