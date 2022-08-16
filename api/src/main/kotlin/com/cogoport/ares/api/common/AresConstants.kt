@@ -19,7 +19,7 @@ object AresConstants {
     const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
     const val KEY_DELIMITER = "_"
 
-    const val ROLE_ZONE_HEAD = "ZoneHead"
+    const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
 
     const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
@@ -50,4 +50,14 @@ object AresConstants {
     const val DECIMAL_NUMBER_UPTO = 12
     const val ROUND_DECIMAL_TO = 4
     const val NO_DEDUCTION_RATE = 0
+
+    const val PAYING_PARTY = "self,paying_party"
+
+    const val PAYMENTS = "payments"
+    const val ACCOUNT_UTILIZATIONS = "account_utilizations"
+    const val SETTLEMENT = "settlement"
+
+    const val CREATE = "CREATE"
+    const val UPDATE = "UPDATE"
+    const val DELETE = "DELETE"
 }

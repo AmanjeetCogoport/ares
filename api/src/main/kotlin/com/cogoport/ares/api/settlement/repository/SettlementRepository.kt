@@ -13,6 +13,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     suspend fun deleteByIdIn(ids: List<Long>)
 
+    suspend fun findByIdIn(ids: List<Long>): List<Settlement>
+
     @Query(
         """
             SELECT 
@@ -63,48 +65,53 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-         SELECT 
-            au.id,
-            s.source_id as payment_document_no,
-            s1.source_id as tds_document_no,
-            s1.source_type::varchar as payment_source_type,
-            s.destination_id,
-            au.document_value,
-            s.destination_type,
-            au.organization_id,
-			au.acc_type::varchar,
-            au.amount_curr - au.pay_curr as current_balance,
-            au.currency as currency,
-            s.currency as payment_currency,
-            s1.currency as tds_currency,
-            au.amount_curr as document_amount,
-            s.amount as settled_amount,
-            s.led_currency,
-            s.led_amount,
-            au.sign_flag,
-            au.taxable_amount,
-            CASE WHEN 
-                s1.source_id = :sourceId
-            THEN 
-                coalesce(s1.amount, 0) 
-            ELSE 0 END as tds,
-            au.transaction_date,
-            au.amount_loc/au.amount_curr as exchange_rate,
-            s.settlement_date,
-            '' as status,
-            coalesce(s1.amount, 0) as settled_tds
+         WITH INVOICES AS (
+            SELECT 
+                au.id,
+                s.source_id AS payment_document_no,
+                s.destination_id,
+                au.document_value,
+                s.destination_type,
+                au.organization_id,
+                au.acc_type::varchar,
+                COALESCE(au.amount_curr - au.pay_curr,0) AS current_balance,
+                au.currency AS currency,
+                s.currency AS payment_currency,
+                COALESCE(au.amount_curr,0) AS document_amount,
+                sum(COALESCE(s.amount,0)) AS settled_amount,
+                s.led_currency,
+                sum(COALESCE(s.led_amount,0)) AS led_amount,
+                au.sign_flag,
+                COALESCE(au.taxable_amount,0) AS taxable_amount,
+                sum(COALESCE(s.amount, 0)) AS tds,
+                au.transaction_date,
+                au.amount_loc/au.amount_curr AS exchange_rate
             FROM settlements s
-                JOIN account_utilizations au ON
-                    s.destination_id = au.document_no
-                    AND s.destination_type::varchar = au.acc_type::varchar
-                LEFT JOIN settlements s1 ON 
-                    s1.destination_id = au.document_no 
-                    AND s1.destination_type::VARCHAR = au.acc_type::VARCHAR
-                    AND s1.source_type IN ('CTDS','VTDS')
-                WHERE au.amount_curr <> 0 
-                    AND s.source_id = :sourceId 
-                    AND s.source_type = :sourceType::SETTLEMENT_TYPE
-                OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+            JOIN account_utilizations au ON
+                s.destination_id = au.document_no
+            WHERE au.amount_curr <> 0 
+                AND s.source_id = :sourceId
+                AND s.source_type = :sourceType::SETTLEMENT_TYPE
+            GROUP BY au.id, s.source_id, s.destination_id, s.destination_type, s.currency, s.led_currency
+            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+        ),
+        TAX AS (
+            SELECT s.destination_id, s.currency, s.source_id as tds_document_no,
+                sum(CASE WHEN s.source_id = :sourceId AND s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS tds,
+                sum(CASE WHEN s.source_type IN ('NOSTRO') THEN s.amount ELSE 0 END) AS nostro_amount,
+                sum(CASE WHEN s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS settled_tds
+            FROM settlements s
+            WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
+                AND s.source_type NOT IN ('REC','PCN','SECH')
+            GROUP BY s.destination_id, s.currency, s.source_id
+        )
+        SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
+            I.acc_type, I.current_balance, I.currency, I.payment_currency, I.document_amount, I.settled_amount, 
+            I.led_currency, I.led_amount, I.sign_flag, I.taxable_amount, I.transaction_date, I.exchange_rate,
+            T.tds_document_no, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
+            COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency
+        FROM INVOICES I
+        LEFT JOIN TAX T ON T.destination_id = I.destination_id
         """
     )
     suspend fun findSettlement(sourceId: Long, sourceType: SettlementType, pageIndex: Int, pageSize: Int): List<SettledInvoice?>

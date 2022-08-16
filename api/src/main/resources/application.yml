@@ -26,6 +26,7 @@ r2dbc:
 
 services:
   service: http://localhost:8093
+  namespace: ${DNS_NAMESPACE:cogoport.local}
 
 kafka:
   bootstrap:
@@ -48,3 +49,11 @@ cogoport:
   exchange_api:
     url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
     version: v1
+
+sage:
+  soapUrl: http://13.232.139.45:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
+  user: admin
+  password: admin@2
+  queryClientUrl: https://gozaf35uzpkokesxfgw3g2ribi0hddzk.lambda-url.ap-south-1.on.aws
+  queryClientPassword: KjjzzU2qneGMtzQQyFJ9QwEiPMFYZgut
+  databaseName: 'COGO2'

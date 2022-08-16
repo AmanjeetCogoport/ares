@@ -16,10 +16,13 @@ netty:
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
+services:
+  namespace: ${DNS_NAMESPACE:cogoport.prod}
+
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?preparedStatementCacheQueries=0
       username: ${DB_USER}
       password: ${DB_PASSWORD}
       dialect: POSTGRES
@@ -46,3 +49,17 @@ opensearch:
 sentry:
   enabled: ${SENTRY_ENABLED:true}
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
+
+cogoport:
+  api_url: https://api.cogoport.com
+  bearer_token: 0b1848788c34b1099d33baa18f5e413744373abfdc193c69016bfe0e107f7532fc68487c243d90086a6034faea960efa4134395f5b06d1d77329a4b7c2759d15
+  
+sage:
+  soapUrl: ${SAGE_SOAP_URL}
+  user: ${SAGE_SOAP_USER}
+  password: ${SAGE_PASSWORD}
+  queryClientUrl: ${SAGE_QUERY_CLIENT_URL}
+  queryClientPassword: ${SAGE_QUERY_CLIENT_PASSWORD}
+  databaseName: ${SAGE_DATABASE_NAME}
+  restAPIUser: ${SAGE_REST_API_USER}
+  restAPIPassword: ${SAGE_REST_API_PASSWORD}

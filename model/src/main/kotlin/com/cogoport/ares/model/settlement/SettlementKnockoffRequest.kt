@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.UUID
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -24,4 +25,6 @@ data class SettlementKnockoffRequest(
 //    var accMode: AccMode = AccMode.AR,
 
     val email: String, // narration or audits
+    val performedBy: UUID?,
+    val performedByUserType: String?
 )

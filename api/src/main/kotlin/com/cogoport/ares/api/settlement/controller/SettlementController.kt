@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -114,14 +115,28 @@ class SettlementController {
         return Response<String>().ok(settlementService.editTds(request))
     }
 
-    @Post("send-for-approval")
+    @Post("/send-for-approval")
     suspend fun sendForApproval(@Valid @Body request: CreateIncidentRequest): Response<String> {
         return Response<String>().ok("Sent For Approval", settlementService.sendForApproval(request))
     }
 
     @Delete
-    suspend fun delete(@QueryValue documentNo: String, @QueryValue settlementType: SettlementType): String {
-        return Response<String>().ok(settlementService.delete(documentNo, settlementType))
+    suspend fun delete(
+        @QueryValue("documentNo") documentNo: String,
+        @QueryValue("settlementType") settlementType: SettlementType,
+        @QueryValue("deletedBy") deletedBy: UUID?,
+        @QueryValue("deletedByUserType") deletedByUserType: String?
+    ): String {
+        return Response<String>().ok(
+            settlementService.delete(
+                DeleteSettlementRequest(
+                    documentNo = documentNo,
+                    settlementType = settlementType,
+                    deletedBy = deletedBy,
+                    deletedByUserType = deletedByUserType
+                )
+            )
+        )
     }
 
     @Get("/org-summary")

@@ -16,7 +16,11 @@ data class Payment(
     var entityCode: Int,
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
+    // Trader partner details id
     var organizationId: UUID?,
+    // Organization id of customer/service provider
+    var taggedOrganizationId: UUID?,
+    var tradePartyMappingId: UUID?,
     var organizationName: String?,
     var accCode: Int,
     var accMode: AccMode,
@@ -41,5 +45,6 @@ data class Payment(
     var paymentNum: Long?,
     var paymentNumValue: String?,
     var exchangeRate: BigDecimal?,
-    var bankId: UUID?
+    var bankId: UUID?,
+    var bankPayAmount: BigDecimal?
 )

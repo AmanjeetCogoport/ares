@@ -13,6 +13,9 @@ import java.util.UUID
 data class AccountPayablesFile(
     var entityCode: Int,
     var organizationId: UUID?,
+    // Organization id of customer/service provider
+    var taggedOrganizationId: UUID?,
+    var tradePartyMappingId: UUID?,
     var orgSerialId: Long?,
     var organizationName: String?,
     var documentNo: Long,
@@ -38,5 +41,6 @@ data class AccountPayablesFile(
     var bankName: String?,
     var isPosted: Boolean,
     var createdBy: UUID?,
-    var updatedBy: UUID?
+    var updatedBy: UUID?,
+    var performedByType: String?
 )
