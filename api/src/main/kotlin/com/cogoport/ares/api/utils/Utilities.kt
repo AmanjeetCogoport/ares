@@ -11,8 +11,8 @@ import java.sql.Timestamp
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class DateUtilities {
-    companion object DateUtils {
+class Utilities {
+    companion object Utils {
         fun getTimeStampFromString(stringDate: String): Timestamp {
 
             try {
@@ -57,21 +57,21 @@ class DateUtilities {
         fun decimalRound(amount: BigDecimal, digits: Int = AresConstants.ROUND_DECIMAL_TO, roundingMode: RoundingMode = RoundingMode.HALF_DOWN): BigDecimal {
             return amount.setScale(digits, roundingMode)
         }
-    }
 
-    /**
-     * Get Total pages from page size and total records
-     * @param totalRows
-     * @param pageSize
-     * @return totalPages
-     */
-    private fun getTotalPages(totalRows: Long, pageSize: Int): Long {
+        /**
+         * Get Total pages from page size and total records
+         * @param totalRows
+         * @param pageSize
+         * @return totalPages
+         */
+        fun getTotalPages(totalRows: Long, pageSize: Int): Long {
 
-        return try {
-            val totalPageSize = if (pageSize > 0) pageSize else 1
-            ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
-        } catch (e: Exception) {
-            0
+            return try {
+                val totalPageSize = if (pageSize > 0) pageSize else 1
+                ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
+            } catch (e: Exception) {
+                0
+            }
         }
     }
 }
