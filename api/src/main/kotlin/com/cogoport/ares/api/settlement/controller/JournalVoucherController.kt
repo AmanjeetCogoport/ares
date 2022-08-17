@@ -32,4 +32,9 @@ class JournalVoucherController {
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
     }
+
+    @Post("/send-for-approval")
+    suspend fun sendForApproval(@Body journalVoucher: JournalVoucher) {
+        journalVoucherService.sendForApproval(journalVoucher)
+    }
 }

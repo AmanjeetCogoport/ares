@@ -14,6 +14,11 @@ import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucher
 import com.cogoport.ares.model.settlement.request.JvListRequest
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -28,6 +33,9 @@ class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var accountUtilizationServiceImpl: AccountUtilizationServiceImpl
+
+    @Inject
+    lateinit var hadesClient: HadesClient
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
@@ -105,6 +113,30 @@ class JournalVoucherServiceImpl : JournalVoucherService {
         return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
+    override suspend fun sendForApproval(journalVoucher: JournalVoucher) {
+        val data = journalVoucherConverter.convertToIncidentModel(journalVoucher)
+        if (journalVoucher.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
+        val incidentData =
+            IncidentData(
+                organization = Organization(
+                    id = journalVoucher.organizationId,
+                    businessName = journalVoucher.organizationName
+                ),
+                journalVoucherRequest = data,
+                tdsRequest = null,
+                creditNoteRequest = null,
+                settlementRequest = null,
+                bankRequest = null
+            )
+        val clientRequest = CreateIncidentRequest(
+            type = IncidentType.JOURNAL_VOUCHER_APPROVAL,
+            description = "Journal Voucher Approval",
+            data = incidentData,
+            createdBy = journalVoucher.createdBy!!
+        )
+        val res = hadesClient.createIncident(clientRequest)
+    }
+
     /**
      * Return Account Type on the basis of jv category and type
      * @param: jvCategory
@@ -112,11 +144,11 @@ class JournalVoucherServiceImpl : JournalVoucherService {
      * @return: AccountType
      */
     private fun getAccountType(jvCategory: JVCategory, type: String): AccountType {
-        return when(type){
-            "CREDIT" ->{
+        return when (type) {
+            "CREDIT" -> {
                 getCreditAccountType(jvCategory)
             }
-            "DEBIT" ->{
+            "DEBIT" -> {
                 getDebitAccountType(jvCategory)
             }
             else -> {
@@ -131,20 +163,20 @@ class JournalVoucherServiceImpl : JournalVoucherService {
      * @return: AccountType
      */
     private fun getCreditAccountType(jvCategory: JVCategory): AccountType {
-        return when(jvCategory){
-            JVCategory.EXCH ->{
+        return when (jvCategory) {
+            JVCategory.EXCH -> {
                 AccountType.CEXCH
             }
-            JVCategory.WOFF ->{
+            JVCategory.WOFF -> {
                 AccountType.CWOFF
             }
-            JVCategory.ROFF ->{
+            JVCategory.ROFF -> {
                 AccountType.CROFF
             }
-            JVCategory.NOSTRO ->{
+            JVCategory.NOSTRO -> {
                 AccountType.NOSTRO
             }
-            JVCategory.OUTST ->{
+            JVCategory.OUTST -> {
                 AccountType.OUTST
             }
             else -> {
@@ -159,20 +191,20 @@ class JournalVoucherServiceImpl : JournalVoucherService {
      * @return: AccountType
      */
     private fun getDebitAccountType(jvCategory: JVCategory): AccountType {
-        return when(jvCategory){
-            JVCategory.EXCH ->{
+        return when (jvCategory) {
+            JVCategory.EXCH -> {
                 AccountType.DEXCH
             }
-            JVCategory.WOFF ->{
+            JVCategory.WOFF -> {
                 AccountType.DWOFF
             }
-            JVCategory.ROFF ->{
+            JVCategory.ROFF -> {
                 AccountType.DROFF
             }
-            JVCategory.NOSTRO ->{
+            JVCategory.NOSTRO -> {
                 AccountType.NOSTRO
             }
-            JVCategory.OUTST ->{
+            JVCategory.OUTST -> {
                 AccountType.OUTST
             }
             else -> {
