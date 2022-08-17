@@ -25,7 +25,7 @@ r2dbc:
       dialect: POSTGRES
 
 services:
-  service: http://localhost:8093
+  service: https://api.dev.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.local}
 
 kafka:
