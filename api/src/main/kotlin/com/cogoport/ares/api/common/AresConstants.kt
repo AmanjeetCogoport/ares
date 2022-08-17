@@ -61,8 +61,4 @@ object AresConstants {
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"
     const val DELETE = "DELETE"
-
-    const val REQUESTED = "REQUESTED"
-
-    const val SETTLEMENT_APPROVAL = "SETTLEMENT_APPROVAL"
 }
