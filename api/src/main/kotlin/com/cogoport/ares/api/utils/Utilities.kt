@@ -8,8 +8,10 @@ import com.cogoport.ares.model.payment.Operator
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
-class Utilities {
+class DateUtilities {
     companion object DateUtils {
         fun getTimeStampFromString(stringDate: String): Timestamp {
 
@@ -54,6 +56,22 @@ class Utilities {
 
         fun decimalRound(amount: BigDecimal, digits: Int = AresConstants.ROUND_DECIMAL_TO, roundingMode: RoundingMode = RoundingMode.HALF_DOWN): BigDecimal {
             return amount.setScale(digits, roundingMode)
+        }
+    }
+
+    /**
+     * Get Total pages from page size and total records
+     * @param totalRows
+     * @param pageSize
+     * @return totalPages
+     */
+    private fun getTotalPages(totalRows: Long, pageSize: Int): Long {
+
+        return try {
+            val totalPageSize = if (pageSize > 0) pageSize else 1
+            ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
+        } catch (e: Exception) {
+            0
         }
     }
 }
