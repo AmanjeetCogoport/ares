@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -725,8 +726,8 @@ open class SettlementServiceImpl : SettlementService {
         createIncidentMapping(
             accUtilIds = docList.map { it.id },
             data = docList,
-            type = AresConstants.SETTLEMENT_APPROVAL,
-            status = AresConstants.REQUESTED,
+            type = com.cogoport.ares.api.common.enums.IncidentType.SETTLEMENT_APPROVAL,
+            status = IncidentStatus.REQUESTED,
             orgName = request.orgName,
             entityCode = request.entityCode,
             performedBy = request.createdBy
@@ -1657,8 +1658,8 @@ open class SettlementServiceImpl : SettlementService {
     open suspend fun createIncidentMapping(
         accUtilIds: List<Long>?,
         data: Any?,
-        type: String?,
-        status: String?,
+        type: com.cogoport.ares.api.common.enums.IncidentType?,
+        status: IncidentStatus?,
         orgName: String?,
         entityCode: Int?,
         performedBy: UUID?

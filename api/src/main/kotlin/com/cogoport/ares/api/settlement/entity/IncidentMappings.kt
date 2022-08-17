@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.settlement.entity
 
+import com.cogoport.ares.api.common.enums.IncidentStatus
+import com.cogoport.ares.api.common.enums.IncidentType
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -16,8 +18,8 @@ data class IncidentMappings(
     val accountUtilizationIds: Any?,
     @MappedProperty(type = DataType.JSON)
     val data: Any?,
-    val incidentType: String?,
-    val incidentStatus: String?,
+    val incidentType: IncidentType?,
+    val incidentStatus: IncidentStatus?,
     val organizationName: String?,
     val entityCode: Int?,
     val createdBy: UUID?,
