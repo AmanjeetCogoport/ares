@@ -16,12 +16,14 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
+import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Hashids
@@ -117,6 +119,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var incidentMappingsRepository: IncidentMappingsRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -716,6 +721,15 @@ open class SettlementServiceImpl : SettlementService {
                 data = incidentData,
                 createdBy = request.createdBy!!
             )
+        )
+        createIncidentMapping(
+            accUtilIds = docList.map { it.id },
+            data = docList,
+            type = AresConstants.SETTLEMENT_APPROVAL,
+            status = AresConstants.REQUESTED,
+            orgName = request.orgName,
+            entityCode = request.entityCode,
+            performedBy = request.createdBy
         )
         return res.data.toString()
     }
@@ -1637,5 +1651,41 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         return documents
+    }
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    open suspend fun createIncidentMapping(
+        accUtilIds: List<Long>?,
+        data: Any?,
+        type: String?,
+        status: String?,
+        orgName: String?,
+        entityCode: Int?,
+        performedBy: UUID?
+    ){
+        val incMapObj = IncidentMappings(
+            id = null,
+            accountUtilizationIds = accUtilIds,
+            data = data,
+            incidentType = type,
+            incidentStatus = status,
+            organizationName = orgName,
+            entityCode = entityCode,
+            createdBy = performedBy,
+            updatedBy = performedBy,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now())
+        )
+        val savedObj = incidentMappingsRepository.save(incMapObj)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.INCIDENT_MAPPINGS,
+                objectId = savedObj.id,
+                actionName = AresConstants.CREATE,
+                data = savedObj,
+                performedBy = performedBy.toString(),
+                performedByUserType = null
+            )
+        )
     }
 }
