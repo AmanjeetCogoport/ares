@@ -19,13 +19,13 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.CollectionResponse
-import com.cogoport.ares.model.payment.CollectionTrendResponse
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -200,7 +200,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId).also {
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, null).also {
+            updateOrgOutstanding(null, request.orgName, request.orgId, it)
+        }
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
@@ -220,7 +223,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         validateDueAmount(paymentsDues)
         validateDueAmount(outstandingDues)
         val orgOutstanding = CustomerOutstanding(orgId, orgName, zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null)
-        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, orgId!!, orgOutstanding)
+        val docId = if (zone != null) "${orgId}_$zone" else "${orgId}_ALL"
+        OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, docId, orgOutstanding)
     }
 
     private fun validateDueAmount(data: MutableList<DueAmount>) {
