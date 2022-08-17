@@ -1662,7 +1662,7 @@ open class SettlementServiceImpl : SettlementService {
         orgName: String?,
         entityCode: Int?,
         performedBy: UUID?
-    ){
+    ) {
         val incMapObj = IncidentMappings(
             id = null,
             accountUtilizationIds = accUtilIds,
