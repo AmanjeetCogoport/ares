@@ -11,10 +11,10 @@ interface JournalVoucherMapper {
     fun convertToModelResponse(journalVoucher: JournalVoucher): JournalVoucherResponse
 
     @Mapping(source = "createdBy", target = "updatedBy")
-    fun convertRequestToEntity(journalVoucher: com.cogoport.ares.model.settlement.request.JournalVoucher): JournalVoucher
+    fun convertRequestToEntity(journalVoucher: com.cogoport.ares.model.settlement.request.JournalVoucherRequest): JournalVoucher
 
-    fun convertEntityToRequest(journalVoucher: JournalVoucher): com.cogoport.ares.model.settlement.request.JournalVoucher
+    fun convertEntityToRequest(journalVoucher: JournalVoucher): com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 
     @Mapping(source = "createdBy", target = "updatedBy")
-    fun convertToIncidentModel(journalVoucher: com.cogoport.ares.model.settlement.request.JournalVoucher): com.cogoport.hades.model.incident.JournalVoucher
+    fun convertToIncidentModel(journalVoucher: JournalVoucher): com.cogoport.hades.model.incident.JournalVoucher
 }

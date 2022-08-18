@@ -8,7 +8,7 @@ import java.util.Date
 import java.util.UUID
 
 @Introspected
-data class JournalVoucher(
+data class JournalVoucherRequest(
     val entityCode: Int,
     val entityId: UUID?,
     val jvNum: String,

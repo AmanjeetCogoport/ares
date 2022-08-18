@@ -7,6 +7,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.service.implementation.AccountUtilizationServiceImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
@@ -15,7 +16,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.model.settlement.request.JournalVoucher
+import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
@@ -82,16 +83,16 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      * @return: com.cogoport.ares.api.settlement.entity.JournalVoucher
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun createJournalVouchers(request: JournalVoucher): String {
+    override suspend fun createJournalVouchers(request: JournalVoucherRequest): String {
         validateCreateRequest(request)
         // create Journal Voucher
         val jv = convertToJournalVoucherEntity(request)
-        val res = createJV(jv)
+        val jvEntity = createJV(jv)
         // Send to Incident Management
-        val incidentRequest = convertToIncidentModel(request)
-        sendToIncidentManagement(request, incidentRequest)
+        val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(jvEntity)
+        sendToIncidentManagement(request, incidentRequestModel)
 
-        return res
+        return jvEntity.id.toString()
         // TODO( "Have to decide on adding JV in account utilization" )
 //        val accType = getAccountType(request.category, request.type)
 //        val accountAccUtilizationRequest = AccUtilizationRequest(
@@ -130,7 +131,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 //        return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
-    private suspend fun createJV(jv: com.cogoport.ares.api.settlement.entity.JournalVoucher): String {
+    private suspend fun createJV(jv: JournalVoucher): JournalVoucher {
         val jvObj = journalVoucherRepository.save(jv)
         auditService.createAudit(
             AuditRequest(
@@ -142,14 +143,14 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = null
             )
         )
-        return jvObj.id.toString()
+        return jvObj
     }
 
-    private fun validateCreateRequest(request: JournalVoucher) {
+    private fun validateCreateRequest(request: JournalVoucherRequest) {
         if (request.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
     }
 
-    private fun convertToJournalVoucherEntity(request: JournalVoucher): com.cogoport.ares.api.settlement.entity.JournalVoucher {
+    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
         request.status = JVStatus.PENDING
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = Timestamp.from(Instant.now())
@@ -158,7 +159,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     private suspend fun sendToIncidentManagement(
-        request: JournalVoucher,
+        request: JournalVoucherRequest,
         data: com.cogoport.hades.model.incident.JournalVoucher
     ) {
         val incidentData =
@@ -180,14 +181,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             createdBy = request.createdBy!!
         )
         val res = hadesClient.createIncident(clientRequest)
-    }
-
-    private fun convertToIncidentModel(request: JournalVoucher): com.cogoport.hades.model.incident.JournalVoucher {
-        request.status = JVStatus.PENDING
-        val data = journalVoucherConverter.convertToIncidentModel(request)
-        data.createdAt = Timestamp.from(Instant.now())
-        data.updatedAt = Timestamp.from(Instant.now())
-        return data
     }
 
     /**
