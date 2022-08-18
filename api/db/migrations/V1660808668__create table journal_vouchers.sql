@@ -24,6 +24,7 @@ create table public.journal_vouchers (
     category jv_category not null,
     validity_date date,
     currency varchar(5),
+    led_currency varchar(5),
     amount decimal(13,4),
     status jv_status not null,
     exchange_rate decimal(9,4),

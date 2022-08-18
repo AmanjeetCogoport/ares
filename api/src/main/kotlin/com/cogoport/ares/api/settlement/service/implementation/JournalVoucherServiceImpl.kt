@@ -1,9 +1,12 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.service.implementation.AccountUtilizationServiceImpl
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
@@ -21,9 +24,13 @@ import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import java.sql.SQLException
+import java.sql.Timestamp
+import java.time.Instant
+import javax.transaction.Transactional
 
 @Singleton
-class JournalVoucherServiceImpl : JournalVoucherService {
+open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var journalVoucherConverter: JournalVoucherMapper
@@ -36,6 +43,9 @@ class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var auditService: AuditService
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
@@ -71,56 +81,91 @@ class JournalVoucherServiceImpl : JournalVoucherService {
      * @param: journalVoucher
      * @return: com.cogoport.ares.api.settlement.entity.JournalVoucher
      */
-    override suspend fun createJournalVouchers(request: JournalVoucher): JournalVoucher {
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun createJournalVouchers(request: JournalVoucher): String {
+        validateCreateRequest(request)
+        // create Journal Voucher
+        val jv = convertToJournalVoucherEntity(request)
+        val res = createJV(jv)
+        // Send to Incident Management
+        val incidentRequest = convertToIncidentModel(request)
+        sendToIncidentManagement(request, incidentRequest)
 
-        val jv = journalVoucherConverter.convertRequestToEntity(request)
-        jv.status = JVStatus.PENDING
-        journalVoucherRepository.save(jv)
+        return res
         // TODO( "Have to decide on adding JV in account utilization" )
 //        val accType = getAccountType(request.category, request.type)
 //        val accountAccUtilizationRequest = AccUtilizationRequest(
-//            documentNo = jv.id!!,
-//            entityCode = jv.entityCode,
+//            documentNo = jvObj.id!!,
+//            entityCode = jvObj.entityCode!!,
 //            orgSerialId = 1,
 //            sageOrganizationId = null,
-//            organizationId =  jv.organizationId,
+//            organizationId =  jvObj.tradePartyId,
 //            taggedOrganizationId = null,
 //            tradePartyMappingId = null,
-//            organizationName = jv.organizationName,
+//            organizationName = jvObj.tradePartnerName,
 //            accType = accType,
 //            accMode = AccMode.AR,
 //            signFlag = -1,
-//            currency = jv.currency,
-//            ledCurrency = jv.ledCurrency,
-//            currencyAmount = jv.amount,
-//            ledgerAmount = jv.amount*jv.exchangeRate,
+//            currency = jvObj.currency!!,
+//            ledCurrency = jvObj.ledCurrency,
+//            currencyAmount = jvObj.amount,
+//            ledgerAmount = jvObj.amount?.multiply(jvObj.exchangeRate!!),
 //            currencyPayment = BigDecimal.ZERO,
 //            ledgerPayment = BigDecimal.ZERO,
 //            taxableAmount = BigDecimal.ZERO,
-//            zoneCode = "WEST",
-//            docStatus = DocumentStatus.FINAL,
-//            docValue = jv.jvNum,
-//            dueDate = jv.validityDate,
-//            transactionDate = jv.validityDate,
+//            zoneCode = ,
+//            docStatus = DocumentStatus.PROFORMA,
+//            docValue = jvObj.jvNum,
+//            dueDate = jvObj.validityDate,
+//            transactionDate = jvObj.validityDate,
 //            serviceType = ServiceType.NA,
 //            category = null,
 //            createdAt = Timestamp.from(Instant.now()),
 //            updatedAt = Timestamp.from(Instant.now()),
-//            performedBy = jv.createdBy,
+//            performedBy = jvObj.createdBy,
 //            performedByType = null
 //        )
 //        accountUtilizationServiceImpl.add(accountAccUtilizationRequest)
-        return journalVoucherConverter.convertEntityToRequest(jv)
+
+//        return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
-    override suspend fun sendForApproval(journalVoucher: JournalVoucher) {
-        val data = journalVoucherConverter.convertToIncidentModel(journalVoucher)
-        if (journalVoucher.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
+    private suspend fun createJV(jv: com.cogoport.ares.api.settlement.entity.JournalVoucher): String {
+        val jvObj = journalVoucherRepository.save(jv)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.JOURNAL_VOUCHERS,
+                objectId = jvObj.id,
+                actionName = AresConstants.CREATE,
+                data = jvObj,
+                performedBy = jvObj.createdBy.toString(),
+                performedByUserType = null
+            )
+        )
+        return jvObj.id.toString()
+    }
+
+    private fun validateCreateRequest(request: JournalVoucher) {
+        if (request.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
+    }
+
+    private fun convertToJournalVoucherEntity(request: JournalVoucher): com.cogoport.ares.api.settlement.entity.JournalVoucher {
+        request.status = JVStatus.PENDING
+        val jv = journalVoucherConverter.convertRequestToEntity(request)
+        jv.createdAt = Timestamp.from(Instant.now())
+        jv.updatedAt = Timestamp.from(Instant.now())
+        return jv
+    }
+
+    private suspend fun sendToIncidentManagement(
+        request: JournalVoucher,
+        data: com.cogoport.hades.model.incident.JournalVoucher
+    ) {
         val incidentData =
             IncidentData(
                 organization = Organization(
-                    id = journalVoucher.organizationId,
-                    businessName = journalVoucher.organizationName
+                    id = request.tradePartyId,
+                    businessName = request.tradePartnerName
                 ),
                 journalVoucherRequest = data,
                 tdsRequest = null,
@@ -132,9 +177,17 @@ class JournalVoucherServiceImpl : JournalVoucherService {
             type = IncidentType.JOURNAL_VOUCHER_APPROVAL,
             description = "Journal Voucher Approval",
             data = incidentData,
-            createdBy = journalVoucher.createdBy!!
+            createdBy = request.createdBy!!
         )
         val res = hadesClient.createIncident(clientRequest)
+    }
+
+    private fun convertToIncidentModel(request: JournalVoucher): com.cogoport.hades.model.incident.JournalVoucher {
+        request.status = JVStatus.PENDING
+        val data = journalVoucherConverter.convertToIncidentModel(request)
+        data.createdAt = Timestamp.from(Instant.now())
+        data.updatedAt = Timestamp.from(Instant.now())
+        return data
     }
 
     /**

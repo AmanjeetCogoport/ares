@@ -25,16 +25,11 @@ class JournalVoucherController {
     lateinit var journalVoucherService: JournalVoucherService
 
     @Post
-    suspend fun createJv(@Body journalVoucher: JournalVoucher): JournalVoucher {
-        return Response<JournalVoucher>().ok(journalVoucherService.createJournalVouchers(journalVoucher))
+    suspend fun createJv(@Body request: JournalVoucher): String {
+        return Response<String>().ok(journalVoucherService.createJournalVouchers(request))
     }
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
-    }
-
-    @Post("/send-for-approval")
-    suspend fun sendForApproval(@Body journalVoucher: JournalVoucher) {
-        journalVoucherService.sendForApproval(journalVoucher)
     }
 }
