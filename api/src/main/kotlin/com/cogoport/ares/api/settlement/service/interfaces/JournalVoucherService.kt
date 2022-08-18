@@ -5,7 +5,7 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JournalVoucherApproval
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
-import java.util.*
+import java.util.UUID
 
 interface JournalVoucherService {
 
