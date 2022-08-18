@@ -1,11 +1,13 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.service.implementation.AccountUtilizationServiceImpl
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
@@ -43,6 +45,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject
     lateinit var auditService: AuditService
@@ -86,6 +91,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         validateCreateRequest(request)
         // create Journal Voucher
         val jv = convertToJournalVoucherEntity(request)
+        jv.jvNum = getJvNumber()
         val res = createJV(jv)
         // Send to Incident Management
         val incidentRequest = convertToIncidentModel(request)
@@ -129,6 +135,15 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
 //        return journalVoucherConverter.convertEntityToRequest(jv)
     }
+
+    /**
+     * Get JV number from generator in fixed format
+     * @return: String
+     */
+    private suspend fun getJvNumber() =
+        SequenceSuffix.JV.prefix + "/" + Utilities.getFinancialYear() + "/" + sequenceGeneratorImpl.getPaymentNumber(
+            SequenceSuffix.JV.prefix
+        )
 
     private suspend fun createJV(jv: com.cogoport.ares.api.settlement.entity.JournalVoucher): String {
         val jvObj = journalVoucherRepository.save(jv)

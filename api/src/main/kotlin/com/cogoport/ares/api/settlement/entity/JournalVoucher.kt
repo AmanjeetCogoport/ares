@@ -18,7 +18,7 @@ data class JournalVoucher(
     var id: Long?,
     val entityId: UUID?,
     val entityCode: Int?,
-    val jvNum: String,
+    var jvNum: String,
     val type: String?,
     val category: JVCategory,
     val validityDate: Date?,
