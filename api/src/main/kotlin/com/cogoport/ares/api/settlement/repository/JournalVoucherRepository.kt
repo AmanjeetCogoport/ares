@@ -23,6 +23,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.category,
             j.validity_date,
             j.currency,
+            j.led_currency,
             j.amount,
             j.status,
             j.exchange_rate,
