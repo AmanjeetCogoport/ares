@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.service.interfaces
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
@@ -41,6 +42,8 @@ interface SettlementService {
     suspend fun editTds(request: EditTdsRequest): String
 
     suspend fun delete(request: DeleteSettlementRequest): String
+
+    suspend fun sendForApproval(request: CreateIncidentRequest): String
 
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse
 }
