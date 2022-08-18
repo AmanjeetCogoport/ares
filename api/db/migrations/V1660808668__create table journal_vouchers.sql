@@ -15,6 +15,10 @@ CREATE TYPE public."jv_status" AS ENUM (
 CREATE CAST (varchar AS JV_CATEGORY) WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS JV_STATUS) WITH INOUT AS IMPLICIT;
 
+insert into payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
+values('JV',1,now(),now());
+
+
 create table public.journal_vouchers (
     id bigserial constraint journal_PK primary key,
     entity_id uuid default NULL,

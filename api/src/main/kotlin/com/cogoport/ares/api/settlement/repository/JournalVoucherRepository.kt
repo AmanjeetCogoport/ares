@@ -1,11 +1,13 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.sql.Timestamp
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Long> {
@@ -51,4 +53,11 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         """
     )
     fun countDocument(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?): Long
+
+    @Query(
+        """
+        UPDATE journal_vouchers SET status = :status, updated_by = :performedBy where id = :id
+    """
+    )
+    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?)
 }
