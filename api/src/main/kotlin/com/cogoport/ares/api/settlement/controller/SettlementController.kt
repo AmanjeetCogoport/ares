@@ -8,6 +8,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
@@ -112,6 +113,11 @@ class SettlementController {
     @Post("/edit-tds")
     suspend fun editTds(@Valid @Body request: EditTdsRequest): String {
         return Response<String>().ok(settlementService.editTds(request))
+    }
+
+    @Post("/send-for-approval")
+    suspend fun sendForApproval(@Valid @Body request: CreateIncidentRequest): Response<String> {
+        return Response<String>().ok("Sent For Approval", settlementService.sendForApproval(request))
     }
 
     @Delete
