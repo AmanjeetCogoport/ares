@@ -30,6 +30,7 @@ class JournalVoucherController {
     suspend fun createJv(@Body request: JournalVoucherRequest): String {
         return Response<String>().ok(journalVoucherService.createJournalVoucher(request))
     }
+
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
