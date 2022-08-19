@@ -56,6 +56,8 @@ object AresConstants {
     const val PAYMENTS = "payments"
     const val ACCOUNT_UTILIZATIONS = "account_utilizations"
     const val SETTLEMENT = "settlement"
+    const val INCIDENT_MAPPINGS = "incident_mappings"
+    const val JOURNAL_VOUCHERS = "journal_vouchers"
 
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"

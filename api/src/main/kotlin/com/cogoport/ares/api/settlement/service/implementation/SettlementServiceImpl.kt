@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -16,12 +17,14 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
+import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Hashids
@@ -35,12 +38,11 @@ import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
-import com.cogoport.ares.model.settlement.CheckRequest
+import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -50,6 +52,12 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Inject
@@ -66,7 +74,6 @@ import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -109,6 +116,12 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var incidentMappingsRepository: IncidentMappingsRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -179,7 +192,7 @@ open class SettlementServiceImpl : SettlementService {
         historyDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = historyDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
             totalRecords = totalRecords,
             pageNo = request.page
         )
@@ -193,22 +206,6 @@ open class SettlementServiceImpl : SettlementService {
                 mutableListOf(request.accountType)
             }
         return accountTypes
-    }
-
-    /**
-     * Get Total pages from page size and total records
-     * @param totalRows
-     * @param pageSize
-     * @return totalPages
-     */
-    private fun getTotalPages(totalRows: Long, pageSize: Int): Long {
-
-        return try {
-            val totalPageSize = if (pageSize > 0) pageSize else 1
-            ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
-        } catch (e: Exception) {
-            0
-        }
     }
 
     /**
@@ -234,7 +231,7 @@ open class SettlementServiceImpl : SettlementService {
         settledDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = settledDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
             totalRecords = totalRecords,
             pageNo = request.page
         )
@@ -682,6 +679,44 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun delete(request: DeleteSettlementRequest) =
         deleteSettlement(request.documentNo, request.settlementType, request.deletedBy, request.deletedByUserType)
+
+    override suspend fun sendForApproval(request: CreateIncidentRequest): String {
+        val docList = request.stackDetails!!.map {
+            documentConverter.convertToIncidentModel(it)
+        }
+        val incidentData =
+            IncidentData(
+                organization = Organization(
+                    id = request.orgId,
+                    businessName = request.orgName
+                ),
+                settlementRequest = com.cogoport.hades.model.incident.Settlement(
+                    entityCode = request.entityCode!!,
+                    list = docList
+                ),
+                tdsRequest = null,
+                bankRequest = null,
+                creditNoteRequest = null
+            )
+        val res = hadesClient.createIncident(
+            com.cogoport.hades.model.incident.request.CreateIncidentRequest(
+                type = IncidentType.SETTLEMENT_APPROVAL,
+                description = "Settlement Approval For Cross Currency Settle",
+                data = incidentData,
+                createdBy = request.createdBy!!
+            )
+        )
+        createIncidentMapping(
+            accUtilIds = docList.map { it.id },
+            data = docList,
+            type = com.cogoport.ares.api.common.enums.IncidentType.SETTLEMENT_APPROVAL,
+            status = IncidentStatus.REQUESTED,
+            orgName = request.orgName,
+            entityCode = request.entityCode,
+            performedBy = request.createdBy
+        )
+        return res.data.toString()
+    }
 
     override suspend fun getOrgSummary(
         orgId: UUID,
@@ -1600,5 +1635,41 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         return documents
+    }
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    open suspend fun createIncidentMapping(
+        accUtilIds: List<Long>?,
+        data: Any?,
+        type: com.cogoport.ares.api.common.enums.IncidentType?,
+        status: IncidentStatus?,
+        orgName: String?,
+        entityCode: Int?,
+        performedBy: UUID?
+    ) {
+        val incMapObj = IncidentMappings(
+            id = null,
+            accountUtilizationIds = accUtilIds,
+            data = data,
+            incidentType = type,
+            incidentStatus = status,
+            organizationName = orgName,
+            entityCode = entityCode,
+            createdBy = performedBy,
+            updatedBy = performedBy,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now())
+        )
+        val savedObj = incidentMappingsRepository.save(incMapObj)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.INCIDENT_MAPPINGS,
+                objectId = savedObj.id,
+                actionName = AresConstants.CREATE,
+                data = savedObj,
+                performedBy = performedBy.toString(),
+                performedByUserType = null
+            )
+        )
     }
 }

@@ -8,9 +8,13 @@ import com.cogoport.ares.model.payment.Operator
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
+import java.time.LocalDate
+import java.time.Month
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 class Utilities {
-    companion object DateUtils {
+    companion object Utils {
         fun getTimeStampFromString(stringDate: String): Timestamp {
 
             try {
@@ -54,6 +58,38 @@ class Utilities {
 
         fun decimalRound(amount: BigDecimal, digits: Int = AresConstants.ROUND_DECIMAL_TO, roundingMode: RoundingMode = RoundingMode.HALF_DOWN): BigDecimal {
             return amount.setScale(digits, roundingMode)
+        }
+
+        /**
+         * Get Total pages from page size and total records
+         * @param totalRows
+         * @param pageSize
+         * @return totalPages
+         */
+        fun getTotalPages(totalRows: Long, pageSize: Int): Long {
+
+            return try {
+                val totalPageSize = if (pageSize > 0) pageSize else 1
+                ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
+            } catch (e: Exception) {
+                0
+            }
+        }
+
+        /**
+         * Get Financial in the format yyyy. If Financial year is 2022-2023, method will return 2223
+         * @return String
+         */
+        fun getFinancialYear(): String {
+            var fiscalYear: Int
+            val currentYear = LocalDate.now().year
+            val currentMonth = LocalDate.now().month
+            if (currentMonth <= Month.MARCH) {
+                fiscalYear = (currentYear)
+            } else {
+                fiscalYear = (currentYear)
+            }
+            return (fiscalYear - 1).toString().substring(2, 4) + (fiscalYear).toString().substring(2, 4)
         }
     }
 }
