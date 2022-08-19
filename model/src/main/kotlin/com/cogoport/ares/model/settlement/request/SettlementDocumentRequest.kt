@@ -1,4 +1,4 @@
-package com.cogoport.ares.model.settlement
+package com.cogoport.ares.model.settlement.request
 
 import com.cogoport.ares.model.common.AresModelConstants
 import com.fasterxml.jackson.annotation.JsonAutoDetect

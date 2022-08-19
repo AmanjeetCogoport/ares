@@ -1,5 +1,6 @@
-package com.cogoport.ares.model.settlement
+package com.cogoport.ares.model.settlement.request
 
+import com.cogoport.ares.model.settlement.CheckDocument
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID

@@ -38,13 +38,11 @@ import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
-import com.cogoport.ares.model.settlement.CheckRequest
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
-import com.cogoport.ares.model.settlement.SettlementDocumentRequest
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -54,6 +52,8 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
@@ -74,7 +74,6 @@ import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -193,7 +192,7 @@ open class SettlementServiceImpl : SettlementService {
         historyDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = historyDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
             totalRecords = totalRecords,
             pageNo = request.page
         )
@@ -207,22 +206,6 @@ open class SettlementServiceImpl : SettlementService {
                 mutableListOf(request.accountType)
             }
         return accountTypes
-    }
-
-    /**
-     * Get Total pages from page size and total records
-     * @param totalRows
-     * @param pageSize
-     * @return totalPages
-     */
-    private fun getTotalPages(totalRows: Long, pageSize: Int): Long {
-
-        return try {
-            val totalPageSize = if (pageSize > 0) pageSize else 1
-            ceil((totalRows.toFloat() / totalPageSize.toFloat()).toDouble()).roundToInt().toLong()
-        } catch (e: Exception) {
-            0
-        }
     }
 
     /**
@@ -248,7 +231,7 @@ open class SettlementServiceImpl : SettlementService {
         settledDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = settledDocuments,
-            totalPages = getTotalPages(totalRecords, request.pageLimit),
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
             totalRecords = totalRecords,
             pageNo = request.page
         )
