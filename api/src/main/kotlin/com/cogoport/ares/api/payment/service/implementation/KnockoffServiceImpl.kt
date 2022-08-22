@@ -168,6 +168,7 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
             paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentEntity.paymentNum
         }
+        paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
         val paymentObj = paymentRepository.save(paymentEntity)
         auditService.createAudit(
@@ -240,7 +241,7 @@ open class KnockoffServiceImpl : KnockoffService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId,
-            migrated = accountUtilization.migrated ?: false
+            migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
         auditService.createAudit(

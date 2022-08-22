@@ -295,7 +295,8 @@ class PaymentMigrationImpl : PaymentMigration {
             bankId = receivableRequest.bankId,
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = receivableRequest.organizationId,
-            bankPayAmount = receivableRequest.bankPayAmount
+            bankPayAmount = receivableRequest.bankPayAmount,
+            migrated = true
         )
     }
 

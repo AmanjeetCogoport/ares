@@ -171,7 +171,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                 accMode = invoiceUtilization.accMode,
                 transactionDate = request.transactionDate,
                 dueDate = request.transactionDate,
-                migrated = request.migrated
+                migrated = false
             )
 
         val isTdsApplied =
