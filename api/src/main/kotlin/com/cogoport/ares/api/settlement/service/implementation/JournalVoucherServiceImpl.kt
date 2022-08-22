@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImp
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
@@ -21,9 +22,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.model.settlement.request.JournalVoucherApproval
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.hades.client.HadesClient
@@ -100,11 +99,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     override suspend fun createJournalVoucher(request: JournalVoucherRequest): String {
         validateCreateRequest(request)
         // create Journal Voucher
+        request.jvNum = getJvNumber()
         val jv = convertToJournalVoucherEntity(request)
-        jv.jvNum = getJvNumber()
         val jvEntity = createJV(jv)
         // Send to Incident Management
-        val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(jvEntity)
+        request.id = jvEntity.id
+        val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
         sendToIncidentManagement(request, incidentRequestModel)
 
         return jvEntity.id.toString()
@@ -114,10 +114,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 //        return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
-    override suspend fun approveJournalVoucher(request: JournalVoucherApproval) {
-        val jvEntity = updateJournalVoucher(request)
-        val accType = getAccountType(jvEntity.category, jvEntity.type!!)
-//        createJvAccUtil(jvEntity, accType)
+    override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
+        val jvEntity = updateJournalVoucher(request.journalVoucherData)
+        val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
+        val signFlag = getSignFlag(accMode, request.journalVoucherData.type)
+        return createJvAccUtil(jvEntity, accMode, signFlag)
     }
 
     override suspend fun rejectJournalVoucher(id: Long, performedBy: UUID?) {
@@ -134,9 +135,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
     }
 
-    private suspend fun updateJournalVoucher(jvObj: JournalVoucherApproval): JournalVoucher {
+    private suspend fun updateJournalVoucher(jvObj: com.cogoport.hades.model.incident.JournalVoucher): JournalVoucher {
+        jvObj.status = JVStatus.APPROVED.toString()
+        jvObj.updatedAt = Timestamp.from(Instant.now())
         val jvEntity = journalVoucherConverter.convertIncidentModelToEntity(jvObj)
-        jvEntity.status = JVStatus.APPROVED
         journalVoucherRepository.update(jvEntity)
         auditService.createAudit(
             AuditRequest(
@@ -151,10 +153,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    private suspend fun createJvAccUtil(
-        request: JournalVoucher,
-        accType: AccountType
-    ) {
+    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): String {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -165,9 +164,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             taggedOrganizationId = null,
             tradePartyMappingId = null,
             organizationName = request.tradePartnerName,
-            accType = accType,
-            accMode = AccMode.AR,
-            signFlag = -1,
+            accType = AccountType.valueOf(request.category.toString()),
+            accMode = accMode,
+            signFlag = signFlag,
             currency = request.currency!!,
             ledCurrency = request.ledCurrency,
             amountCurr = request.amount ?: BigDecimal.ZERO,
@@ -197,6 +196,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = null
             )
         )
+        return accUtilObj.id.toString()
     }
 
     /**
@@ -208,7 +208,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             SequenceSuffix.JV.prefix
         )
 
-    private suspend fun createJV(jv: JournalVoucher): JournalVoucher {
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    open suspend fun createJV(jv: JournalVoucher): JournalVoucher {
         val jvObj = journalVoucherRepository.save(jv)
         auditService.createAudit(
             AuditRequest(
@@ -239,11 +240,15 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         request: JournalVoucherRequest,
         data: com.cogoport.hades.model.incident.JournalVoucher
     ) {
+        data.createdAt = Timestamp.from(Instant.now())
+        data.updatedAt = Timestamp.from(Instant.now())
         val incidentData =
             IncidentData(
                 organization = Organization(
                     id = request.tradePartyId,
-                    businessName = request.tradePartnerName
+                    businessName = request.tradePartnerName,
+                    tradePartyType = null,
+                    tradePartyName = null
                 ),
                 journalVoucherRequest = data,
                 tdsRequest = null,
@@ -261,18 +266,18 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     /**
-     * Return Account Type on the basis of jv category and type
-     * @param: jvCategory
+     * Return Sign Flag on the basis of account mode and type
+     * @param: accMode
      * @param: type
-     * @return: AccountType
+     * @return: Short
      */
-    private fun getAccountType(jvCategory: JVCategory, type: String): AccountType {
+    private fun getSignFlag(accMode: AccMode, type: String): Short {
         return when (type) {
             "CREDIT" -> {
-                getCreditAccountType(jvCategory)
+                getCreditSignFlag(accMode)
             }
             "DEBIT" -> {
-                getDebitAccountType(jvCategory)
+                getDebitSignFlag(accMode)
             }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
@@ -281,55 +286,30 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     /**
-     * Return credit Account Type on the basis of jv category
-     * @param: jvCategory
-     * @return: AccountType
+     * Return credit Sign Flag on the basis of Account Mode
+     * @param: accMode
+     * @return: Short
      */
-    private fun getCreditAccountType(jvCategory: JVCategory): AccountType {
-        return when (jvCategory) {
-            JVCategory.EXCH -> {
-                AccountType.CEXCH
-            }
-            JVCategory.WOFF -> {
-                AccountType.CWOFF
-            }
-            JVCategory.ROFF -> {
-                AccountType.CROFF
-            }
-            JVCategory.NOSTRO -> {
-                AccountType.NOSTRO
-            }
-            JVCategory.OUTST -> {
-                AccountType.OUTST
-            }
+    private fun getCreditSignFlag(accMode: AccMode): Short {
+
+        return when (accMode) {
+            AccMode.AR -> { -1 }
+            AccMode.AP -> { 1 }
             else -> {
-                throw AresException(AresError.ERR_1009, "JV Category")
+                throw AresException(AresError.ERR_1009, "Acc Mode")
             }
         }
     }
 
     /**
-     * Return debit Account Type on the basis of jv category
-     * @param: jvCategory
-     * @return: AccountType
+     * Return Debit Sign Flag on the basis of Account Mode
+     * @param: accMode
+     * @return: Short
      */
-    private fun getDebitAccountType(jvCategory: JVCategory): AccountType {
-        return when (jvCategory) {
-            JVCategory.EXCH -> {
-                AccountType.DEXCH
-            }
-            JVCategory.WOFF -> {
-                AccountType.DWOFF
-            }
-            JVCategory.ROFF -> {
-                AccountType.DROFF
-            }
-            JVCategory.NOSTRO -> {
-                AccountType.NOSTRO
-            }
-            JVCategory.OUTST -> {
-                AccountType.OUTST
-            }
+    private fun getDebitSignFlag(accMode: AccMode): Short {
+        return when (accMode) {
+            AccMode.AR -> { 1 }
+            AccMode.AP -> { -1 }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV Category")
             }
