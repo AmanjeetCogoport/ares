@@ -28,5 +28,6 @@ data class Document(
     var currency: String,
     var ledCurrency: String,
     var exchangeRate: BigDecimal,
+    var approved: Boolean?,
     var signFlag: Short
 )
