@@ -28,7 +28,7 @@ class JournalVoucherController {
 
     @Post
     suspend fun createJv(@Body request: JournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Created Successfully",journalVoucherService.createJournalVoucher(request))
+        return Response<String>().ok("Created Successfully", journalVoucherService.createJournalVoucher(request))
     }
 
     @Get("/list{?jvListRequest*}")
@@ -38,7 +38,7 @@ class JournalVoucherController {
 
     @Post("/approved")
     suspend fun approveJv(@Valid @Body request: JournalVoucherApproval): Response<String> {
-        return Response<String>().ok("Successful",journalVoucherService.approveJournalVoucher(request))
+        return Response<String>().ok("Successful", journalVoucherService.approveJournalVoucher(request))
     }
 
     @Post("/rejected")
