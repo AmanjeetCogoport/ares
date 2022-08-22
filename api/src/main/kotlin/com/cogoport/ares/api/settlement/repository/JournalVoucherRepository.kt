@@ -42,7 +42,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
-    suspend fun getListVouchers(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, page: Int, pageLimit: Int,status: JVStatus?, query: String?,): List<JournalVoucher>
+    suspend fun getListVouchers(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, page: Int, pageLimit: Int, status: JVStatus?, query: String?,): List<JournalVoucher>
 
     @Query(
         """
