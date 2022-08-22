@@ -37,11 +37,12 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             where 
                 (:entityCode is null OR entity_code = :entityCode) AND
                 (:startDate is null OR  created_at >= :startDate) AND
+                (:status is null OR  status = :status::JV_STATUS) AND
                 (:endDate is null OR created_at <= :endDate)
-                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
+                OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
-    suspend fun getListVouchers(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, page: Int, pageLimit: Int, query: String?,): List<JournalVoucher>
+    suspend fun getListVouchers(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, page: Int, pageLimit: Int, status: JVStatus?, query: String?,): List<JournalVoucher>
 
     @Query(
         """
