@@ -4,7 +4,7 @@ import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
-import com.cogoport.ares.model.settlement.request.JournalVoucherApproval
+import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import io.micronaut.http.annotation.Body
