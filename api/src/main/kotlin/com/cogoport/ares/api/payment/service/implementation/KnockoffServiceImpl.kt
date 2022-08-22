@@ -239,7 +239,8 @@ open class KnockoffServiceImpl : KnockoffService {
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            orgSerialId = knockOffRecord.orgSerialId
+            orgSerialId = knockOffRecord.orgSerialId,
+            migrated = accountUtilization.migrated ?: false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
         auditService.createAudit(

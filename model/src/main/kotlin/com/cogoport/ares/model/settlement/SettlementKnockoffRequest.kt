@@ -26,5 +26,6 @@ data class SettlementKnockoffRequest(
 
     val email: String, // narration or audits
     val performedBy: UUID?,
-    val performedByUserType: String?
+    val performedByUserType: String?,
+    val migrated: Boolean?
 )

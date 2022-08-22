@@ -170,7 +170,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 payLoc = BigDecimal.ZERO,
                 accMode = invoiceUtilization.accMode,
                 transactionDate = request.transactionDate,
-                dueDate = request.transactionDate
+                dueDate = request.transactionDate,
+                migrated = request.migrated
             )
 
         val isTdsApplied =
