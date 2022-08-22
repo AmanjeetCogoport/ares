@@ -35,6 +35,6 @@ data class Document(
     var settledTds: BigDecimal?,
     var exchangeRate: BigDecimal,
     var signFlag: Short,
-    var nostroAmount: BigDecimal
-
+    var nostroAmount: BigDecimal,
+    var approved: Boolean?
 )
