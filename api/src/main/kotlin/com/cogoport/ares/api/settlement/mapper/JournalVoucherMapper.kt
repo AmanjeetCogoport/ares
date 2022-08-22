@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.mapper
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
-import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping

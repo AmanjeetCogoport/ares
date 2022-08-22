@@ -12,9 +12,11 @@ import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImp
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -22,7 +24,6 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.hades.client.HadesClient
@@ -113,11 +114,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 //        return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
-    override suspend fun approveJournalVoucher(request: JournalVoucherApproval) {
+    override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
         val jvEntity = updateJournalVoucher(request.journalVoucherData)
         val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
         val signFlag = getSignFlag(accMode, request.journalVoucherData.type)
-        createJvAccUtil(jvEntity, accMode, signFlag)
+        return createJvAccUtil(jvEntity, accMode, signFlag)
     }
 
     override suspend fun rejectJournalVoucher(id: Long, performedBy: UUID?) {
@@ -135,8 +136,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     private suspend fun updateJournalVoucher(jvObj: com.cogoport.hades.model.incident.JournalVoucher): JournalVoucher {
+        jvObj.status = JVStatus.APPROVED.toString()
+        jvObj.updatedAt = Timestamp.from(Instant.now())
         val jvEntity = journalVoucherConverter.convertIncidentModelToEntity(jvObj)
-        jvEntity.status = JVStatus.APPROVED
         journalVoucherRepository.update(jvEntity)
         auditService.createAudit(
             AuditRequest(
@@ -151,7 +153,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short) {
+    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): String {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -194,6 +196,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = null
             )
         )
+        return accUtilObj.id.toString()
     }
 
     /**
@@ -237,7 +240,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         request: JournalVoucherRequest,
         data: com.cogoport.hades.model.incident.JournalVoucher
     ) {
-//        data.accMode = request.accMode
+        data.createdAt = Timestamp.from(Instant.now())
+        data.updatedAt = Timestamp.from(Instant.now())
         val incidentData =
             IncidentData(
                 organization = Organization(
