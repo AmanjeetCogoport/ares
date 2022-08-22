@@ -69,6 +69,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             jvListRequest.endDate,
             jvListRequest.page,
             jvListRequest.pageLimit,
+            jvListRequest.status,
             jvListRequest.query
         )
         val totalRecords =
