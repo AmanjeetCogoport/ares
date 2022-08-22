@@ -20,7 +20,7 @@ data class JournalVoucherResponse(
     val validityDate: Date?,
     val amount: BigDecimal?,
     val currency: String?,
-    val status: JVStatus,
+    val status: JVStatus?,
     val exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
     val tradePartnerName: String?,
