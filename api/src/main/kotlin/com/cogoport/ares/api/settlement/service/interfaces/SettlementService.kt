@@ -47,7 +47,7 @@ interface SettlementService {
 
     suspend fun sendForApproval(request: CreateIncidentRequest): String
 
-    suspend fun rejectApproval(request: RejectSettleApproval): String
+    suspend fun reject(request: RejectSettleApproval): String
 
     suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse
 }

@@ -772,7 +772,7 @@ open class SettlementServiceImpl : SettlementService {
         return res
     }
 
-    override suspend fun rejectApproval(request: RejectSettleApproval): String {
+    override suspend fun reject(request: RejectSettleApproval): String {
         incidentMappingsRepository.updateStatus(
             incidentMappingId = request.incidentMappingId.toLong(),
             status = IncidentStatus.REJECTED
