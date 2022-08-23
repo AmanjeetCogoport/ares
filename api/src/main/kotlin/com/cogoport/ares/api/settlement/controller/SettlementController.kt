@@ -25,6 +25,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -119,6 +120,11 @@ class SettlementController {
     @Post("/send-for-approval")
     suspend fun sendForApproval(@Valid @Body request: CreateIncidentRequest): Response<String> {
         return Response<String>().ok("Sent For Approval", settlementService.sendForApproval(request))
+    }
+
+    @Post("/reject-approval")
+    suspend fun rejectApproval(@Valid @Body request: RejectSettleApproval): Response<String> {
+        return Response<String>().ok("Rejected Approval", settlementService.rejectApproval(request))
     }
 
     @Delete
