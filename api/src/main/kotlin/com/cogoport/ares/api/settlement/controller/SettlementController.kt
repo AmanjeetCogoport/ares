@@ -7,6 +7,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
@@ -91,13 +92,13 @@ class SettlementController {
     }
 
     @Post("/check")
-    suspend fun check(@Body request: CheckRequest): List<CheckDocument> {
-        return Response<List<CheckDocument>>().ok(settlementService.check(request))
+    suspend fun check(@Body request: CheckRequest): CheckResponse {
+        return Response<CheckResponse>().ok(settlementService.check(request))
     }
 
     @Post("/edit-check")
-    suspend fun editCheck(@Body request: CheckRequest): List<CheckDocument> {
-        return Response<List<CheckDocument>>().ok(settlementService.editCheck(request))
+    suspend fun editCheck(@Body request: CheckRequest): CheckResponse {
+        return Response<CheckResponse>().ok(settlementService.editCheck(request))
     }
 
     @Post("/settle")

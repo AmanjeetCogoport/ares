@@ -38,6 +38,7 @@ import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
@@ -656,10 +657,28 @@ open class SettlementServiceImpl : SettlementService {
         if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
     }
 
-    override suspend fun check(request: CheckRequest): List<CheckDocument> =
-        runSettlement(request, false)
+    override suspend fun check(request: CheckRequest): CheckResponse {
+        val stack = runSettlement(request, false)
+        val canSettle = getCanSettleFlag(stack)
+        return CheckResponse(
+            stackDetails = stack,
+            canSettle = canSettle
+        )
+    }
 
-    override suspend fun editCheck(request: CheckRequest): List<CheckDocument> {
+    private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
+        var canSettle = true
+        val currencyList = stack.map { it.currency }
+        if (currencyList.distinct().size > 1) canSettle = false
+        if (canSettle) {
+            stack.forEach {
+                if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
+            }
+        }
+        return canSettle
+    }
+
+    override suspend fun editCheck(request: CheckRequest): CheckResponse {
         adjustBalanceAmount(type = "add", documents = request.stackDetails)
         val checkResponse = check(request)
         adjustBalanceAmount(type = "subtract", documents = request.stackDetails)

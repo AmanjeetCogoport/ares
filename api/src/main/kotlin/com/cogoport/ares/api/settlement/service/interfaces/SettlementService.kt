@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.service.interfaces
 import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
@@ -31,9 +32,9 @@ interface SettlementService {
 
     suspend fun getSettlement(request: SettlementRequest): ResponseList<SettledInvoice?>
 
-    suspend fun check(request: CheckRequest): List<CheckDocument>
+    suspend fun check(request: CheckRequest): CheckResponse
 
-    suspend fun editCheck(request: CheckRequest): List<CheckDocument>
+    suspend fun editCheck(request: CheckRequest): CheckResponse
 
     suspend fun settle(request: CheckRequest): List<CheckDocument>
 
