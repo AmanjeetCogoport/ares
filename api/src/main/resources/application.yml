@@ -27,10 +27,10 @@ r2dbc:
 services:
   service: https://api.dev.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.local}
-
-kafka:
-  bootstrap:
-    servers: localhost:29092
+#
+#kafka:
+#  bootstrap:
+#    servers: localhost:29092
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss

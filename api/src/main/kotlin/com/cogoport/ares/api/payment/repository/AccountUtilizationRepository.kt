@@ -602,4 +602,22 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+
+    @Query(
+            """
+                SELECT * FROM account_utilizations
+                WHERE document_value = :documentValue
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
+
+    @Query(
+            """
+                SELECT * FROM account_utilizations
+                WHERE document_no = :documentNo
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType?): AccountUtilization
 }
