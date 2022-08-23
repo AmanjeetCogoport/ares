@@ -38,6 +38,7 @@ import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
@@ -53,11 +54,13 @@ import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.request.UpdateStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Inject
@@ -656,10 +659,28 @@ open class SettlementServiceImpl : SettlementService {
         if (request.accMode == null) throw AresException(AresError.ERR_1003, "account mode")
     }
 
-    override suspend fun check(request: CheckRequest): List<CheckDocument> =
-        runSettlement(request, false)
+    override suspend fun check(request: CheckRequest): CheckResponse {
+        val stack = runSettlement(request, false)
+        val canSettle = if (request.throughIncident) true else getCanSettleFlag(stack)
+        return CheckResponse(
+            stackDetails = stack,
+            canSettle = canSettle
+        )
+    }
 
-    override suspend fun editCheck(request: CheckRequest): List<CheckDocument> {
+    private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
+        var canSettle = true
+        val currencyList = stack.map { it.currency }
+        if (currencyList.distinct().size > 1) canSettle = false
+        if (canSettle) {
+            stack.forEach {
+                if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
+            }
+        }
+        return canSettle
+    }
+
+    override suspend fun editCheck(request: CheckRequest): CheckResponse {
         adjustBalanceAmount(type = "add", documents = request.stackDetails)
         val checkResponse = check(request)
         adjustBalanceAmount(type = "subtract", documents = request.stackDetails)
@@ -667,8 +688,36 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun settle(request: CheckRequest): List<CheckDocument> =
-        runSettlement(request, true)
+    override suspend fun settle(request: CheckRequest): List<CheckDocument> {
+        // If request is coming through incident management check
+        return if (request.throughIncident) {
+            // Validate Request
+            if (request.incidentMappingId == null) throw AresException(AresError.ERR_1003, "incidentMappingId")
+            if (request.incidentId == null) throw AresException(AresError.ERR_1003, "incidentId")
+
+            // Update Status of Incident in incident_mappings table
+            hadesClient.updateStatus(
+                UpdateStatusRequest(
+                    id = hashId.decode(request.incidentId!!)[0],
+                    status = com.cogoport.hades.model.incident.enums.IncidentStatus.APPROVED
+                )
+            )
+
+            // Perform Settlement
+            val response = runSettlement(request, true)
+
+            // Update status of incident at incident management
+            incidentMappingsRepository.updateStatus(
+                incidentMappingId = request.incidentMappingId!!.toLong(),
+                status = IncidentStatus.APPROVED
+            )
+
+            // return response
+            response
+        } else {
+            runSettlement(request, true)
+        }
+    }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun edit(request: CheckRequest): List<CheckDocument> = editSettlement(request)
@@ -684,6 +733,15 @@ open class SettlementServiceImpl : SettlementService {
         val docList = request.stackDetails!!.map {
             documentConverter.convertToIncidentModel(it)
         }
+        val res = createIncidentMapping(
+            accUtilIds = docList.map { it.id },
+            data = docList,
+            type = com.cogoport.ares.api.common.enums.IncidentType.SETTLEMENT_APPROVAL,
+            status = IncidentStatus.REQUESTED,
+            orgName = request.orgName,
+            entityCode = request.entityCode,
+            performedBy = request.createdBy
+        )
         val incidentData =
             IncidentData(
                 organization = Organization(
@@ -695,13 +753,14 @@ open class SettlementServiceImpl : SettlementService {
                 settlementRequest = com.cogoport.hades.model.incident.Settlement(
                     entityCode = request.entityCode!!,
                     list = docList,
-                    settlementDate = request.settlementDate
+                    settlementDate = request.settlementDate,
+                    incidentMappingId = res
                 ),
                 tdsRequest = null,
                 bankRequest = null,
                 creditNoteRequest = null
             )
-        val res = hadesClient.createIncident(
+        hadesClient.createIncident(
             com.cogoport.hades.model.incident.request.CreateIncidentRequest(
                 type = IncidentType.SETTLEMENT_APPROVAL,
                 description = "Settlement Approval For Cross Currency Settle",
@@ -709,16 +768,22 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy = request.createdBy!!
             )
         )
-        createIncidentMapping(
-            accUtilIds = docList.map { it.id },
-            data = docList,
-            type = com.cogoport.ares.api.common.enums.IncidentType.SETTLEMENT_APPROVAL,
-            status = IncidentStatus.REQUESTED,
-            orgName = request.orgName,
-            entityCode = request.entityCode,
-            performedBy = request.createdBy
+
+        return res
+    }
+
+    override suspend fun reject(request: RejectSettleApproval): String {
+        incidentMappingsRepository.updateStatus(
+            incidentMappingId = request.incidentMappingId.toLong(),
+            status = IncidentStatus.REJECTED
         )
-        return res.data.toString()
+        hadesClient.updateStatus(
+            UpdateStatusRequest(
+                id = hashId.decode(request.incidentId)[0],
+                status = com.cogoport.hades.model.incident.enums.IncidentStatus.REJECTED
+            )
+        )
+        return request.incidentId
     }
 
     override suspend fun getOrgSummary(
@@ -1649,7 +1714,7 @@ open class SettlementServiceImpl : SettlementService {
         orgName: String?,
         entityCode: Int?,
         performedBy: UUID?
-    ) {
+    ): String {
         val incMapObj = IncidentMappings(
             id = null,
             accountUtilizationIds = accUtilIds,
@@ -1674,5 +1739,6 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = null
             )
         )
+        return savedObj.id.toString()
     }
 }

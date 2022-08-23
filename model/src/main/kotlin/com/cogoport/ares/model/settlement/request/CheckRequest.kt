@@ -9,5 +9,8 @@ data class CheckRequest(
     val stackDetails: MutableList<CheckDocument>,
     val settlementDate: Timestamp = Timestamp.from(Instant.now()),
     val createdBy: UUID?,
-    val createdByUserType: String?
+    val createdByUserType: String?,
+    val throughIncident: Boolean = false,
+    val incidentId: String?,
+    val incidentMappingId: String?
 )

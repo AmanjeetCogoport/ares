@@ -5,6 +5,6 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class JournalVoucherApproval(
-    val incidentId: Long,
+    val incidentId: String,
     val journalVoucherData: JournalVoucher
 )
