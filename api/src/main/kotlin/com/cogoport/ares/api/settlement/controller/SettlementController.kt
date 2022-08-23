@@ -124,7 +124,7 @@ class SettlementController {
 
     @Post("/reject")
     suspend fun reject(@Valid @Body request: RejectSettleApproval): Response<String> {
-        return Response<String>().ok("Rejected Approval", settlementService.reject(request))
+        return Response<String>().ok("Rejected", settlementService.reject(request))
     }
 
     @Delete
