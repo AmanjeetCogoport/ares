@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.payment.OrgStatsResponse
@@ -13,7 +12,6 @@ import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
-import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -68,8 +66,4 @@ class OnAccountController {
         return Response<OrgStatsResponse>().ok(onAccountService.getOrgStats(orgId))
     }
 
-    @Post("/account-utilisation-db")
-    suspend fun getAccountUtilizationRequest(@Valid @Body request: PushAccountUtilizationRequest): List<AccountUtilization> {
-        return Response<List<AccountUtilization>>().ok(onAccountService.getDataAccUtilization(request));
-    }
 }
