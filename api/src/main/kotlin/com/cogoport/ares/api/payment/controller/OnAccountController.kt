@@ -65,5 +65,4 @@ class OnAccountController {
     suspend fun getOrgStats(@QueryValue(AresConstants.ORG_ID) orgId: UUID?): OrgStatsResponse {
         return Response<OrgStatsResponse>().ok(onAccountService.getOrgStats(orgId))
     }
-
 }

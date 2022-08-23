@@ -16,7 +16,6 @@ import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.model.payment.AccountUtilizationId
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -28,6 +27,7 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.AccountUtilizationId
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
@@ -503,16 +503,14 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun getDataAccUtilization(request: PushAccountUtilizationRequest): List<AccountUtilization> {
         val accUtilizationResponse: MutableList<AccountUtilization> = mutableListOf()
-        var accUtilizationEntity :AccountUtilization
+        var accUtilizationEntity: AccountUtilization
         for (accUtilizationReq in request.accountUtilizations) {
-            if((request.inputType) == AccountUtilizationId.DOCUMENTNO){
-                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType);
-            }
-            else if((request.inputType) == AccountUtilizationId.DOCUMENTVALUE){
-                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType);
-            }
-            else{
-                TODO("Not Yet Implemented");
+            if ((request.inputType) == AccountUtilizationId.DOCUMENTNO) {
+                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType)
+            } else if ((request.inputType) == AccountUtilizationId.DOCUMENTVALUE) {
+                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
+            } else {
+                TODO("Not Yet Implemented")
             }
             accUtilizationResponse.add(accUtilizationEntity)
             Client.addDocument("test_invoices", accUtilizationEntity.id.toString(), accUtilizationEntity)

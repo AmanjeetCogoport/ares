@@ -18,6 +18,6 @@ class OpenSearchController {
     @Inject lateinit var onAccountService: OnAccountService
     @Post("/account-utilization")
     suspend fun getAccountUtilizationRequest(@Valid @Body request: PushAccountUtilizationRequest): List<AccountUtilization> {
-        return Response<List<AccountUtilization>>().ok(onAccountService.getDataAccUtilization(request));
+        return Response<List<AccountUtilization>>().ok(onAccountService.getDataAccUtilization(request))
     }
 }

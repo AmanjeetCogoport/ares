@@ -50,4 +50,3 @@ enum class AccountUtilizationId(val dbValue: String) {
     DOCUMENTNO("DOCUMENTNO"),
     DOCUMENTVALUE("DOCUMENTVALUE")
 }
-

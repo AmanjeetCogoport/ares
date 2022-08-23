@@ -5,6 +5,6 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class PushAccountUtilizationRequest(
-        var inputType: AccountUtilizationId,
-        var accountUtilizations: List<DocIdAccTypePair>
+    var inputType: AccountUtilizationId,
+    var accountUtilizations: List<DocIdAccTypePair>
 )
