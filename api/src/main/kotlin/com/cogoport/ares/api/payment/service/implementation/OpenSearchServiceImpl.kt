@@ -14,6 +14,7 @@ import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
+import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -205,6 +206,20 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
+        }
+    }
+
+    override suspend fun pushOutstandingListData(request: OpenSearchListRequest) {
+        for (itr in request.openSearchList) {
+            if (itr.orgId.isEmpty()) {
+                throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
+            }
+            accountUtilizationRepository.generateOrgOutstanding(itr.orgId, null).also {
+                updateOrgOutstanding(null, itr.orgName, itr.orgId, it)
+            }
+            accountUtilizationRepository.generateOrgOutstanding(itr.orgId, itr.zone).also {
+                updateOrgOutstanding(itr.zone, itr.orgName, itr.orgId, it)
+            }
         }
     }
 

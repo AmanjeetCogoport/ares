@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -9,9 +10,11 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
+import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -37,6 +40,11 @@ class OutstandingController {
     @Get("/open-search/add{?request*}")
     suspend fun addToOpenSearch(@Valid request: OpenSearchRequest) {
         return pushToClientService.pushOutstandingData(request)
+    }
+
+    @Post("/open-search/add-list")
+    suspend fun addToOpenSearch(@Valid @Body request: OpenSearchListRequest) {
+        return pushToClientService.pushOutstandingListData(request)
     }
 
     @Get("/{orgId}")
