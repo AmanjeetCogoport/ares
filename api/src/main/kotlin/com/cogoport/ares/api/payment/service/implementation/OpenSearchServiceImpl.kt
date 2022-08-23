@@ -14,6 +14,7 @@ import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
+import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -30,6 +31,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.time.Month
+import java.time.format.DateTimeFormatter
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -205,6 +207,26 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
+        }
+    }
+
+    /**
+     * Push List of Organization outstanding data to open search.
+     * @param: openSearchListRequest
+     */
+    override suspend fun pushOutstandingListData(openSearchListRequest: OpenSearchListRequest) {
+        for (organization in openSearchListRequest.openSearchList) {
+            pushOutstandingData(
+                OpenSearchRequest(
+                    zone = organization.zone,
+                    date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern(AresConstants.YEAR_DATE_FORMAT)),
+                    quarter = AresConstants.CURR_QUARTER,
+                    year = AresConstants.CURR_YEAR,
+                    orgId = organization.orgId,
+                    orgName = organization.orgName,
+                    accMode = null
+                )
+            )
         }
     }
 
