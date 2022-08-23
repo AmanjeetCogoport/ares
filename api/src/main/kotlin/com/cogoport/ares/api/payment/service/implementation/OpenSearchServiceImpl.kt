@@ -216,15 +216,17 @@ class OpenSearchServiceImpl : OpenSearchService {
      */
     override suspend fun pushOutstandingListData(openSearchListRequest: OpenSearchListRequest) {
         for (organization in openSearchListRequest.openSearchList) {
-            pushOutstandingData(OpenSearchRequest(
-                zone = organization.zone,
-                date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern(AresConstants.YEAR_DATE_FORMAT)),
-                quarter =  AresConstants.CURR_QUARTER,
-                year = AresConstants.CURR_YEAR,
-                orgId = organization.orgId,
-                orgName = organization.orgName,
-                accMode = null
-            ))
+            pushOutstandingData(
+                OpenSearchRequest(
+                    zone = organization.zone,
+                    date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern(AresConstants.YEAR_DATE_FORMAT)),
+                    quarter = AresConstants.CURR_QUARTER,
+                    year = AresConstants.CURR_YEAR,
+                    orgId = organization.orgId,
+                    orgName = organization.orgName,
+                    accMode = null
+                )
+            )
         }
     }
 
