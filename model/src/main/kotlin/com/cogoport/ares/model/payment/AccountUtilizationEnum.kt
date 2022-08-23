@@ -46,7 +46,10 @@ enum class InvoiceType(val value: String) {
     SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"), PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment")
 }
 
-enum class AccountUtilizationId(val dbValue: String) {
-    DOCUMENTNO("DOCUMENTNO"),
-    DOCUMENTVALUE("DOCUMENTVALUE")
+/**
+ * Used to identify the input of request which updates account utilization data from DB on Open Search
+ */
+enum class DocumentSearchType {
+    NUMBER,
+    VALUE
 }

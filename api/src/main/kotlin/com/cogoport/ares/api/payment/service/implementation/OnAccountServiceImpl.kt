@@ -27,7 +27,7 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.AccountUtilizationId
+import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
@@ -505,9 +505,9 @@ open class OnAccountServiceImpl : OnAccountService {
         val accUtilizationResponse: MutableList<AccountUtilization> = mutableListOf()
         var accUtilizationEntity: AccountUtilization
         for (accUtilizationReq in request.accountUtilizations) {
-            if ((request.inputType) == AccountUtilizationId.DOCUMENTNO) {
+            if ((request.inputType) == DocumentSearchType.NUMBER) {
                 accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType)
-            } else if ((request.inputType) == AccountUtilizationId.DOCUMENTVALUE) {
+            } else if ((request.inputType) == DocumentSearchType.VALUE) {
                 accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
             } else {
                 TODO("Not Yet Implemented")
