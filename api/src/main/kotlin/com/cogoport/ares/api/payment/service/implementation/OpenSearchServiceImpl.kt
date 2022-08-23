@@ -31,6 +31,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.time.Month
+import java.time.format.DateTimeFormatter
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -209,17 +210,21 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
     }
 
-    override suspend fun pushOutstandingListData(request: OpenSearchListRequest) {
-        for (itr in request.openSearchList) {
-            if (itr.orgId.isEmpty()) {
-                throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
-            }
-            accountUtilizationRepository.generateOrgOutstanding(itr.orgId, null).also {
-                updateOrgOutstanding(null, itr.orgName, itr.orgId, it)
-            }
-            accountUtilizationRepository.generateOrgOutstanding(itr.orgId, itr.zone).also {
-                updateOrgOutstanding(itr.zone, itr.orgName, itr.orgId, it)
-            }
+    /**
+     * Push List of Organization outstanding data to open search.
+     * @param: openSearchListRequest
+     */
+    override suspend fun pushOutstandingListData(openSearchListRequest: OpenSearchListRequest) {
+        for (organization in openSearchListRequest.openSearchList) {
+            pushOutstandingData(OpenSearchRequest(
+                zone = organization.zone,
+                date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern(AresConstants.YEAR_DATE_FORMAT)),
+                quarter =  AresConstants.CURR_QUARTER,
+                year = AresConstants.CURR_YEAR,
+                orgId = organization.orgId,
+                orgName = organization.orgName,
+                accMode = null
+            ))
         }
     }
 
