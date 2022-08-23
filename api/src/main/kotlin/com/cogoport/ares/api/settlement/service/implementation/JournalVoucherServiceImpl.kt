@@ -15,6 +15,7 @@ import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
+import com.cogoport.ares.api.utils.Hashids
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
@@ -28,8 +29,10 @@ import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.hades.model.incident.request.UpdateStatusRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -59,6 +62,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var hashids: Hashids
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
@@ -114,11 +120,24 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 //        return journalVoucherConverter.convertEntityToRequest(jv)
     }
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
+        // Update Journal Voucher
         val jvEntity = updateJournalVoucher(request.journalVoucherData)
+
+        // Insert JV in account_utilizations
         val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
         val signFlag = getSignFlag(accMode, request.journalVoucherData.type)
-        return createJvAccUtil(jvEntity, accMode, signFlag)
+        val accUtilEntity = createJvAccUtil(jvEntity, accMode, signFlag)
+
+        // Update Incident status on incident management
+        hadesClient.updateStatus(
+            UpdateStatusRequest(
+                id = hashids.decode(request.incidentId)[0],
+                status = IncidentStatus.APPROVED
+            )
+        )
+        return accUtilEntity.id.toString()
     }
 
     override suspend fun rejectJournalVoucher(id: Long, performedBy: UUID?) {
@@ -153,7 +172,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): String {
+    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -196,7 +215,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = null
             )
         )
-        return accUtilObj.id.toString()
+        return accUtilObj
     }
 
     /**
