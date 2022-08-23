@@ -506,7 +506,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var accUtilizationEntity: AccountUtilization
         for (accUtilizationReq in request.accountUtilizations) {
             if ((request.inputType) == DocumentSearchType.NUMBER) {
-                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType)
+                accUtilizationEntity = accountUtilizationRepository.findByDocumentNoAndAccType(accUtilizationReq.id, accUtilizationReq.accType)
             } else if ((request.inputType) == DocumentSearchType.VALUE) {
                 accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
             } else {

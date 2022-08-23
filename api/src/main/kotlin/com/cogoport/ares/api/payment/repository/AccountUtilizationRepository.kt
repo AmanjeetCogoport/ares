@@ -620,4 +620,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             """
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType?): AccountUtilization
+
+    suspend fun findByDocumentNoAndAccType(documentNo: String, accType: AccountType?): AccountUtilization
 }
