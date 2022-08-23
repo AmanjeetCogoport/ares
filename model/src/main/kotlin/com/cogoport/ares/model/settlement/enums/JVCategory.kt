@@ -2,7 +2,7 @@ package com.cogoport.ares.model.settlement.enums
 
 enum class JVCategory(val value: String) {
     EXCH("EXCH"),
-    NOSTRO("NOSTRO"),
+    JVNOS("JVNOS"),
     WOFF("WOFF"),
     ROFF("ROFF"),
     OUTST("OUTST");

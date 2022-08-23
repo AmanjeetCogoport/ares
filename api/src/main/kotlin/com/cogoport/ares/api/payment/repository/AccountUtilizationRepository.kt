@@ -371,7 +371,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ORDER BY transaction_date DESC
             LIMIT :limit
             OFFSET :offset
-        ) 
+        ), 
+         MAPPINGS AS (
+        	select jsonb_array_elements(account_utilization_ids)::int as id 
+        	from incident_mappings
+        	where incident_status = 'REQUESTED'
+        	and incident_type = 'SETTLEMENT_APPROVAL'
+        )
         SELECT 
             au.id,
             s.source_id,
@@ -394,6 +400,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            CASE WHEN 
+            	au.id in (select id from MAPPINGS) 
+        	THEN
+        		false
+        	ELSE
+        		true
+        	END as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 
@@ -431,7 +444,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ORDER BY transaction_date DESC
             LIMIT :limit
             OFFSET :offset
-        ) 
+        ),
+        MAPPINGS AS (
+        	select jsonb_array_elements(account_utilization_ids)::int as id 
+        	from incident_mappings
+        	where incident_status = 'REQUESTED'
+        	and incident_type = 'SETTLEMENT_APPROVAL'
+        )
         SELECT 
             au.id,
             s.source_id,
@@ -454,6 +473,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            CASE WHEN 
+            	au.id in (select id from MAPPINGS) 
+        	THEN
+        		false
+        	ELSE
+        		true
+        	END as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 

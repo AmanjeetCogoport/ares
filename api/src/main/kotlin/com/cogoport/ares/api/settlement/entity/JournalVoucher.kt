@@ -33,4 +33,5 @@ data class JournalVoucher(
     var createdAt: Timestamp?,
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
+    var description: String?
 )
