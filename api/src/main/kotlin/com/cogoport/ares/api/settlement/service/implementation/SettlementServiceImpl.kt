@@ -688,11 +688,14 @@ open class SettlementServiceImpl : SettlementService {
             IncidentData(
                 organization = Organization(
                     id = request.orgId,
-                    businessName = request.orgName
+                    businessName = request.orgName,
+                    tradePartyType = null,
+                    tradePartyName = null
                 ),
                 settlementRequest = com.cogoport.hades.model.incident.Settlement(
                     entityCode = request.entityCode!!,
-                    list = docList
+                    list = docList,
+                    settlementDate = request.settlementDate
                 ),
                 tdsRequest = null,
                 bankRequest = null,
