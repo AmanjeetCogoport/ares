@@ -69,7 +69,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
         val documentEntity = journalVoucherRepository.getListVouchers(
-            jvListRequest.entityCode,
             jvListRequest.startDate,
             jvListRequest.endDate,
             jvListRequest.page,
@@ -79,7 +78,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
-                jvListRequest.entityCode,
                 jvListRequest.startDate,
                 jvListRequest.endDate
             )
