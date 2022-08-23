@@ -628,4 +628,82 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+
+    @Query(
+        """
+                SELECT
+                id,
+                document_no,
+                document_value,
+                zone_code,
+                service_type,
+                document_status,
+                entity_code,
+                category,
+                org_serial_id,
+                sage_organization_id,
+                organization_id,
+                organization_name,
+                acc_code,
+                acc_type,
+                acc_mode,
+                sign_flag,
+                currency,
+                led_currency,
+                amount_curr,
+                amount_loc,
+                pay_curr,
+                pay_loc,
+                due_date,
+                transaction_date,
+                created_at,
+                updated_at,
+                taxable_amount,
+                trade_party_mapping_id,
+                tagged_organization_id
+                FROM account_utilizations
+                WHERE document_value = :documentValue
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
+
+    @Query(
+        """
+                SELECT
+                id,
+                document_no,
+                document_value,
+                zone_code,
+                service_type,
+                document_status,
+                entity_code,
+                category,
+                org_serial_id,
+                sage_organization_id,
+                organization_id,
+                organization_name,
+                acc_code,
+                acc_type,
+                acc_mode,
+                sign_flag,
+                currency,
+                led_currency,
+                amount_curr,
+                amount_loc,
+                pay_curr,
+                pay_loc,
+                due_date,
+                transaction_date,
+                created_at,
+                updated_at,
+                taxable_amount,
+                trade_party_mapping_id,
+                tagged_organization_id
+                FROM account_utilizations
+                WHERE document_no = :documentNo
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
 }
