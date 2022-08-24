@@ -1,5 +1,4 @@
 package com.cogoport.ares.model.settlement
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
@@ -16,7 +15,7 @@ data class JournalVoucherResponse(
     val entityId: UUID?,
     val jvNum: String?,
     val type: String?,
-    val category: JVCategory?,
+    val category: String?,
     val validityDate: Date?,
     val amount: BigDecimal?,
     val currency: String?,
