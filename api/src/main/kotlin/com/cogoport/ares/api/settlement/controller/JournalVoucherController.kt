@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
+import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import io.micronaut.http.annotation.Body
@@ -13,7 +14,6 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.util.UUID
 import javax.validation.Valid
 
 /**
@@ -36,13 +36,13 @@ class JournalVoucherController {
         return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
     }
 
-    @Post("/approved")
+    @Post("/approve")
     suspend fun approveJv(@Valid @Body request: JournalVoucherApproval): Response<String> {
         return Response<String>().ok("Successful", journalVoucherService.approveJournalVoucher(request))
     }
 
-    @Post("/rejected")
-    suspend fun rejectJv(id: Long, performedBy: UUID?) {
-        journalVoucherService.rejectJournalVoucher(id, performedBy)
+    @Post("/reject")
+    suspend fun rejectJv(@Valid @Body request: JournalVoucherReject) {
+        journalVoucherService.rejectJournalVoucher(request)
     }
 }

@@ -4,13 +4,15 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import javax.validation.constraints.NotNull
 
 data class CheckRequest(
-    val stackDetails: MutableList<CheckDocument>,
+    @field:NotNull(message = "stackDetails is mandatory") val stackDetails: MutableList<CheckDocument>?,
     val settlementDate: Timestamp = Timestamp.from(Instant.now()),
-    val createdBy: UUID?,
+    @field:NotNull(message = "createdBy is mandatory") val createdBy: UUID?,
     val createdByUserType: String?,
     val throughIncident: Boolean = false,
     val incidentId: String?,
-    val incidentMappingId: String?
+    val incidentMappingId: String?,
+    val remark: String?
 )

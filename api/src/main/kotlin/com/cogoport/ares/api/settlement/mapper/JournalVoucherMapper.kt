@@ -19,5 +19,6 @@ interface JournalVoucherMapper {
     @Mapping(source = "createdBy", target = "updatedBy")
     fun convertToIncidentModel(journalVoucher: JournalVoucherRequest): com.cogoport.hades.model.incident.JournalVoucher
 
+    @Mapping(target = "id", expression = "java(null)")
     fun convertIncidentModelToEntity(jv: com.cogoport.hades.model.incident.JournalVoucher): JournalVoucher
 }

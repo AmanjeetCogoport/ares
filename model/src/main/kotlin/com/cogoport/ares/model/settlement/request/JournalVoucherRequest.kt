@@ -10,7 +10,7 @@ import java.util.UUID
 
 @Introspected
 data class JournalVoucherRequest(
-    var id: Long?,
+    var id: String?,
     val entityCode: Int,
     val entityId: UUID?,
     var jvNum: String?,
