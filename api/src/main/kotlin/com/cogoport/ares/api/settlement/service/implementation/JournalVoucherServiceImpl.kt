@@ -127,7 +127,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
         // Update Journal Voucher
-        val jvEntity = updateJournalVoucher(request.journalVoucherData!!)
+        val jvEntity = updateJournalVoucher(request.journalVoucherData!!, request.remark)
 
         // Insert JV in account_utilizations
         val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
@@ -148,9 +148,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun rejectJournalVoucher(request: JournalVoucherReject) {
+    override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
         val jvId = hashids.decode(request.journalVoucherId!!)[0]
-        journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy)
+        journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy, request.remark)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
@@ -170,13 +170,15 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             ),
             id = request.incidentId
         )
+        return request.incidentId!!
     }
 
-    private suspend fun updateJournalVoucher(jvObj: com.cogoport.hades.model.incident.JournalVoucher): JournalVoucher {
+    private suspend fun updateJournalVoucher(jvObj: com.cogoport.hades.model.incident.JournalVoucher, remark: String?): JournalVoucher {
         jvObj.status = JVStatus.APPROVED.toString()
         jvObj.updatedAt = Timestamp.from(Instant.now())
         val jvEntity = journalVoucherConverter.convertIncidentModelToEntity(jvObj)
         jvEntity.id = hashids.decode(jvObj.id)[0]
+        jvEntity.description = remark
         journalVoucherRepository.update(jvEntity)
         auditService.createAudit(
             AuditRequest(

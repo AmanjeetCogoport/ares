@@ -15,5 +15,5 @@ interface JournalVoucherService {
 
     suspend fun approveJournalVoucher(request: JournalVoucherApproval): String
 
-    suspend fun rejectJournalVoucher(request: JournalVoucherReject)
+    suspend fun rejectJournalVoucher(request: JournalVoucherReject): String
 }

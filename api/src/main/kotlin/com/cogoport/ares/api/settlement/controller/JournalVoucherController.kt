@@ -38,11 +38,11 @@ class JournalVoucherController {
 
     @Post("/approve")
     suspend fun approveJv(@Valid @Body request: JournalVoucherApproval): Response<String> {
-        return Response<String>().ok("Successful", journalVoucherService.approveJournalVoucher(request))
+        return Response<String>().ok("Approved", journalVoucherService.approveJournalVoucher(request))
     }
 
     @Post("/reject")
-    suspend fun rejectJv(@Valid @Body request: JournalVoucherReject) {
-        journalVoucherService.rejectJournalVoucher(request)
+    suspend fun rejectJv(@Valid @Body request: JournalVoucherReject): Response<String> {
+        return Response<String>().ok("Rejected", journalVoucherService.rejectJournalVoucher(request))
     }
 }
