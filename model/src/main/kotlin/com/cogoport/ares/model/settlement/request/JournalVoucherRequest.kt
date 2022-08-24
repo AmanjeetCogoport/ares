@@ -23,7 +23,7 @@ data class JournalVoucherRequest(
     val ledCurrency: String,
     val exchangeRate: BigDecimal,
     val tradePartyId: UUID,
-    val tradePartnerName: String,
+    val tradePartyName: String,
     var createdBy: UUID?,
     var accMode: AccMode,
     var description: String?
