@@ -1,6 +1,6 @@
 CREATE TYPE public."jv_category" AS ENUM (
  'EXCH',
- 'NOSTRO',
+ 'JVNOS',
  'WOFF',
  'ROFF',
  'OUTST');
