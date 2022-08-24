@@ -28,7 +28,7 @@ data class JournalVoucher(
     var status: JVStatus,
     val exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
-    val tradePartnerName: String,
+    val tradePartyName: String,
     var createdBy: UUID?,
     var createdAt: Timestamp?,
     var updatedBy: UUID?,

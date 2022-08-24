@@ -66,20 +66,27 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var hashids: Hashids
 
+    /**
+     * Get List of JVs based on input filters.
+     * @param: jvListRequest
+     * @return: ResponseList
+     */
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
         val documentEntity = journalVoucherRepository.getListVouchers(
-            jvListRequest.startDate,
-            jvListRequest.endDate,
-            jvListRequest.page,
-            jvListRequest.pageLimit,
             jvListRequest.status,
-            jvListRequest.query
+            jvListRequest.category,
+            jvListRequest.type,
+            "%${jvListRequest.query}%",
+            jvListRequest.page,
+            jvListRequest.pageLimit
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
-                jvListRequest.startDate,
-                jvListRequest.endDate
+                jvListRequest.status,
+                jvListRequest.category,
+                jvListRequest.type,
+                "%${jvListRequest.query}%"
             )
         val jvList = mutableListOf<JournalVoucherResponse>()
         documentEntity.forEach { doc ->
@@ -180,7 +187,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             organizationId = request.tradePartyId,
             taggedOrganizationId = null,
             tradePartyMappingId = null,
-            organizationName = request.tradePartnerName,
+            organizationName = request.tradePartyName,
             accType = AccountType.valueOf(request.category.toString()),
             accMode = accMode,
             signFlag = signFlag,
@@ -263,7 +270,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             IncidentData(
                 organization = Organization(
                     id = request.tradePartyId,
-                    businessName = request.tradePartnerName,
+                    businessName = request.tradePartyName,
                     tradePartyType = null,
                     tradePartyName = null
                 ),
@@ -279,7 +286,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             data = incidentData,
             createdBy = request.createdBy!!
         )
-        val res = hadesClient.createIncident(clientRequest)
+        hadesClient.createIncident(clientRequest)
     }
 
     /**
