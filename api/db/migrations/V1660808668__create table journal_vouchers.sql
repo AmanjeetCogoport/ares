@@ -1,6 +1,6 @@
 CREATE TYPE public."jv_category" AS ENUM (
  'EXCH',
- 'NOSTRO',
+ 'JVNOS',
  'WOFF',
  'ROFF',
  'OUTST');
@@ -33,7 +33,8 @@ create table public.journal_vouchers (
     status jv_status not null,
     exchange_rate decimal(9,4),
     trade_party_id uuid NULL,
-    trade_partner_name varchar(200) NULL,
+    trade_party_name varchar(200) NULL,
+    description varchar,
     created_at timestamp not null default now(),
     created_by uuid,
     updated_at timestamp not null default now(),

@@ -1,1 +1,0 @@
-ALTER TABLE journal_vouchers ADD COLUMN description varchar
