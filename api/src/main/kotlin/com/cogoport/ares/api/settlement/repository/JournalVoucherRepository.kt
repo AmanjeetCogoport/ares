@@ -67,8 +67,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
 
     @Query(
         """
-        UPDATE journal_vouchers SET status = :status, updated_by = :performedBy where id = :id
+        UPDATE journal_vouchers SET status = :status, updated_by = :performedBy, description = :remark where id = :id
     """
     )
-    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?)
+    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?, remark: String?)
 }

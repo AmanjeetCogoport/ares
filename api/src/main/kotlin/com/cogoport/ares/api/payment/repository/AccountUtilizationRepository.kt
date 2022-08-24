@@ -368,6 +368,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
+                AND (:accMode is null OR acc_mode::varchar = :accMode)
             ORDER BY transaction_date DESC
             LIMIT :limit
             OFFSET :offset
@@ -400,6 +401,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            au.acc_mode,
             CASE WHEN 
             	au.id in (select id from MAPPINGS) 
         	THEN
@@ -426,7 +428,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, accMode: AccMode?): List<Document?>
 
     @Query(
         """
@@ -473,6 +475,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            au.acc_mode,
             CASE WHEN 
             	au.id in (select id from MAPPINGS) 
         	THEN

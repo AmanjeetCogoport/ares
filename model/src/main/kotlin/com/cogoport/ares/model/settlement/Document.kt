@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.settlement
 
+import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date
@@ -8,7 +9,7 @@ import java.util.UUID
 @JsonInclude
 data class Document(
 
-    var id: Long,
+    var id: String,
     var documentNo: String,
     var documentValue: String,
     var organizationId: UUID,
@@ -36,5 +37,6 @@ data class Document(
     var exchangeRate: BigDecimal,
     var signFlag: Short,
     var nostroAmount: BigDecimal,
-    var approved: Boolean?
+    var approved: Boolean?,
+    var accMode: AccMode
 )
