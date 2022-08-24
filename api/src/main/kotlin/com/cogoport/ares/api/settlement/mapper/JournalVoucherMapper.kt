@@ -9,6 +9,7 @@ import org.mapstruct.ReportingPolicy
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE)
 interface JournalVoucherMapper {
 
+    @Mapping(target = "category", expression = "java(journalVoucher.getCategory().getValue())")
     fun convertToModelResponse(journalVoucher: JournalVoucher): JournalVoucherResponse
 
     @Mapping(source = "createdBy", target = "updatedBy")
