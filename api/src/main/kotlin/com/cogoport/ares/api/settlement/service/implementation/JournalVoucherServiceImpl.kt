@@ -37,9 +37,12 @@ import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.sql.Date
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -118,7 +121,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
         // Send to Incident Management
         request.id = hashids.encode(jvEntity.id!!)
+        val formatedDate = SimpleDateFormat("yyyy-MM-dd").format(request.validityDate)
         val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
+        incidentRequestModel.validityDate = Date.valueOf(formatedDate)
         sendToIncidentManagement(request, incidentRequestModel)
 
         return request.id!!
@@ -126,8 +131,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
+        val jvId = hashids.decode(request.journalVoucherData!!.id)[0]
         // Update Journal Voucher
-        val jvEntity = updateJournalVoucher(request.journalVoucherData!!, request.remark)
+        val jvEntity = updateJournalVoucher(jvId, request.performedBy, request.remark)
 
         // Insert JV in account_utilizations
         val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
@@ -173,11 +179,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return request.incidentId!!
     }
 
-    private suspend fun updateJournalVoucher(jvObj: com.cogoport.hades.model.incident.JournalVoucher, remark: String?): JournalVoucher {
-        jvObj.status = JVStatus.APPROVED.toString()
-        jvObj.updatedAt = Timestamp.from(Instant.now())
-        val jvEntity = journalVoucherConverter.convertIncidentModelToEntity(jvObj)
-        jvEntity.id = hashids.decode(jvObj.id)[0]
+    private suspend fun updateJournalVoucher(jvId: Long, performedBy: UUID?, remark: String?): JournalVoucher {
+        val jvEntity = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "journal_voucher_id: $jvId")
+        jvEntity.status = JVStatus.APPROVED
+        jvEntity.updatedAt = Timestamp.from(Instant.now())
+        jvEntity.updatedBy = performedBy
         jvEntity.description = remark
         journalVoucherRepository.update(jvEntity)
         auditService.createAudit(
@@ -248,8 +254,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             SequenceSuffix.JV.prefix
         )
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    open suspend fun createJV(jv: JournalVoucher): JournalVoucher {
+    private suspend fun createJV(jv: JournalVoucher): JournalVoucher {
         val jvObj = journalVoucherRepository.save(jv)
         auditService.createAudit(
             AuditRequest(
@@ -280,8 +285,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         request: JournalVoucherRequest,
         data: com.cogoport.hades.model.incident.JournalVoucher
     ) {
-        data.createdAt = Timestamp.from(Instant.now())
-        data.updatedAt = Timestamp.from(Instant.now())
         val incidentData =
             IncidentData(
                 organization = Organization(

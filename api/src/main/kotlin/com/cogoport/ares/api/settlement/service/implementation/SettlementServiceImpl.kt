@@ -748,10 +748,12 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun delete(request: DeleteSettlementRequest) =
         deleteSettlement(request.documentNo, request.settlementType, request.deletedBy, request.deletedByUserType)
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun sendForApproval(request: CreateIncidentRequest): String {
         val docList = request.stackDetails!!.map {
             documentConverter.convertToIncidentModel(it)
         }
+        val formatedDate = SimpleDateFormat("yyyy-MM-dd").format(request.settlementDate)
         val res = createIncidentMapping(
             accUtilIds = docList.map { hashId.decode(it.id)[0] },
             data = docList,
@@ -772,7 +774,7 @@ open class SettlementServiceImpl : SettlementService {
                 settlementRequest = com.cogoport.hades.model.incident.Settlement(
                     entityCode = request.entityCode!!,
                     list = docList,
-                    settlementDate = request.settlementDate,
+                    settlementDate = java.sql.Date.valueOf(formatedDate),
                     incidentMappingId = res
                 ),
                 tdsRequest = null,
@@ -791,6 +793,7 @@ open class SettlementServiceImpl : SettlementService {
         return res
     }
 
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun reject(request: RejectSettleApproval): String {
         incidentMappingsRepository.updateStatus(
             incidentMappingId = hashId.decode(request.incidentMappingId!!)[0],
@@ -1769,8 +1772,7 @@ open class SettlementServiceImpl : SettlementService {
         return documents
     }
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    open suspend fun createIncidentMapping(
+    private suspend fun createIncidentMapping(
         accUtilIds: List<Long>?,
         data: Any?,
         type: com.cogoport.ares.api.common.enums.IncidentType?,
