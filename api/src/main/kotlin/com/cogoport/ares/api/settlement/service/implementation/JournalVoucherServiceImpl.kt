@@ -121,7 +121,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
         // Send to Incident Management
         request.id = hashids.encode(jvEntity.id!!)
-        val formatedDate = SimpleDateFormat("yyyy-MM-dd").format(request.validityDate)
+        val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.validityDate)
         val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
         incidentRequestModel.validityDate = Date.valueOf(formatedDate)
         sendToIncidentManagement(request, incidentRequestModel)

@@ -753,7 +753,7 @@ open class SettlementServiceImpl : SettlementService {
         val docList = request.stackDetails!!.map {
             documentConverter.convertToIncidentModel(it)
         }
-        val formatedDate = SimpleDateFormat("yyyy-MM-dd").format(request.settlementDate)
+        val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.settlementDate)
         val res = createIncidentMapping(
             accUtilIds = docList.map { hashId.decode(it.id)[0] },
             data = docList,
