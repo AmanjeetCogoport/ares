@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.settlement
 
+import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
@@ -31,5 +32,6 @@ data class HistoryDocument(
     val exchangeRate: BigDecimal,
     val settledAmount: BigDecimal,
     val lastEditedDate: Date,
-    var status: String?
+    var status: String?,
+    var accMode: AccMode
 )
