@@ -152,12 +152,16 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = getOrgIds(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
+        val accType = getAccountType(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
+        val accMode = getAccountMode(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
         val amount =
             accountUtilizationRepository.getAccountBalance(
                 orgId,
                 summaryRequest.entityCode!!,
                 summaryRequest.startDate,
-                summaryRequest.endDate
+                summaryRequest.endDate,
+                accType,
+                accMode
             )
         return SummaryResponse(amount)
     }
