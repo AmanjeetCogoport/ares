@@ -507,10 +507,8 @@ open class OnAccountServiceImpl : OnAccountService {
         for (accUtilizationReq in request.accountUtilizations) {
             if ((request.inputType) == DocumentSearchType.NUMBER) {
                 accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType)
-            } else if ((request.inputType) == DocumentSearchType.VALUE) {
-                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
             } else {
-                TODO("Not Yet Implemented")
+                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
             }
             accUtilizationResponse.add(accUtilizationEntity)
             Client.addDocument("test_invoices", accUtilizationEntity.id.toString(), accUtilizationEntity)
