@@ -196,7 +196,10 @@ open class SettlementServiceImpl : SettlementService {
         documents.forEach { doc ->
             historyDocuments.add(historyDocumentConverter.convertToModel(doc))
         }
-        historyDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
+        historyDocuments.forEach {
+            it.documentNo = hashId.encode(it.documentNo.toLong())
+            it.id = it.id?.let { it1 -> hashId.encode(it1.toLong()) }
+        }
         return ResponseList(
             list = historyDocuments,
             totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
@@ -235,7 +238,10 @@ open class SettlementServiceImpl : SettlementService {
         // Pagination Data
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
-        settledDocuments.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
+        settledDocuments.forEach {
+            it.documentNo = hashId.encode(it.documentNo.toLong())
+            it.id = it.id?.let { it1 -> hashId.encode(it1.toLong()) }
+        }
         return ResponseList(
             list = settledDocuments,
             totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
