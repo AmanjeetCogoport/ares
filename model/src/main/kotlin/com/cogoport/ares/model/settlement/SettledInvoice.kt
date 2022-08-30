@@ -8,7 +8,7 @@ import java.util.UUID
 
 @JsonInclude
 data class SettledInvoice(
-    val id: Long?,
+    var id: String?,
     val organizationId: UUID?,
     var documentNo: String,
     var documentValue: String,

@@ -11,7 +11,7 @@ import java.util.Date
 @JsonInclude
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class HistoryDocument(
-    val id: Long?,
+    var id: String?,
     var documentNo: String,
     val documentValue: String,
     val accountType: String?,
