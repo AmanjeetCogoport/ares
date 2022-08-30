@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.settlement
 
+import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date
@@ -33,5 +34,6 @@ data class SettledInvoice(
     var exchangeRate: BigDecimal,
     var signFlag: Short,
     var sid: Long?,
-    var nostroAmount: BigDecimal
+    var nostroAmount: BigDecimal,
+    var accMode: AccMode
 )
