@@ -44,8 +44,9 @@ class Bootstrap {
     private fun configureSentry() {
         if (sentryConfig.enabled == true) {
             Sentry.init { options: SentryOptions ->
-                options.dsn = sentryConfig.dsn
-                options.tracesSampleRate = 0.3
+                options.setDsn(sentryConfig.dsn)
+                options.setTracesSampleRate(1.0)
+                options.setDebug(false)
             }
         }
     }
