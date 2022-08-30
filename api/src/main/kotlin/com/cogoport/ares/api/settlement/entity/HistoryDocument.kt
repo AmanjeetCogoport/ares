@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
+import com.cogoport.ares.model.payment.AccMode
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
@@ -22,5 +23,6 @@ data class HistoryDocument(
     val settledAmount: BigDecimal,
     val lastEditedDate: Date,
     var status: String?,
-    val settledTds: BigDecimal
+    val settledTds: BigDecimal,
+    val accMode: AccMode
 )

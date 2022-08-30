@@ -269,6 +269,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             taxable_amount,
             transaction_date,
             au.sign_flag,
+            au.acc_mode,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
             pay_curr as settled_amount,
