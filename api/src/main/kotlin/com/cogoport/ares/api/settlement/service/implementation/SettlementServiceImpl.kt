@@ -830,7 +830,11 @@ open class SettlementServiceImpl : SettlementService {
             accountUtilizationRepository.getOrgSummary(orgId, startDate, endDate)
                 ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
-        responseModel.tdsStyle = TdsStyle(style = "gross", rate = 2.toBigDecimal())
+        val tdsStyle = cogoClient.getOrgTdsStyles(orgId.toString())
+        responseModel.tdsStyle = TdsStyle(
+            style = tdsStyle.data.tdsDeductionStyle,
+            rate = tdsStyle.data.tdsDeductionRate
+        )
         return responseModel
     }
 
