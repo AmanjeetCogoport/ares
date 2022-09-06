@@ -15,7 +15,6 @@ import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
-import com.cogoport.ares.api.utils.Hashids
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
@@ -27,6 +26,7 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
@@ -65,9 +65,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var auditService: AuditService
-
-    @Inject
-    lateinit var hashids: Hashids
 
     /**
      * Get List of JVs based on input filters.
@@ -120,7 +117,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val jvEntity = createJV(jv)
 
         // Send to Incident Management
-        request.id = hashids.encode(jvEntity.id!!)
+        request.id = Hashids.encode(jvEntity.id!!)
         val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.validityDate)
         val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
         incidentRequestModel.validityDate = Date.valueOf(formatedDate)
@@ -131,7 +128,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
-        val jvId = hashids.decode(request.journalVoucherData!!.id)[0]
+        val jvId = Hashids.decode(request.journalVoucherData!!.id)[0]
         // Update Journal Voucher
         val jvEntity = updateJournalVoucher(jvId, request.performedBy, request.remark)
 
@@ -155,7 +152,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
-        val jvId = hashids.decode(request.journalVoucherId!!)[0]
+        val jvId = Hashids.decode(request.journalVoucherId!!)[0]
         journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy, request.remark)
         auditService.createAudit(
             AuditRequest(
