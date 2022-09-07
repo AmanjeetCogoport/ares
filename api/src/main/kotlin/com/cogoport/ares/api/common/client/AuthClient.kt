@@ -35,8 +35,26 @@ interface AuthClient {
     @Get("/get_organization_zone_details{?request*}")
     suspend fun getCogoOrganization(request: CogoOrganizationRequest): PlatformOrganizationResponse
 
+    /**
+     * Takes trade party mapping id and returns its TDS styles.
+     * @param: id
+     */
     @Get("/get_organization_trade_party_finance_detail")
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
+
+    /**
+     * Takes trade party mapping id list and returns its TDS styles list.
+     * @param: id
+     */
+    @Get("/list_organization_trade_party_finance_detail")
+    suspend fun listOrgTdsStyles(@QueryValue("ids") id: List<String>): List<TdsDataResponse>
+
+    /**
+     * Takes trade party detail id and returns TDS styles of corresponding org with mapping type as self.
+     */
+    @Get("/get_self_organization_trade_party_finance_detail")
+    suspend fun getSelfOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
+
     @Get("/get_organization_details_by_sage_org_id{?request*}")
     suspend fun getOrgDetailsBySageOrgId(request: GetOrgDetailsRequest): GetOrgDetailsResponse
 
