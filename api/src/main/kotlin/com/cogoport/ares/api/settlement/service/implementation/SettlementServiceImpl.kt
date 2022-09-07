@@ -3,7 +3,9 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
+import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -500,7 +502,7 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         for (doc in documentModel) {
-            val tdsElement = tdsProfiles.find { it?.id == doc.organizationId }
+            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsElement)
             doc.tds = calculateTds(
                 rate = rate,
@@ -553,15 +555,19 @@ open class SettlementServiceImpl : SettlementService {
      * @return: List
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
-        var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        val tdsStylesFromClient = mutableListOf<TdsStylesResponse>()
+        val tdsStylesResponse = mutableListOf<TdsStylesResponse>()
+        var tdsStylesFromClient = listOf<TdsDataResponse>()
         try {
-            val tdsStylesFromClient = cogoClient.listOrgTdsStyles(tradePartyMappingIds)
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(
+                request = ListOrgStylesRequest(
+                    ids = tradePartyMappingIds
+                )
+            )
         } catch (_: Exception) {
             null
         }
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient.find { it?.id.toString() == tradePartyMapping }
+            val tdsElement = tdsStylesFromClient.find { it.data.id.toString() == tradePartyMapping }?.data
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
@@ -569,8 +575,8 @@ open class SettlementServiceImpl : SettlementService {
                     TdsStylesResponse(
                         id = UUID.fromString(tradePartyMapping),
                         tdsDeductionStyle = "gross",
-                        tdsDeductionType = "no_deductions",
-                        tdsDeductionRate = 2.toBigDecimal()
+                        tdsDeductionType = "normal",
+                        tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
                     )
                 )
             }
@@ -731,7 +737,7 @@ open class SettlementServiceImpl : SettlementService {
         // Fetch Organization Tds Profile from mappingIds
         val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
         for (doc in documentModel) {
-            val tdsProfile = tdsProfiles.find { it?.id == doc.organizationId }
+            val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             // Fetch Rate From Profile
             val rate = getTdsRate(tdsProfile)
 
@@ -918,8 +924,8 @@ open class SettlementServiceImpl : SettlementService {
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
         val tdsResponse = getSelfOrgTdsProfile(orgId)
         var tdsStyle = TdsStyle(
-            style = tdsResponse!!.tdsDeductionStyle,
-            rate = tdsResponse!!.tdsDeductionRate
+            style = tdsResponse.tdsDeductionStyle,
+            rate = tdsResponse.tdsDeductionRate
         )
         responseModel.tdsStyle = tdsStyle
         return responseModel

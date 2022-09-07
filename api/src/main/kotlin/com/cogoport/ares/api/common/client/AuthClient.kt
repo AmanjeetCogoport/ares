@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.api.common.models.CogoBankResponse
+import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
@@ -46,8 +47,8 @@ interface AuthClient {
      * Takes trade party mapping id list and returns its TDS styles list.
      * @param: id
      */
-    @Get("/list_organization_trade_party_finance_detail")
-    suspend fun listOrgTdsStyles(@QueryValue("ids") id: List<String>): List<TdsDataResponse>
+    @Post("/list_organization_trade_party_finance_detail_webhook")
+    suspend fun listOrgTdsStyles(@Body request: ListOrgStylesRequest): List<TdsDataResponse>
 
     /**
      * Takes trade party detail id and returns TDS styles of corresponding org with mapping type as self.
