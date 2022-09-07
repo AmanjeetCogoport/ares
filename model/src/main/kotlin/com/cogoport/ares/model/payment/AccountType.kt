@@ -15,6 +15,11 @@ enum class AccountType(val dbValue: String) {
     INTER("INTER"),
     MTC("MTC"),
     MTCCV("MTCCV"),
+    WOFF("WOFF"),
+    ROFF("ROFF"),
+    EXCH("EXCH"),
+    JVNOS("JVNOS"),
+    OUTST("OUTST"),
     PAY("PAY");
 
     open operator fun contains(value: String?): Boolean {

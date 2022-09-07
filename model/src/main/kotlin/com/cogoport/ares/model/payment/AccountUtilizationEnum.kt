@@ -43,5 +43,15 @@ enum class DocStatus(val value: String) {
 }
 
 enum class InvoiceType(val value: String) {
-    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"), PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment")
+    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"),
+    PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment"),
+    WOFF("Write Off Voucher"), ROFF("Round Off Voucher"), EXCH("Exchange Voucher"), OUTST("Outstanding Voucher"), JVNOS("Nostro Voucher")
+}
+
+/**
+ * Used to identify the input of request which updates account utilization data from DB on Open Search
+ */
+enum class DocumentSearchType {
+    NUMBER,
+    VALUE
 }

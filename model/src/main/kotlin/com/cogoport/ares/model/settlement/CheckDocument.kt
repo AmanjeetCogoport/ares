@@ -1,16 +1,17 @@
 package com.cogoport.ares.model.settlement
 
+import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.sql.Timestamp
+import java.util.Date
 
 @JsonInclude
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @Introspected
 data class CheckDocument(
-    var id: Long,
+    var id: String,
     var documentNo: String,
     var documentValue: String,
     var accountType: SettlementType,
@@ -27,9 +28,11 @@ data class CheckDocument(
     var currency: String,
     var ledCurrency: String,
     var exchangeRate: BigDecimal,
-    var transactionDate: Timestamp,
+    var transactionDate: Date,
     var settledTds: BigDecimal,
     var settledAmount: BigDecimal?,
     var nostroAmount: BigDecimal?,
-    var settledNostro: BigDecimal?
+    var settledNostro: BigDecimal?,
+    var accMode: AccMode,
+    var signFlag: Short
 )

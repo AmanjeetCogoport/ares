@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
+import com.cogoport.ares.model.payment.AccMode
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
@@ -28,5 +29,7 @@ data class Document(
     var currency: String,
     var ledCurrency: String,
     var exchangeRate: BigDecimal,
-    var signFlag: Short
+    var approved: Boolean?,
+    var signFlag: Short,
+    var accMode: AccMode
 )

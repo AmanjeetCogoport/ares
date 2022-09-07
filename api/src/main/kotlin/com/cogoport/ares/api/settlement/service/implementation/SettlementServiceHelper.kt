@@ -5,6 +5,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.InvoiceType
@@ -19,7 +20,7 @@ class SettlementServiceHelper {
     @Inject
     lateinit var exchangeClient: ExchangeClient
 
-    fun getDocumentType(accType: AccountType): String {
+    fun getDocumentType(accType: AccountType, signFlag: Short, accMode: AccMode): String {
         return when (accType) {
             AccountType.SINV -> InvoiceType.SINV.value
             AccountType.SCN -> InvoiceType.SCN.value
@@ -29,7 +30,31 @@ class SettlementServiceHelper {
             AccountType.PCN -> InvoiceType.PCN.value
             AccountType.PDN -> InvoiceType.PDN.value
             AccountType.PAY -> InvoiceType.PAY.value
+            AccountType.ROFF -> getVoucherType(signFlag, accMode) + InvoiceType.ROFF.value
+            AccountType.WOFF -> getVoucherType(signFlag, accMode) + InvoiceType.WOFF.value
+            AccountType.EXCH -> getVoucherType(signFlag, accMode) + InvoiceType.EXCH.value
+            AccountType.OUTST -> getVoucherType(signFlag, accMode) + InvoiceType.OUTST.value
+            AccountType.JVNOS -> getVoucherType(signFlag, accMode) + InvoiceType.JVNOS.value
             else -> throw AresException(AresError.ERR_1009, "accountType")
+        }
+    }
+
+    private fun getVoucherType(signFlag: Short, accMode: AccMode): String {
+        return when (accMode) {
+            AccMode.AR -> {
+                when (signFlag.toInt()) {
+                    1 -> "Debit "
+                    -1 -> "Credit "
+                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
+                }
+            }
+            AccMode.AP -> {
+                when (signFlag.toInt()) {
+                    1 -> "Credit "
+                    -1 -> "Debit "
+                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
+                }
+            }
         }
     }
 

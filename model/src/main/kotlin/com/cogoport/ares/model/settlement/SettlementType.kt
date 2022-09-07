@@ -1,7 +1,5 @@
 package com.cogoport.ares.model.settlement
 
-import com.cogoport.ares.model.payment.AccountType
-
 enum class SettlementType(val dbValue: String) {
     SINV("SINV"),
     PINV("PINV"),
@@ -15,11 +13,15 @@ enum class SettlementType(val dbValue: String) {
     PECH("PECH"),
     VTDS("VTDS"),
     CTDS("CTDS"),
-    NOSTRO("NOSTRO")
-    ;
+    NOSTRO("NOSTRO"),
+    WOFF("WOFF"),
+    ROFF("ROFF"),
+    EXCH("EXCH"),
+    JVNOS("JVNOS"),
+    OUTST("OUTST");
 
     open operator fun contains(value: String?): Boolean {
-        for (c in AccountType.values()) {
+        for (c in SettlementType.values()) {
             if (c.equals(value)) {
                 return true
             }
