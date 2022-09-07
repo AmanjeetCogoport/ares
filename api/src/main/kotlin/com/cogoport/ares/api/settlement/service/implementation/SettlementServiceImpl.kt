@@ -560,7 +560,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (importerExporterId != null) {
             listOf(AccountType.SINV, AccountType.REC, AccountType.SCN) + jvList
         } else {
-            listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN) + jvList
+            listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY) + jvList
         }
     }
 
