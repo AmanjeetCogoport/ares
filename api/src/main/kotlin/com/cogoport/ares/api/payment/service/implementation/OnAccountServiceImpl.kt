@@ -111,8 +111,12 @@ open class OnAccountServiceImpl : OnAccountService {
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.serviceType = ServiceType.NA
-        receivableRequest.accMode = AccMode.AR
-        receivableRequest.signFlag = SignSuffix.REC.sign
+        if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
+        if (receivableRequest.accMode == AccMode.AR) {
+            receivableRequest.signFlag = SignSuffix.REC.sign
+        } else {
+            receivableRequest.signFlag = SignSuffix.PAY.sign
+        }
 
         setPaymentAmounts(receivableRequest)
 //        setOrganizations(receivableRequest)
@@ -121,8 +125,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
-        payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-        payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
 
         val savedPayment = paymentRepository.save(payment)
         auditService.createAudit(
@@ -149,12 +151,13 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
-        accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
 
-        if (receivableRequest.accMode == AccMode.AP) {
+        if (receivableRequest.accMode == AccMode.AR) {
+            accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        } else {
             accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
@@ -414,19 +417,33 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    private fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
-        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+    private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
+        if (payment.accMode == AccMode.AR) {
+            payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+            payment.paymentCode = PaymentCode.REC
+            payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+            payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
+        } else {
+            payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
+            payment.paymentCode = PaymentCode.PAY
+            payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
+            payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
+        }
+
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
         payment.isPosted = false
         payment.isDeleted = false
-        payment.paymentCode = PaymentCode.REC
     }
 
     private fun setAccountUtilizationModel(accUtilizationModel: AccUtilizationRequest, receivableRequest: Payment) {
+        if (receivableRequest.accMode == AccMode.AR) {
+            accUtilizationModel.accType = AccountType.REC
+        } else {
+            accUtilizationModel.accType = AccountType.PAY
+        }
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
-        accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = BigDecimal.ZERO
         accUtilizationModel.ledgerPayment = BigDecimal.ZERO
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount

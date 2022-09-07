@@ -470,7 +470,7 @@ open class SettlementServiceImpl : SettlementService {
         val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
         val accTypeMode = getAccountModeAndType(request.importerExporterId, request.serviceProviderId)
         val accType = accTypeMode!!.accType
-        val accMode = accTypeMode!!.accMode
+        val accMode = accTypeMode.accMode
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
@@ -649,9 +649,9 @@ open class SettlementServiceImpl : SettlementService {
         return if (importerExporterId != null && serviceProviderId != null) {
             AccTypeMode(accMode = null, accType = listOf(AccountType.SINV, AccountType.PINV))
         } else if (importerExporterId != null) {
-            AccTypeMode(accMode = AccMode.AR, accType = listOf(AccountType.SINV, AccountType.REC, AccountType.SCN) + jvList)
+            AccTypeMode(accMode = AccMode.AR, accType = listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList)
         } else {
-            AccTypeMode(accMode = AccMode.AP, accType = listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN) + jvList)
+            AccTypeMode(accMode = AccMode.AP, accType = listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY) + jvList)
         }
     }
 
