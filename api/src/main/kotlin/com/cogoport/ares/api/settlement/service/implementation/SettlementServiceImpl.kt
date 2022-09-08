@@ -3,7 +3,9 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
+import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -24,6 +26,7 @@ import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
+import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -152,8 +155,9 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = getOrgIds(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
-        val accType = getAccountType(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
-        val accMode = getAccountMode(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
+        val accTypeMode = getAccountModeAndType(summaryRequest.importerExporterId, summaryRequest.serviceProviderId)
+        val accType = accTypeMode!!.accType
+        val accMode = accTypeMode!!.accMode
         val amount =
             accountUtilizationRepository.getAccountBalance(
                 orgId,
@@ -464,8 +468,9 @@ open class SettlementServiceImpl : SettlementService {
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val orgId = getOrgIds(request.importerExporterId, request.serviceProviderId)
-        val accType = getAccountType(request.importerExporterId, request.serviceProviderId)
-        val accMode = getAccountMode(request.importerExporterId, request.serviceProviderId)
+        val accTypeMode = getAccountModeAndType(request.importerExporterId, request.serviceProviderId)
+        val accType = accTypeMode!!.accType
+        val accMode = accTypeMode.accMode
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
@@ -478,13 +483,15 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%",
                 accMode
             )
-
+        if (documentEntity.isEmpty())
+            return ResponseList()
+        val tradePartyMappingIds = documentEntity.map { document -> document!!.mappingId.toString() }.distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = hashId.encode(it.documentNo.toLong())
             it.id = hashId.encode(it.id.toLong())
         }
-        val tdsProfiles = orgId.map { getOrgTdsProfile(it) }
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
         val total =
             accountUtilizationRepository.getDocumentCount(
                 accType,
@@ -495,7 +502,7 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         for (doc in documentModel) {
-            val tdsElement = tdsProfiles.find { it?.id == doc.organizationId }
+            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsElement)
             doc.tds = calculateTds(
                 rate = rate,
@@ -522,14 +529,86 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun getOrgTdsProfile(orgId: UUID): TdsStylesResponse? {
-        return try {
-            cogoClient.getOrgTdsStyles(orgId.toString()).data
+    /**
+     * Get TDS Deduction styles for trade party mapping id.
+     * @param: tradePartyMappingId
+     * @return: TdsStylesResponse
+     */
+    private suspend fun getOrgTdsProfile(tradePartyMappingId: UUID): TdsStylesResponse? {
+        var tdsStylesResponse = TdsStylesResponse(
+            id = tradePartyMappingId,
+            tdsDeductionStyle = "gross",
+            tdsDeductionType = "no_deductions",
+            tdsDeductionRate = 2.toBigDecimal()
+        )
+        try {
+            tdsStylesResponse = cogoClient.getOrgTdsStyles(tradePartyMappingId.toString()).data
         } catch (_: Exception) {
             null
         }
+        return tdsStylesResponse
     }
 
+    /**
+     * Get TDS Deduction styles for list of trade party mapping id.
+     * @param: tradePartyMappingIds
+     * @return: List
+     */
+    private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
+        val tdsStylesResponse = mutableListOf<TdsStylesResponse>()
+        var tdsStylesFromClient = listOf<TdsDataResponse>()
+        try {
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(
+                request = ListOrgStylesRequest(
+                    ids = tradePartyMappingIds
+                )
+            )
+        } catch (_: Exception) {
+            null
+        }
+        for (tradePartyMapping in tradePartyMappingIds) {
+            val tdsElement = tdsStylesFromClient.find { it.data.id.toString() == tradePartyMapping }?.data
+            if (tdsElement != null) {
+                tdsStylesResponse.add(tdsElement)
+            } else {
+                tdsStylesResponse.add(
+                    TdsStylesResponse(
+                        id = UUID.fromString(tradePartyMapping),
+                        tdsDeductionStyle = "gross",
+                        tdsDeductionType = "normal",
+                        tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+                    )
+                )
+            }
+        }
+        return tdsStylesResponse
+    }
+
+    /**
+     * Get TDS Deduction styles for trade party detail's self mapping id.
+     * @param: tradePartyDetailsId
+     * @return: TdsStylesResponse
+     */
+    private suspend fun getSelfOrgTdsProfile(tradePartyDetailsId: UUID): TdsStylesResponse {
+        var tdsStylesResponse = TdsStylesResponse(
+            id = tradePartyDetailsId,
+            tdsDeductionStyle = "gross",
+            tdsDeductionType = "no_deductions",
+            tdsDeductionRate = 2.toBigDecimal()
+        )
+        try {
+            tdsStylesResponse = cogoClient.getSelfOrgTdsStyles(tradePartyDetailsId.toString()).data
+        } catch (_: Exception) {
+            null
+        }
+        return tdsStylesResponse
+    }
+
+    /**
+     * Groups document in case of.
+     * @param: documentEntity
+     * @return: List
+     */
     private suspend fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
         return documentEntity.groupBy { it!!.id }.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
@@ -544,6 +623,12 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
+    /**
+     * Get organization id list from importerExporterId and serviceProviderId.
+     * @param: importerExporterId
+     * @param: serviceProviderId
+     * @return: List
+     */
     private fun getOrgIds(importerExporterId: UUID?, serviceProviderId: UUID?): List<UUID> {
         val orgId = mutableListOf<UUID>()
         if (importerExporterId != null)
@@ -553,24 +638,20 @@ open class SettlementServiceImpl : SettlementService {
         return orgId
     }
 
-    private fun getAccountType(importerExporterId: UUID?, serviceProviderId: UUID?): List<AccountType> {
+    /**
+     * Get Account Mode and Account Type based on importerExportId and serviceProviderId in the request.
+     * @param: importerExporterId
+     * @param: serviceProviderId
+     * @return: AccTypeMode
+     */
+    private fun getAccountModeAndType(importerExporterId: UUID?, serviceProviderId: UUID?): AccTypeMode? {
         val jvList = listOf(AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST)
         return if (importerExporterId != null && serviceProviderId != null) {
-            listOf(AccountType.SINV, AccountType.PINV)
+            AccTypeMode(accMode = null, accType = listOf(AccountType.SINV, AccountType.PINV))
         } else if (importerExporterId != null) {
-            listOf(AccountType.SINV, AccountType.REC, AccountType.SCN) + jvList
+            AccTypeMode(accMode = AccMode.AR, accType = listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList)
         } else {
-            listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY) + jvList
-        }
-    }
-
-    private fun getAccountMode(importerExporterId: UUID?, serviceProviderId: UUID?): AccMode? {
-        return if (importerExporterId != null && serviceProviderId != null) {
-            null
-        } else if (importerExporterId != null) {
-            AccMode.AR
-        } else {
-            AccMode.AP
+            AccTypeMode(accMode = AccMode.AP, accType = listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY) + jvList)
         }
     }
 
@@ -640,7 +721,9 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
-
+        if (documentEntity.isEmpty())
+            return ResponseList()
+        val tradePartyMappingIds = documentEntity.map { document -> document!!.mappingId.toString() }.distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(
@@ -651,9 +734,10 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "%${request.query}%"
             )
+        // Fetch Organization Tds Profile from mappingIds
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
         for (doc in documentModel) {
-            // Fetch Organization Tds Profile
-            val tdsProfile = getOrgTdsProfile(doc.organizationId)
+            val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             // Fetch Rate From Profile
             val rate = getTdsRate(tdsProfile)
 
@@ -821,6 +905,14 @@ open class SettlementServiceImpl : SettlementService {
         return request.incidentId!!
     }
 
+    /**
+     * Get Organization summary orgName, outstanding, currency, tdsStyle.
+     * Used to display information on header of TDS Settlement.
+     * @param: orgId
+     * @param: startDate
+     * @param: endDate
+     * @return: endDate
+     */
     override suspend fun getOrgSummary(
         orgId: UUID,
         startDate: Timestamp?,
@@ -830,11 +922,12 @@ open class SettlementServiceImpl : SettlementService {
             accountUtilizationRepository.getOrgSummary(orgId, startDate, endDate)
                 ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
-        val tdsStyle = cogoClient.getOrgTdsStyles(orgId.toString())
-        responseModel.tdsStyle = TdsStyle(
-            style = tdsStyle.data.tdsDeductionStyle,
-            rate = tdsStyle.data.tdsDeductionRate
+        val tdsResponse = getSelfOrgTdsProfile(orgId)
+        var tdsStyle = TdsStyle(
+            style = tdsResponse.tdsDeductionStyle,
+            rate = tdsResponse.tdsDeductionRate
         )
+        responseModel.tdsStyle = tdsStyle
         return responseModel
     }
 
