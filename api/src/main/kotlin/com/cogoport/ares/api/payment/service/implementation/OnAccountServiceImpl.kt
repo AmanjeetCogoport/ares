@@ -241,7 +241,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
 
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name)
+        val accType = receivableRequest.paymentCode?.name ?: PaymentCode.REC.name
+        val accMode = receivableRequest.accMode?.name ?: AccMode.AR.name
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
 
         if (payment.isPosted && accountUtilization != null)
             throw AresException(AresError.ERR_1005, "")
