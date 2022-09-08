@@ -486,7 +486,7 @@ open class SettlementServiceImpl : SettlementService {
         if (documentEntity.isEmpty())
             return ResponseList()
         val tradePartyMappingIds = documentEntity
-            .filter { document -> document!!.mappingId!=null }
+            .filter { document -> document!!.mappingId != null }
             .map { document -> document!!.mappingId.toString() }
             .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
@@ -727,7 +727,7 @@ open class SettlementServiceImpl : SettlementService {
         if (documentEntity.isEmpty())
             return ResponseList()
         val tradePartyMappingIds = documentEntity
-            .filter { document -> document!!.mappingId!=null }
+            .filter { document -> document!!.mappingId != null }
             .map { document -> document!!.mappingId.toString() }
             .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
