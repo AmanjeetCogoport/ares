@@ -485,7 +485,10 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty())
             return ResponseList()
-        val tradePartyMappingIds = documentEntity.map { document -> document!!.mappingId.toString() }.distinct()
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document!!.mappingId!=null }
+            .map { document -> document!!.mappingId.toString() }
+            .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = hashId.encode(it.documentNo.toLong())
@@ -723,7 +726,10 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty())
             return ResponseList()
-        val tradePartyMappingIds = documentEntity.map { document -> document!!.mappingId.toString() }.distinct()
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document!!.mappingId!=null }
+            .map { document -> document!!.mappingId.toString() }
+            .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(

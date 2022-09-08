@@ -14,7 +14,7 @@ data class Document(
     var tdsCurrency: String?,
     var documentNo: Long,
     var organizationId: UUID,
-    var mappingId: UUID,
+    var mappingId: UUID?,
     var documentValue: String,
     var documentType: String,
     var accountType: String,
