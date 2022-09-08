@@ -1,0 +1,1 @@
+alter table payments alter column trans_ref_number type VARCHAR(200);
