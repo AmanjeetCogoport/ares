@@ -386,6 +386,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -429,7 +430,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, accMode: AccMode?): List<Document?>
+    suspend fun getDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: List<AccountType>,
+        orgId: List<UUID>,
+        entityCode: Int?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?,
+        accMode: AccMode?
+    ): List<Document?>
 
     @Query(
         """
@@ -460,6 +471,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -503,7 +515,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getTDSDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: AccountType?,
+        orgId: List<UUID>,
+        accMode: AccMode?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?
+    ): List<Document?>
 
     @Query(
         """
