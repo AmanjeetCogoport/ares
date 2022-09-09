@@ -240,13 +240,13 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+        if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
+        val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
+        val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
+            ?: throw AresException(AresError.ERR_1002, "")
 
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name)
-
-        if (payment.isPosted && accountUtilization != null)
-            throw AresException(AresError.ERR_1005, "")
-
-        return updatePayment(receivableRequest, accountUtilization!!, payment)
+        return updatePayment(receivableRequest, accountUtilization, payment)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
