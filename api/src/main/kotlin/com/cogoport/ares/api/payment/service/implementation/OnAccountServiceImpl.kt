@@ -244,7 +244,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
         val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
-            ?: throw AresException(AresError.ERR_1005, "")
+            ?: throw AresException(AresError.ERR_1002, "")
 
         return updatePayment(receivableRequest, accountUtilization, payment)
     }
