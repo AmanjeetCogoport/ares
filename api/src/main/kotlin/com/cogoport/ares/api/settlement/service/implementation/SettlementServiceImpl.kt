@@ -530,58 +530,61 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     /**
-     * Get TDS Deduction styles for trade party mapping id.
-     * @param: tradePartyMappingId
-     * @return: TdsStylesResponse
-     */
-    private suspend fun getOrgTdsProfile(tradePartyMappingId: UUID): TdsStylesResponse? {
-        var tdsStylesResponse = TdsStylesResponse(
-            id = tradePartyMappingId,
-            tdsDeductionStyle = "gross",
-            tdsDeductionType = "no_deductions",
-            tdsDeductionRate = 2.toBigDecimal()
-        )
-        try {
-            tdsStylesResponse = cogoClient.getOrgTdsStyles(tradePartyMappingId.toString()).data
-        } catch (_: Exception) {
-            null
-        }
-        return tdsStylesResponse
-    }
-
-    /**
      * Get TDS Deduction styles for list of trade party mapping id.
      * @param: tradePartyMappingIds
      * @return: List
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
-        val tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        var tdsStylesFromClient = listOf<TdsDataResponse>()
+        var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
+        var tdsStylesFromClient: List<TdsDataResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(
-                request = ListOrgStylesRequest(
-                    ids = tradePartyMappingIds
-                )
-            )
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))
         } catch (_: Exception) {
             null
         }
+        tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
+
+        return tdsStylesResponse
+    }
+
+    /**
+     * Assign client response TDS Styles to all the mapping Ids.
+     * @param: tdsStylesResponse
+     * @param: tradePartyMappingIds
+     */
+    private fun assignClientResponse(
+        tdsStylesResponse: MutableList<TdsStylesResponse>,
+        tradePartyMappingIds: List<String>,
+        tdsStylesFromClient: List<TdsDataResponse>?
+    ): MutableList<TdsStylesResponse> {
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient.find { it.data.id.toString() == tradePartyMapping }?.data
+            val tdsElement = tdsStylesFromClient?.find { it.data.id.toString() == tradePartyMapping }?.data
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
-                tdsStylesResponse.add(
-                    TdsStylesResponse(
-                        id = UUID.fromString(tradePartyMapping),
-                        tdsDeductionStyle = "gross",
-                        tdsDeductionType = "normal",
-                        tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
-                    )
-                )
+                addDefaultStyle(tdsStylesResponse, tradePartyMapping)
             }
         }
         return tdsStylesResponse
+    }
+
+    /**
+     * Assign and add Default profile to input mapping Id.
+     * @param: tdsStylesResponse
+     * @param: tradePartyMappingIds
+     */
+    private fun addDefaultStyle(
+        tdsStylesResponse: MutableList<TdsStylesResponse>,
+        tradePartyMapping: String
+    ) {
+        tdsStylesResponse.add(
+            TdsStylesResponse(
+                id = UUID.fromString(tradePartyMapping),
+                tdsDeductionStyle = "gross",
+                tdsDeductionType = "normal",
+                tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+            )
+        )
     }
 
     /**
