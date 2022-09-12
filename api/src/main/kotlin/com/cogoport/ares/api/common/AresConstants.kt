@@ -63,5 +63,5 @@ object AresConstants {
     const val UPDATE = "UPDATE"
     const val DELETE = "DELETE"
 
-    const val ALL = "ALL"
+    const val ALL = "All"
 }
