@@ -62,4 +62,7 @@ object AresConstants {
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"
     const val DELETE = "DELETE"
+
+    const val ALL = "ALL"
+    const val ON_ACCOUNT_PAYMENT = "ON_ACCOUNT_PAYMENT"
 }
