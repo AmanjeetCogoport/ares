@@ -103,7 +103,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 sum(CASE WHEN s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS settled_tds
             FROM settlements s
             WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
-                AND s.source_type NOT IN ('REC','PCN','SECH')
+                AND s.source_type NOT IN ('REC','PCN','SECH','PAY')
             GROUP BY s.destination_id, s.currency, s.source_id
         )
         SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
