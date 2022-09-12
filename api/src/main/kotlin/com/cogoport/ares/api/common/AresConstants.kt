@@ -64,5 +64,4 @@ object AresConstants {
     const val DELETE = "DELETE"
 
     const val ALL = "ALL"
-    const val ON_ACCOUNT_PAYMENT = "ON_ACCOUNT_PAYMENT"
 }
