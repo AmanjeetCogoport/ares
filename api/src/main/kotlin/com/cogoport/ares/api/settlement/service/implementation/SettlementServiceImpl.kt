@@ -212,7 +212,9 @@ open class SettlementServiceImpl : SettlementService {
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
         val accountTypes =
             if (request.accountType == "All") {
-                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
+                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString())
+            } else if (request.accountType == "REC") {
+                mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else {
                 mutableListOf(request.accountType)
             }
