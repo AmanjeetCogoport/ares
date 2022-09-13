@@ -430,7 +430,7 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
         }
 
-        payment.migrated=false
+        payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
         payment.isPosted = false
@@ -451,7 +451,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
         accUtilizationModel.docStatus = DocumentStatus.PROFORMA
-        accUtilizationModel.migrated=false
+        accUtilizationModel.migrated = false
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
