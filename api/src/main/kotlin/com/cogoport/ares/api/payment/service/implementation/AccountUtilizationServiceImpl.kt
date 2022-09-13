@@ -60,9 +60,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun add(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
-
         val responseList = mutableListOf<CreateInvoiceResponse>()
         for (accUtilizationRequest in accUtilizationRequestList) {
+            if(accUtilizationRequest.migrated==null){
+                accUtilizationRequest.migrated=false
+            }
 
             if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
                 responseList.add(
