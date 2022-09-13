@@ -27,10 +27,10 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
+import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
-import com.cogoport.ares.api.utils.Hashids
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
@@ -59,13 +59,14 @@ import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
+import com.cogoport.kuber.client.KuberClient
 import com.cogoport.plutus.client.PlutusClient
-import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -118,9 +119,6 @@ open class SettlementServiceImpl : SettlementService {
     lateinit var settlementServiceHelper: SettlementServiceHelper
 
     @Inject
-    private lateinit var hashId: Hashids
-
-    @Inject
     lateinit var auditService: AuditService
 
     @Inject
@@ -128,6 +126,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var incidentMappingsRepository: IncidentMappingsRepository
+
+    @Inject
+    lateinit var kuberClient: KuberClient
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -201,8 +202,8 @@ open class SettlementServiceImpl : SettlementService {
             historyDocuments.add(historyDocumentConverter.convertToModel(doc))
         }
         historyDocuments.forEach {
-            it.documentNo = hashId.encode(it.documentNo.toLong())
-            it.id = it.id?.let { it1 -> hashId.encode(it1.toLong()) }
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = it.id?.let { it1 -> Hashids.encode(it1.toLong()) }
         }
         return ResponseList(
             list = historyDocuments,
@@ -214,8 +215,10 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
         val accountTypes =
-            if (request.accountType == "All") {
-                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString())
+            if (request.accountType == AresConstants.ALL) {
+                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString())
+            } else if (request.accountType == "REC") {
+                mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else {
                 mutableListOf(request.accountType)
             }
@@ -230,21 +233,22 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun getSettlement(
         request: SettlementRequest
     ): ResponseList<com.cogoport.ares.model.settlement.SettledInvoice?> {
-        request.documentNo = hashId.decode(request.documentNo)[0].toString()
+        request.documentNo = Hashids.decode(request.documentNo)[0].toString()
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
         val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments)
         // Fetch Sid for invoices
-        val invoiceSids = getSidsForInvoices(settlements)
-        val settledDocuments = populateSettledDocuments(settlements, request, payments, invoiceSids)
+        val docIds = settlements.map { it.destinationId.toString() }
+        val sids = getSidsForInvoices(docIds, request.settlementType)
+        val settledDocuments = populateSettledDocuments(settlements, request, payments, sids)
 
         // Pagination Data
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
         settledDocuments.forEach {
-            it.documentNo = hashId.encode(it.documentNo.toLong())
-            it.id = it.id?.let { it1 -> hashId.encode(it1.toLong()) }
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = it.id?.let { it1 -> Hashids.encode(it1.toLong()) }
         }
         return ResponseList(
             list = settledDocuments,
@@ -254,11 +258,26 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun getSidsForInvoices(settlements: MutableList<SettledInvoice>): List<SidResponse>? {
-        val invoiceIds = settlements.map { it.destinationId.toString() }
-        return if (invoiceIds.isNotEmpty()) {
+    private suspend fun getSidsForInvoices(ids: List<String>, accType: SettlementType): List<Sid>? {
+        return if (ids.isNotEmpty()) {
             try {
-                plutusClient.getSidsForInvoiceIds(invoiceIds)
+                if (accType == SettlementType.REC) {
+                    plutusClient.getSidsForInvoiceIds(ids)?.map {
+                        Sid(
+                            documentId = it.invoiceId,
+                            jobNumber = it.jobNumber.toString()
+                        )
+                    }
+                } else if (accType in listOf(SettlementType.PAY, SettlementType.PCN)) {
+                    kuberClient.getSidsForBillIds(ids).map {
+                        Sid(
+                            documentId = it.billId,
+                            jobNumber = it.jobNumber
+                        )
+                    }
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
                 null
@@ -289,12 +308,8 @@ open class SettlementServiceImpl : SettlementService {
                     BigDecimal.ZERO
                 }
             }
-            val settledAmount = docList.value.sumOf { it.settledAmount }
-            val ledgerAmount = docList.value.sumOf { it.ledAmount }
             docList.value.map {
                 it.settledTds = settledTds
-                it.settledAmount = settledAmount
-                it.ledAmount = ledgerAmount
             }
             val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency } ?: docList.value.first()
             settlements.add(settledInvoice)
@@ -306,12 +321,12 @@ open class SettlementServiceImpl : SettlementService {
         settlements: MutableList<SettledInvoice>,
         request: SettlementRequest,
         payments: List<PaymentData>,
-        invoiceSids: List<SidResponse>?
+        sids: List<Sid>?
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
             when (request.settlementType) {
-                SettlementType.REC, SettlementType.PCN -> {
+                SettlementType.REC, SettlementType.PCN, SettlementType.PAY -> {
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
                         getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
@@ -331,7 +346,7 @@ open class SettlementServiceImpl : SettlementService {
                     settledDoc.settledTds -= settledDoc.tds
 
                     // Assign Sid
-                    settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo.toLong() }?.jobNumber
+                    settledDoc.sid = sids?.find { it.documentId == settledDoc.documentNo.toLong() }?.jobNumber
                     // Assign Status
                     val paid = (settledDoc.documentAmount - (settledDoc.settledAmount + settledDoc.tds + settledDoc.nostroAmount))
                     if (paid.compareTo(BigDecimal.ZERO) == 0) {
@@ -378,8 +393,8 @@ open class SettlementServiceImpl : SettlementService {
                 if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
             }
         }
-        val payments = if (settlementType == SettlementType.REC) {
-            paymentRepository.findByPaymentNumIn(paymentIds)
+        val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
+            paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
         } else {
             accountUtilizationRepository.getPaymentDetails(paymentIds)
         }
@@ -398,7 +413,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN -> {
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY -> {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(
@@ -491,8 +506,8 @@ open class SettlementServiceImpl : SettlementService {
             .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
-            it.documentNo = hashId.encode(it.documentNo.toLong())
-            it.id = hashId.encode(it.id.toLong())
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = Hashids.encode(it.id.toLong())
         }
         val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
         val total =
@@ -533,58 +548,61 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     /**
-     * Get TDS Deduction styles for trade party mapping id.
-     * @param: tradePartyMappingId
-     * @return: TdsStylesResponse
-     */
-    private suspend fun getOrgTdsProfile(tradePartyMappingId: UUID): TdsStylesResponse? {
-        var tdsStylesResponse = TdsStylesResponse(
-            id = tradePartyMappingId,
-            tdsDeductionStyle = "gross",
-            tdsDeductionType = "no_deductions",
-            tdsDeductionRate = 2.toBigDecimal()
-        )
-        try {
-            tdsStylesResponse = cogoClient.getOrgTdsStyles(tradePartyMappingId.toString()).data
-        } catch (_: Exception) {
-            null
-        }
-        return tdsStylesResponse
-    }
-
-    /**
      * Get TDS Deduction styles for list of trade party mapping id.
      * @param: tradePartyMappingIds
      * @return: List
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
-        val tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        var tdsStylesFromClient = listOf<TdsDataResponse>()
+        var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
+        var tdsStylesFromClient: List<TdsDataResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(
-                request = ListOrgStylesRequest(
-                    ids = tradePartyMappingIds
-                )
-            )
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))
         } catch (_: Exception) {
             null
         }
+        tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
+
+        return tdsStylesResponse
+    }
+
+    /**
+     * Assign client response TDS Styles to all the mapping Ids.
+     * @param: tdsStylesResponse
+     * @param: tradePartyMappingIds
+     */
+    private fun assignClientResponse(
+        tdsStylesResponse: MutableList<TdsStylesResponse>,
+        tradePartyMappingIds: List<String>,
+        tdsStylesFromClient: List<TdsDataResponse>?
+    ): MutableList<TdsStylesResponse> {
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient.find { it.data.id.toString() == tradePartyMapping }?.data
+            val tdsElement = tdsStylesFromClient?.find { it.data.id.toString() == tradePartyMapping }?.data
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
-                tdsStylesResponse.add(
-                    TdsStylesResponse(
-                        id = UUID.fromString(tradePartyMapping),
-                        tdsDeductionStyle = "gross",
-                        tdsDeductionType = "normal",
-                        tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
-                    )
-                )
+                addDefaultStyle(tdsStylesResponse, tradePartyMapping)
             }
         }
         return tdsStylesResponse
+    }
+
+    /**
+     * Assign and add Default profile to input mapping Id.
+     * @param: tdsStylesResponse
+     * @param: tradePartyMappingIds
+     */
+    private fun addDefaultStyle(
+        tdsStylesResponse: MutableList<TdsStylesResponse>,
+        tradePartyMapping: String
+    ) {
+        tdsStylesResponse.add(
+            TdsStylesResponse(
+                id = UUID.fromString(tradePartyMapping),
+                tdsDeductionStyle = "gross",
+                tdsDeductionType = "normal",
+                tdsDeductionRate = AresConstants.DEFAULT_TDS_RATE.toBigDecimal()
+            )
+        )
     }
 
     /**
@@ -761,7 +779,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
         }
-        documentModel.forEach { it.documentNo = hashId.encode(it.documentNo.toLong()) }
+        documentModel.forEach { it.documentNo = Hashids.encode(it.documentNo.toLong()) }
         return ResponseList(
             list = documentModel,
             totalPages = ceil(total?.toDouble()?.div(request.pageLimit!!) ?: 0.0).toLong(),
@@ -813,7 +831,7 @@ open class SettlementServiceImpl : SettlementService {
 
             // Update Status of Incident in incident_mappings table
             incidentMappingsRepository.updateStatus(
-                incidentMappingId = hashId.decode(request.incidentMappingId!!)[0],
+                incidentMappingId = Hashids.decode(request.incidentMappingId!!)[0],
                 status = IncidentStatus.APPROVED
             )
 
@@ -855,7 +873,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.settlementDate)
         val res = createIncidentMapping(
-            accUtilIds = docList.map { hashId.decode(it.id)[0] },
+            accUtilIds = docList.map { Hashids.decode(it.id)[0] },
             data = docList,
             type = com.cogoport.ares.api.common.enums.IncidentType.SETTLEMENT_APPROVAL,
             status = IncidentStatus.REQUESTED,
@@ -896,7 +914,7 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun reject(request: RejectSettleApproval): String {
         incidentMappingsRepository.updateStatus(
-            incidentMappingId = hashId.decode(request.incidentMappingId!!)[0],
+            incidentMappingId = Hashids.decode(request.incidentMappingId!!)[0],
             status = IncidentStatus.REJECTED
         )
         hadesClient.updateIncident(
@@ -938,7 +956,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private suspend fun editInvoiceTds(request: EditTdsRequest): String {
-        request.documentNo = hashId.decode(request.documentNo!!)[0].toString()
+        request.documentNo = Hashids.decode(request.documentNo!!)[0].toString()
         val doc =
             settlementRepository.findByDestIdAndDestType(
                 request.documentNo!!.toLong(),
@@ -976,7 +994,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         if (currNewTds > tdsDoc.amount!!) {
             // TODO("Generate Credit Note")
-            return hashId.encode(tdsDoc.destinationId)
+            return Hashids.encode(tdsDoc.destinationId)
         } else if (currNewTds < tdsDoc.amount) {
             val invoiceTdsDiff = request.oldTds!! - request.newTds!!
             val invoiceTdsDiffLed = Utilities.binaryOperation(invoiceTdsDiff, request.exchangeRate!!, Operator.MULTIPLY)
@@ -1029,24 +1047,26 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = request.updatedByUserType
             )
         )
-        return hashId.encode(tdsDoc.destinationId)
+        return Hashids.encode(tdsDoc.destinationId)
     }
 
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
         val sourceDoc =
             request.stackDetails!!.first {
-                it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
+                it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy, request.createdByUserType)
         return runSettlement(request, true)
     }
 
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?, deletedByUserType: String?): String {
-        val documentNo = hashId.decode(documentNo)[0]
+        val documentNo = Hashids.decode(documentNo)[0]
         val sourceType =
-            if (settlementType == SettlementType.REC)
-                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            when (settlementType) {
+                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr =
@@ -1126,7 +1146,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-        return hashId.encode(documentNo)
+        return Hashids.encode(documentNo)
     }
 
     private suspend fun reduceAccountUtilization(
@@ -1241,8 +1261,8 @@ open class SettlementServiceImpl : SettlementService {
         businessValidation(source, dest)
         val settledList = settleDocuments(request, source, dest, performDbOperation)
         settledList.forEach {
-            it.id = hashId.encode(it.id.toLong())
-            it.documentNo = hashId.encode(it.documentNo.toLong())
+            it.id = Hashids.encode(it.id.toLong())
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
             it.settledTds = settledTdsCopy[it.id]!!
         }
         return request.stackDetails!!.map { r -> settledList.filter { it.id == r.id }[0] }
@@ -1812,8 +1832,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun sanitizeInput(request: CheckRequest) {
         request.stackDetails!!.forEach {
-            it.id = hashId.decode(it.id)[0].toString()
-            it.documentNo = hashId.decode(it.documentNo)[0].toString()
+            it.id = Hashids.decode(it.id)[0].toString()
+            it.documentNo = Hashids.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
             it.settledTds = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
@@ -1918,6 +1938,6 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = null
             )
         )
-        return hashId.encode(savedObj.id!!)
+        return Hashids.encode(savedObj.id!!)
     }
 }

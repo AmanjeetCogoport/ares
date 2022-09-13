@@ -33,7 +33,7 @@ data class SettledInvoice(
     var settledTds: BigDecimal,
     var exchangeRate: BigDecimal,
     var signFlag: Short,
-    var sid: Long?,
+    var sid: String?,
     var nostroAmount: BigDecimal,
     var accMode: AccMode
 )
