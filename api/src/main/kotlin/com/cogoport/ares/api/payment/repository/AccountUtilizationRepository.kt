@@ -687,7 +687,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 updated_at,
                 taxable_amount,
                 trade_party_mapping_id,
-                tagged_organization_id
+                tagged_organization_id,
+                migrated
                 FROM account_utilizations
                 WHERE document_value = :documentValue
                 AND   acc_type = :accType::account_type
@@ -726,7 +727,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 updated_at,
                 taxable_amount,
                 trade_party_mapping_id,
-                tagged_organization_id
+                tagged_organization_id,
+                migrated
                 FROM account_utilizations
                 WHERE document_no = :documentNo
                 AND   acc_type = :accType::account_type
