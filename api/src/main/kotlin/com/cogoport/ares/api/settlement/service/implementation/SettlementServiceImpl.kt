@@ -1282,9 +1282,7 @@ open class SettlementServiceImpl : SettlementService {
             var availableAmount = payment.allocationAmount
             val canSettle = fetchSettlingDocs(payment.accountType)
             for (invoice in dest) {
-                if (canSettle.contains(invoice.accountType) &&
-                    availableAmount.compareTo(0.toBigDecimal()) != 0
-                ) {
+                if (canSettle.contains(invoice.accountType)) {
                     availableAmount =
                         doSettlement(
                             request,
@@ -1406,7 +1404,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         assignInvoiceStatus(invoice)
         assignPaymentStatus(payment)
-        if (performDbOperation)
+        if (performDbOperation && toSettleAmount.compareTo(BigDecimal.ZERO) != 0)
             performDbOperation(
                 request,
                 toSettleAmount,
@@ -1443,21 +1441,25 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment Nostro Ledger Amount */
         val paymentNostroLed = getExchangeValue(paymentNostro, ledgerRate) //
 
+        val amount = (paidAmount + paymentTds + paymentNostro)
+        val ledAmount = (paidLedAmount + paymentTdsLed + paymentNostroLed)
         // Create Documents Settlement Entry
-        createSettlement(
-            payment.documentNo.toLong(),
-            payment.accountType,
-            invoice.documentNo.toLong(),
-            invoice.accountType,
-            payment.currency,
-            (paidAmount + paymentTds + paymentNostro),
-            payment.ledCurrency,
-            (paidLedAmount + paymentTdsLed + paymentNostroLed),
-            1,
-            request.settlementDate,
-            request.createdBy,
-            request.createdByUserType
-        )
+        if (amount.compareTo(BigDecimal.ZERO) != 0) {
+            createSettlement(
+                payment.documentNo.toLong(),
+                payment.accountType,
+                invoice.documentNo.toLong(),
+                invoice.accountType,
+                payment.currency,
+                amount,
+                payment.ledCurrency,
+                ledAmount,
+                1,
+                request.settlementDate,
+                request.createdBy,
+                request.createdByUserType
+            )
+        }
 
         // Create TDS Entry
         if (paymentTds.compareTo(BigDecimal.ZERO) != 0) {
