@@ -1053,7 +1053,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
         val sourceDoc =
             request.stackDetails!!.first {
-                it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
+                it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy, request.createdByUserType)
         return runSettlement(request, true)
@@ -1062,9 +1062,11 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
         val sourceType =
-            if (settlementType == SettlementType.REC)
-                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            when (settlementType) {
+                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr =
