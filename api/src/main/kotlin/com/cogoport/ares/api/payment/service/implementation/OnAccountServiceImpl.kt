@@ -16,6 +16,7 @@ import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -26,6 +27,7 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
@@ -109,8 +111,12 @@ open class OnAccountServiceImpl : OnAccountService {
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         receivableRequest.serviceType = ServiceType.NA
-        receivableRequest.accMode = AccMode.AR
-        receivableRequest.signFlag = SignSuffix.REC.sign
+        if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
+        if (receivableRequest.accMode == AccMode.AR) {
+            receivableRequest.signFlag = SignSuffix.REC.sign
+        } else {
+            receivableRequest.signFlag = SignSuffix.PAY.sign
+        }
 
         setPaymentAmounts(receivableRequest)
 //        setOrganizations(receivableRequest)
@@ -119,8 +125,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
-        payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-        payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
 
         val savedPayment = paymentRepository.save(payment)
         auditService.createAudit(
@@ -147,12 +151,13 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
-        accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
 
-        if (receivableRequest.accMode == AccMode.AP) {
+        if (receivableRequest.accMode == AccMode.AR) {
+            accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
+        } else {
             accUtilEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         }
 
@@ -235,13 +240,13 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+        if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
+        val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
+        val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
+            ?: throw AresException(AresError.ERR_1002, "")
 
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name)
-
-        if (payment.isPosted && accountUtilization != null)
-            throw AresException(AresError.ERR_1005, "")
-
-        return updatePayment(receivableRequest, accountUtilization!!, payment)
+        return updatePayment(receivableRequest, accountUtilization, payment)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
@@ -412,19 +417,33 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    private fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
-        payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+    private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
+        if (payment.accMode == AccMode.AR) {
+            payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
+            payment.paymentCode = PaymentCode.REC
+            payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+            payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
+        } else {
+            payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
+            payment.paymentCode = PaymentCode.PAY
+            payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
+            payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
+        }
+
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
         payment.isPosted = false
         payment.isDeleted = false
-        payment.paymentCode = PaymentCode.REC
     }
 
     private fun setAccountUtilizationModel(accUtilizationModel: AccUtilizationRequest, receivableRequest: Payment) {
+        if (receivableRequest.accMode == AccMode.AR) {
+            accUtilizationModel.accType = AccountType.REC
+        } else {
+            accUtilizationModel.accType = AccountType.PAY
+        }
         accUtilizationModel.zoneCode = receivableRequest.zone
         accUtilizationModel.serviceType = receivableRequest.serviceType
-        accUtilizationModel.accType = AccountType.REC
         accUtilizationModel.currencyPayment = BigDecimal.ZERO
         accUtilizationModel.ledgerPayment = BigDecimal.ZERO
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
@@ -497,5 +516,20 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.organizationName = clientResponse.organizationTradePartyName
         receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
         receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
+    }
+
+    override suspend fun getDataAccUtilization(request: PushAccountUtilizationRequest): List<AccountUtilization> {
+        val accUtilizationResponse: MutableList<AccountUtilization> = mutableListOf()
+        var accUtilizationEntity: AccountUtilization
+        for (accUtilizationReq in request.accountUtilizations) {
+            if ((request.inputType) == DocumentSearchType.NUMBER) {
+                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocNo(accUtilizationReq.id, accUtilizationReq.accType)
+            } else {
+                accUtilizationEntity = accountUtilizationRepository.getAccountUtilizationsByDocValue(accUtilizationReq.id, accUtilizationReq.accType)
+            }
+            accUtilizationResponse.add(accUtilizationEntity)
+            Client.addDocument("test_invoices", accUtilizationEntity.id.toString(), accUtilizationEntity)
+        }
+        return accUtilizationResponse
     }
 }

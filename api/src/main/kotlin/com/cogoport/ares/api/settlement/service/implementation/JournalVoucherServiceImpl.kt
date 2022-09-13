@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImp
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
@@ -21,21 +22,25 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.model.settlement.request.JournalVoucherApproval
+import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.sql.Date
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
@@ -61,21 +66,27 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var auditService: AuditService
 
+    /**
+     * Get List of JVs based on input filters.
+     * @param: jvListRequest
+     * @return: ResponseList
+     */
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
         val documentEntity = journalVoucherRepository.getListVouchers(
-            jvListRequest.entityCode,
-            jvListRequest.startDate,
-            jvListRequest.endDate,
+            jvListRequest.status,
+            jvListRequest.category,
+            jvListRequest.type,
+            "%${jvListRequest.query}%",
             jvListRequest.page,
-            jvListRequest.pageLimit,
-            jvListRequest.query
+            jvListRequest.pageLimit
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
-                jvListRequest.entityCode,
-                jvListRequest.startDate,
-                jvListRequest.endDate
+                jvListRequest.status,
+                jvListRequest.category,
+                jvListRequest.type,
+                "%${jvListRequest.query}%"
             )
         val jvList = mutableListOf<JournalVoucherResponse>()
         documentEntity.forEach { doc ->
@@ -97,45 +108,80 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun createJournalVoucher(request: JournalVoucherRequest): String {
+        // validate request
         validateCreateRequest(request)
+
         // create Journal Voucher
+        request.jvNum = getJvNumber()
         val jv = convertToJournalVoucherEntity(request)
-        jv.jvNum = getJvNumber()
         val jvEntity = createJV(jv)
+
         // Send to Incident Management
-        val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(jvEntity)
+        request.id = Hashids.encode(jvEntity.id!!)
+        val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.validityDate)
+        val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
+        incidentRequestModel.validityDate = Date.valueOf(formatedDate)
         sendToIncidentManagement(request, incidentRequestModel)
 
-        return jvEntity.id.toString()
-        // TODO( "Have to decide on adding JV in account utilization" )
-//
-
-//        return journalVoucherConverter.convertEntityToRequest(jv)
+        return request.id!!
     }
 
-    override suspend fun approveJournalVoucher(request: JournalVoucherApproval) {
-        val jvEntity = updateJournalVoucher(request)
-        val accType = getAccountType(jvEntity.category, jvEntity.type!!)
-//        createJvAccUtil(jvEntity, accType)
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
+        val jvId = Hashids.decode(request.journalVoucherData!!.id)[0]
+        // Update Journal Voucher
+        val jvEntity = updateJournalVoucher(jvId, request.performedBy, request.remark)
+
+        // Insert JV in account_utilizations
+        val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
+        val signFlag = getSignFlag(accMode, request.journalVoucherData.type)
+        val accUtilEntity = createJvAccUtil(jvEntity, accMode, signFlag)
+
+        // Update Incident status on incident management
+        hadesClient.updateIncident(
+            request = UpdateIncidentRequest(
+                status = IncidentStatus.APPROVED,
+                data = null,
+                remark = request.remark,
+                updatedBy = request.performedBy!!
+            ),
+            id = request.incidentId
+        )
+        return request.incidentId!!
     }
 
-    override suspend fun rejectJournalVoucher(id: Long, performedBy: UUID?) {
-        journalVoucherRepository.updateStatus(id, JVStatus.REJECTED, performedBy)
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
+        val jvId = Hashids.decode(request.journalVoucherId!!)[0]
+        journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy, request.remark)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
-                objectId = id,
+                objectId = jvId,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to id, "status" to JVStatus.REJECTED),
-                performedBy = performedBy.toString(),
+                data = mapOf("id" to jvId, "status" to JVStatus.REJECTED),
+                performedBy = request.performedBy.toString(),
                 performedByUserType = null
             )
         )
+        hadesClient.updateIncident(
+            request = UpdateIncidentRequest(
+                status = IncidentStatus.REJECTED,
+                data = null,
+                remark = request.remark,
+                updatedBy = request.performedBy!!
+            ),
+            id = request.incidentId
+        )
+        return request.incidentId!!
     }
 
-    private suspend fun updateJournalVoucher(jvObj: JournalVoucherApproval): JournalVoucher {
-        val jvEntity = journalVoucherConverter.convertIncidentModelToEntity(jvObj)
+    private suspend fun updateJournalVoucher(jvId: Long, performedBy: UUID?, remark: String?): JournalVoucher {
+        val jvEntity = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "journal_voucher_id: $jvId")
         jvEntity.status = JVStatus.APPROVED
+        jvEntity.updatedAt = Timestamp.from(Instant.now())
+        jvEntity.updatedBy = performedBy
+        jvEntity.description = remark
         journalVoucherRepository.update(jvEntity)
         auditService.createAudit(
             AuditRequest(
@@ -150,10 +196,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    private suspend fun createJvAccUtil(
-        request: JournalVoucher,
-        accType: AccountType
-    ) {
+    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -163,10 +206,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             organizationId = request.tradePartyId,
             taggedOrganizationId = null,
             tradePartyMappingId = null,
-            organizationName = request.tradePartnerName,
-            accType = accType,
-            accMode = AccMode.AR,
-            signFlag = -1,
+            organizationName = request.tradePartyName,
+            accType = AccountType.valueOf(request.category.toString()),
+            accMode = accMode,
+            signFlag = signFlag,
             currency = request.currency!!,
             ledCurrency = request.ledCurrency,
             amountCurr = request.amount ?: BigDecimal.ZERO,
@@ -197,6 +240,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = null
             )
         )
+        return accUtilObj
     }
 
     /**
@@ -243,7 +287,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             IncidentData(
                 organization = Organization(
                     id = request.tradePartyId,
-                    businessName = request.tradePartnerName
+                    businessName = request.tradePartyName,
+                    tradePartyType = null,
+                    tradePartyName = null
                 ),
                 journalVoucherRequest = data,
                 tdsRequest = null,
@@ -257,22 +303,22 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             data = incidentData,
             createdBy = request.createdBy!!
         )
-        val res = hadesClient.createIncident(clientRequest)
+        hadesClient.createIncident(clientRequest)
     }
 
     /**
-     * Return Account Type on the basis of jv category and type
-     * @param: jvCategory
+     * Return Sign Flag on the basis of account mode and type
+     * @param: accMode
      * @param: type
-     * @return: AccountType
+     * @return: Short
      */
-    private fun getAccountType(jvCategory: JVCategory, type: String): AccountType {
+    private fun getSignFlag(accMode: AccMode, type: String): Short {
         return when (type) {
             "CREDIT" -> {
-                getCreditAccountType(jvCategory)
+                getCreditSignFlag(accMode)
             }
             "DEBIT" -> {
-                getDebitAccountType(jvCategory)
+                getDebitSignFlag(accMode)
             }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
@@ -281,55 +327,30 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     /**
-     * Return credit Account Type on the basis of jv category
-     * @param: jvCategory
-     * @return: AccountType
+     * Return credit Sign Flag on the basis of Account Mode
+     * @param: accMode
+     * @return: Short
      */
-    private fun getCreditAccountType(jvCategory: JVCategory): AccountType {
-        return when (jvCategory) {
-            JVCategory.EXCH -> {
-                AccountType.CEXCH
-            }
-            JVCategory.WOFF -> {
-                AccountType.CWOFF
-            }
-            JVCategory.ROFF -> {
-                AccountType.CROFF
-            }
-            JVCategory.NOSTRO -> {
-                AccountType.NOSTRO
-            }
-            JVCategory.OUTST -> {
-                AccountType.OUTST
-            }
+    private fun getCreditSignFlag(accMode: AccMode): Short {
+
+        return when (accMode) {
+            AccMode.AR -> { -1 }
+            AccMode.AP -> { 1 }
             else -> {
-                throw AresException(AresError.ERR_1009, "JV Category")
+                throw AresException(AresError.ERR_1009, "Acc Mode")
             }
         }
     }
 
     /**
-     * Return debit Account Type on the basis of jv category
-     * @param: jvCategory
-     * @return: AccountType
+     * Return Debit Sign Flag on the basis of Account Mode
+     * @param: accMode
+     * @return: Short
      */
-    private fun getDebitAccountType(jvCategory: JVCategory): AccountType {
-        return when (jvCategory) {
-            JVCategory.EXCH -> {
-                AccountType.DEXCH
-            }
-            JVCategory.WOFF -> {
-                AccountType.DWOFF
-            }
-            JVCategory.ROFF -> {
-                AccountType.DROFF
-            }
-            JVCategory.NOSTRO -> {
-                AccountType.NOSTRO
-            }
-            JVCategory.OUTST -> {
-                AccountType.OUTST
-            }
+    private fun getDebitSignFlag(accMode: AccMode): Short {
+        return when (accMode) {
+            AccMode.AR -> { 1 }
+            AccMode.AP -> { -1 }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV Category")
             }

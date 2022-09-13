@@ -67,8 +67,8 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
         exception?.let {
             logger.error(exception.message)
             Sentry.withScope {
-                it.setTag("traceId", MDC.get("traceId"))
-                it.setTag("spanId", MDC.get("spanId"))
+                it.setTag("traceId", MDC.get("traceId") ?: "")
+                it.setTag("spanId", MDC.get("spanId") ?: "")
                 Sentry.captureException(exception)
             }
         }

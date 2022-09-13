@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.settlement.request
 
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
@@ -9,9 +10,10 @@ import java.util.UUID
 
 @Introspected
 data class JournalVoucherRequest(
+    var id: String?,
     val entityCode: Int,
     val entityId: UUID?,
-    val jvNum: String,
+    var jvNum: String?,
     val type: String,
     var status: JVStatus?,
     val category: JVCategory,
@@ -21,6 +23,8 @@ data class JournalVoucherRequest(
     val ledCurrency: String,
     val exchangeRate: BigDecimal,
     val tradePartyId: UUID,
-    val tradePartnerName: String,
+    val tradePartyName: String,
     var createdBy: UUID?,
+    var accMode: AccMode,
+    var description: String?
 )

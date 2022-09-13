@@ -84,10 +84,10 @@ class Utilities {
             var fiscalYear: Int
             val currentYear = LocalDate.now().year
             val currentMonth = LocalDate.now().month
-            if (currentMonth <= Month.MARCH) {
-                fiscalYear = (currentYear)
+            fiscalYear = if (currentMonth <= Month.MARCH) {
+                (currentYear)
             } else {
-                fiscalYear = (currentYear)
+                (currentYear) + 1
             }
             return (fiscalYear - 1).toString().substring(2, 4) + (fiscalYear).toString().substring(2, 4)
         }

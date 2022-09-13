@@ -7,6 +7,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
+import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
@@ -24,6 +25,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -91,13 +93,13 @@ class SettlementController {
     }
 
     @Post("/check")
-    suspend fun check(@Body request: CheckRequest): List<CheckDocument> {
-        return Response<List<CheckDocument>>().ok(settlementService.check(request))
+    suspend fun check(@Body request: CheckRequest): CheckResponse {
+        return Response<CheckResponse>().ok(settlementService.check(request))
     }
 
     @Post("/edit-check")
-    suspend fun editCheck(@Body request: CheckRequest): List<CheckDocument> {
-        return Response<List<CheckDocument>>().ok(settlementService.editCheck(request))
+    suspend fun editCheck(@Body request: CheckRequest): CheckResponse {
+        return Response<CheckResponse>().ok(settlementService.editCheck(request))
     }
 
     @Post("/settle")
@@ -118,6 +120,11 @@ class SettlementController {
     @Post("/send-for-approval")
     suspend fun sendForApproval(@Valid @Body request: CreateIncidentRequest): Response<String> {
         return Response<String>().ok("Sent For Approval", settlementService.sendForApproval(request))
+    }
+
+    @Post("/reject")
+    suspend fun reject(@Valid @Body request: RejectSettleApproval): Response<String> {
+        return Response<String>().ok("Rejected", settlementService.reject(request))
     }
 
     @Delete

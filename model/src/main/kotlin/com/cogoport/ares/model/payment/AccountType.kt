@@ -15,13 +15,10 @@ enum class AccountType(val dbValue: String) {
     INTER("INTER"),
     MTC("MTC"),
     MTCCV("MTCCV"),
-    CWOFF("CWOFF"),
-    DWOFF("DWOFF"),
-    CROFF("CROFF"),
-    DROFF("DROFF"),
-    CEXCH("CROFF"),
-    DEXCH("DROFF"),
-    NOSTRO("NOSTRO"),
+    WOFF("WOFF"),
+    ROFF("ROFF"),
+    EXCH("EXCH"),
+    JVNOS("JVNOS"),
     OUTST("OUTST"),
     PAY("PAY");
 

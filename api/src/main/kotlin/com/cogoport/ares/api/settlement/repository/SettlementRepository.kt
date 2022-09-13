@@ -85,7 +85,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 COALESCE(au.taxable_amount,0) AS taxable_amount,
                 sum(COALESCE(s.amount, 0)) AS tds,
                 au.transaction_date,
-                au.amount_loc/au.amount_curr AS exchange_rate
+                au.amount_loc/au.amount_curr AS exchange_rate,
+                au.acc_mode
             FROM settlements s
             JOIN account_utilizations au ON
                 s.destination_id = au.document_no
@@ -102,14 +103,14 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 sum(CASE WHEN s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS settled_tds
             FROM settlements s
             WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
-                AND s.source_type NOT IN ('REC','PCN','SECH')
+                AND s.source_type NOT IN ('REC','PCN','SECH','PAY')
             GROUP BY s.destination_id, s.currency, s.source_id
         )
         SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
             I.acc_type, I.current_balance, I.currency, I.payment_currency, I.document_amount, I.settled_amount, 
             I.led_currency, I.led_amount, I.sign_flag, I.taxable_amount, I.transaction_date, I.exchange_rate,
             T.tds_document_no, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
-            COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency
+            COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency, I.acc_mode
         FROM INVOICES I
         LEFT JOIN TAX T ON T.destination_id = I.destination_id
         """

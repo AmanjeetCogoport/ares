@@ -1,12 +1,12 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -28,37 +28,47 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.status,
             j.exchange_rate,
             j.trade_party_id,
-            j.trade_partner_name,
+            j.trade_party_name,
             j.created_at,
             j.created_by,
             j.updated_at,
-            j.updated_by
+            j.updated_by,
+            j.description as description
             FROM journal_vouchers j
             where 
-                (:entityCode is null OR entity_code = :entityCode) AND
-                (:startDate is null OR  created_at >= :startDate) AND
-                (:endDate is null OR created_at <= :endDate)
-                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
+                (:status is null OR  status = :status::JV_STATUS) AND
+                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:type is null OR  type = :type) AND
+                (:query is null OR trade_party_name like :query)
+                OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
-    suspend fun getListVouchers(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, page: Int, pageLimit: Int, query: String?,): List<JournalVoucher>
+    suspend fun getListVouchers(
+        status: JVStatus?,
+        category: JVCategory?,
+        type: String?,
+        query: String?,
+        page: Int,
+        pageLimit: Int
+    ): List<JournalVoucher>
 
     @Query(
         """
         SELECT count(1)
             FROM journal_vouchers j
             where 
-                (:entityCode is null OR entity_code = :entityCode) AND
-                (:startDate is null OR  created_at >= :startDate) AND
-                (:endDate is null OR created_at <= :endDate)
+                (:status is null OR  status = :status::JV_STATUS) AND
+                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:type is null OR  type = :type) AND
+                (:query is null OR trade_party_name like :query)
         """
     )
-    fun countDocument(entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?): Long
+    fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long
 
     @Query(
         """
-        UPDATE journal_vouchers SET status = :status, updated_by = :performedBy where id = :id
+        UPDATE journal_vouchers SET status = :status, updated_by = :performedBy, description = :remark where id = :id
     """
     )
-    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?)
+    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?, remark: String?)
 }

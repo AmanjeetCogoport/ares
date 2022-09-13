@@ -269,6 +269,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             taxable_amount,
             transaction_date,
             au.sign_flag,
+            au.acc_mode,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
             pay_curr as settled_amount,
@@ -368,16 +369,24 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
+                AND (:accMode is null OR acc_mode::varchar = :accMode)
             ORDER BY transaction_date DESC
             LIMIT :limit
             OFFSET :offset
-        ) 
+        ), 
+         MAPPINGS AS (
+        	select jsonb_array_elements(account_utilization_ids)::int as id 
+        	from incident_mappings
+        	where incident_status = 'REQUESTED'
+        	and incident_type = 'SETTLEMENT_APPROVAL'
+        )
         SELECT 
             au.id,
             s.source_id,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -394,6 +403,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            au.acc_mode,
+            CASE WHEN 
+            	au.id in (select id from MAPPINGS) 
+        	THEN
+        		false
+        	ELSE
+        		true
+        	END as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 
@@ -413,7 +430,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: List<AccountType>,
+        orgId: List<UUID>,
+        entityCode: Int?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?,
+        accMode: AccMode?
+    ): List<Document?>
 
     @Query(
         """
@@ -431,13 +458,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ORDER BY transaction_date DESC
             LIMIT :limit
             OFFSET :offset
-        ) 
+        ),
+        MAPPINGS AS (
+        	select jsonb_array_elements(account_utilization_ids)::int as id 
+        	from incident_mappings
+        	where incident_status = 'REQUESTED'
+        	and incident_type = 'SETTLEMENT_APPROVAL'
+        )
         SELECT 
             au.id,
             s.source_id,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -454,6 +488,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.currency, 
             au.led_currency, 
             au.sign_flag,
+            au.acc_mode,
+            CASE WHEN 
+            	au.id in (select id from MAPPINGS) 
+        	THEN
+        		false
+        	ELSE
+        		true
+        	END as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 
@@ -473,7 +515,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getTDSDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: AccountType?,
+        orgId: List<UUID>,
+        accMode: AccMode?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?
+    ): List<Document?>
 
     @Query(
         """
@@ -546,9 +597,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
+                    AND acc_type::varchar in (:accType)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
 
     @Query(
         """
@@ -602,4 +655,82 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+
+    @Query(
+        """
+                SELECT
+                id,
+                document_no,
+                document_value,
+                zone_code,
+                service_type,
+                document_status,
+                entity_code,
+                category,
+                org_serial_id,
+                sage_organization_id,
+                organization_id,
+                organization_name,
+                acc_code,
+                acc_type,
+                acc_mode,
+                sign_flag,
+                currency,
+                led_currency,
+                amount_curr,
+                amount_loc,
+                pay_curr,
+                pay_loc,
+                due_date,
+                transaction_date,
+                created_at,
+                updated_at,
+                taxable_amount,
+                trade_party_mapping_id,
+                tagged_organization_id
+                FROM account_utilizations
+                WHERE document_value = :documentValue
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
+
+    @Query(
+        """
+                SELECT
+                id,
+                document_no,
+                document_value,
+                zone_code,
+                service_type,
+                document_status,
+                entity_code,
+                category,
+                org_serial_id,
+                sage_organization_id,
+                organization_id,
+                organization_name,
+                acc_code,
+                acc_type,
+                acc_mode,
+                sign_flag,
+                currency,
+                led_currency,
+                amount_curr,
+                amount_loc,
+                pay_curr,
+                pay_loc,
+                due_date,
+                transaction_date,
+                created_at,
+                updated_at,
+                taxable_amount,
+                trade_party_mapping_id,
+                tagged_organization_id
+                FROM account_utilizations
+                WHERE document_no = :documentNo
+                AND   acc_type = :accType::account_type
+            """
+    )
+    suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
 }

@@ -1,11 +1,11 @@
 package com.cogoport.ares.model.settlement.enums
 
 enum class JVCategory(val value: String) {
-    EXCH("EXCH"),
-    NOSTRO("NOSTRO"),
-    WOFF("WOFF"),
-    ROFF("ROFF"),
-    OUTST("OUTST");
+    EXCH("Exchange"),
+    JVNOS("Nostro"),
+    WOFF("Write Off"),
+    ROFF("Round Off"),
+    OUTST("Outstanding");
 
     open operator fun contains(value: String?): Boolean {
         for (c in JVCategory.values()) {
