@@ -295,7 +295,8 @@ class PaymentMigrationImpl : PaymentMigration {
             bankId = receivableRequest.bankId,
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = receivableRequest.organizationId,
-            bankPayAmount = receivableRequest.bankPayAmount
+            bankPayAmount = receivableRequest.bankPayAmount,
+            migrated = true
         )
     }
 
@@ -329,7 +330,8 @@ class PaymentMigrationImpl : PaymentMigration {
             updatedAt = receivableRequest.updatedAt,
             tradePartyMappingId = paymentEntity.tradePartyMappingId,
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
-            taxableAmount = BigDecimal.ZERO
+            taxableAmount = BigDecimal.ZERO,
+            migrated = true
         )
     }
 
@@ -372,7 +374,8 @@ class PaymentMigrationImpl : PaymentMigration {
             updatedAt = receivableRequest.updatedAt,
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
-            taxableAmount = BigDecimal.ZERO
+            taxableAmount = BigDecimal.ZERO,
+            migrated = true
         )
     }
 
