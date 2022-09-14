@@ -237,7 +237,7 @@ open class SettlementServiceImpl : SettlementService {
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
         val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
-        val settlements = getSettledInvoices(settlementGrouped, payments)
+        val settlements = getSettledInvoices(settlementGrouped, payments, request.documentNo.toLong())
         // Fetch Sid for invoices
         val docIds = settlements.map { it.destinationId.toString() }
         val sids = getSidsForInvoices(docIds, request.settlementType)
@@ -287,7 +287,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun getSettledInvoices(
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
-        payments: List<PaymentData>
+        payments: List<PaymentData>,
+        paymentRequested: Long
     ): MutableList<SettledInvoice> {
         val settlements = mutableListOf<SettledInvoice>()
         for (docList in settlementGrouped) {
@@ -311,7 +312,7 @@ open class SettlementServiceImpl : SettlementService {
             docList.value.map {
                 it.settledTds = settledTds
             }
-            val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency } ?: docList.value.first()
+            val settledInvoice = docList.value.find { it.tdsDocumentNo == paymentRequested } ?: docList.value.first()
             settlements.add(settledInvoice)
         }
         return settlements

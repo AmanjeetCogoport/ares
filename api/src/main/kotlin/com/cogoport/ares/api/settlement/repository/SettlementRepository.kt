@@ -90,6 +90,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             FROM settlements s
             JOIN account_utilizations au ON
                 s.destination_id = au.document_no
+                AND s.destination_type::VARCHAR = au.acc_type::VARCHAR
             WHERE au.amount_curr <> 0 
                 AND s.source_id = :sourceId
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
