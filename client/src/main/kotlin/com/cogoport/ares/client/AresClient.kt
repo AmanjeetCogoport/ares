@@ -21,18 +21,7 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.AccountCollectionResponse
-import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
-import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.BulkPaymentResponse
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
-import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.*
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
@@ -113,4 +102,14 @@ interface AresClient {
 
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
+
+    @Get("/payments/dashboard/overallStatsForKam")
+    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse
+
+    @Get("/payments/dashboard/overallStatsForCustomer")
+    suspend fun getOverallStatsForCustomer(
+        @QueryValue("docValue") docValue: List<String>,
+        @QueryValue("custId") custId: String
+    ): OverallStatsForCustomerResponse
+
 }

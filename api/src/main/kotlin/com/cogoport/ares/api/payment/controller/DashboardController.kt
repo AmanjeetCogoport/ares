@@ -16,12 +16,7 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.*
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
@@ -80,6 +75,19 @@ class DashboardController {
     @Get("/org-payables-stats{?request*}")
     suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse {
         return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
+    }
+
+    @Get("/overallStatsForKam")
+    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse {
+        return Response<OverallStatsForKamResponse>().ok(dashboardService.getOverallStatsForKam(docValue))
+    }
+
+    @Get("/overallStatsForCustomer")
+    suspend fun getOverallStatsForCustomer(
+        @QueryValue("docValue") docValue: List<String>,
+        @QueryValue("custId")custId: String
+    ): OverallStatsForCustomerResponse {
+        return Response<OverallStatsForCustomerResponse>().ok(dashboardService.getOverallStatsForCustomer(docValue, custId))
     }
 
     /** To be Deleted */
