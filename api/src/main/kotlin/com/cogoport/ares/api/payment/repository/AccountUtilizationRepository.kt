@@ -1,22 +1,12 @@
 package com.cogoport.ares.api.payment.repository
 
-import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.CollectionTrend
-import com.cogoport.ares.api.payment.entity.DailyOutstanding
-import com.cogoport.ares.api.payment.entity.OrgOutstanding
-import com.cogoport.ares.api.payment.entity.OrgStatsResponse
-import com.cogoport.ares.api.payment.entity.OrgSummary
-import com.cogoport.ares.api.payment.entity.Outstanding
-import com.cogoport.ares.api.payment.entity.OutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OverallAgeingStats
-import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.entity.*
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.response.DueCountResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -53,7 +43,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """update account_utilizations set 
-              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id"""
+              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =`now()` where id=:id"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
@@ -712,4 +702,24 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             """
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
+
+    @Query(
+        """
+            Select
+            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) as due_count,
+            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) as overdue_count,
+            COALESCE(sum(case when (now()::date - due_date) between 0 and 30 then 1 else 0 end),0) as thirty_count,
+            COALESCE(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
+            COALESCE(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
+            COALESCE(sum(case when (now()::date - due_date) > 90 then 1 else 0 end),0) as ninety_plus,
+            COALESCE(sum(case when document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_count
+            From account_utilizations
+                   WHERE amount_curr <> 0
+                    AND amount_loc - pay_loc <> 0
+                    AND tagged_organization_id = :orgId
+                    AND acc_type in ('PINV','PDN','PCN')
+        """
+    )
+    suspend fun getKamPaymentCount(orgId: String): DueCountResponse?
+
 }
