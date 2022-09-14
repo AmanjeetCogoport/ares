@@ -27,6 +27,7 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
+import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -64,8 +65,8 @@ import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
+import com.cogoport.kuber.client.KuberClient
 import com.cogoport.plutus.client.PlutusClient
-import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -125,6 +126,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var incidentMappingsRepository: IncidentMappingsRepository
+
+    @Inject
+    lateinit var kuberClient: KuberClient
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -235,8 +239,9 @@ open class SettlementServiceImpl : SettlementService {
         val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments)
         // Fetch Sid for invoices
-        val invoiceSids = getSidsForInvoices(settlements)
-        val settledDocuments = populateSettledDocuments(settlements, request, payments, invoiceSids)
+        val docIds = settlements.map { it.destinationId.toString() }
+        val sids = getSidsForInvoices(docIds, request.settlementType)
+        val settledDocuments = populateSettledDocuments(settlements, request, payments, sids)
 
         // Pagination Data
         val totalRecords =
@@ -253,11 +258,26 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun getSidsForInvoices(settlements: MutableList<SettledInvoice>): List<SidResponse>? {
-        val invoiceIds = settlements.map { it.destinationId.toString() }
-        return if (invoiceIds.isNotEmpty()) {
+    private suspend fun getSidsForInvoices(ids: List<String>, accType: SettlementType): List<Sid>? {
+        return if (ids.isNotEmpty()) {
             try {
-                plutusClient.getSidsForInvoiceIds(invoiceIds)
+                if (accType == SettlementType.REC) {
+                    plutusClient.getSidsForInvoiceIds(ids)?.map {
+                        Sid(
+                            documentId = it.invoiceId,
+                            jobNumber = it.jobNumber.toString()
+                        )
+                    }
+                } else if (accType in listOf(SettlementType.PAY, SettlementType.PCN)) {
+                    kuberClient.getSidsForBillIds(ids).map {
+                        Sid(
+                            documentId = it.billId,
+                            jobNumber = it.jobNumber
+                        )
+                    }
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
                 null
@@ -301,7 +321,7 @@ open class SettlementServiceImpl : SettlementService {
         settlements: MutableList<SettledInvoice>,
         request: SettlementRequest,
         payments: List<PaymentData>,
-        invoiceSids: List<SidResponse>?
+        sids: List<Sid>?
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
@@ -326,7 +346,7 @@ open class SettlementServiceImpl : SettlementService {
                     settledDoc.settledTds -= settledDoc.tds
 
                     // Assign Sid
-                    settledDoc.sid = invoiceSids?.find { it.invoiceId == settledDoc.documentNo.toLong() }?.jobNumber
+                    settledDoc.sid = sids?.find { it.documentId == settledDoc.documentNo.toLong() }?.jobNumber
                     // Assign Status
                     val paid = (settledDoc.documentAmount - (settledDoc.settledAmount + settledDoc.tds + settledDoc.nostroAmount))
                     if (paid.compareTo(BigDecimal.ZERO) == 0) {
@@ -1033,7 +1053,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
         val sourceDoc =
             request.stackDetails!!.first {
-                it.accountType in listOf(SettlementType.REC, SettlementType.PCN)
+                it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy, request.createdByUserType)
         return runSettlement(request, true)
@@ -1042,9 +1062,11 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
         val sourceType =
-            if (settlementType == SettlementType.REC)
-                listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-            else listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            when (settlementType) {
+                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val debitDoc = fetchedDoc.groupBy { it?.destinationId }
         val sourceCurr =
