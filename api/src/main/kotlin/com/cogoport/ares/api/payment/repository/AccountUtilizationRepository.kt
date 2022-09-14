@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.payment.response.DueCountResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -45,7 +46,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """update account_utilizations set 
-              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id"""
+              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =`now()` where id=:id"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
@@ -730,6 +731,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
+<<<<<<< HEAD
         select
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count,
@@ -882,4 +884,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId: String): OverdueInvoicesResponse?
+
+    @Query(
+        """
+            Select
+            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) as due_count,
+            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) as overdue_count,
+            COALESCE(sum(case when (now()::date - due_date) between 0 and 30 then 1 else 0 end),0) as thirty_count,
+            COALESCE(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
+            COALESCE(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
+            COALESCE(sum(case when (now()::date - due_date) > 90 then 1 else 0 end),0) as ninety_plus,
+            COALESCE(sum(case when document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_count
+            From account_utilizations
+                   WHERE amount_curr <> 0
+                    AND amount_loc - pay_loc <> 0
+                    AND tagged_organization_id = :orgId
+                    AND acc_type in ('PINV','PDN','PCN')
+        """
+    )
+    suspend fun getKamPaymentCount(orgId: String): DueCountResponse?
 }
