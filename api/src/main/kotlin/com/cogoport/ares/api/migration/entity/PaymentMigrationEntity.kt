@@ -44,5 +44,6 @@ data class PaymentMigrationEntity(
     var bankId: UUID?,
     var tradePartyMappingId: UUID?,
     var taggedOrganizationId: UUID?,
-    var bankPayAmount: BigDecimal?
+    var bankPayAmount: BigDecimal?,
+    var migrated: Boolean?
 )

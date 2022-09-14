@@ -1,0 +1,5 @@
+ALTER TABLE account_utilizations
+ADD COLUMN migrated BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE payments
+ADD COLUMN migrated BOOLEAN DEFAULT FALSE;
