@@ -103,21 +103,13 @@ interface AresClient {
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 
-    @Get("/payments/kam-payment/overallStatsForKam")
+    @Get("/payments/dashboard/overallStatsForKam")
     suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse
 
-    @Get("/payments/kam-payment/overdueInvoiceByDueDate")
-    suspend fun getOverdueInvoicesByDueDateForKam(@QueryValue("docValue") docValue: List<String>): OverdueInvoicesResponse
-
-    @Get("/payments/kam-payment/overallStatsForCustomer")
+    @Get("/payments/dashboard/overallStatsForCustomer")
     suspend fun getOverallStatsForCustomer(
         @QueryValue("docValue") docValue: List<String>,
         @QueryValue("custId") custId: String
     ): OverallStatsForCustomerResponse
 
-    @Get("/payments/kam-payment/overdueInvoiceByDueDateForCustomer")
-    suspend fun getOverdueInvoicesByDueDateForCustomer(
-        @QueryValue("docValue") docValue: List<String>,
-        @QueryValue("custId")custId: String
-    ): OverdueInvoicesResponse
 }
