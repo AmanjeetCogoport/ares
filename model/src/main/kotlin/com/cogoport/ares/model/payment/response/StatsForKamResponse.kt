@@ -1,6 +1,5 @@
 package com.cogoport.ares.model.payment.response
 
-
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -14,13 +13,11 @@ import java.math.BigDecimal
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class OverallStatsForKamResponse(
-    @JsonProperty("proformaInvoices")
-    val proformaInvoices: List<StatsForKamResponse?>,
-    @JsonProperty("dueForPayment")
-    val dueForPayment: List<StatsForKamResponse?>,
-    @JsonProperty("overdueInvoices")
-    val overdueInvoices: List<StatsForKamResponse?>,
-    @JsonProperty("totalReceivables")
-    val totalReceivables: List<StatsForKamResponse?>
+data class StatsForKamResponse(
+    @JsonProperty("totalAmount")
+    val totalAmount: BigDecimal? = 0.toBigDecimal(),
+    @JsonProperty("InvoicesCount")
+    val invoicesCount: Int? = 0,
+    @JsonProperty("customersCount")
+    val customersCount: Int? = 0
 )

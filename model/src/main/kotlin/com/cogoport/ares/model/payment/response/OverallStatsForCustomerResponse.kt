@@ -14,13 +14,15 @@ import java.math.BigDecimal
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class OverallStatsForKamResponse(
+data class OverallStatsForCustomerResponse(
     @JsonProperty("proformaInvoices")
-    val proformaInvoices: List<StatsForKamResponse?>,
+    val proformaInvoices: List<StatsForCustomerResponse?>,
     @JsonProperty("dueForPayment")
-    val dueForPayment: List<StatsForKamResponse?>,
+    val dueForPayment: List<StatsForCustomerResponse?>,
     @JsonProperty("overdueInvoices")
-    val overdueInvoices: List<StatsForKamResponse?>,
+    val overdueInvoices: List<StatsForCustomerResponse?>,
     @JsonProperty("totalReceivables")
-    val totalReceivables: List<StatsForKamResponse?>
+    val totalReceivables: List<StatsForCustomerResponse?>,
+    @JsonProperty("onAccountPayment")
+    val onAccountPayment: BigDecimal? = 0.toBigDecimal()
 )

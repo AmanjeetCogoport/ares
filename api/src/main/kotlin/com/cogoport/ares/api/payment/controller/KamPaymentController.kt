@@ -2,10 +2,12 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.service.interfaces.KamPaymentService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
 import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 
@@ -15,28 +17,26 @@ class KamPaymentController {
     @Inject
     lateinit var kamPaymentService: KamPaymentService
 
-    @Get("/proforma-invoices")
-    suspend fun getProformaInvoicesForKam(proformaIds: List<String>): OverallStatsForKamResponse {
-        return Response<OverallStatsForKamResponse>().ok(kamPaymentService.getProformaInvoicesForKam(proformaIds))
-    }
-
-    @Get("/duePayment")
-    suspend fun getDuePaymentForKam(proformaIds: List<String>): OverallStatsForKamResponse {
-        return Response<OverallStatsForKamResponse>().ok(kamPaymentService.getDueForPaymentForKam(proformaIds))
-    }
-
-    @Get("/overdueInvoices")
-    suspend fun getOverdueInvoicesForKam(proformaIds: List<String>): OverallStatsForKamResponse {
-        return Response<OverallStatsForKamResponse>().ok(kamPaymentService.getOverdueInvoicesForKam(proformaIds))
-    }
-
-    @Get("/totalReceivables")
-    suspend fun getTotalReceivablesForKam(proformaIds: List<String>): OverallStatsForKamResponse {
-        return Response<OverallStatsForKamResponse>().ok(kamPaymentService.getTotalReceivablesForKam(proformaIds))
+    @Get("/overallStatsForKam")
+    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse {
+        return Response<OverallStatsForKamResponse>().ok(kamPaymentService.getOverallStatsForKam(docValue))
     }
 
     @Get("/overdueInvoiceByDueDate")
-    suspend fun getOverdueInvoicesByDueDateForKam(proformaIds: List<String>): OverdueInvoicesResponse {
-        return Response<OverdueInvoicesResponse>().ok(kamPaymentService.getOverdueInvoicesByDueDateForKam(proformaIds))
+    suspend fun getOverdueInvoicesByDueDateForKam(@QueryValue("docValue") docValue: List<String>): OverdueInvoicesResponse {
+        return Response<OverdueInvoicesResponse>().ok(kamPaymentService.getOverdueInvoicesByDueDateForKam(docValue))
     }
+
+    @Get("/overallStatsForCustomer")
+    suspend fun getOverallStatsForCustomer(@QueryValue("docValue") docValue: List<String>,
+                                           @QueryValue("custId")custId: String): OverallStatsForCustomerResponse {
+        return Response<OverallStatsForCustomerResponse>().ok(kamPaymentService.getOverallStatsForCustomer(docValue, custId))
+    }
+
+    @Get("/overdueInvoiceByDueDateForCustomer")
+    suspend fun getOverdueInvoicesByDueDateForCustomer(@QueryValue("docValue") docValue: List<String>,
+                                                       @QueryValue("custId")custId: String): OverdueInvoicesResponse {
+        return Response<OverdueInvoicesResponse>().ok(kamPaymentService.getOverdueInvoicesByDueDateForCustomer(docValue, custId))
+    }
+
 }
