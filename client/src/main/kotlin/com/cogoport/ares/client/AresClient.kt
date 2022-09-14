@@ -13,7 +13,6 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
-import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
@@ -21,7 +20,19 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.*
+import com.cogoport.ares.model.payment.response.AccountCollectionResponse
+import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
+import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.BulkPaymentResponse
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.response.OrgPayableResponse
+import com.cogoport.ares.model.payment.response.OutstandingResponse
+import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.DueCountResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
@@ -34,7 +45,6 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
-import java.util.UUID
 
 @Client(id = "ares")
 interface AresClient {
