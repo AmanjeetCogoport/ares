@@ -13,11 +13,11 @@ class KamPaymentServiceImpl : KamPaymentService {
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
-    override suspend fun getOverallStatsForKam(proformaIds: List<String>): OverallStatsForKamResponse {
-        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(proformaIds)
-        val duePayment = accountUtilizationRepository.getDuePayment(proformaIds)
-        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(proformaIds)
-        val totalReceivables = accountUtilizationRepository.getTotalReceivables(proformaIds)
+    override suspend fun getOverallStatsForKam(docValue: List<String>): OverallStatsForKamResponse {
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(docValue)
+        val duePayment = accountUtilizationRepository.getDuePayment(docValue)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(docValue)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivables(docValue)
 
         return OverallStatsForKamResponse(
             proformaInvoices = profromaInvoices,
@@ -27,29 +27,20 @@ class KamPaymentServiceImpl : KamPaymentService {
         )
     }
 
-    override suspend fun getOverdueInvoicesByDueDateForKam(proformaIds: List<String>): OverdueInvoicesResponse {
-        val response = accountUtilizationRepository.getOverdueInvoices(proformaIds)
-        return OverdueInvoicesResponse(
-            thirtyAmount = response.ThirtyAmount,
-            sixtyAmount = response.SixtyAmount,
-            ninetyAmount = response.NinetyAmount,
-            ninetyPlusAmount = response.NinetyPlusAmount,
-            thirtyCount = response.ThirtyCount,
-            sixtyCount = response.SixtyCount,
-            ninetyCount = response.NinetyCount,
-            ninetyPlusCount = response.NinetyPlusCount
-        )
+    override suspend fun getOverdueInvoicesByDueDateForKam(docValue: List<String>): OverdueInvoicesResponse {
+        val response = accountUtilizationRepository.getOverdueInvoices(docValue)
+        return response
     }
 
     override suspend fun getOverallStatsForCustomer(
-        proformaIds: List<String>,
+        docValue: List<String>,
         custId: String
     ): OverallStatsForCustomerResponse {
-        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(proformaIds, custId)
-        val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(proformaIds, custId)
-        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(proformaIds, custId)
-        val totalReceivables = accountUtilizationRepository.getTotalReceivablesForCustomer(proformaIds, custId)
-        val onAccountPayment = accountUtilizationRepository.getOnAccountPaymentForCustomer(proformaIds, custId)
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(docValue, custId)
+        val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(docValue, custId)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivablesForCustomer(docValue, custId)
+        val onAccountPayment = accountUtilizationRepository.getOnAccountPaymentForCustomer(docValue, custId)
 
         return OverallStatsForCustomerResponse(
             proformaInvoices = profromaInvoices,
@@ -61,20 +52,11 @@ class KamPaymentServiceImpl : KamPaymentService {
     }
 
     override suspend fun getOverdueInvoicesByDueDateForCustomer(
-        proformaIds: List<String>,
+        docValue: List<String>,
         custId: String
     ): OverdueInvoicesResponse {
-        val response = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(proformaIds, custId)
-        return OverdueInvoicesResponse(
-            thirtyAmount = response.ThirtyAmount,
-            sixtyAmount = response.SixtyAmount,
-            ninetyAmount = response.NinetyAmount,
-            ninetyPlusAmount = response.NinetyPlusAmount,
-            thirtyCount = response.ThirtyCount,
-            sixtyCount = response.SixtyCount,
-            ninetyCount = response.NinetyCount,
-            ninetyPlusCount = response.NinetyPlusCount
-        )
+        val response = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(docValue, custId)
+        return response
     }
 
 }

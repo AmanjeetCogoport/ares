@@ -6,6 +6,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.plutus.model.invoice.enums.TradeType
@@ -731,7 +732,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         select
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as invoices_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and and document_value in (:ids) and document_status = 'PROFORMA' and acc_mode = 'AR' ) as customers_count
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status = 'PROFORMA' and acc_mode = 'AR' ) as customers_count
         from account_utilizations
         where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
     """
@@ -790,7 +791,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and document_value in (:ids)
         """
     )
-    suspend fun getOverdueInvoices(ids: List<String>): OverdueInvoices
+    suspend fun getOverdueInvoices(ids: List<String>): OverdueInvoicesResponse
 
     @Query(
         """
@@ -880,5 +881,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
         """
     )
-    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId:  String): OverdueInvoices
+    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId:  String): OverdueInvoicesResponse
 }

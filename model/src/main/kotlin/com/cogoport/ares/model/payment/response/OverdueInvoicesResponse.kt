@@ -15,19 +15,19 @@ import java.math.BigDecimal
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OverdueInvoicesResponse(
     @JsonProperty("thirtyAmount")
-    val thirtyAmount: BigDecimal?,
+    val thirtyAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("sixtyAmount")
-    val sixtyAmount: BigDecimal?,
+    val sixtyAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("ninetyAmount")
-    val ninetyAmount: BigDecimal?,
+    val ninetyAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("ninetyPlusAmount")
-    val ninetyPlusAmount: BigDecimal?,
+    val ninetyPlusAmount: BigDecimal? = 0.toBigDecimal(),
     @JsonProperty("thirtyCount")
-    val thirtyCount: Int?,
+    val thirtyCount: Int? = 0,
     @JsonProperty("sixtyCount")
-    val sixtyCount: Int?,
+    val sixtyCount: Int? = 0,
     @JsonProperty("ninetyCount")
-    val ninetyCount: Int?,
+    val ninetyCount: Int? = 0,
     @JsonProperty("ninetyPlusCount")
-    val ninetyPlusCount: Int?,
+    val ninetyPlusCount: Int? = 0
 )
