@@ -730,9 +730,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as InvoicesCount,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status = 'PROFORMA' and acc_mode = 'AR' ) as customersCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status = 'PROFORMA' and acc_mode = 'AR' ) as customers_count
         from account_utilizations
         where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
     """
@@ -741,9 +741,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date < now()::date ) as customersCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date < now()::date ) as customers_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date < now()::date
         
@@ -754,9 +754,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date >= now()::date  ) as customersCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date >= now()::date  ) as customers_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date >= now()::date
     """
@@ -766,9 +766,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR') as customersCount
+        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR') as customers_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
     """
@@ -778,26 +778,26 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select 
-        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirtyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixtyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninetyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninetyPlusAmount,
-        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirtyCount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixtyCount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninetyCount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninetyPlusCount
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
+        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
+        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirty_count,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
+        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninety_plus_count
         from account_utilizations
         where acc_mode = 'AR' 
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and document_value in (:ids)
         """
     )
-    suspend fun getOverdueInvoices(ids: List<String>): OverdueInvoicesResponse
+    suspend fun getOverdueInvoices(ids: List<String>): List<OverdueInvoicesResponse?>
 
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as InvoicesCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
         and tagged_organization_id = :custId::uuid
@@ -809,8 +809,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
         and due_date < now()::date
@@ -823,8 +823,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
         and due_date >= now()::date
@@ -837,8 +837,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as totalAmount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as InvoicesCount
+        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
         and document_value in (:ids)
@@ -851,7 +851,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as onAccountPayment
+        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as on_account_payment
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
         and document_value in (:ids)
@@ -865,14 +865,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select 
-        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirtyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixtyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninetyAmount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninetyPlusAmount,
-        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirtyCount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixtyCount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninetyCount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninetyPlusCount
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
+        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
+        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirty_count,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
+        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninety_plus_count
         from account_utilizations
         where acc_mode = 'AR' 
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') 
@@ -881,5 +881,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
         """
     )
-    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId:  String): OverdueInvoicesResponse
+    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId:  String): List<OverdueInvoicesResponse?>
 }

@@ -23,16 +23,7 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
-import com.cogoport.ares.model.payment.response.DpoResponse
-import com.cogoport.ares.model.payment.response.DsoResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.*
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -376,5 +367,42 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getLedgerAmount(data: SearchResponse<Void>?): BigDecimal {
         return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
+    }
+
+    override suspend fun getOverallStatsForKam(docValue: List<String>): OverallStatsForKamResponse {
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(docValue)
+        val duePayment = accountUtilizationRepository.getDuePayment(docValue)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(docValue)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivables(docValue)
+        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoices(docValue)
+
+        return OverallStatsForKamResponse(
+            proformaInvoices = profromaInvoices,
+            dueForPayment = duePayment,
+            overdueInvoices = overdueInvoice,
+            totalReceivables = totalReceivables,
+            overDueInvoicesByDueDate = overdueInvoicesByDueDate
+        )
+    }
+
+    override suspend fun getOverallStatsForCustomer(
+        docValue: List<String>,
+        custId: String
+    ): OverallStatsForCustomerResponse {
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(docValue, custId)
+        val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(docValue, custId)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivablesForCustomer(docValue, custId)
+        val onAccountPayment = accountUtilizationRepository.getOnAccountPaymentForCustomer(docValue, custId)
+        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(docValue,custId)
+
+        return OverallStatsForCustomerResponse(
+            proformaInvoices = profromaInvoices,
+            dueForPayment = duePayment,
+            overdueInvoices = overdueInvoice,
+            totalReceivables = totalReceivables,
+            onAccountPayment = onAccountPayment,
+            overDueInvoicesByDueDate = overdueInvoicesByDueDate
+        )
     }
 }

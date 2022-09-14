@@ -24,5 +24,7 @@ data class OverallStatsForCustomerResponse(
     @JsonProperty("totalReceivables")
     val totalReceivables: List<StatsForCustomerResponse?>,
     @JsonProperty("onAccountPayment")
-    val onAccountPayment: BigDecimal? = 0.toBigDecimal()
+    val onAccountPayment: BigDecimal? = 0.toBigDecimal(),
+    @JsonProperty("overDueInvoices")
+    val overDueInvoicesByDueDate: List<OverdueInvoicesResponse?>
 )
