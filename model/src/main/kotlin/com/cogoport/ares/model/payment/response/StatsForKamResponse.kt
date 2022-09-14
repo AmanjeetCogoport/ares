@@ -7,7 +7,7 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class StatsForKamResponse(
-        val totalAmount: BigDecimal?,
-        val invoicesCount: Int?,
-        val customersCount: Int?
+    val totalAmount: BigDecimal?,
+    val invoicesCount: Int?,
+    val customersCount: Int?
 )
