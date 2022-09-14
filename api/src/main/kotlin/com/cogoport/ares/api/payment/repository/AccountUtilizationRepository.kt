@@ -9,7 +9,6 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import com.cogoport.plutus.model.invoice.enums.TradeType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -737,7 +736,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
     """
     )
-    suspend fun getProformaInvoicesStats(ids : List<String>): List<StatsForKamResponse?>
+    suspend fun getProformaInvoicesStats(ids: List<String>): StatsForKamResponse?
     @Query(
         """
         select
@@ -749,7 +748,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         
     """
     )
-    suspend fun getDuePayment(ids : List<String>): List<StatsForKamResponse?>
+    suspend fun getDuePayment(ids: List<String>): StatsForKamResponse?
 
     @Query(
         """
@@ -761,7 +760,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date >= now()::date
     """
     )
-    suspend fun getOverdueInvoicesStats(ids : List<String>): List<StatsForKamResponse?>
+    suspend fun getOverdueInvoicesStats(ids: List<String>): StatsForKamResponse?
 
     @Query(
         """
@@ -773,7 +772,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
     """
     )
-    suspend fun getTotalReceivables(ids : List<String>): List<StatsForKamResponse?>
+    suspend fun getTotalReceivables(ids: List<String>): StatsForKamResponse?
 
     @Query(
         """
@@ -791,7 +790,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and document_value in (:ids)
         """
     )
-    suspend fun getOverdueInvoices(ids: List<String>): List<OverdueInvoicesResponse?>
+    suspend fun getOverdueInvoices(ids: List<String>): OverdueInvoicesResponse?
 
     @Query(
         """
@@ -804,7 +803,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
     """
     )
-    suspend fun getProformaInvoicesForCustomer(ids : List<String>, custId: String): List<StatsForCustomerResponse?>
+    suspend fun getProformaInvoicesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
 
     @Query(
         """
@@ -818,7 +817,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
     """
     )
-    suspend fun getDuePaymentForCustomer(ids : List<String>, custId: String): List<StatsForCustomerResponse?>
+    suspend fun getDuePaymentForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
 
     @Query(
         """
@@ -832,7 +831,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
     """
     )
-    suspend fun getOverdueInvoicesForCustomer(ids : List<String>, custId: String): List<StatsForCustomerResponse?>
+    suspend fun getOverdueInvoicesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
 
     @Query(
         """
@@ -846,7 +845,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
     """
     )
-    suspend fun getTotalReceivablesForCustomer(ids : List<String>, custId: String): List<StatsForCustomerResponse?>
+    suspend fun getTotalReceivablesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
 
     @Query(
         """
@@ -859,8 +858,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
     """
     )
-    suspend fun getOnAccountPaymentForCustomer(ids : List<String>, custId: String): BigDecimal
-
+    suspend fun getOnAccountPaymentForCustomer(ids: List<String>, custId: String): BigDecimal
 
     @Query(
         """
@@ -881,5 +879,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by tagged_organization_id
         """
     )
-    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId:  String): List<OverdueInvoicesResponse?>
+    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId: String): OverdueInvoicesResponse?
 }

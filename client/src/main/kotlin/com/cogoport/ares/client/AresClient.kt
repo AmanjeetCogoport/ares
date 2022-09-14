@@ -110,11 +110,14 @@ interface AresClient {
     suspend fun getOverdueInvoicesByDueDateForKam(@QueryValue("docValue") docValue: List<String>): OverdueInvoicesResponse
 
     @Get("/payments/kam-payment/overallStatsForCustomer")
-    suspend fun getOverallStatsForCustomer(@QueryValue("docValue") docValue: List<String>,
-                                           @QueryValue("custId") custId: String): OverallStatsForCustomerResponse
-
+    suspend fun getOverallStatsForCustomer(
+        @QueryValue("docValue") docValue: List<String>,
+        @QueryValue("custId") custId: String
+    ): OverallStatsForCustomerResponse
 
     @Get("/payments/kam-payment/overdueInvoiceByDueDateForCustomer")
-    suspend fun getOverdueInvoicesByDueDateForCustomer(@QueryValue("docValue") docValue: List<String>,
-                                                       @QueryValue("custId")custId: String): OverdueInvoicesResponse
+    suspend fun getOverdueInvoicesByDueDateForCustomer(
+        @QueryValue("docValue") docValue: List<String>,
+        @QueryValue("custId")custId: String
+    ): OverdueInvoicesResponse
 }

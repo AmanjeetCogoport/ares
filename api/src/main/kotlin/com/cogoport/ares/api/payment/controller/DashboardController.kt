@@ -83,8 +83,10 @@ class DashboardController {
     }
 
     @Get("/overallStatsForCustomer")
-    suspend fun getOverallStatsForCustomer(@QueryValue("docValue") docValue: List<String>,
-                                           @QueryValue("custId")custId: String): OverallStatsForCustomerResponse {
+    suspend fun getOverallStatsForCustomer(
+        @QueryValue("docValue") docValue: List<String>,
+        @QueryValue("custId")custId: String
+    ): OverallStatsForCustomerResponse {
         return Response<OverallStatsForCustomerResponse>().ok(dashboardService.getOverallStatsForCustomer(docValue, custId))
     }
 

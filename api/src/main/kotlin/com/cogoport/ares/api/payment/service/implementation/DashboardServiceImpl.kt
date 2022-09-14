@@ -394,7 +394,7 @@ class DashboardServiceImpl : DashboardService {
         val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)
         val totalReceivables = accountUtilizationRepository.getTotalReceivablesForCustomer(docValue, custId)
         val onAccountPayment = accountUtilizationRepository.getOnAccountPaymentForCustomer(docValue, custId)
-        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(docValue,custId)
+        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(docValue, custId)
 
         return OverallStatsForCustomerResponse(
             proformaInvoices = profromaInvoices,
