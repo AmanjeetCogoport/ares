@@ -136,6 +136,9 @@ open class KnockoffServiceImpl : KnockoffService {
         if (leftAmount.compareTo(BigDecimal.ZERO) == 0)
             paymentStatus = KnockOffStatus.FULL.name
 
+        if (leftAmount < 0.toBigDecimal())
+            paymentStatus = KnockOffStatus.OVERPAID.name
+
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
         try {
             emitPaymentStatus(accPayResponse)

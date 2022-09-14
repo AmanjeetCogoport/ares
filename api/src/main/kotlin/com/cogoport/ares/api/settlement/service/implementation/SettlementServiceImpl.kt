@@ -1636,6 +1636,8 @@ open class SettlementServiceImpl : SettlementService {
             "UNPAID"
         else if (accountUtilization.amountCurr > accountUtilization.payCurr)
             "PARTIAL"
+        else if (accountUtilization.amountCurr < accountUtilization.payCurr)
+            "OVERPAID"
         else
             "FULL"
 
