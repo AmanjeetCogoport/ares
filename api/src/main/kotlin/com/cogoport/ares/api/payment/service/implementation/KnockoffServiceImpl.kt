@@ -133,11 +133,8 @@ open class KnockoffServiceImpl : KnockoffService {
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
-        if (leftAmount.compareTo(BigDecimal.ZERO) == 0)
+        if (leftAmount <= 0.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
-
-        if (leftAmount < 0.toBigDecimal())
-            paymentStatus = KnockOffStatus.OVERPAID.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
         try {
