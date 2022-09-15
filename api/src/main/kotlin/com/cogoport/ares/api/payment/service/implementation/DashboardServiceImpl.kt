@@ -25,7 +25,18 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.*
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
+import com.cogoport.ares.model.payment.response.DpoResponse
+import com.cogoport.ares.model.payment.response.DsoResponse
+import com.cogoport.ares.model.payment.response.OrgPayableResponse
+import com.cogoport.ares.model.payment.response.OutstandingResponse
+import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
+import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -36,8 +47,6 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
-import java.util.*
-import kotlin.collections.HashMap
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -395,7 +404,7 @@ class DashboardServiceImpl : DashboardService {
         val listOfkamConsolidatedCount = accountUtilizationRepository.getKamPaymentCount(request.proformaNumbers, request.pageIndex, request.pageSize)
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
         for (ConsolidatedCount in listOfkamConsolidatedCount) {
-            var balance = getStatsForCustomer(ConsolidatedCount?.proformaNumbers!! , ConsolidatedCount?.bookingPartyId.toString())
+            var balance = getStatsForCustomer(ConsolidatedCount?.proformaNumbers!!, ConsolidatedCount?.bookingPartyId.toString())
             balance.kamProformaCount = ConsolidatedCount
             statsList.add(balance)
         }
