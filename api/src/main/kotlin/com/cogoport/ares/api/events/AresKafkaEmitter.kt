@@ -27,4 +27,10 @@ interface AresKafkaEmitter {
 
     @Topic("sage-jv-migration")
     fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+
+    @Topic("update-bill-archive")
+    fun emitUpdateBillsToArchive(billId: Long)
+
+    @Topic("update-invoice-archive")
+    fun emitUpdateInvoicesToArchive(invoiceId: Long)
 }

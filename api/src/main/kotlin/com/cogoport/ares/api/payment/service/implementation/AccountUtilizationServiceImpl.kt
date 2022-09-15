@@ -150,6 +150,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
         return listResponse[0]
     }
 
@@ -184,6 +185,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
             }
+            emitAccUtilizationToDemeter(accUtilizationRequest)
             result = true
         }
         return result
@@ -230,6 +232,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
@@ -294,6 +297,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
@@ -357,5 +361,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         }
         throw AresException(AresError.ERR_1205, "accountType")
+    }
+
+    private fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
+        try {
+            if (accUtilizationRequest.accType == AccountType.PINV)
+                aresKafkaEmitter.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)
+            else if (accUtilizationRequest.accType == AccountType.SINV)
+                aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 }
