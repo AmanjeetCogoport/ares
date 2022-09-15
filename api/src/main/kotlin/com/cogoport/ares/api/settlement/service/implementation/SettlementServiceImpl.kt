@@ -1619,7 +1619,7 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            val paidTds = document.settledTds - (document.tds ?: BigDecimal.ZERO)
+            val paidTds = document.settledTds
             updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
@@ -1639,8 +1639,8 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String? = null
     ) {
         when (accountUtilization.accType) {
-            AccountType.PINV -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
-            AccountType.SINV -> updateBalanceAmount(accountUtilization)
+            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
+            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization)
             else -> {}
         }
     }

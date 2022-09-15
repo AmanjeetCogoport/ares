@@ -31,4 +31,10 @@ interface AresKafkaEmitter {
 
     @Topic("update-bill-payment-status")
     fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
+
+    @Topic("update-bill-archive")
+    fun emitUpdateBillsToArchive(billId: Long)
+
+    @Topic("update-invoice-archive")
+    fun emitUpdateInvoicesToArchive(invoiceId: Long)
 }
