@@ -122,10 +122,9 @@ interface AresClient {
 
     @Get("/payments/dashboard/overallStatsForCustomers")
     suspend fun getOverallStatsForCustomers(
-        @QueryValue("docValue") docValue: List<String>,
-        @QueryValue("custId") custId: String
+        @PathVariable("proformaNumbers") proformaNumbers: List<String>,
+        @PathVariable("pageNumber") pageNumber: Int?,
+        @PathVariable("pageLimit") pageLimit: Int?
     ): OverallStatsForCustomerResponse
 
-    @Get("/due-for-payment")
-    suspend fun getKamPaymentCount(@PathVariable("proformaNumbers") proformaNumbers: List<String>, @PathVariable("pageNumber") pageNumber: Int?,@PathVariable("pageLimit") pageLimit: Int?): List<DueCountResponse?>
 }

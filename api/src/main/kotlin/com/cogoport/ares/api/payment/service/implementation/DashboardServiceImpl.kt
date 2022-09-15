@@ -23,18 +23,7 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
-import com.cogoport.ares.model.payment.response.DpoResponse
-import com.cogoport.ares.model.payment.response.DsoResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.*
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -45,6 +34,8 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
+import java.util.*
+import kotlin.collections.HashMap
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -397,12 +388,18 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOverallStatsForCustomers(
-        docValue: List<String>,
-        custId: List<String>
+        listOfConsolidatedAddresses: List<ConsolidatedAddresses>, proformaNumbers: List<String>,pageIndex: Int?, pageSize: Int?
     ): List<OverallStatsForCustomerResponse> {
+        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamPaymentCount(proformaNumbers, pageIndex, pageSize)
+        val mapOfBookingPartyId: HashMap<UUID, DueCountResponse?> = hashMapOf()
+        for(lic in listOfkamConsolidatedCount){
+            mapOfBookingPartyId.put(lic!!.bookingPartyID, lic)
+        }
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
-        for (id in custId) {
-            statsList.add(getStatsForCustomer(docValue, id))
+        for ( k in listOfConsolidatedAddresses) {
+            var balance = getStatsForCustomer(k.proformaNumbers as List<String>, k.bookingPartyId.toString())
+            balance.kamProformaCount = mapOfBookingPartyId.get(k.bookingPartyId)
+            statsList.add(balance)
         }
         return statsList
     }
@@ -422,7 +419,8 @@ class DashboardServiceImpl : DashboardService {
             overdueInvoices = overdueInvoice,
             totalReceivables = totalReceivables,
             onAccountPayment = onAccountPayment,
-            overDueInvoicesByDueDate = overdueInvoicesByDueDate
+            overDueInvoicesByDueDate = overdueInvoicesByDueDate,
+            kamProformaCount = null
         )
     }
 }

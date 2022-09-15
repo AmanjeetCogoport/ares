@@ -7,11 +7,12 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class OverallStatsForCustomerResponse(
-    val custId: String?,
-    val proformaInvoices: StatsForCustomerResponse?,
-    val dueForPayment: StatsForCustomerResponse?,
-    val overdueInvoices: StatsForCustomerResponse?,
-    val totalReceivables: StatsForCustomerResponse?,
-    val onAccountPayment: BigDecimal?,
-    val overDueInvoicesByDueDate: OverdueInvoicesResponse?
+    var custId: String?,
+    var kamProformaCount:DueCountResponse?,
+    var proformaInvoices: StatsForCustomerResponse?,
+    var dueForPayment: StatsForCustomerResponse?,
+    var overdueInvoices: StatsForCustomerResponse?,
+    var totalReceivables: StatsForCustomerResponse?,
+    var onAccountPayment: BigDecimal?,
+    var overDueInvoicesByDueDate: OverdueInvoicesResponse?
 )

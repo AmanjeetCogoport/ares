@@ -33,11 +33,4 @@ class InvoiceController {
     suspend fun addInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
         return accUtilService.add(invoiceRequest)
     }
-
-    @Get("/due-for-payment")
-    suspend fun getKamPaymentCount(@PathVariable("proformaNumbers") proformaNumbers: List<String>,
-                                   @PathVariable("pageNumber") pageNumber: Int?,
-                                   @PathVariable("pageLimit") pageLimit: Int?): List<DueCountResponse?> {
-        return accUtilRepo.getKamPaymentCount(proformaNumbers,pageNumber,pageLimit)
-    }
 }

@@ -895,25 +895,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId: String): OverdueInvoicesResponse?
 
-//    @Query(
-//        """
-//            Select
-//            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) as due_count,
-//            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) as overdue_count,
-//            COALESCE(sum(case when (now()::date - due_date) between 0 and 30 then 1 else 0 end),0) as thirty_count,
-//            COALESCE(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
-//            COALESCE(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
-//            COALESCE(sum(case when (now()::date - due_date) > 90 then 1 else 0 end),0) as ninety_plus,
-//            COALESCE(sum(case when document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_count
-//            From account_utilizations
-//                   WHERE amount_curr <> 0
-//                    AND amount_loc - pay_loc <> 0
-//                    AND tagged_organization_id = :orgId
-//                    AND acc_type in ('PINV','PDN','PCN')
-//        """
-//    )
-//    suspend fun getKamPaymentCount(orgId: String): DueCountResponse?
-
     @Query(
         """
             Select
@@ -934,5 +915,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getKamPaymentCount(proformaNumbers: List<String>,  pageIndex: Int?, pageSize: Int?,): List<DueCountResponse?>
+    suspend fun getKamPaymentCount(proformaNumbers: List<String>,  pageIndex: Int?, pageSize: Int?): List<DueCountResponse?>
 }

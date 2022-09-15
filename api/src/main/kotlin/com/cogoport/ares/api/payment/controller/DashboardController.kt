@@ -16,18 +16,8 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
-import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Delete
-import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.QueryValue
+import com.cogoport.ares.model.payment.response.*
+import io.micronaut.http.annotation.*
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -91,10 +81,12 @@ class DashboardController {
 
     @Get("/overallStatsForCustomers")
     suspend fun getOverallStatsForCustomers(
-        @QueryValue("docValue") docValue: List<String>,
-        @QueryValue("custId")custId: List<String>
+        @PathVariable("proformaNumbers") listOfConsolidatedAddresses: List<ConsolidatedAddresses>,
+        @PathVariable("proformaNumbers") proformaNumbers: List<String>,
+        @PathVariable("pageNumber") pageNumber: Int?,
+        @PathVariable("pageLimit") pageLimit: Int?
     ): List<OverallStatsForCustomerResponse> {
-        return Response<List<OverallStatsForCustomerResponse>>().ok(dashboardService.getOverallStatsForCustomers(docValue, custId))
+        return Response<List<OverallStatsForCustomerResponse>>().ok(dashboardService.getOverallStatsForCustomers(listOfConsolidatedAddresses,proformaNumbers,pageNumber,pageLimit))
     }
 
     /** To be Deleted */
