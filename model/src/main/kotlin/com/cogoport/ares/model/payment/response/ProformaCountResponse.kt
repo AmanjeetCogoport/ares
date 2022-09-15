@@ -2,7 +2,7 @@ package com.cogoport.ares.model.payment.response
 
 import java.util.UUID
 
-data class DueCountResponse(
+data class ProformaCountResponse(
     val bookingPartyId: UUID,
     val proformaNumbers: List<String>,
     val dueCount: Long,

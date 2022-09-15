@@ -17,7 +17,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.response.DueCountResponse
+import com.cogoport.ares.model.payment.response.ProformaCountResponse
 import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -57,7 +57,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """update account_utilizations set 
-              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =`now()` where id=:id"""
+              pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
@@ -916,5 +916,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getKamPaymentCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<DueCountResponse?>
+    suspend fun getKamProformaCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<ProformaCountResponse?>
 }

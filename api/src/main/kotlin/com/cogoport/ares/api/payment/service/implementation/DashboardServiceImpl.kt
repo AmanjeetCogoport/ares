@@ -401,7 +401,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStatsForCustomers(
         request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse> {
-        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamPaymentCount(request.proformaNumbers, request.pageIndex, request.pageSize)
+        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamProformaCount(request.proformaNumbers, request.pageIndex, request.pageSize)
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
         for (ConsolidatedCount in listOfkamConsolidatedCount) {
             var balance = getStatsForCustomer(ConsolidatedCount?.proformaNumbers!!, ConsolidatedCount?.bookingPartyId.toString())

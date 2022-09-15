@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
@@ -17,9 +16,6 @@ class InvoiceController {
 
     @Inject
     lateinit var accUtilService: AccountUtilizationService
-
-    @Inject
-    lateinit var accUtilRepo: AccountUtilizationRepository
 
     @Post("/add-bulk")
     suspend fun addBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
