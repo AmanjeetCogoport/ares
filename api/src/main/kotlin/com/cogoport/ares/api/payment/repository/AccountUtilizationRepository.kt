@@ -17,7 +17,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.response.ProformaCountResponse
+import com.cogoport.ares.model.payment.response.CustomerListCountResponse
 import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -916,5 +916,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getKamProformaCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<ProformaCountResponse?>
+    suspend fun getKamProformaCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<CustomerListCountResponse?>
 }
