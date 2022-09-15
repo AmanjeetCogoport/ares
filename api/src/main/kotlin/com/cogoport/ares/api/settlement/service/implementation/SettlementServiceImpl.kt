@@ -495,7 +495,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
+                "${request.query}%",
                 accMode
             )
         if (documentEntity.isEmpty())
@@ -517,7 +517,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%"
+                "${request.query}%"
             )
         for (doc in documentModel) {
             val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
@@ -1069,7 +1069,8 @@ open class SettlementServiceImpl : SettlementService {
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
-        val debitDoc = fetchedDoc.groupBy { it?.destinationId }
+        val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
+        val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
         val sourceCurr =
             fetchedDoc.sumOf {
                 it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong()))
@@ -1080,7 +1081,8 @@ open class SettlementServiceImpl : SettlementService {
             accType = AccountType.valueOf(settlementType.toString()),
             amount = sourceCurr,
             updatedBy = deletedBy,
-            updatedByUserType = deletedByUserType
+            updatedByUserType = deletedByUserType,
+            tdsPaid = paymentTdsDoc?.amount
         )
         for (debits in debitDoc) {
             val settledDoc =
@@ -1307,7 +1309,7 @@ open class SettlementServiceImpl : SettlementService {
                     performDbOperation
                 ) {
                     createTdsRecord(
-                        sourceId = invoice.documentNo.toLong(),
+                        sourceId = payment.documentNo.toLong(),
                         destId = payment.documentNo.toLong(),
                         destType = payment.accountType,
                         currency = payment.currency,
@@ -1545,7 +1547,7 @@ open class SettlementServiceImpl : SettlementService {
         val paymentUtilized =
             paidAmount +
                 if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
-                    payment.tds!!
+                    (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
                 else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized, request.createdBy, request.createdByUserType) // Update Payment
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy, request.createdByUserType) // Update Invoice
