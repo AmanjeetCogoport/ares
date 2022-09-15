@@ -8,9 +8,11 @@ import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.payment.AgeingBucketZone
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
@@ -380,12 +382,12 @@ class DashboardServiceImpl : DashboardService {
         return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
     }
 
-    override suspend fun getOverallStatsForKam(docValue: List<String>): OverallStatsForKamResponse {
-        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(docValue)
-        val duePayment = accountUtilizationRepository.getDuePayment(docValue)
-        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(docValue)
-        val totalReceivables = accountUtilizationRepository.getTotalReceivables(docValue)
-        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoices(docValue)
+    override suspend fun getOverallStatsForKam(request: KamPaymentRequest): OverallStatsForKamResponse {
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(request.docValue)
+        val duePayment = accountUtilizationRepository.getDuePayment(request.docValue)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(request.docValue)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivables(request.docValue)
+        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoices(request.docValue)
 
         return OverallStatsForKamResponse(
             proformaInvoices = profromaInvoices,
@@ -397,12 +399,11 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOverallStatsForCustomers(
-        docValue: List<String>,
-        custId: List<String>
+        request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse> {
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
-        for (id in custId) {
-            statsList.add(getStatsForCustomer(docValue, id))
+        for (id in request.custId) {
+            statsList.add(getStatsForCustomer(request.docValue, id))
         }
         return statsList
     }

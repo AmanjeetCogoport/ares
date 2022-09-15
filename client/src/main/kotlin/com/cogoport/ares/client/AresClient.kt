@@ -2,8 +2,10 @@ package com.cogoport.ares.client
 
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.OutstandingList
@@ -116,12 +118,11 @@ interface AresClient {
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 
-    @Get("/payments/dashboard/overallStatsForKam")
-    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse
+    @Post("/payments/dashboard/overallStatsForKam{?request*}")
+    suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): OverallStatsForKamResponse
 
-    @Get("/payments/dashboard/overallStatsForCustomers")
+    @Post("/payments/dashboard/overallStatsForCustomers{?request*}")
     suspend fun getOverallStatsForCustomers(
-        @QueryValue("docValue") docValue: List<String>,
-        @QueryValue("custId") custId: List<String>
+        @Valid @Body request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse>
 }

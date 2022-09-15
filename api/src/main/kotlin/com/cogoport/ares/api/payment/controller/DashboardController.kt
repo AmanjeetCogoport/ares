@@ -4,8 +4,10 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
@@ -24,9 +26,11 @@ import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
@@ -84,17 +88,16 @@ class DashboardController {
         return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
     }
 
-    @Get("/overallStatsForKam")
-    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse {
-        return Response<OverallStatsForKamResponse>().ok(dashboardService.getOverallStatsForKam(docValue))
+    @Post("/overallStatsForKam{?request*}")
+    suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): OverallStatsForKamResponse {
+        return Response<OverallStatsForKamResponse>().ok(dashboardService.getOverallStatsForKam(request))
     }
 
-    @Get("/overallStatsForCustomers")
+    @Post("/overallStatsForCustomers{?request*}")
     suspend fun getOverallStatsForCustomers(
-        @QueryValue("docValue") docValue: List<String>,
-        @QueryValue("custId")custId: List<String>
+        @Valid @Body request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse> {
-        return Response<List<OverallStatsForCustomerResponse>>().ok(dashboardService.getOverallStatsForCustomers(docValue, custId))
+        return Response<List<OverallStatsForCustomerResponse>>().ok(dashboardService.getOverallStatsForCustomers(request))
     }
 
     /** To be Deleted */
