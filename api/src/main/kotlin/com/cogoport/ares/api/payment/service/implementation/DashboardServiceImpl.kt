@@ -23,7 +23,18 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.*
+import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
+import com.cogoport.ares.model.payment.response.DpoResponse
+import com.cogoport.ares.model.payment.response.DsoResponse
+import com.cogoport.ares.model.payment.response.OrgPayableResponse
+import com.cogoport.ares.model.payment.response.OutstandingResponse
+import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
+import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -385,10 +396,18 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getOverallStatsForCustomer(
+    override suspend fun getOverallStatsForCustomers(
         docValue: List<String>,
-        custId: String
-    ): OverallStatsForCustomerResponse {
+        custId: List<String>
+    ): List<OverallStatsForCustomerResponse> {
+        var statsList = mutableListOf<OverallStatsForCustomerResponse>()
+        for (id in custId) {
+            statsList.add(getStatsForCustomer(docValue, id))
+        }
+        return statsList
+    }
+
+    suspend fun getStatsForCustomer(docValue: List<String>, custId: String): OverallStatsForCustomerResponse {
         val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(docValue, custId)
         val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(docValue, custId)
         val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)
@@ -397,6 +416,7 @@ class DashboardServiceImpl : DashboardService {
         val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoicesByDueDateForCustomer(docValue, custId)
 
         return OverallStatsForCustomerResponse(
+            custId = custId,
             proformaInvoices = profromaInvoices,
             dueForPayment = duePayment,
             overdueInvoices = overdueInvoice,

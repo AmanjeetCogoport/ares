@@ -7,6 +7,7 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class OverallStatsForCustomerResponse(
+    val custId: String?,
     val proformaInvoices: StatsForCustomerResponse?,
     val dueForPayment: StatsForCustomerResponse?,
     val overdueInvoices: StatsForCustomerResponse?,

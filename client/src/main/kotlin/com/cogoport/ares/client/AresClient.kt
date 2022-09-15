@@ -120,8 +120,8 @@ interface AresClient {
     @Get("/payments/dashboard/overallStatsForKam")
     suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse
 
-    @Get("/payments/dashboard/overallStatsForCustomer")
-    suspend fun getOverallStatsForCustomer(
+    @Get("/payments/dashboard/overallStatsForCustomers")
+    suspend fun getOverallStatsForCustomers(
         @QueryValue("docValue") docValue: List<String>,
         @QueryValue("custId") custId: String
     ): OverallStatsForCustomerResponse
