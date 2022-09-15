@@ -1,7 +1,9 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
@@ -27,6 +29,6 @@ interface DashboardService {
     suspend fun createIndex(index: String)
     suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>
     suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
-    suspend fun getOverallStatsForKam(docValue: List<String>): OverallStatsForKamResponse
-    suspend fun getOverallStatsForCustomers(listOfConsolidatedAddresses: List<ConsolidatedAddresses>, proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<OverallStatsForCustomerResponse>
+    suspend fun getOverallStatsForKam(request: KamPaymentRequest): OverallStatsForKamResponse
+    suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): List<OverallStatsForCustomerResponse>
 }

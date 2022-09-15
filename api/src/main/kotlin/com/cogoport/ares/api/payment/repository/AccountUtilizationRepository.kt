@@ -758,7 +758,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
         (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date < now()::date ) as customers_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date < now()::date
+        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date >= now()::date
         
     """
     )
@@ -771,7 +771,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
         (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date >= now()::date  ) as customers_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date >= now()::date
+        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date < now()::date
     """
     )
     suspend fun getOverdueInvoicesStats(ids: List<String>): StatsForKamResponse?
@@ -898,6 +898,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             Select
+            array_agg(document_value) as proforma_numbers,
             tagged_organization_id as booking_party_id,
             COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) as due_count,
             COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) as overdue_count,
@@ -915,5 +916,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getKamPaymentCount(proformaNumbers: List<String>,  pageIndex: Int?, pageSize: Int?): List<DueCountResponse?>
+    suspend fun getKamPaymentCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<DueCountResponse?>
 }

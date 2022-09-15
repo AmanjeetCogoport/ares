@@ -2,8 +2,10 @@ package com.cogoport.ares.client
 
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.OutstandingList
@@ -27,15 +29,14 @@ import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
-import com.cogoport.ares.model.payment.response.DueCountResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForKamResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
@@ -117,14 +118,11 @@ interface AresClient {
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 
-    @Get("/payments/dashboard/overallStatsForKam")
-    suspend fun getOverallStatsForKam(@QueryValue("docValue") docValue: List<String>): OverallStatsForKamResponse
+    @Post("/payments/dashboard/overallStatsForKam{?request*}")
+    suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): OverallStatsForKamResponse
 
-    @Get("/payments/dashboard/overallStatsForCustomers")
+    @Post("/payments/dashboard/overallStatsForCustomers{?request*}")
     suspend fun getOverallStatsForCustomers(
-        @PathVariable("proformaNumbers") proformaNumbers: List<String>,
-        @PathVariable("pageNumber") pageNumber: Int?,
-        @PathVariable("pageLimit") pageLimit: Int?
-    ): OverallStatsForCustomerResponse
-
+        @Valid @Body request: CustomerStatsRequest
+    ): List<OverallStatsForCustomerResponse>
 }

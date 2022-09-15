@@ -8,9 +8,11 @@ import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.payment.AgeingBucketZone
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
@@ -371,12 +373,12 @@ class DashboardServiceImpl : DashboardService {
         return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
     }
 
-    override suspend fun getOverallStatsForKam(docValue: List<String>): OverallStatsForKamResponse {
-        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(docValue)
-        val duePayment = accountUtilizationRepository.getDuePayment(docValue)
-        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(docValue)
-        val totalReceivables = accountUtilizationRepository.getTotalReceivables(docValue)
-        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoices(docValue)
+    override suspend fun getOverallStatsForKam(request: KamPaymentRequest): OverallStatsForKamResponse {
+        val profromaInvoices = accountUtilizationRepository.getProformaInvoicesStats(request.docValue)
+        val duePayment = accountUtilizationRepository.getDuePayment(request.docValue)
+        val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesStats(request.docValue)
+        val totalReceivables = accountUtilizationRepository.getTotalReceivables(request.docValue)
+        val overdueInvoicesByDueDate = accountUtilizationRepository.getOverdueInvoices(request.docValue)
 
         return OverallStatsForKamResponse(
             proformaInvoices = profromaInvoices,
@@ -388,23 +390,19 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOverallStatsForCustomers(
-        listOfConsolidatedAddresses: List<ConsolidatedAddresses>, proformaNumbers: List<String>,pageIndex: Int?, pageSize: Int?
+        request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse> {
-        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamPaymentCount(proformaNumbers, pageIndex, pageSize)
-        val mapOfBookingPartyId: HashMap<UUID, DueCountResponse?> = hashMapOf()
-        for(lic in listOfkamConsolidatedCount){
-            mapOfBookingPartyId.put(lic!!.bookingPartyID, lic)
-        }
+        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamPaymentCount(request.proformaNumbers, request.pageIndex, request.pageSize)
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
-        for ( k in listOfConsolidatedAddresses) {
-            var balance = getStatsForCustomer(k.proformaNumbers as List<String>, k.bookingPartyId.toString())
-            balance.kamProformaCount = mapOfBookingPartyId.get(k.bookingPartyId)
+        for (ConsolidatedCount in listOfkamConsolidatedCount) {
+            var balance = getStatsForCustomer(ConsolidatedCount?.proformaNumbers!! , ConsolidatedCount?.bookingPartyId.toString())
+            balance.kamProformaCount = ConsolidatedCount
             statsList.add(balance)
         }
         return statsList
     }
 
-    suspend fun getStatsForCustomer(docValue: List<String>, custId: String): OverallStatsForCustomerResponse {
+    private suspend fun getStatsForCustomer(docValue: List<String>, custId: String): OverallStatsForCustomerResponse {
         val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(docValue, custId)
         val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(docValue, custId)
         val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)

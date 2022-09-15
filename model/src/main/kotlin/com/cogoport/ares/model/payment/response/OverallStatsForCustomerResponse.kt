@@ -8,11 +8,12 @@ import java.math.BigDecimal
 @MappedEntity
 data class OverallStatsForCustomerResponse(
     var custId: String?,
-    var kamProformaCount:DueCountResponse?,
+    var kamProformaCount: DueCountResponse?,
     var proformaInvoices: StatsForCustomerResponse?,
     var dueForPayment: StatsForCustomerResponse?,
     var overdueInvoices: StatsForCustomerResponse?,
     var totalReceivables: StatsForCustomerResponse?,
     var onAccountPayment: BigDecimal?,
-    var overDueInvoicesByDueDate: OverdueInvoicesResponse?
+    var overDueInvoicesByDueDate: OverdueInvoicesResponse?,
+    var custName: String? = null
 )
