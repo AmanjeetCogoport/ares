@@ -495,7 +495,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
+                "${request.query}%",
                 accMode
             )
         if (documentEntity.isEmpty())
@@ -517,7 +517,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%"
+                "${request.query}%"
             )
         for (doc in documentModel) {
             val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
