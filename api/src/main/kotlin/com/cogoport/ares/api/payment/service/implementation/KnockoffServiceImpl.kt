@@ -133,7 +133,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
-        if (leftAmount.compareTo(BigDecimal.ZERO) == 0)
+        if (leftAmount <= 0.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
@@ -168,6 +168,7 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
             paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentEntity.paymentNum
         }
+        paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
         val paymentObj = paymentRepository.save(paymentEntity)
         auditService.createAudit(
@@ -225,9 +226,9 @@ open class KnockoffServiceImpl : KnockoffService {
             tradePartyMappingId = knockOffRecord.tradePartyMappingId,
             organizationName = knockOffRecord.organizationName,
             accCode = AresModelConstants.AP_ACCOUNT_CODE,
-            accType = knockOffRecord.accType,
+            accType = SignSuffix.PAY.accountType,
             accMode = knockOffRecord.accMode,
-            signFlag = knockOffRecord.signFlag,
+            signFlag = SignSuffix.PAY.sign,
             currency = knockOffRecord.currency,
             ledCurrency = knockOffRecord.ledgerCurrency,
             amountCurr = currTotalAmtPaid,
@@ -239,7 +240,8 @@ open class KnockoffServiceImpl : KnockoffService {
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            orgSerialId = knockOffRecord.orgSerialId
+            orgSerialId = knockOffRecord.orgSerialId,
+            migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
         auditService.createAudit(

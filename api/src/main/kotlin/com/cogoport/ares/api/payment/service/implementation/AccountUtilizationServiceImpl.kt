@@ -60,9 +60,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      */
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun add(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse> {
-
         val responseList = mutableListOf<CreateInvoiceResponse>()
         for (accUtilizationRequest in accUtilizationRequestList) {
+            if (accUtilizationRequest.migrated == null) {
+                accUtilizationRequest.migrated = false
+            }
 
             if (!Utilities.isInvoiceAccountType(accUtilizationRequest.accType!!)) {
                 responseList.add(
@@ -148,6 +150,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
         return listResponse[0]
     }
 
@@ -182,6 +185,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
             }
+            emitAccUtilizationToDemeter(accUtilizationRequest)
             result = true
         }
         return result
@@ -228,6 +232,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
@@ -292,6 +297,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
+        emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
@@ -355,5 +361,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         }
         throw AresException(AresError.ERR_1205, "accountType")
+    }
+
+    private fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
+        try {
+            if (accUtilizationRequest.accType == AccountType.PINV)
+                aresKafkaEmitter.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)
+            else if (accUtilizationRequest.accType == AccountType.SINV)
+                aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
     }
 }

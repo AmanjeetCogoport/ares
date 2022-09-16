@@ -37,9 +37,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
-import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
-import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -66,6 +64,7 @@ import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -237,7 +236,7 @@ open class SettlementServiceImpl : SettlementService {
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
         val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
-        val settlements = getSettledInvoices(settlementGrouped, payments)
+        val settlements = getSettledInvoices(settlementGrouped, payments, request.documentNo.toLong())
         // Fetch Sid for invoices
         val docIds = settlements.map { it.destinationId.toString() }
         val sids = getSidsForInvoices(docIds, request.settlementType)
@@ -287,7 +286,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun getSettledInvoices(
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
-        payments: List<PaymentData>
+        payments: List<PaymentData>,
+        paymentRequested: Long
     ): MutableList<SettledInvoice> {
         val settlements = mutableListOf<SettledInvoice>()
         for (docList in settlementGrouped) {
@@ -311,7 +311,7 @@ open class SettlementServiceImpl : SettlementService {
             docList.value.map {
                 it.settledTds = settledTds
             }
-            val settledInvoice = docList.value.find { it.tdsCurrency == it.paymentCurrency } ?: docList.value.first()
+            val settledInvoice = docList.value.find { it.tdsDocumentNo == paymentRequested } ?: docList.value.first()
             settlements.add(settledInvoice)
         }
         return settlements
@@ -495,7 +495,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
+                "${request.query}%",
                 accMode
             )
         if (documentEntity.isEmpty())
@@ -517,7 +517,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%"
+                "${request.query}%"
             )
         for (doc in documentModel) {
             val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
@@ -1006,7 +1006,8 @@ open class SettlementServiceImpl : SettlementService {
                 amount = invoiceTdsDiff,
                 ledAmount = invoiceTdsDiffLed,
                 updatedBy = request.updatedBy!!,
-                updatedByUserType = request.updatedByUserType
+                updatedByUserType = request.updatedByUserType,
+                tdsPaid = invoiceTdsDiff
             )
             sourceDoc.amount = sourceDoc.amount?.minus(paymentTdsDiff)
             sourceDoc.ledAmount =
@@ -1068,7 +1069,8 @@ open class SettlementServiceImpl : SettlementService {
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
-        val debitDoc = fetchedDoc.groupBy { it?.destinationId }
+        val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
+        val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
         val sourceCurr =
             fetchedDoc.sumOf {
                 it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong()))
@@ -1079,11 +1081,14 @@ open class SettlementServiceImpl : SettlementService {
             accType = AccountType.valueOf(settlementType.toString()),
             amount = sourceCurr,
             updatedBy = deletedBy,
-            updatedByUserType = deletedByUserType
+            updatedByUserType = deletedByUserType,
+            tdsPaid = paymentTdsDoc?.amount
         )
         for (debits in debitDoc) {
             val settledDoc =
                 debits.value.filter { it?.sourceType == settlementType }
+            val tdsDoc = debits.value.find { it?.sourceType in listOf(SettlementType.CTDS, SettlementType.VTDS) }
+            var tdsPaid = tdsDoc?.amount ?: BigDecimal.ZERO
             if (settledDoc.isEmpty()) throw AresException(AresError.ERR_1501, "")
             for (source in settledDoc) {
                 val payment =
@@ -1121,13 +1126,15 @@ open class SettlementServiceImpl : SettlementService {
                             )
                         }
                     settledCurr = getExchangeValue(settledCurr, rate)
+                    tdsPaid = getExchangeValue(tdsPaid, rate)
                 }
                 reduceAccountUtilization(
                     docId = source.destinationId,
                     accType = AccountType.valueOf(source.destinationType.toString()),
                     amount = settledCurr,
                     updatedBy = deletedBy,
-                    updatedByUserType = deletedByUserType
+                    updatedByUserType = deletedByUserType,
+                    tdsPaid = tdsPaid
                 )
             }
         }
@@ -1155,7 +1162,8 @@ open class SettlementServiceImpl : SettlementService {
         amount: BigDecimal,
         ledAmount: BigDecimal? = null,
         updatedBy: UUID?,
-        updatedByUserType: String?
+        updatedByUserType: String?,
+        tdsPaid: BigDecimal? = null
     ) {
         val accUtil =
             accountUtilizationRepository.findRecord(docId, accType.toString())
@@ -1189,7 +1197,8 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            updateExternalSystemInvoice(accUtilObj)
+            val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
+            updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
         } catch (e: Exception) {
@@ -1298,7 +1307,7 @@ open class SettlementServiceImpl : SettlementService {
                     performDbOperation
                 ) {
                     createTdsRecord(
-                        sourceId = invoice.documentNo.toLong(),
+                        sourceId = payment.documentNo.toLong(),
                         destId = payment.documentNo.toLong(),
                         destType = payment.accountType,
                         currency = payment.currency,
@@ -1540,7 +1549,7 @@ open class SettlementServiceImpl : SettlementService {
         val paymentUtilized =
             paidAmount +
                 if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
-                    payment.tds!!
+                    (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
                 else 0.toBigDecimal()
         updateAccountUtilization(payment, paymentUtilized, request.createdBy, request.createdByUserType) // Update Payment
         updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy, request.createdByUserType) // Update Invoice
@@ -1596,7 +1605,7 @@ open class SettlementServiceImpl : SettlementService {
                     AresError.ERR_1503,
                     "${document.documentNo}_${document.accountType}"
                 )
-        if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount) {
+        if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
         paymentUtilization.payCurr += utilizedAmount
@@ -1614,7 +1623,8 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            updateExternalSystemInvoice(accountUtilization)
+            val paidTds = document.settledTds
+            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
         } catch (e: Exception) {
@@ -1626,10 +1636,15 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka for Plutus(Sales) or Kuber(Purchase) based on accountType in accountUtilization.
      * @param: accountUtilization
      */
-    private fun updateExternalSystemInvoice(accountUtilization: AccountUtilization) {
+    private fun updateExternalSystemInvoice(
+        accountUtilization: AccountUtilization,
+        paidTds: BigDecimal,
+        performedBy: UUID? = null,
+        performedByUserType: String? = null
+    ) {
         when (accountUtilization.accType) {
-            AccountType.PINV -> emitPayableBillStatus(accountUtilization)
-            AccountType.SINV -> updateBalanceAmount(accountUtilization)
+            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
+            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization)
             else -> {}
         }
     }
@@ -1653,7 +1668,12 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update status in Kuber(Purchase MS).
      * @param: accountUtilization
      */
-    private fun emitPayableBillStatus(accountUtilization: AccountUtilization) {
+    private fun emitPayableBillStatus(
+        accountUtilization: AccountUtilization,
+        paidTds: BigDecimal,
+        performedBy: UUID?,
+        performedByUserType: String?
+    ) {
         val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"
         else if (accountUtilization.amountCurr > accountUtilization.payCurr)
@@ -1661,15 +1681,14 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
-        aresKafkaEmitter.emitBillPaymentStatus(
-            PayableKnockOffProduceEvent(
-                AccountPayableFileResponse(
-                    documentNo = accountUtilization.documentNo,
-                    documentValue = accountUtilization.documentValue!!,
-                    isSuccess = true,
-                    paymentStatus = status,
-                    failureReason = null
-                )
+        aresKafkaEmitter.emitUpdateBillPaymentStatus(
+            UpdatePaymentStatusRequest(
+                billId = accountUtilization.documentNo,
+                paymentStatus = status,
+                paidAmount = accountUtilization.payCurr,
+                paidTds = paidTds,
+                performedBy = performedBy,
+                performedByUserType = performedByUserType
             )
         )
     }

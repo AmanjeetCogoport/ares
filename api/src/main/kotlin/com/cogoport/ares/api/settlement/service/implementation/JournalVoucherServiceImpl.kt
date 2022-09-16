@@ -226,7 +226,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             category = null,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            accCode = AresModelConstants.AR_ACCOUNT_CODE
+            accCode = AresModelConstants.AR_ACCOUNT_CODE,
+            migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
         auditService.createAudit(

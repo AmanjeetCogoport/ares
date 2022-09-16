@@ -28,7 +28,7 @@ class JournalVoucherController {
 
     @Post
     suspend fun createJv(@Body request: JournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Created Successfully", journalVoucherService.createJournalVoucher(request))
+        return Response<String>().ok("Request Sent", journalVoucherService.createJournalVoucher(request))
     }
 
     @Get("/list{?jvListRequest*}")
