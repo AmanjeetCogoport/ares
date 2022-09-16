@@ -401,17 +401,17 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStatsForCustomers(
         request: CustomerStatsRequest
     ): List<OverallStatsForCustomerResponse> {
-        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamProformaCount(request.proformaNumbers, request.pageIndex, request.pageSize)
+        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamProformaCount(request.docValues, request.pageIndex, request.pageSize)
         var statsList = mutableListOf<OverallStatsForCustomerResponse>()
         for (ConsolidatedCount in listOfkamConsolidatedCount) {
-            var balance = getStatsForCustomer(ConsolidatedCount?.proformaNumbers!!, ConsolidatedCount?.bookingPartyId.toString())
+            var balance = getStatsForCustomer(ConsolidatedCount?.docValues!!, ConsolidatedCount?.bookingPartyId.toString())
             balance.kamProformaCount = ConsolidatedCount
             statsList.add(balance)
         }
         return statsList
     }
 
-    private suspend fun getStatsForCustomer(docValue: List<String>, custId: String): OverallStatsForCustomerResponse {
+    private suspend fun getStatsForCustomer(docValue: List<String?>, custId: String): OverallStatsForCustomerResponse {
         val profromaInvoices = accountUtilizationRepository.getProformaInvoicesForCustomer(docValue, custId)
         val duePayment = accountUtilizationRepository.getDuePaymentForCustomer(docValue, custId)
         val overdueInvoice = accountUtilizationRepository.getOverdueInvoicesForCustomer(docValue, custId)

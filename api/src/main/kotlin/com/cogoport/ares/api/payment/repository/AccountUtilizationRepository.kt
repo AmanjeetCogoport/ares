@@ -813,11 +813,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
-    suspend fun getProformaInvoicesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
+    suspend fun getProformaInvoicesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
 
     @Query(
         """
@@ -827,11 +826,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
         and due_date < now()::date
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
-    suspend fun getDuePaymentForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
+    suspend fun getDuePaymentForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
 
     @Query(
         """
@@ -841,11 +839,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
         and due_date >= now()::date
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
-    suspend fun getOverdueInvoicesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
+    suspend fun getOverdueInvoicesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
 
     @Query(
         """
@@ -855,11 +852,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
         and document_value in (:ids)
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
-    suspend fun getTotalReceivablesForCustomer(ids: List<String>, custId: String): StatsForCustomerResponse?
+    suspend fun getTotalReceivablesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
 
     @Query(
         """
@@ -868,11 +864,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
         and document_value in (:ids)
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
-    suspend fun getOnAccountPaymentForCustomer(ids: List<String>, custId: String): BigDecimal
+    suspend fun getOnAccountPaymentForCustomer(ids: List<String?>, custId: String?): BigDecimal
 
     @Query(
         """
@@ -889,32 +884,33 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         where acc_mode = 'AR' 
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') 
         and document_value in (:ids)
-        and tagged_organization_id = :custId::uuid
-        group by tagged_organization_id
+        and (:custId is null or tagged_organization_id = :custId::uuid)
         """
     )
-    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String>, custId: String): OverdueInvoicesResponse?
+    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String?>, custId: String?): OverdueInvoicesResponse?
 
     @Query(
         """
-            Select
-            array_agg(document_value) as proforma_numbers,
-            tagged_organization_id as booking_party_id,
-            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) as due_count,
-            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) as overdue_count,
-            COALESCE(sum(case when (now()::date - due_date) between 0 and 30 then 1 else 0 end),0) as thirty_count,
-            COALESCE(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
-            COALESCE(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
-            COALESCE(sum(case when (now()::date - due_date) > 90 then 1 else 0 end),0) as ninety_plus,
-            COALESCE(sum(case when document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_count
-            From account_utilizations
+            SELECT
+            array_agg(document_value) AS doc_values,
+            tagged_organization_id AS booking_party_id,
+            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) AS due_count,
+            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) AS overdue_count,
+            COALESCE(sum(case when (due_date - now()::date) between 0 and 30 then 1 else 0 end),0) AS thirty_count,
+            COALESCE(sum(case when (due_date - now()::date) between 31 and 60 then 1 else 0 end),0) AS sixty_count,
+            COALESCE(sum(case when (due_date - now()::date) between 61 and 90 then 1 else 0 end),0) AS ninety_count,
+            COALESCE(sum(case when (due_date - now()::date) > 90 then 1 else 0 end),0) AS ninety_plus,
+            COALESCE(sum(case when document_status = 'PROFORMA' then 1 else 0 end),0) AS proforma_count
+            FROM account_utilizations
                    WHERE amount_curr <> 0
                     AND amount_loc - pay_loc <> 0
-                    AND document_value IN :proformaNumbers
+                    AND due_date is not null 
+                    AND document_value IN (:proformaNumbers)
                     AND acc_type in ('SINV','SDN','SCN')
+                    AND tagged_organization_id IS NOT NULL
             GROUP BY tagged_organization_id      
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getKamProformaCount(proformaNumbers: List<String>, pageIndex: Int?, pageSize: Int?): List<CustomerListCountResponse?>
+    suspend fun getKamProformaCount(proformaNumbers: List<String?>, pageIndex: Int?, pageSize: Int?): List<CustomerListCountResponse?>
 }

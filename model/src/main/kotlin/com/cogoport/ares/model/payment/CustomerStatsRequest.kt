@@ -6,7 +6,7 @@ import io.micronaut.data.annotation.MappedEntity
 @Introspected
 @MappedEntity
 data class CustomerStatsRequest(
-    val proformaNumbers: List<String>,
+    val docValues: List<String>,
     val pageIndex: Int?,
     val pageSize: Int?
 )
