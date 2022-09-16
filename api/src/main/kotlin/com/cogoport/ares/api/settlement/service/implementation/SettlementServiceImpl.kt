@@ -1548,13 +1548,14 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         // Update Documents in Account Utilization
-        val paymentUtilized =
-            paidAmount +
+        val utilizedTdsOfPaymentDoc =
                 if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
                     (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
                 else 0.toBigDecimal()
-        updateAccountUtilization(payment, paymentUtilized, request.createdBy, request.createdByUserType) // Update Payment
-        updateAccountUtilization(invoice, (toSettleAmount + invoiceTds + invoiceNostro), request.createdBy, request.createdByUserType) // Update Invoice
+        val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
+        val invoiceUtilized = toSettleAmount + invoiceTds + invoiceNostro
+        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy, request.createdByUserType) // Update Payment
+        updateAccountUtilization(invoice, invoiceTds, invoiceUtilized, request.createdBy, request.createdByUserType) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1595,6 +1596,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun updateAccountUtilization(
         document: CheckDocument,
         utilizedAmount: BigDecimal,
+        paidTds: BigDecimal,
         updatedBy: UUID?,
         updatedByUserType: String?
     ) {
@@ -1625,7 +1627,6 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            val paidTds = document.settledTds
             updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
@@ -1660,7 +1661,7 @@ open class SettlementServiceImpl : SettlementService {
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
-                    balanceAmount = accountUtilization.amountCurr.minus(accountUtilization.payCurr)
+                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr
                 )
             )
         )
