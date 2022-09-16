@@ -181,19 +181,21 @@ open class SettlementServiceImpl : SettlementService {
         val accountTypes = stringAccountTypes(request)
         val documents =
             accountUtilizationRepository.getHistoryDocument(
-                request.orgId,
+                request.orgId!!,
                 accountTypes,
                 request.page,
                 request.pageLimit,
                 request.startDate,
-                request.endDate
+                request.endDate,
+                request.query
             )
         val totalRecords =
             accountUtilizationRepository.countHistoryDocument(
-                request.orgId,
+                request.orgId!!,
                 accountTypes,
                 request.startDate,
-                request.endDate
+                request.endDate,
+                request.query
             )
 
         val historyDocuments = mutableListOf<HistoryDocument>()
@@ -219,7 +221,7 @@ open class SettlementServiceImpl : SettlementService {
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else {
-                mutableListOf(request.accountType)
+                mutableListOf(request.accountType!!)
             }
         return accountTypes
     }
