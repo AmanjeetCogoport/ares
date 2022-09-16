@@ -1549,9 +1549,9 @@ open class SettlementServiceImpl : SettlementService {
 
         // Update Documents in Account Utilization
         val utilizedTdsOfPaymentDoc =
-                if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
-                    (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
-                else 0.toBigDecimal()
+            if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
+                (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
+            else 0.toBigDecimal()
         val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
         val invoiceUtilized = toSettleAmount + invoiceTds + invoiceNostro
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy, request.createdByUserType) // Update Payment
