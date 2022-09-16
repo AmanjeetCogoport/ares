@@ -284,6 +284,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
+                AND (document_value ilike :query || '%')
             GROUP BY au.id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
@@ -294,7 +295,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageIndex: Int?,
         pageSize: Int?,
         startDate: String?,
-        endDate: String?
+        endDate: String?,
+        query: String
     ): List<HistoryDocument?>
 
     @Query(
@@ -307,9 +309,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
+            AND (document_value ilike :query || '%')
         """
     )
-    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<String>, startDate: String?, endDate: String?): Long
+    fun countHistoryDocument(
+        orgIds: List<UUID>,
+        accountTypes: List<String>,
+        startDate: String?,
+        endDate: String?,
+        query: String
+    ): Long
 
     @Query(
         """
