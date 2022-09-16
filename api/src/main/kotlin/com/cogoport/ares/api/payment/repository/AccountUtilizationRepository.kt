@@ -758,7 +758,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
         (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date < now()::date ) as customers_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date >= now()::date
+        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date > now()::date
         
     """
     )
@@ -771,7 +771,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
         (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date >= now()::date  ) as customers_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date < now()::date
+        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date <= now()::date
     """
     )
     suspend fun getOverdueInvoicesStats(ids: List<String>): StatsForKamResponse?
@@ -825,7 +825,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
-        and due_date < now()::date
+        and due_date > now()::date
         and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
@@ -838,7 +838,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
         from account_utilizations
         where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
-        and due_date >= now()::date
+        and due_date <= now()::date
         and (:custId is null or tagged_organization_id = :custId::uuid)
     """
     )
