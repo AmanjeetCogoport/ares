@@ -30,31 +30,20 @@ class SettlementServiceHelper {
             AccountType.PCN -> InvoiceType.PCN.value
             AccountType.PDN -> InvoiceType.PDN.value
             AccountType.PAY -> InvoiceType.PAY.value
-            AccountType.ROFF -> getVoucherType(signFlag, accMode) + InvoiceType.ROFF.value
-            AccountType.WOFF -> getVoucherType(signFlag, accMode) + InvoiceType.WOFF.value
-            AccountType.EXCH -> getVoucherType(signFlag, accMode) + InvoiceType.EXCH.value
-            AccountType.OUTST -> getVoucherType(signFlag, accMode) + InvoiceType.OUTST.value
-            AccountType.JVNOS -> getVoucherType(signFlag, accMode) + InvoiceType.JVNOS.value
+            AccountType.ROFF -> getVoucherType(signFlag) + InvoiceType.ROFF.value
+            AccountType.WOFF -> getVoucherType(signFlag) + InvoiceType.WOFF.value
+            AccountType.EXCH -> getVoucherType(signFlag) + InvoiceType.EXCH.value
+            AccountType.OUTST -> getVoucherType(signFlag) + InvoiceType.OUTST.value
+            AccountType.JVNOS -> getVoucherType(signFlag) + InvoiceType.JVNOS.value
             else -> throw AresException(AresError.ERR_1009, "accountType")
         }
     }
 
-    private fun getVoucherType(signFlag: Short, accMode: AccMode): String {
-        return when (accMode) {
-            AccMode.AR -> {
-                when (signFlag.toInt()) {
-                    1 -> "Debit "
-                    -1 -> "Credit "
-                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
-                }
-            }
-            AccMode.AP -> {
-                when (signFlag.toInt()) {
-                    1 -> "Credit "
-                    -1 -> "Debit "
-                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
-                }
-            }
+    private fun getVoucherType(signFlag: Short): String {
+        return when (signFlag.toInt()) {
+            1 -> "Debit "
+            -1 -> "Credit "
+            else -> { throw AresException(AresError.ERR_1009, "signFlag") }
         }
     }
 
