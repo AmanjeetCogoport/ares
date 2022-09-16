@@ -313,45 +313,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      */
     private fun getSignFlag(accMode: AccMode, type: String): Short {
         return when (type) {
-            "CREDIT" -> {
-                getCreditSignFlag(accMode)
-            }
-            "DEBIT" -> {
-                getDebitSignFlag(accMode)
-            }
+            "CREDIT" -> { -1 }
+            "DEBIT" -> { 1 }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
-            }
-        }
-    }
-
-    /**
-     * Return credit Sign Flag on the basis of Account Mode
-     * @param: accMode
-     * @return: Short
-     */
-    private fun getCreditSignFlag(accMode: AccMode): Short {
-
-        return when (accMode) {
-            AccMode.AR -> { -1 }
-            AccMode.AP -> { 1 }
-            else -> {
-                throw AresException(AresError.ERR_1009, "Acc Mode")
-            }
-        }
-    }
-
-    /**
-     * Return Debit Sign Flag on the basis of Account Mode
-     * @param: accMode
-     * @return: Short
-     */
-    private fun getDebitSignFlag(accMode: AccMode): Short {
-        return when (accMode) {
-            AccMode.AR -> { 1 }
-            AccMode.AP -> { -1 }
-            else -> {
-                throw AresException(AresError.ERR_1009, "JV Category")
             }
         }
     }
