@@ -18,9 +18,9 @@ import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 
 interface DashboardService {
@@ -37,5 +37,5 @@ interface DashboardService {
     suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>
     suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
     suspend fun getOverallStatsForKam(request: KamPaymentRequest): StatsForKamResponse
-    suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): List<OverallStatsForCustomerResponse>
+    suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): List<StatsForCustomerResponse?>
 }

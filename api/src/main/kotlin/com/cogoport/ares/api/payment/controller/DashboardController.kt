@@ -18,14 +18,7 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.OrgPayableResponse
-import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
-import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.payment.response.*
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -96,7 +89,7 @@ class DashboardController {
     @Post("/overallStatsForCustomers")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
-    ): List<OverallStatsForCustomerResponse> {
+    ): List<StatsForCustomerResponse?> {
         return dashboardService.getOverallStatsForCustomers(request)
     }
 

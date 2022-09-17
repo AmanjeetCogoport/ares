@@ -33,9 +33,9 @@ import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
@@ -124,5 +124,5 @@ interface AresClient {
     @Post("/payments/dashboard/overallStatsForCustomers")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
-    ): List<OverallStatsForCustomerResponse>
+    ): List<StatsForCustomerResponse?>
 }

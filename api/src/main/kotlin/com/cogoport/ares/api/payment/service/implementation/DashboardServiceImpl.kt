@@ -32,10 +32,10 @@ import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -383,19 +383,12 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOverallStatsForKam(request: KamPaymentRequest): StatsForKamResponse {
-        val response = accountUtilizationRepository.getOverallStatsForKam(request.docValue)
-        return response
+        return accountUtilizationRepository.getOverallStatsForKam(request.docValue)
     }
 
     override suspend fun getOverallStatsForCustomers(
         request: CustomerStatsRequest
-    ): List<OverallStatsForCustomerResponse> {
-        val result = mutableListOf<OverallStatsForCustomerResponse>()
-        val listOfkamConsolidatedCount = accountUtilizationRepository.getKamProformaCount(request.docValues, request.pageIndex, request.pageSize)
-        var customerStatsList = accountUtilizationRepository.getOverallStatsForCustomers(request.docValues!!, request.pageIndex, request.pageSize)
-        // TO-DO mapping of both lists
-        return result
-
+    ): List<StatsForCustomerResponse?> {
+        return accountUtilizationRepository.getOverallStatsForCustomers(request.docValues, request.pageIndex, request.pageSize)
     }
-
 }
