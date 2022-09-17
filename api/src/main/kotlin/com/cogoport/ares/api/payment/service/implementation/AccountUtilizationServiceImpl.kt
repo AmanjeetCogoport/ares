@@ -150,7 +150,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
-        emitAccUtilizationToDemeter(accUtilizationRequest)
+        // emitAccUtilizationToDemeter(accUtilizationRequest)
         return listResponse[0]
     }
 
@@ -185,7 +185,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             } catch (e: Exception) {
                 logger().error(e.stackTraceToString())
             }
-            emitAccUtilizationToDemeter(accUtilizationRequest)
+            // emitAccUtilizationToDemeter(accUtilizationRequest)
             result = true
         }
         return result
@@ -232,7 +232,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
-        emitAccUtilizationToDemeter(accUtilizationRequest)
+        // emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
@@ -297,7 +297,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
-        emitAccUtilizationToDemeter(accUtilizationRequest)
+        // emitAccUtilizationToDemeter(accUtilizationRequest)
     }
 
     /**
