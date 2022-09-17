@@ -772,14 +772,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT tagged_organization_id as organization_id,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN')  AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
         COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
         COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
-        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as thirty_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as thirty_amount,
         COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as sixty_amount,
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as ninety_amount,
         COALESCE(sum(case when (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as ninety_plus_amount,
@@ -788,7 +788,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 THEN 1 ELSE 0 END),0) as ninety_count,
         COALESCE(sum(case when (now()::date - due_date) > 90 THEN 1 ELSE 0 END),0) as ninety_plus_count
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND document_value in (:ids) AND due_date IS NOT NULL AND  amount_curr <> 0
+        WHERE acc_mode = 'AR' AND document_value in (:ids) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL
         GROUP BY tagged_organization_id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
