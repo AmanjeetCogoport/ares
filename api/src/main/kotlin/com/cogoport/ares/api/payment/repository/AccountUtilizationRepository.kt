@@ -18,7 +18,6 @@ import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.response.CustomerListCountResponse
-import com.cogoport.ares.model.payment.response.OverdueInvoicesResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.data.annotation.Query
@@ -741,161 +740,71 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
 
     @Query(
-        """
+        """ 
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status = 'PROFORMA' and acc_mode = 'AR' ) as customers_count
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_proforma_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status = 'PROFORMA') as customers_count_proforma,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and due_date > now()::date and document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_due_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and due_date > now()::date and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as due_invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and due_date > now()::date ) as customers_count_due,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and due_date <= now()::date  and document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_overdue_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and due_date <= now()::date and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as overdue_invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and due_date <= now()::date  ) as customers_count_overdue,
+        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount_receivables,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status in ('FINAL','PROFORMA') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as receivables_invoices_count,
+        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA')) as customers_count_receivables,
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
+        coalesce(sum(case when (now()::date - due_date) >90 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 and due_date is NOT NULL then 1 else 0 end),0) as thirty_count,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 and due_date is NOT NULL then 1 else 0 end),0) as sixty_count,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 and due_date is NOT NULL then 1 else 0 end),0) as ninety_count,
+        coalesce(sum(case when (now()::date - due_date) >90 and due_date is NOT NULL then 1 else 0 end),0) as ninety_plus_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
-    """
-    )
-    suspend fun getProformaInvoicesStats(ids: List<String>): StatsForKamResponse?
-    @Query(
+        where acc_mode = 'AR' and document_value in (:ids)
         """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date < now()::date ) as customers_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date > now()::date
-        
-    """
     )
-    suspend fun getDuePayment(ids: List<String>): StatsForKamResponse?
+    suspend fun getOverallStatsForKam(ids: List<String?>): StatsForKamResponse
 
     @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR' and due_date >= now()::date  ) as customers_count
+        """ 
+        select (array_agg(tagged_organization_id))[1] as organization_id,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_proforma_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as proforma_invoices_count,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN')  and due_date > now()::date and  document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_due_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and due_date > now()::date and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as due_invoices_count,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and due_date <= now()::date  and document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_overdue_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and due_date <= now()::date and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as overdue_invoices_count,
+        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL','PROFORMA') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount_receivables,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status in ('FINAL','PROFORMA') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as receivables_invoices_count,
+        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as on_account_payment,
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
+        coalesce(sum(case when (now()::date - due_date) > 90 and due_date is NOT NULL then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
+        coalesce(sum(case when (now()::date - due_date) between 0 and 30 and due_date is NOT NULL then 1 else 0 end),0) as thirty_count,
+        coalesce(sum(case when (now()::date - due_date) between 31 and 60 and due_date is NOT NULL then 1 else 0 end),0) as sixty_count,
+        coalesce(sum(case when (now()::date - due_date) between 61 and 90 and due_date is NOT NULL then 1 else 0 end),0) as ninety_count,
+        coalesce(sum(case when (now()::date - due_date) > 90 and due_date is NOT NULL then 1 else 0 end),0) as ninety_plus_count
         from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids) and due_date <= now()::date
-    """
+        where acc_mode = 'AR' and document_value in (:ids)
+        group by tagged_organization_id
+        order by tagged_organization_id
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+        """
     )
-    suspend fun getOverdueInvoicesStats(ids: List<String>): StatsForKamResponse?
+    suspend fun getOverallStatsForCustomers(ids: List<String?>, pageIndex: Int?, pageSize: Int?): List<StatsForCustomerResponse?>
 
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count,
-        (select count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and document_value in (:ids) and document_status in ('FINAL','PROFORMA') and acc_mode = 'AR') as customers_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
-    """
-    )
-    suspend fun getTotalReceivables(ids: List<String>): StatsForKamResponse?
-
-    @Query(
-        """
-        select 
-        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
-        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirty_count,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninety_plus_count
-        from account_utilizations
-        where acc_mode = 'AR' 
-        and due_date is not null and document_status in ('FINAL', 'PROFORMA') and document_value in (:ids)
-        """
-    )
-    suspend fun getOverdueInvoices(ids: List<String>): OverdueInvoicesResponse?
-
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and document_status = 'PROFORMA' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status = 'PROFORMA' then 1 else 0 end),0) as invoices_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status = 'PROFORMA' and document_value in (:ids)
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-    """
-    )
-    suspend fun getProformaInvoicesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
-
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
-        and due_date > now()::date
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-    """
-    )
-    suspend fun getDuePaymentForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
-
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') and document_value in (:ids)
-        and due_date <= now()::date
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-    """
-    )
-    suspend fun getOverdueInvoicesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
-
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc- pay_loc <> 0) and document_status in ('FINAL','PROFORMA') then 1 else 0 end),0) as invoices_count
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
-        and document_value in (:ids)
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-    """
-    )
-    suspend fun getTotalReceivablesForCustomer(ids: List<String?>, custId: String?): StatsForCustomerResponse?
-
-    @Query(
-        """
-        select
-        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as on_account_payment
-        from account_utilizations
-        where acc_mode = 'AR' and document_status in ('FINAL','PROFORMA') 
-        and document_value in (:ids)
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-    """
-    )
-    suspend fun getOnAccountPaymentForCustomer(ids: List<String?>, custId: String?): BigDecimal
-
-    @Query(
-        """
-        select 
-        coalesce(sum(case when (now()::date - due_date) between 0 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as thirty_amount,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as sixty_amount,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_amount,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end),0) as ninety_plus_amount,
-        coalesce(sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end),0) as thirty_count,
-        coalesce(sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end),0) as sixty_count,
-        coalesce(sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end),0) as ninety_count,
-        coalesce(sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end),0) as ninety_plus_count
-        from account_utilizations
-        where acc_mode = 'AR' 
-        and due_date is not null and document_status in ('FINAL', 'PROFORMA') 
-        and document_value in (:ids)
-        and (:custId is null or tagged_organization_id = :custId::uuid)
-        """
-    )
-    suspend fun getOverdueInvoicesByDueDateForCustomer(ids: List<String?>, custId: String?): OverdueInvoicesResponse?
 
     @Query(
         """
             SELECT
             array_agg(document_value) AS doc_values,
             tagged_organization_id AS booking_party_id,
-            COALESCE(sum(case when due_date < now()::date then 1 else 0 end),0) AS due_count,
-            COALESCE(sum(case when due_date >= now()::date then 1 else 0 end),0) AS overdue_count,
+            COALESCE(sum(case when due_date > now()::date then 1 else 0 end),0) AS due_count,
+            COALESCE(sum(case when due_date <= now()::date then 1 else 0 end),0) AS overdue_count,
             COALESCE(sum(case when (due_date - now()::date) between 0 and 30 then 1 else 0 end),0) AS thirty_count,
             COALESCE(sum(case when (due_date - now()::date) between 31 and 60 then 1 else 0 end),0) AS sixty_count,
             COALESCE(sum(case when (due_date - now()::date) between 61 and 90 then 1 else 0 end),0) AS ninety_count,
@@ -908,7 +817,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_value IN (:proformaNumbers)
                     AND acc_type in ('SINV','SDN','SCN')
                     AND tagged_organization_id IS NOT NULL
-            GROUP BY tagged_organization_id      
+            GROUP BY tagged_organization_id 
+            ORDER BY tagged_organization_id
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )

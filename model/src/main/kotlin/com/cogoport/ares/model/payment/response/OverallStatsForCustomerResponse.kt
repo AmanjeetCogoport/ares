@@ -9,11 +9,6 @@ import java.math.BigDecimal
 data class OverallStatsForCustomerResponse(
     var custId: String?,
     var kamProformaCount: CustomerListCountResponse?,
-    var proformaInvoices: StatsForCustomerResponse?,
-    var dueForPayment: StatsForCustomerResponse?,
-    var overdueInvoices: StatsForCustomerResponse?,
-    var totalReceivables: StatsForCustomerResponse?,
-    var onAccountPayment: BigDecimal?,
-    var overDueInvoicesByDueDate: OverdueInvoicesResponse?,
+    var balance: StatsForCustomerResponse?,
     var custName: String? = null
 )
