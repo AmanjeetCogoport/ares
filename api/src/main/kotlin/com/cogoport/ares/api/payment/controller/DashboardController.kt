@@ -88,12 +88,12 @@ class DashboardController {
         return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
     }
 
-    @Post("/overallStatsForKam")
+    @Post("/kam/overall-stats")
     suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse {
         return Response<StatsForKamResponse>().ok(dashboardService.getOverallStatsForKam(request))
     }
 
-    @Post("/overallStatsForCustomers")
+    @Post("/customer/overall-stats")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
     ): List<StatsForCustomerResponse?> {

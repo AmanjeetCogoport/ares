@@ -762,7 +762,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as ninety_count,
         COALESCE(sum(case when (now()::date - due_date) >90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as ninety_plus_count
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND document_value in (:ids)
+        WHERE acc_mode = 'AR' AND document_value in (:ids) AND tagged_organization_id IS NOT NULL
         """
     )
     suspend fun getOverallStatsForKam(ids: List<String?>): StatsForKamResponse

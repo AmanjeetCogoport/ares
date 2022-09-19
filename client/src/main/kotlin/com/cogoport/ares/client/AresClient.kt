@@ -118,10 +118,10 @@ interface AresClient {
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 
-    @Post("/payments/dashboard/overallStatsForKam")
+    @Post("/payments/dashboard/kam/overall-stats")
     suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse
 
-    @Post("/payments/dashboard/overallStatsForCustomers")
+    @Post("/payments/dashboard/customer/overall-stats")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
     ): List<StatsForCustomerResponse?>
