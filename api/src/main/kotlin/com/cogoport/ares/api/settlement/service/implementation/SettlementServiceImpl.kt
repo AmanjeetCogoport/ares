@@ -533,7 +533,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.balanceAmount -= doc.tds
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount,
+                docAmount = doc.documentAmount,
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType)
             )
@@ -769,7 +769,7 @@ open class SettlementServiceImpl : SettlementService {
 
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount,
+                docAmount = doc.documentAmount,
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType)
             )
@@ -1555,7 +1555,7 @@ open class SettlementServiceImpl : SettlementService {
         val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
         val invoiceUtilized = toSettleAmount + invoiceTds + invoiceNostro
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy, request.createdByUserType) // Update Payment
-        updateAccountUtilization(invoice, invoiceTds, invoiceUtilized, request.createdBy, request.createdByUserType) // Update Invoice
+        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy, request.createdByUserType) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
