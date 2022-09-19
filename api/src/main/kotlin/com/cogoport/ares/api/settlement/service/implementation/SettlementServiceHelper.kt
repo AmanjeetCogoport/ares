@@ -47,13 +47,13 @@ class SettlementServiceHelper {
         }
     }
 
-    fun getDocumentStatus(afterTdsAmount: BigDecimal, balanceAmount: BigDecimal, docType: SettlementType): String {
+    fun getDocumentStatus(docAmount: BigDecimal, balanceAmount: BigDecimal, docType: SettlementType): String {
         val payments = listOf(SettlementType.REC, SettlementType.PAY, SettlementType.SCN, SettlementType.PCN)
         return if (balanceAmount.compareTo(BigDecimal.ZERO) == 0) {
             if (payments.contains(docType)) DocStatus.UTILIZED.value else DocStatus.PAID.value
-        } else if (afterTdsAmount.compareTo(balanceAmount) != 0) {
+        } else if (docAmount.compareTo(balanceAmount) != 0) {
             if (payments.contains(docType)) DocStatus.PARTIAL_UTILIZED.value else DocStatus.PARTIAL_PAID.value
-        } else if (afterTdsAmount.compareTo(balanceAmount) == 0) {
+        } else if (docAmount.compareTo(balanceAmount) == 0) {
             if (payments.contains(docType)) DocStatus.UNUTILIZED.value else DocStatus.UNPAID.value
         } else {
             throw AresException(AresError.ERR_1504, "")

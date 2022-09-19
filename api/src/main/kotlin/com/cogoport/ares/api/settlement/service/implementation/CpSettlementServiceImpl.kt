@@ -428,7 +428,7 @@ class CpSettlementServiceImpl : CpSettlementService {
             )
         for (doc in documentModel) {
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount!!,
+                docAmount = doc.documentAmount,
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType.dbValue)
             )
