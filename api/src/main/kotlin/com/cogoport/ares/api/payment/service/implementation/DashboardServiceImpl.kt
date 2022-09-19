@@ -382,8 +382,8 @@ class DashboardServiceImpl : DashboardService {
         return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
     }
 
-    override suspend fun getOverallStatsForKam(request: KamPaymentRequest): StatsForKamResponse {
-        return accountUtilizationRepository.getOverallStatsForKam(request.docValue)
+    override suspend fun getOverallStats(request: KamPaymentRequest): StatsForKamResponse {
+        return accountUtilizationRepository.getOverallStats(request.docValue)
     }
 
     override suspend fun getOverallStatsForCustomers(
