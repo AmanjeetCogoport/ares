@@ -153,7 +153,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
         val jvId = Hashids.decode(request.journalVoucherId!!)[0]
-        journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy, request.remark)
+        journalVoucherRepository.reject(jvId, request.performedBy!!, request.remark)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
@@ -174,6 +174,20 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             id = request.incidentId
         )
         return request.incidentId!!
+    }
+
+    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String) {
+        journalVoucherRepository.updateStatus(id, status, performedBy)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.JOURNAL_VOUCHERS,
+                objectId = id,
+                actionName = AresConstants.UPDATE,
+                data = mapOf("id" to id, "status" to status),
+                performedBy = performedBy.toString(),
+                performedByUserType = performedByUserType
+            )
+        )
     }
 
     private suspend fun updateJournalVoucher(jvId: Long, performedBy: UUID?, remark: String?): JournalVoucher {
