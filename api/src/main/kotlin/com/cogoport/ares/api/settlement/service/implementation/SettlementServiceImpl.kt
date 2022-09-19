@@ -66,6 +66,7 @@ import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -128,6 +129,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberClient: KuberClient
+
+    @Value("\${ares.settlement.crossTradeParty:false}")
+    private var crossTradeParty: Boolean = false
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -716,9 +720,16 @@ open class SettlementServiceImpl : SettlementService {
      * Validate input for list of documents
      */
     private fun validateSettlementDocumentInput(request: SettlementDocumentRequest) {
+        logger().info("ares.settlement.crossTradeParty: {}", crossTradeParty)
         if (request.entityCode == null) throw AresException(AresError.ERR_1003, "entityCode")
         if (request.importerExporterId == null && request.serviceProviderId == null)
             throw AresException(AresError.ERR_1003, "importerExporterId and serviceProviderId")
+        if (!crossTradeParty &&
+            request.importerExporterId != null &&
+            request.serviceProviderId != null &&
+            (request.importerExporterId != request.serviceProviderId)
+        )
+            throw AresException(AresError.ERR_1506, "")
     }
 
     /**
