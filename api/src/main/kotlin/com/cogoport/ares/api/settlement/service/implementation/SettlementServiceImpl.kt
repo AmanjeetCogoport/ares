@@ -543,7 +543,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
             doc.status = settlementServiceHelper.getDocumentStatus(
                 docAmount = doc.documentAmount,
-                balanceAmount = doc.balanceAmount,
+                balanceAmount = doc.currentBalance,
                 docType = SettlementType.valueOf(doc.accountType)
             )
             doc.settledAllocation = BigDecimal.ZERO
