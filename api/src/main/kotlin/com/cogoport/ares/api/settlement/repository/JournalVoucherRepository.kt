@@ -73,7 +73,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         WHERE id = :id
     """
     )
-    suspend fun reject(id: Long, performedBy: UUID?, remark: String?)
+    suspend fun reject(id: Long, performedBy: UUID, remark: String?)
 
     @Query(
         """
@@ -82,5 +82,5 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             WHERE id = :id
         """
     )
-    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?)
+    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID)
 }
