@@ -33,7 +33,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.created_by,
             j.updated_at,
             j.updated_by,
-            j.description as description
+            j.description as description,
+            j.acc_mode
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
