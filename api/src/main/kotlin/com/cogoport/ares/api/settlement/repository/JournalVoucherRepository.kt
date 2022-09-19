@@ -68,14 +68,18 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
 
     @Query(
         """
-        UPDATE journal_vouchers SET status = 'REJECTED', updated_by = :performedBy, description = :remark where id = :id
+        UPDATE journal_vouchers 
+        SET status = 'REJECTED', updated_by = :performedBy, description = :remark, updated_at = NOW() 
+        WHERE id = :id
     """
     )
     suspend fun reject(id: Long, performedBy: UUID?, remark: String?)
 
     @Query(
         """
-            UPDATE journal_vouchers SET status = :status, updated_by = :performedBy where id = :id
+            UPDATE journal_vouchers 
+            SET status = :status, updated_by = :performedBy, updated_at = NOW() 
+            WHERE id = :id
         """
     )
     suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID?)
