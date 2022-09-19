@@ -136,7 +136,7 @@ open class SettlementServiceImpl : SettlementService {
     private var crossTradeParty: Boolean = false
 
     @Inject
-    lateinit var journalVoucherService: JournalVoucherService
+    private lateinit var journalVoucherService: JournalVoucherService
 
     /**
      * Get documents for Given Business partner/partners in input request.
