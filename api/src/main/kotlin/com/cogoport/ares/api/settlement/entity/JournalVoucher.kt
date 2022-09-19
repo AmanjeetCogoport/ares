@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
@@ -33,5 +34,6 @@ data class JournalVoucher(
     var createdAt: Timestamp?,
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
-    var description: String?
+    var description: String?,
+    var accMode: AccMode
 )

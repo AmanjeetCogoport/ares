@@ -460,6 +460,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND pay_curr <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
+                AND (:accMode is null OR acc_mode = :accMode::ACCOUNT_MODE)
                 AND (:accType is null OR acc_type::varchar = :accType)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)

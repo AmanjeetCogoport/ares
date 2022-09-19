@@ -30,6 +30,7 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
@@ -52,6 +53,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.CheckRequest
@@ -132,6 +134,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Value("\${ares.settlement.crossTradeParty:false}")
     private var crossTradeParty: Boolean = false
+
+    @Inject
+    private lateinit var journalVoucherService: JournalVoucherService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -538,7 +543,7 @@ open class SettlementServiceImpl : SettlementService {
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
             doc.status = settlementServiceHelper.getDocumentStatus(
                 docAmount = doc.documentAmount,
-                balanceAmount = doc.balanceAmount,
+                balanceAmount = doc.currentBalance,
                 docType = SettlementType.valueOf(doc.accountType)
             )
             doc.settledAllocation = BigDecimal.ZERO
@@ -1650,7 +1655,7 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka for Plutus(Sales) or Kuber(Purchase) based on accountType in accountUtilization.
      * @param: accountUtilization
      */
-    private fun updateExternalSystemInvoice(
+    private suspend fun updateExternalSystemInvoice(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID? = null,
@@ -1659,6 +1664,13 @@ open class SettlementServiceImpl : SettlementService {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization)
+            AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS ->
+                journalVoucherService.updateJournalVoucherStatus(
+                    id = accountUtilization.documentNo,
+                    status = JVStatus.UTILIZED,
+                    performedBy = performedBy!!,
+                    performedByUserType = performedByUserType!!
+                )
             else -> {}
         }
     }

@@ -4,7 +4,8 @@ enum class JVStatus(val value: String) {
     PENDING("PENDING"),
     APPROVED("APPROVED"),
     REJECTED("REJECTED"),
-    DELETED("DELETED");
+    DELETED("DELETED"),
+    UTILIZED("UTILIZED");
 
     open operator fun contains(value: String?): Boolean {
         for (c in JVStatus.values()) {
