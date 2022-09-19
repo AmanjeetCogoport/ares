@@ -90,7 +90,7 @@ class DashboardController {
 
     @Post("/kam/overall-stats")
     suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse {
-        return Response<StatsForKamResponse>().ok(dashboardService.getOverallStatsForKam(request))
+        return Response<StatsForKamResponse>().ok(dashboardService.getOverallStats(request))
     }
 
     @Post("/customer/overall-stats")

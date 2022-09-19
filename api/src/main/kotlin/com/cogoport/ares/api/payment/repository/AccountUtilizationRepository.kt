@@ -765,7 +765,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         WHERE acc_mode = 'AR' AND document_value in (:ids) AND tagged_organization_id IS NOT NULL
         """
     )
-    suspend fun getOverallStatsForKam(ids: List<String?>): StatsForKamResponse
+    suspend fun getOverallStats(ids: List<String?>): StatsForKamResponse
 
     @Query(
         """ 
