@@ -19,12 +19,12 @@ data class StatsForKamResponse(
     val totalAmountReceivables: BigDecimal?,
     val receivablesInvoicesCount: Int?,
     val customersCountReceivables: Int?,
-    val thirtyAmount: BigDecimal?,
-    val sixtyAmount: BigDecimal?,
-    val ninetyAmount: BigDecimal?,
-    val ninetyPlusAmount: BigDecimal?,
-    val thirtyCount: Int?,
-    val sixtyCount: Int?,
-    val ninetyCount: Int?,
-    val ninetyPlusCount: Int?
+    val dueByThirtyDaysAmount: BigDecimal?,
+    val dueBySixtyDaysAmount: BigDecimal?,
+    val dueByNinetyDaysAmount: BigDecimal?,
+    val dueByNinetyPlusDaysAmount: BigDecimal?,
+    val dueByThirtyDaysCount: Int?,
+    val dueBySixtyDaysCount: Int?,
+    val dueByNinetyDaysCount: Int?,
+    val dueByNinetyPlusDaysCount: Int?
 )

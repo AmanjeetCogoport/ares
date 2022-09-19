@@ -389,6 +389,6 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStatsForCustomers(
         request: CustomerStatsRequest
     ): List<StatsForCustomerResponse?> {
-        return accountUtilizationRepository.getOverallStatsForCustomers(request.docValues, request.pageIndex, request.pageSize)
+        return accountUtilizationRepository.getOverallStatsForCustomers(request.docValues, request.bookingPartyId, request.pageIndex, request.pageSize)
     }
 }
