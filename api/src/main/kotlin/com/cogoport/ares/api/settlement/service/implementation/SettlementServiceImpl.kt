@@ -677,7 +677,7 @@ open class SettlementServiceImpl : SettlementService {
      * @return: AccTypeMode
      */
     private fun getAccountModeAndType(importerExporterId: UUID?, serviceProviderId: UUID?): AccTypeMode? {
-        val jvList = listOf(AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST)
+        val jvList = settlementServiceHelper.getJvList(classType = AccountType::class.java)
         return if (importerExporterId != null && serviceProviderId != null) {
             AccTypeMode(accMode = null, accType = listOf(AccountType.SINV, AccountType.PINV))
         } else if (importerExporterId != null) {
@@ -1074,11 +1074,11 @@ open class SettlementServiceImpl : SettlementService {
             request.stackDetails!!.first {
                 it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
-        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy, request.createdByUserType)
+        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy!!, request.createdByUserType)
         return runSettlement(request, true)
     }
 
-    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID?, deletedByUserType: String?): String {
+    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
         val sourceType =
             when (settlementType) {
@@ -1179,8 +1179,8 @@ open class SettlementServiceImpl : SettlementService {
         accType: AccountType,
         amount: BigDecimal,
         ledAmount: BigDecimal? = null,
-        updatedBy: UUID?,
-        updatedByUserType: String?,
+        updatedBy: UUID,
+        updatedByUserType: String? = null,
         tdsPaid: BigDecimal? = null
     ) {
         val accUtil =
@@ -1451,6 +1451,8 @@ open class SettlementServiceImpl : SettlementService {
         payment: CheckDocument,
         invoice: CheckDocument
     ) {
+        val jvList = settlementServiceHelper.getJvList(SettlementType::class.java)
+
         /** Invoice Amount in payment currency */
         val paidAmount = getExchangeValue(toSettleAmount, exchangeRate, true)
         /** Payment ledger amount */
@@ -1466,10 +1468,12 @@ open class SettlementServiceImpl : SettlementService {
         /** Nostro Amount in payment currency */
         val paymentNostro = getExchangeValue(invoiceNostro, exchangeRate, true)
         /** Payment Nostro Ledger Amount */
-        val paymentNostroLed = getExchangeValue(paymentNostro, ledgerRate) //
+        val paymentNostroLed = getExchangeValue(paymentNostro, ledgerRate)
 
-        val amount = (paidAmount + paymentTds + paymentNostro)
-        val ledAmount = (paidLedAmount + paymentTdsLed + paymentNostroLed)
+        val isNotJv = payment.accountType !in jvList
+
+        val amount = paidAmount + if (isNotJv) paymentTds + paymentNostro else BigDecimal.ZERO
+        val ledAmount = paidLedAmount + if (isNotJv) paymentTdsLed + paymentNostroLed else BigDecimal.ZERO
         // Create Documents Settlement Entry
         if (amount.compareTo(BigDecimal.ZERO) != 0) {
             createSettlement(
@@ -1489,7 +1493,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         // Create TDS Entry
-        if (paymentTds.compareTo(BigDecimal.ZERO) != 0) {
+        if (paymentTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
@@ -1507,7 +1511,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         // Create Nostro Entry
-        if (paymentNostro.compareTo(BigDecimal.ZERO) != 0) {
+        if (paymentNostro.compareTo(BigDecimal.ZERO) != 0 && (isNotJv)) {
             createSettlement(
                 sourceId = payment.documentNo.toLong(),
                 sourceType = SettlementType.NOSTRO,
@@ -1567,11 +1571,11 @@ open class SettlementServiceImpl : SettlementService {
         val utilizedTdsOfPaymentDoc =
             if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
                 (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
-            else 0.toBigDecimal()
+            else BigDecimal.ZERO
         val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
-        val invoiceUtilized = toSettleAmount + invoiceTds + invoiceNostro
-        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy, request.createdByUserType) // Update Payment
-        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy, request.createdByUserType) // Update Invoice
+        val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
+        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType) // Update Payment
+        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1613,7 +1617,7 @@ open class SettlementServiceImpl : SettlementService {
         document: CheckDocument,
         utilizedAmount: BigDecimal,
         paidTds: BigDecimal,
-        updatedBy: UUID?,
+        updatedBy: UUID,
         updatedByUserType: String?
     ) {
         val paymentUtilization =
@@ -1658,8 +1662,8 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun updateExternalSystemInvoice(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
-        performedBy: UUID? = null,
-        performedByUserType: String? = null
+        performedBy: UUID,
+        performedByUserType: String?
     ) {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
@@ -1668,8 +1672,8 @@ open class SettlementServiceImpl : SettlementService {
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
                     status = JVStatus.UTILIZED,
-                    performedBy = performedBy!!,
-                    performedByUserType = performedByUserType!!
+                    performedBy = performedBy,
+                    performedByUserType = performedByUserType
                 )
             else -> {}
         }
@@ -1816,7 +1820,7 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
         val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY)
-        val jvList = listOf(SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST)
+        val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
         return when (accType) {
             SettlementType.REC -> {
                 listOf(SettlementType.SINV, SettlementType.SDN) + jvList
