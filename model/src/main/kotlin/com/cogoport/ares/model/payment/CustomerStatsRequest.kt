@@ -8,8 +8,8 @@ import io.micronaut.data.annotation.MappedEntity
 data class CustomerStatsRequest(
     val docValues: List<String?>,
     val bookingPartyId: String?,
-    val pageIndex: Int?,
-    val pageSize: Int?,
+    val pageIndex: Int,
+    val pageSize: Int,
     val sortType: String?,
     val sortBy: String?
 )
