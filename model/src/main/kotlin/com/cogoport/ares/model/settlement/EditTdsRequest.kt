@@ -13,6 +13,6 @@ data class EditTdsRequest(
     @field: NotNull(message = "exchangeRate is required") val exchangeRate: BigDecimal?,
     @field: NotNull(message = "currency is required") val currency: String?,
     @field: NotNull(message = "Updated By is required") val updatedBy: UUID?,
-    val updatedByUserType: String?
+    @field: NotNull(message = "updatedByUserType is required") val updatedByUserType: String?
 
 )

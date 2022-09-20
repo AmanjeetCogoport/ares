@@ -379,7 +379,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
         ), 
@@ -465,7 +465,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
         ),
