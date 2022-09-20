@@ -811,6 +811,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
-    suspend fun getOverallStatsForCustomers(documentValues: List<String?>, bookingPartyId: String?,
-                                            pageIndex: Int?, pageSize: Int?, sortType: String?, sortBy: String?): List<StatsForCustomerResponse?>
+    suspend fun getOverallStatsForCustomers(
+        documentValues: List<String?>,
+        bookingPartyId: String?,
+        pageIndex: Int?,
+        pageSize: Int?,
+        sortType: String?,
+        sortBy: String?
+    ): List<StatsForCustomerResponse?>
 }
