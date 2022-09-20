@@ -75,4 +75,16 @@ class SettlementServiceHelper {
             throw AresException(AresError.ERR_1505, "$from to $to")
         }
     }
+
+    fun <T : Any> getJvList(classType: Class<T>): List<T> {
+        return if (classType == SettlementType::class.java) {
+            listOf(
+                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST
+            ) as List<T>
+        } else {
+            listOf(
+                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST
+            ) as List<T>
+        }
+    }
 }
