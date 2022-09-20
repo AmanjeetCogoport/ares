@@ -6,5 +6,5 @@ import io.micronaut.data.annotation.MappedEntity
 @Introspected
 @MappedEntity
 data class KamPaymentRequest(
-    val docValue: List<String?>
+    val docValue: List<String>
 )
