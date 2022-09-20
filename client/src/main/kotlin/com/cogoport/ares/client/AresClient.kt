@@ -2,8 +2,10 @@ package com.cogoport.ares.client
 
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.OutstandingList
@@ -33,6 +35,8 @@ import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
@@ -113,4 +117,12 @@ interface AresClient {
 
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
+
+    @Post("/payments/dashboard/kam/overall-stats")
+    suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse
+
+    @Post("/payments/dashboard/customer/overall-stats")
+    suspend fun getOverallStatsForCustomers(
+        @Valid @Body request: CustomerStatsRequest
+    ): List<StatsForCustomerResponse?>
 }
