@@ -769,7 +769,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """ 
-        SELECT tagged_organization_id as organization_id,
+        SELECT * from
+        (SELECT tagged_organization_id as organization_id,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
@@ -790,10 +791,26 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
         AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid)
-        GROUP BY tagged_organization_id
+        GROUP BY tagged_organization_id) output
+        ORDER BY
+            CASE WHEN :sortBy = 'DESC' THEN
+                    CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
+                         WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
+                         WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count
+                    END
+            END 
+            DESC,
+            CASE WHEN :sortBy = 'ASC' THEN
+                    CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
+                         WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
+                         WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count 
+                    END        
+            END 
+            ASC,
+            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END DESC
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
     suspend fun getOverallStatsForCustomers(documentValues: List<String?>, bookingPartyId: String?,
-                                            pageIndex: Int?, pageSize: Int?): List<StatsForCustomerResponse?>
+                                            pageIndex: Int?, pageSize: Int?, sortType: String?, sortBy: String?): List<StatsForCustomerResponse?>
 }
