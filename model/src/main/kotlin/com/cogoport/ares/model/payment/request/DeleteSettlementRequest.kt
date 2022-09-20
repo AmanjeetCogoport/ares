@@ -7,5 +7,5 @@ data class DeleteSettlementRequest(
     val documentNo: String,
     val settlementType: SettlementType,
     val deletedBy: UUID,
-    val deletedByUserType: String
+    val deletedByUserType: String?
 )

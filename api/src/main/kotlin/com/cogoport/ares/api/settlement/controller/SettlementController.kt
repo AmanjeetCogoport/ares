@@ -132,7 +132,7 @@ class SettlementController {
         @QueryValue("documentNo") documentNo: String,
         @QueryValue("settlementType") settlementType: SettlementType,
         @QueryValue("deletedBy") deletedBy: UUID,
-        @QueryValue("deletedByUserType") deletedByUserType: String
+        @QueryValue("deletedByUserType") deletedByUserType: String?
     ): String {
         return Response<String>().ok(
             settlementService.delete(

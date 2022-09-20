@@ -1024,7 +1024,7 @@ open class SettlementServiceImpl : SettlementService {
                 amount = invoiceTdsDiff,
                 ledAmount = invoiceTdsDiffLed,
                 updatedBy = request.updatedBy!!,
-                updatedByUserType = request.updatedByUserType!!,
+                updatedByUserType = request.updatedByUserType,
                 tdsPaid = invoiceTdsDiff
             )
             sourceDoc.amount = sourceDoc.amount?.minus(paymentTdsDiff)
@@ -1074,11 +1074,11 @@ open class SettlementServiceImpl : SettlementService {
             request.stackDetails!!.first {
                 it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
-        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy!!, request.createdByUserType!!)
+        deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy!!, request.createdByUserType)
         return runSettlement(request, true)
     }
 
-    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String): String {
+    private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
         val sourceType =
             when (settlementType) {
@@ -1180,7 +1180,7 @@ open class SettlementServiceImpl : SettlementService {
         amount: BigDecimal,
         ledAmount: BigDecimal? = null,
         updatedBy: UUID,
-        updatedByUserType: String,
+        updatedByUserType: String? = null,
         tdsPaid: BigDecimal? = null
     ) {
         val accUtil =
@@ -1574,8 +1574,8 @@ open class SettlementServiceImpl : SettlementService {
             else BigDecimal.ZERO
         val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
-        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType!!) // Update Payment
-        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType!!) // Update Invoice
+        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType) // Update Payment
+        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1618,7 +1618,7 @@ open class SettlementServiceImpl : SettlementService {
         utilizedAmount: BigDecimal,
         paidTds: BigDecimal,
         updatedBy: UUID,
-        updatedByUserType: String
+        updatedByUserType: String?
     ) {
         val paymentUtilization =
             accountUtilizationRepository.findRecord(
@@ -1663,7 +1663,7 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID,
-        performedByUserType: String
+        performedByUserType: String?
     ) {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)

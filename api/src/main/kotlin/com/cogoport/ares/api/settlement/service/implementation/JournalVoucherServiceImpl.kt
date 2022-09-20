@@ -176,7 +176,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return request.incidentId!!
     }
 
-    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String) {
+    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?) {
         journalVoucherRepository.updateStatus(id, status, performedBy)
         auditService.createAudit(
             AuditRequest(
