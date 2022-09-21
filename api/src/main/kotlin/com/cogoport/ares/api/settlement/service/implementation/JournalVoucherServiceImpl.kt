@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -17,6 +16,7 @@ import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus

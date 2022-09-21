@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
