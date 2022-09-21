@@ -5,7 +5,6 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -22,6 +21,7 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -428,7 +428,7 @@ class CpSettlementServiceImpl : CpSettlementService {
             )
         for (doc in documentModel) {
             doc.status = settlementServiceHelper.getDocumentStatus(
-                afterTdsAmount = doc.afterTdsAmount!!,
+                docAmount = doc.documentAmount,
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType.dbValue)
             )

@@ -1,10 +1,10 @@
 package com.cogoport.ares.api.settlement.controller
 
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -131,7 +131,7 @@ class SettlementController {
     suspend fun delete(
         @QueryValue("documentNo") documentNo: String,
         @QueryValue("settlementType") settlementType: SettlementType,
-        @QueryValue("deletedBy") deletedBy: UUID?,
+        @QueryValue("deletedBy") deletedBy: UUID,
         @QueryValue("deletedByUserType") deletedByUserType: String?
     ): String {
         return Response<String>().ok(

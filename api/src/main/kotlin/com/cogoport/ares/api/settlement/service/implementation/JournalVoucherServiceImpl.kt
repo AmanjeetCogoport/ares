@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -17,6 +16,7 @@ import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -153,7 +153,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
         val jvId = Hashids.decode(request.journalVoucherId!!)[0]
-        journalVoucherRepository.updateStatus(jvId, JVStatus.REJECTED, request.performedBy, request.remark)
+        journalVoucherRepository.reject(jvId, request.performedBy!!, request.remark)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
@@ -174,6 +174,20 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             id = request.incidentId
         )
         return request.incidentId!!
+    }
+
+    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?) {
+        journalVoucherRepository.updateStatus(id, status, performedBy)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.JOURNAL_VOUCHERS,
+                objectId = id,
+                actionName = AresConstants.UPDATE,
+                data = mapOf("id" to id, "status" to status),
+                performedBy = performedBy.toString(),
+                performedByUserType = performedByUserType
+            )
+        )
     }
 
     private suspend fun updateJournalVoucher(jvId: Long, performedBy: UUID?, remark: String?): JournalVoucher {
@@ -314,45 +328,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      */
     private fun getSignFlag(accMode: AccMode, type: String): Short {
         return when (type) {
-            "CREDIT" -> {
-                getCreditSignFlag(accMode)
-            }
-            "DEBIT" -> {
-                getDebitSignFlag(accMode)
-            }
+            "CREDIT" -> { -1 }
+            "DEBIT" -> { 1 }
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
-            }
-        }
-    }
-
-    /**
-     * Return credit Sign Flag on the basis of Account Mode
-     * @param: accMode
-     * @return: Short
-     */
-    private fun getCreditSignFlag(accMode: AccMode): Short {
-
-        return when (accMode) {
-            AccMode.AR -> { -1 }
-            AccMode.AP -> { 1 }
-            else -> {
-                throw AresException(AresError.ERR_1009, "Acc Mode")
-            }
-        }
-    }
-
-    /**
-     * Return Debit Sign Flag on the basis of Account Mode
-     * @param: accMode
-     * @return: Short
-     */
-    private fun getDebitSignFlag(accMode: AccMode): Short {
-        return when (accMode) {
-            AccMode.AR -> { 1 }
-            AccMode.AP -> { -1 }
-            else -> {
-                throw AresException(AresError.ERR_1009, "JV Category")
             }
         }
     }

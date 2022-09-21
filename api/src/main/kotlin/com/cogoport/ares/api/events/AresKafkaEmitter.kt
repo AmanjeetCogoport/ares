@@ -4,6 +4,7 @@ import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
 
@@ -27,4 +28,13 @@ interface AresKafkaEmitter {
 
     @Topic("sage-jv-migration")
     fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+
+    @Topic("update-bill-payment-status")
+    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
+
+    @Topic("update-bill-archive")
+    fun emitUpdateBillsToArchive(billId: Long)
+
+    @Topic("update-invoice-archive")
+    fun emitUpdateInvoicesToArchive(invoiceId: Long)
 }

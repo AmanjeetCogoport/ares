@@ -4,8 +4,11 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
@@ -22,9 +25,13 @@ import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
@@ -80,6 +87,18 @@ class DashboardController {
     @Get("/org-payables-stats{?request*}")
     suspend fun getOrgPayables(@Valid request: OrgPayableRequest): OrgPayableResponse {
         return Response<OrgPayableResponse>().ok(dashboardService.getOrgPayables(request))
+    }
+
+    @Post("/kam/overall-stats")
+    suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse {
+        return Response<StatsForKamResponse>().ok(dashboardService.getOverallStats(request))
+    }
+
+    @Post("/customer/overall-stats")
+    suspend fun getOverallStatsForCustomers(
+        @Valid @Body request: CustomerStatsRequest
+    ): ResponseList<StatsForCustomerResponse?> {
+        return dashboardService.getOverallStatsForCustomers(request)
     }
 
     /** To be Deleted */
