@@ -857,6 +857,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         GROUP BY tagged_organization_id) as output
         """
     )
-    suspend fun getCount(documentValues: List<String>,
-                         bookingPartyId: String?):Long?
+    suspend fun getCount(
+        documentValues: List<String>,
+        bookingPartyId: String?
+    ): Long?
 }
