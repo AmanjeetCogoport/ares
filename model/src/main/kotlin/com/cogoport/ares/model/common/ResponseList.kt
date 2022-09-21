@@ -1,7 +1,7 @@
-package com.cogoport.ares.api.common.models
+package com.cogoport.ares.model.common
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import reactor.util.annotation.Nullable
+import io.micronaut.core.annotation.Nullable
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResponseList<T>(
