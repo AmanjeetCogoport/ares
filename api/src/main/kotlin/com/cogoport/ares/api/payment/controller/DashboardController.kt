@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
@@ -96,7 +97,7 @@ class DashboardController {
     @Post("/customer/overall-stats")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
-    ): List<StatsForCustomerResponse?> {
+    ): ResponseList<StatsForCustomerResponse?> {
         return dashboardService.getOverallStatsForCustomers(request)
     }
 

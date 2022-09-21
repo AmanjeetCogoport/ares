@@ -7,6 +7,7 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -388,11 +389,18 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOverallStatsForCustomers(
         request: CustomerStatsRequest
-    ): List<StatsForCustomerResponse?> {
-        return accountUtilizationRepository.getOverallStatsForCustomers(
+    ): ResponseList<StatsForCustomerResponse?> {
+        var list = listOf<StatsForCustomerResponse?>()
+        list = accountUtilizationRepository.getOverallStatsForCustomers(
             request.docValues, request.bookingPartyId,
             request.pageIndex, request.pageSize,
             request.sortType, request.sortBy
         )
+        val responseList = ResponseList<StatsForCustomerResponse?>()
+        responseList.list = list
+        responseList.totalRecords = accountUtilizationRepository.getCount(request.docValues, request.bookingPartyId)
+        responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
+        responseList.pageNo = request.pageIndex
+        return responseList
     }
 }

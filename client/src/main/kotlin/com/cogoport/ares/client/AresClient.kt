@@ -1,5 +1,6 @@
 package com.cogoport.ares.client
 
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -124,5 +125,5 @@ interface AresClient {
     @Post("/payments/dashboard/customer/overall-stats")
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
-    ): List<StatsForCustomerResponse?>
+    ): ResponseList<StatsForCustomerResponse?>
 }

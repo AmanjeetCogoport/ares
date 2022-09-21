@@ -4,7 +4,6 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
@@ -34,6 +33,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
