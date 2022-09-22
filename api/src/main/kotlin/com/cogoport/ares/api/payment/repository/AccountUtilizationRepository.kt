@@ -282,6 +282,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 				s.destination_id = au.document_no
 				AND s.destination_type::varchar = au.acc_type::varchar        	
             WHERE amount_curr <> 0
+                AND pay_curr <> 0
                 AND organization_id in (:orgIds)
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
@@ -307,6 +308,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations
             WHERE
             amount_curr <> 0
+            AND pay_curr <> 0
             AND organization_id in (:orgIds)
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
