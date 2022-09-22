@@ -662,11 +662,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             transaction_date::timestamp AS transaction_date, 
             null as exchange_rate
         FROM account_utilizations
-        WHERE acc_type = 'PCN' 
+        WHERE acc_type::varchar = :accType 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
 
     @Query(
         """
