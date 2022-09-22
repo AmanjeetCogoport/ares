@@ -1091,6 +1091,7 @@ open class SettlementServiceImpl : SettlementService {
             when (settlementType) {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+                SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1542,7 +1543,7 @@ open class SettlementServiceImpl : SettlementService {
                 getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             if (excLedAmount.compareTo(BigDecimal.ZERO) != 0) {
                 val exType =
-                    if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
+                    if (invoice.accMode == AccMode.AR)
                         SettlementType.SECH
                     else SettlementType.PECH
                 val exSign =
