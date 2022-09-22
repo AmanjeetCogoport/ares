@@ -803,21 +803,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid)
         GROUP BY tagged_organization_id) output
         ORDER BY
-            CASE WHEN :sortBy = 'DESC' THEN
+            CASE WHEN :sortBy = 'Desc' THEN
                     CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
                          WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
                          WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count
                     END
             END 
-            DESC,
-            CASE WHEN :sortBy = 'ASC' THEN
+            Desc,
+            CASE WHEN :sortBy = 'Asc' THEN
                     CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
                          WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
                          WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count 
                     END        
             END 
-            ASC,
-            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END DESC
+            Asc,
+            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END Desc
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
