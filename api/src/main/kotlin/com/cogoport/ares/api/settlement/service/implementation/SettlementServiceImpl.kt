@@ -226,8 +226,10 @@ open class SettlementServiceImpl : SettlementService {
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
-                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
-                    AccountType.SINV.toString())
+                mutableListOf(
+                    AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
+                    AccountType.SINV.toString()
+                )
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else if (request.accountType == "SINV") {
@@ -409,9 +411,9 @@ open class SettlementServiceImpl : SettlementService {
         }
         val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
             paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
-        } else if (settlementType == SettlementType.PCN){
+        } else if (settlementType == SettlementType.PCN) {
             accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.PCN.dbValue)
-        } else{
+        } else {
             accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.SINV.dbValue)
         }
         payments.forEach {
