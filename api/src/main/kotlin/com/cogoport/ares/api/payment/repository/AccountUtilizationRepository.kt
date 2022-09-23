@@ -280,7 +280,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
-				AND s.destination_type::varchar = au.acc_type::varchar        	
+				AND s.destination_type::varchar = au.acc_type::varchar
+            JOIN settlements s1 ON
+				s1.source_id = au.document_no
+				AND s1.source_type::varchar = au.acc_type::varchar
             WHERE amount_curr <> 0
                 AND pay_curr <> 0
                 AND organization_id in (:orgIds)
@@ -304,8 +307,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        SELECT count(1)
+        SELECT count(distinct account_utilizations.id)
             FROM account_utilizations
+            JOIN settlements s ON
+				s.source_id = document_no
+				AND s.source_type::varchar = acc_type::varchar
             WHERE
             amount_curr <> 0
             AND pay_curr <> 0
