@@ -227,8 +227,7 @@ open class SettlementServiceImpl : SettlementService {
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
                 mutableListOf(
-                    AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
-                    AccountType.SINV.toString()
+                    AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString()
                 )
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
