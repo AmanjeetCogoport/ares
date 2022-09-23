@@ -16,6 +16,7 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class UpdateInvoiceRequest(
     var documentNo: Long,
+    var documentValue: String,
     var accMode: AccMode,
     var accType: AccountType,
     var docStatus: DocumentStatus,
