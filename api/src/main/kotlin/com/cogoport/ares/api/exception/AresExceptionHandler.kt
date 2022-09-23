@@ -24,9 +24,8 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
         exception: Exception?
     ): HttpResponse<ErrorResponse> {
 
-        sendToSentry(exception)
         logger.error(request.toString(), exception)
-        var errorMessage: ErrorResponse
+        val errorMessage: ErrorResponse
 
         when (exception) {
             is AresException -> {
@@ -36,6 +35,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                     }
             }
             is HttpStatusException -> {
+                sendToSentry(exception)
                 errorMessage =
                     ErrorResponse(
                         AresError.ERR_1000.code,
@@ -52,6 +52,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                     )
             }
             else -> {
+                sendToSentry(exception)
                 errorMessage =
                     ErrorResponse(
                         AresError.ERR_1001.code,
