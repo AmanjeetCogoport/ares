@@ -46,5 +46,6 @@ data class AccUtilizationRequest(
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var performedBy: UUID? = null,
-    var performedByType: String? = null
+    var performedByType: String? = null,
+    var migrated: Boolean?
 )

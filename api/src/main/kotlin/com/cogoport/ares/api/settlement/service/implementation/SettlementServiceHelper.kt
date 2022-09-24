@@ -30,41 +30,30 @@ class SettlementServiceHelper {
             AccountType.PCN -> InvoiceType.PCN.value
             AccountType.PDN -> InvoiceType.PDN.value
             AccountType.PAY -> InvoiceType.PAY.value
-            AccountType.ROFF -> getVoucherType(signFlag, accMode) + InvoiceType.ROFF.value
-            AccountType.WOFF -> getVoucherType(signFlag, accMode) + InvoiceType.WOFF.value
-            AccountType.EXCH -> getVoucherType(signFlag, accMode) + InvoiceType.EXCH.value
-            AccountType.OUTST -> getVoucherType(signFlag, accMode) + InvoiceType.OUTST.value
-            AccountType.JVNOS -> getVoucherType(signFlag, accMode) + InvoiceType.JVNOS.value
+            AccountType.ROFF -> getVoucherType(signFlag) + InvoiceType.ROFF.value
+            AccountType.WOFF -> getVoucherType(signFlag) + InvoiceType.WOFF.value
+            AccountType.EXCH -> getVoucherType(signFlag) + InvoiceType.EXCH.value
+            AccountType.OUTST -> getVoucherType(signFlag) + InvoiceType.OUTST.value
+            AccountType.JVNOS -> getVoucherType(signFlag) + InvoiceType.JVNOS.value
             else -> throw AresException(AresError.ERR_1009, "accountType")
         }
     }
 
-    private fun getVoucherType(signFlag: Short, accMode: AccMode): String {
-        return when (accMode) {
-            AccMode.AR -> {
-                when (signFlag.toInt()) {
-                    1 -> "Debit "
-                    -1 -> "Credit "
-                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
-                }
-            }
-            AccMode.AP -> {
-                when (signFlag.toInt()) {
-                    1 -> "Credit "
-                    -1 -> "Debit "
-                    else -> { throw AresException(AresError.ERR_1009, "signFlag") }
-                }
-            }
+    private fun getVoucherType(signFlag: Short): String {
+        return when (signFlag.toInt()) {
+            1 -> "Debit "
+            -1 -> "Credit "
+            else -> { throw AresException(AresError.ERR_1009, "signFlag") }
         }
     }
 
-    fun getDocumentStatus(afterTdsAmount: BigDecimal, balanceAmount: BigDecimal, docType: SettlementType): String {
+    fun getDocumentStatus(docAmount: BigDecimal, balanceAmount: BigDecimal, docType: SettlementType): String {
         val payments = listOf(SettlementType.REC, SettlementType.PAY, SettlementType.SCN, SettlementType.PCN)
         return if (balanceAmount.compareTo(BigDecimal.ZERO) == 0) {
             if (payments.contains(docType)) DocStatus.UTILIZED.value else DocStatus.PAID.value
-        } else if (afterTdsAmount.compareTo(balanceAmount) != 0) {
+        } else if (docAmount.compareTo(balanceAmount) != 0) {
             if (payments.contains(docType)) DocStatus.PARTIAL_UTILIZED.value else DocStatus.PARTIAL_PAID.value
-        } else if (afterTdsAmount.compareTo(balanceAmount) == 0) {
+        } else if (docAmount.compareTo(balanceAmount) == 0) {
             if (payments.contains(docType)) DocStatus.UNUTILIZED.value else DocStatus.UNPAID.value
         } else {
             throw AresException(AresError.ERR_1504, "")
@@ -84,6 +73,18 @@ class SettlementServiceHelper {
         } catch (e: Exception) {
             logger().error("Exchange Rate not found in for {} to {} for date: {}", from, to, transactionDate)
             throw AresException(AresError.ERR_1505, "$from to $to")
+        }
+    }
+
+    fun <T : Any> getJvList(classType: Class<T>): List<T> {
+        return if (classType == SettlementType::class.java) {
+            listOf(
+                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST
+            ) as List<T>
+        } else {
+            listOf(
+                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST
+            ) as List<T>
         }
     }
 }

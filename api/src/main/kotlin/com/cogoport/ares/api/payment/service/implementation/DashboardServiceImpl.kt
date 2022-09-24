@@ -7,10 +7,13 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
+import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
@@ -33,6 +36,8 @@ import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -376,5 +381,26 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getLedgerAmount(data: SearchResponse<Void>?): BigDecimal {
         return data?.aggregations()?.get("ledgerAmount")?.sum()?.value()?.toBigDecimal() ?: 0.toBigDecimal()
+    }
+
+    override suspend fun getOverallStats(request: KamPaymentRequest): StatsForKamResponse {
+        return accountUtilizationRepository.getOverallStats(request.docValue)
+    }
+
+    override suspend fun getOverallStatsForCustomers(
+        request: CustomerStatsRequest
+    ): ResponseList<StatsForCustomerResponse?> {
+        var list = listOf<StatsForCustomerResponse?>()
+        list = accountUtilizationRepository.getOverallStatsForCustomers(
+            request.docValues, request.bookingPartyId,
+            request.pageIndex, request.pageSize,
+            request.sortType, request.sortBy
+        )
+        val responseList = ResponseList<StatsForCustomerResponse?>()
+        responseList.list = list
+        responseList.totalRecords = accountUtilizationRepository.getCount(request.docValues, request.bookingPartyId)
+        responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
+        responseList.pageNo = request.pageIndex
+        return responseList
     }
 }

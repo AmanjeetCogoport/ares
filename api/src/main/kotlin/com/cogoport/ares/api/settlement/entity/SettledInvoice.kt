@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
@@ -30,5 +31,6 @@ data class SettledInvoice(
     var signFlag: Short,
     val exchangeRate: BigDecimal,
     var settledTds: BigDecimal,
-    var nostroAmount: BigDecimal
+    var nostroAmount: BigDecimal,
+    var accMode: AccMode
 )

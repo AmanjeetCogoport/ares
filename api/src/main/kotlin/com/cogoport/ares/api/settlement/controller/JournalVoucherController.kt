@@ -1,9 +1,9 @@
 package com.cogoport.ares.api.settlement.controller
 
-import com.cogoport.ares.api.common.models.ResponseList
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
@@ -28,7 +28,7 @@ class JournalVoucherController {
 
     @Post
     suspend fun createJv(@Body request: JournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Created Successfully", journalVoucherService.createJournalVoucher(request))
+        return Response<String>().ok("Request Sent", journalVoucherService.createJournalVoucher(request))
     }
 
     @Get("/list{?jvListRequest*}")

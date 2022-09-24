@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
-import com.cogoport.ares.api.common.models.ResponseList
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse

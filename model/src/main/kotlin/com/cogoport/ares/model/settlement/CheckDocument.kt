@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.sql.Timestamp
+import java.util.Date
 
 @JsonInclude
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -28,7 +28,7 @@ data class CheckDocument(
     var currency: String,
     var ledCurrency: String,
     var exchangeRate: BigDecimal,
-    var transactionDate: Timestamp,
+    var transactionDate: Date,
     var settledTds: BigDecimal,
     var settledAmount: BigDecimal?,
     var nostroAmount: BigDecimal?,

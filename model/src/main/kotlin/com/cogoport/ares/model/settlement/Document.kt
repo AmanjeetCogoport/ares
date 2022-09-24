@@ -16,6 +16,7 @@ data class Document(
     var accountType: String,
     var documentType: String,
     var transactionDate: Date,
+    var mappingId: UUID?,
     var dueDate: Date?,
     var documentAmount: BigDecimal,
     var ledgerAmount: BigDecimal,

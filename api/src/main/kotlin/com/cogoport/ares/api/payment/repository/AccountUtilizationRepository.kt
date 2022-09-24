@@ -17,6 +17,8 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
+import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -33,7 +35,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) """
     )
@@ -42,7 +44,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) """
     )
@@ -269,6 +271,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             taxable_amount,
             transaction_date,
             au.sign_flag,
+            au.acc_mode,
             amount_loc/amount_curr as exchange_rate,
             '' as status,
             pay_curr as settled_amount,
@@ -277,12 +280,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
-				AND s.destination_type::varchar = au.acc_type::varchar        	
+				AND s.destination_type::varchar = au.acc_type::varchar
+            JOIN settlements s1 ON
+				s1.source_id = au.document_no
+				AND s1.source_type::varchar = au.acc_type::varchar
             WHERE amount_curr <> 0
+                AND pay_curr <> 0
                 AND organization_id in (:orgIds)
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
+                AND (document_value ilike :query || '%')
             GROUP BY au.id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
@@ -293,22 +301,34 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageIndex: Int?,
         pageSize: Int?,
         startDate: String?,
-        endDate: String?
+        endDate: String?,
+        query: String
     ): List<HistoryDocument?>
 
     @Query(
         """
-        SELECT count(1)
+        SELECT count(distinct account_utilizations.id)
             FROM account_utilizations
+            JOIN settlements s ON
+				s.source_id = document_no
+				AND s.source_type::varchar = acc_type::varchar
             WHERE
             amount_curr <> 0
+            AND pay_curr <> 0
             AND organization_id in (:orgIds)
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
+            AND (document_value ilike :query || '%')
         """
     )
-    fun countHistoryDocument(orgIds: List<UUID>, accountTypes: List<String>, startDate: String?, endDate: String?): Long
+    fun countHistoryDocument(
+        orgIds: List<UUID>,
+        accountTypes: List<String>,
+        startDate: String?,
+        endDate: String?,
+        query: String
+    ): Long
 
     @Query(
         """
@@ -369,7 +389,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
         ), 
@@ -385,6 +405,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -428,7 +449,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getDocumentList(limit: Int? = null, offset: Int? = null, accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, accMode: AccMode?): List<Document?>
+    suspend fun getDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: List<AccountType>,
+        orgId: List<UUID>,
+        entityCode: Int?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?,
+        accMode: AccMode?
+    ): List<Document?>
 
     @Query(
         """
@@ -439,11 +470,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND pay_curr <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
+                AND (:accMode is null OR acc_mode = :accMode::ACCOUNT_MODE)
                 AND (:accType is null OR acc_type::varchar = :accType)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
         ),
@@ -459,6 +491,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
+            au.trade_party_mapping_id as mapping_id,
             document_no, 
             document_value, 
             acc_type as document_type,
@@ -502,7 +535,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
         """
     )
-    suspend fun getTDSDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): List<Document?>
+    suspend fun getTDSDocumentList(
+        limit: Int? = null,
+        offset: Int? = null,
+        accType: AccountType?,
+        orgId: List<UUID>,
+        accMode: AccMode?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?
+    ): List<Document?>
 
     @Query(
         """
@@ -575,9 +617,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
+                    AND acc_type::varchar in (:accType)
+                    AND (:accMode is null OR acc_mode::varchar = :accMode)
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
 
     @Query(
         """
@@ -626,11 +670,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             transaction_date::timestamp AS transaction_date, 
             null as exchange_rate
         FROM account_utilizations
-        WHERE acc_type = 'PCN' 
+        WHERE acc_type::varchar = :accType 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
 
     @Query(
         """
@@ -663,7 +707,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 updated_at,
                 taxable_amount,
                 trade_party_mapping_id,
-                tagged_organization_id
+                tagged_organization_id,
+                migrated
                 FROM account_utilizations
                 WHERE document_value = :documentValue
                 AND   acc_type = :accType::account_type
@@ -702,11 +747,126 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 updated_at,
                 taxable_amount,
                 trade_party_mapping_id,
-                tagged_organization_id
+                tagged_organization_id,
+                migrated
                 FROM account_utilizations
                 WHERE document_no = :documentNo
                 AND   acc_type = :accType::account_type
             """
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
+
+    @Query(
+        """ 
+        SELECT
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
+        (SELECT count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') AND amount_loc - pay_loc <> 0 AND document_value in (:documentValues) AND document_status = 'PROFORMA') as customers_count_proforma,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc- pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
+        (SELECT count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') AND amount_loc - pay_loc <> 0 AND document_value in (:documentValues) AND document_status in ('FINAL','PROFORMA') AND due_date > now()::date ) as customers_count_due,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        (SELECT count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') AND amount_curr - pay_curr <> 0 AND document_value in (:documentValues) AND document_status in ('FINAL','PROFORMA') AND due_date <= now()::date  ) as customers_count_overdue,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        (SELECT count(distinct tagged_organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') AND amount_loc - pay_loc <> 0 AND document_value in (:documentValues) AND document_status in ('FINAL','PROFORMA')) as customers_count_receivables,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 AND due_date is NOT NULL THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60 AND due_date is NOT NULL THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND due_date is NOT NULL THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) >90 AND due_date is NOT NULL THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(sum(case when (now()::date - due_date) >90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND tagged_organization_id IS NOT NULL
+        """
+    )
+    suspend fun getOverallStats(documentValues: List<String>): StatsForKamResponse
+
+    @Query(
+        """ 
+        SELECT * from
+        (SELECT tagged_organization_id as organization_id,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
+        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid)
+        GROUP BY tagged_organization_id) output
+        ORDER BY
+            CASE WHEN :sortBy = 'Desc' THEN
+                    CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
+                         WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
+                         WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortBy = 'Asc' THEN
+                    CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
+                         WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
+                         WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count 
+                    END        
+            END 
+            Asc,
+            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END Desc
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+        """
+    )
+    suspend fun getOverallStatsForCustomers(
+        documentValues: List<String>,
+        bookingPartyId: String?,
+        pageIndex: Int,
+        pageSize: Int,
+        sortType: String?,
+        sortBy: String?
+    ): List<StatsForCustomerResponse?>
+
+    @Query(
+        """ 
+        SELECT count(*) from
+        (SELECT tagged_organization_id as organization_id,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
+        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid)
+        GROUP BY tagged_organization_id) as output
+        """
+    )
+    suspend fun getCount(
+        documentValues: List<String>,
+        bookingPartyId: String?
+    ): Long?
 }
