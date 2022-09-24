@@ -2,6 +2,7 @@ package com.cogoport.ares.api.exception
 
 import com.cogoport.ares.api.common.models.ErrorResponse
 import com.cogoport.ares.api.utils.logger
+import io.micronaut.context.env.Environment
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -9,13 +10,14 @@ import io.micronaut.http.annotation.Error
 import io.micronaut.http.exceptions.HttpStatusException
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import io.sentry.Sentry
+import io.sentry.protocol.Request
 import jakarta.inject.Singleton
 import org.slf4j.MDC
 import javax.validation.ConstraintViolationException
 import javax.validation.ValidationException
 
 @Singleton
-class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorResponse>> {
+class AresExceptionHandler(private var environment: Environment) : ExceptionHandler<Exception, HttpResponse<ErrorResponse>> {
     private val logger = logger()
 
     @Error(global = true, exception = Exception::class)
@@ -24,7 +26,7 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
         exception: Exception?
     ): HttpResponse<ErrorResponse> {
 
-        sendToSentry(exception)
+        sendToSentry(exception, request)
         logger.error(request.toString(), exception)
         var errorMessage: ErrorResponse
 
@@ -63,12 +65,14 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
         return getResponse(errorMessage.httpStatus, errorMessage)
     }
 
-    private fun sendToSentry(exception: Exception?) {
+    private fun sendToSentry(exception: Exception?, request: HttpRequest<*>?) {
         exception?.let {
             logger.error(exception.message)
             Sentry.withScope {
                 it.setTag("traceId", MDC.get("traceId"))
                 it.setTag("spanId", MDC.get("spanId"))
+                it.setTag("environment", environment.activeNames.toString())
+                it.request = getRequest(request)
                 Sentry.captureException(exception)
             }
         }
@@ -105,5 +109,32 @@ class AresExceptionHandler : ExceptionHandler<Exception, HttpResponse<ErrorRespo
                 HttpStatus.NOT_FOUND
             )
         )
+    }
+
+    private fun getRequest(originalRequest: HttpRequest<*>?): Request {
+        val request = Request()
+        request.url = originalRequest?.uri.toString()
+        request.cookies = getCookies(originalRequest)
+        request.method = originalRequest?.method.toString()
+        request.headers = getHeaders(originalRequest)
+        request.queryString = originalRequest?.uri?.query
+        request.envs = mapOf(
+            "remoteAddress" to originalRequest?.remoteAddress.toString(),
+            "serverAddress" to originalRequest?.serverAddress.toString(),
+            "serverName" to originalRequest?.serverName
+        )
+        return request
+    }
+
+    private fun getHeaders(request: HttpRequest<*>?): HashMap<String, String> {
+        val headers = HashMap<String, String>()
+        request?.headers?.map { headers.put(it.key, it.value[0].toString()) }
+        return headers
+    }
+
+    private fun getCookies(request: HttpRequest<*>?): String {
+        val cookies = ""
+        request?.headers?.map { cookies.plus(Pair(it.key, it.value[0]).toString()) }
+        return cookies
     }
 }
