@@ -226,9 +226,14 @@ open class SettlementServiceImpl : SettlementService {
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
-                mutableListOf(AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString())
+                mutableListOf(
+                    AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
+                    AccountType.SINV.toString()
+                )
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
+            } else if (request.accountType == "SINV") {
+                mutableListOf(AccountType.SINV.toString())
             } else {
                 mutableListOf(request.accountType!!)
             }
@@ -278,7 +283,7 @@ open class SettlementServiceImpl : SettlementService {
                             jobNumber = it.jobNumber.toString()
                         )
                     }
-                } else if (accType in listOf(SettlementType.PAY, SettlementType.PCN)) {
+                } else if (accType in listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)) {
                     kuberClient.getSidsForBillIds(ids).map {
                         Sid(
                             documentId = it.billId,
@@ -337,7 +342,7 @@ open class SettlementServiceImpl : SettlementService {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
             when (request.settlementType) {
-                SettlementType.REC, SettlementType.PCN, SettlementType.PAY -> {
+                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
                         getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
@@ -406,8 +411,10 @@ open class SettlementServiceImpl : SettlementService {
         }
         val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
             paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
+        } else if (settlementType == SettlementType.PCN) {
+            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.PCN.dbValue)
         } else {
-            accountUtilizationRepository.getPaymentDetails(paymentIds)
+            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.SINV.dbValue)
         }
         payments.forEach {
             if (it.documentNo == null) throw AresException(AresError.ERR_1503, "")
@@ -424,7 +431,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN, SettlementType.PAY -> {
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(
@@ -1084,6 +1091,7 @@ open class SettlementServiceImpl : SettlementService {
             when (settlementType) {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+                SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1535,7 +1543,7 @@ open class SettlementServiceImpl : SettlementService {
                 getExchangeValue(toSettleAmount, invoice.exchangeRate) - (paidLedAmount)
             if (excLedAmount.compareTo(BigDecimal.ZERO) != 0) {
                 val exType =
-                    if (fetchSettlingDocs(SettlementType.CTDS).contains(invoice.accountType))
+                    if (invoice.accMode == AccMode.AR)
                         SettlementType.SECH
                     else SettlementType.PECH
                 val exSign =

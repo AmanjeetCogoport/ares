@@ -280,8 +280,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
-				AND s.destination_type::varchar = au.acc_type::varchar        	
+				AND s.destination_type::varchar = au.acc_type::varchar
+            JOIN settlements s1 ON
+				s1.source_id = au.document_no
+				AND s1.source_type::varchar = au.acc_type::varchar
             WHERE amount_curr <> 0
+                AND pay_curr <> 0
                 AND organization_id in (:orgIds)
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
@@ -303,10 +307,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-        SELECT count(1)
+        SELECT count(distinct account_utilizations.id)
             FROM account_utilizations
+            JOIN settlements s ON
+				s.source_id = document_no
+				AND s.source_type::varchar = acc_type::varchar
             WHERE
             amount_curr <> 0
+            AND pay_curr <> 0
             AND organization_id in (:orgIds)
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
@@ -662,11 +670,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             transaction_date::timestamp AS transaction_date, 
             null as exchange_rate
         FROM account_utilizations
-        WHERE acc_type = 'PCN' 
+        WHERE acc_type::varchar = :accType 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
 
     @Query(
         """
@@ -803,21 +811,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid)
         GROUP BY tagged_organization_id) output
         ORDER BY
-            CASE WHEN :sortBy = 'DESC' THEN
+            CASE WHEN :sortBy = 'Desc' THEN
                     CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
                          WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
                          WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count
                     END
             END 
-            DESC,
-            CASE WHEN :sortBy = 'ASC' THEN
+            Desc,
+            CASE WHEN :sortBy = 'Asc' THEN
                     CASE WHEN :sortType = 'proforma_invoices_count' THEN output.proforma_invoices_count
                          WHEN :sortType = 'overdue_invoices_count' THEN output.overdue_invoices_count
                          WHEN :sortType = 'due_invoices_count' THEN output.due_invoices_count 
                     END        
             END 
-            ASC,
-            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END DESC
+            Asc,
+            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.due_invoices_count END Desc
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )

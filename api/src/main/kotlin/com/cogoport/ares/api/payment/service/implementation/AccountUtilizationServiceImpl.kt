@@ -202,6 +202,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
 
         accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
+        accountUtilization.documentValue = updateInvoiceRequest.documentValue
         accountUtilization.dueDate = updateInvoiceRequest.dueDate
         accountUtilization.documentStatus = updateInvoiceRequest.docStatus
         accountUtilization.entityCode = updateInvoiceRequest.entityCode
