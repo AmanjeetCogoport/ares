@@ -869,4 +869,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         documentValues: List<String>,
         bookingPartyId: String?
     ): Long?
+
+    @Query(
+        """
+            DELETE FROM account_utilizations WHERE document_value IN (:docValues)
+        """
+    )
+    suspend fun deleteConsolidatedInvoices(docValues: List<String>)
 }

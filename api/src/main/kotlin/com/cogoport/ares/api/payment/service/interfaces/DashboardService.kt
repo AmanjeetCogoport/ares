@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -39,4 +40,5 @@ interface DashboardService {
     suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
     suspend fun getOverallStats(request: KamPaymentRequest): StatsForKamResponse
     suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): ResponseList<StatsForCustomerResponse?>
+    suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq)
 }

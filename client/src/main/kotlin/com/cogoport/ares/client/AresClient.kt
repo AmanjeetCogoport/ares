@@ -1,5 +1,6 @@
 package com.cogoport.ares.client
 
+import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -126,4 +127,7 @@ interface AresClient {
     suspend fun getOverallStatsForCustomers(
         @Valid @Body request: CustomerStatsRequest
     ): ResponseList<StatsForCustomerResponse?>
+
+    @Delete("/payments/dashboard/kam/consolidated")
+    suspend fun deleteConsolidatedInvoices(@Body req: DeleteConsolidatedInvoicesReq)
 }
