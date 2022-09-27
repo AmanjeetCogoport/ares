@@ -700,14 +700,14 @@ open class SettlementServiceImpl : SettlementService {
     private fun getListOfAccountTypeFromDocType(docType: String?, accMode: AccMode?): List<AccountType> {
         val jvList = settlementServiceHelper.getJvList(classType = AccountType::class.java)
         return when {
-            docType == "PAYMENT" && accMode == AccMode.AR -> { listOf(AccountType.REC) }
-            docType == "PAYMENT" && accMode == AccMode.AP -> { listOf(AccountType.PAY) }
-            docType == "INVOICE" && accMode == AccMode.AR -> { listOf(AccountType.SINV) }
-            docType == "INVOICE" && accMode == AccMode.AP -> { listOf(AccountType.PINV) }
-            docType == "INVOICE" && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
-            docType == "CREDIT_NOTE" && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
-            docType == "CREDIT_NOTE" && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
-            docType == "JV" && accMode != null -> { jvList }
+            docType == AresConstants.PAYMENT && accMode == AccMode.AR -> { listOf(AccountType.REC) }
+            docType == AresConstants.PAYMENT && accMode == AccMode.AP -> { listOf(AccountType.PAY) }
+            docType == AresConstants.INVOICE && accMode == AccMode.AR -> { listOf(AccountType.SINV) }
+            docType == AresConstants.INVOICE && accMode == AccMode.AP -> { listOf(AccountType.PINV) }
+            docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
+            docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
+            docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
+            docType == AresConstants.JV && accMode != null -> { jvList }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList
             }
@@ -1017,7 +1017,7 @@ open class SettlementServiceImpl : SettlementService {
                 ?: throw AresException(AresError.ERR_1503, "TDS")
         val sourceDoc =
             doc.first { it.sourceType in fetchSettlingDocs(it?.destinationType!!) }
-                ?: throw AresException(AresError.ERR_1503, "PAYMENT")
+                ?: throw AresException(AresError.ERR_1503, AresConstants.PAYMENT)
         val sourceLedgerRate =
             Utilities.binaryOperation(sourceDoc.ledAmount, sourceDoc.amount!!, Operator.DIVIDE)
         var currNewTds = request.newTds!!
