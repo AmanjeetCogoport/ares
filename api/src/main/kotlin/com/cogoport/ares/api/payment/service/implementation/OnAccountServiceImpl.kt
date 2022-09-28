@@ -25,6 +25,7 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentSearchType
@@ -533,5 +534,19 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument("test_invoices", accUtilizationEntity.id.toString(), accUtilizationEntity)
         }
         return accUtilizationResponse
+    }
+
+    override suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq) {
+        accountUtilizationRepository.deleteConsolidatedInvoices(req.docValues)
+        auditService.createAudit(
+            AuditRequest(
+                actionName = "DELETE",
+                objectId = req.jobId,
+                objectType = "account_utilizations",
+                data = req.docValues,
+                performedBy = req.performedBy,
+                performedByUserType = req.performedByUserType
+            )
+        )
     }
 }

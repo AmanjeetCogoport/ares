@@ -4,7 +4,6 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -112,9 +111,4 @@ class DashboardController {
 
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
-
-    @Delete("/kam/consolidated")
-    suspend fun deleteConsolidatedInvoices(@Body req: DeleteConsolidatedInvoicesReq) {
-        dashboardService.deleteConsolidatedInvoices(req)
-    }
 }

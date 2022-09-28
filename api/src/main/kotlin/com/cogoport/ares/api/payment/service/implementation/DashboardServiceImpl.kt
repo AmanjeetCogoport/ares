@@ -5,11 +5,9 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
-import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -408,19 +406,5 @@ class DashboardServiceImpl : DashboardService {
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
         responseList.pageNo = request.pageIndex
         return responseList
-    }
-
-    override suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq) {
-        accountUtilizationRepository.deleteConsolidatedInvoices(req.docValues)
-        auditService.createAudit(
-            AuditRequest(
-                actionName = "DELETE",
-                objectId = req.jobId,
-                objectType = "account_utilizations",
-                data = req.docValues,
-                performedBy = req.performedBy,
-                performedByUserType = req.performedByUserType
-            )
-        )
     }
 }

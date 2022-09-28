@@ -128,6 +128,6 @@ interface AresClient {
         @Valid @Body request: CustomerStatsRequest
     ): ResponseList<StatsForCustomerResponse?>
 
-    @Delete("/payments/dashboard/kam/consolidated")
+    @Delete("/payments/accounts/consolidated")
     suspend fun deleteConsolidatedInvoices(@Body req: DeleteConsolidatedInvoicesReq)
 }
