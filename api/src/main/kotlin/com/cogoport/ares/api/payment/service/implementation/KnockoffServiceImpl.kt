@@ -96,9 +96,9 @@ open class KnockoffServiceImpl : KnockoffService {
         var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
-        if(accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr, accountUtilization.amountLoc)
-        }else {
+        } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
         }
 
@@ -118,13 +118,13 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
-        if(accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
             saveAccountUtilization(
-                    savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                    currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
-                    accountUtilization.amountLoc - accountUtilization.payLoc
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
+                accountUtilization.amountLoc - accountUtilization.payLoc
             )
-        }else {
+        } else {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid
