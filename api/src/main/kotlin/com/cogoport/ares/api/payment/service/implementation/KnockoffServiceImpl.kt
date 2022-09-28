@@ -93,9 +93,15 @@ open class KnockoffServiceImpl : KnockoffService {
         )
 
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
-        val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
-        val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
-        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
+        var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
+
+        if(accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr, accountUtilization.amountLoc)
+        }else {
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        }
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -111,10 +117,19 @@ open class KnockoffServiceImpl : KnockoffService {
         saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
-        saveAccountUtilization(
-            savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-            currTotalAmtPaid, ledTotalAmtPaid
-        )
+
+        if(accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+            saveAccountUtilization(
+                    savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                    currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
+                    accountUtilization.amountLoc - accountUtilization.payLoc
+            )
+        }else {
+            saveAccountUtilization(
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid
+            )
+        }
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
         saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
@@ -209,7 +224,9 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         accountUtilization: AccountUtilization,
         currTotalAmtPaid: BigDecimal,
-        ledTotalAmtPaid: BigDecimal
+        ledTotalAmtPaid: BigDecimal,
+        utilizedCurrTotalAmtPaid: BigDecimal,
+        utilizedLedTotalAmtPaid: BigDecimal
     ) {
         val accountUtilEntity = AccountUtilization(
             id = null,
@@ -233,8 +250,8 @@ open class KnockoffServiceImpl : KnockoffService {
             ledCurrency = knockOffRecord.ledgerCurrency,
             amountCurr = currTotalAmtPaid,
             amountLoc = ledTotalAmtPaid,
-            payCurr = currTotalAmtPaid,
-            payLoc = ledTotalAmtPaid,
+            payCurr = utilizedCurrTotalAmtPaid,
+            payLoc = utilizedLedTotalAmtPaid,
             taxableAmount = BigDecimal.ZERO,
             dueDate = accountUtilization.dueDate,
             transactionDate = knockOffRecord.transactionDate,
