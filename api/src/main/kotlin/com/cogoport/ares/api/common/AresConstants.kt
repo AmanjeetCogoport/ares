@@ -64,4 +64,10 @@ object AresConstants {
     const val DELETE = "DELETE"
 
     const val ALL = "All"
+
+    // Settlement Constants
+    const val PAYMENT = "PAYMENT"
+    const val INVOICE = "INVOICE"
+    const val CREDIT_NOTE = "CREDIT_NOTE"
+    const val JV = "JV"
 }

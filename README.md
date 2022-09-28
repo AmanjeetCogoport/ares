@@ -19,6 +19,7 @@
 
 ## Working with IntellJ IDE
 
+
 We have to install jdk explicitly to use Intellj build and run functionality.
 ### Download GraalVM JDK 17
 1. [JDK URL](https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.0.0.2/graalvm-ce-java17-darwin-amd64-22.0.0.2.tar.gz)
