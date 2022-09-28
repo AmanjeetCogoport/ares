@@ -872,7 +872,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            DELETE FROM account_utilizations WHERE document_value IN (:docValues)
+            DELETE FROM account_utilizations WHERE document_value IN (:docValues) and acc_type IN ('SINV', 'SDN') and acc_mode='AR'
         """
     )
     suspend fun deleteConsolidatedInvoices(docValues: List<String>)

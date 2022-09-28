@@ -542,7 +542,7 @@ open class OnAccountServiceImpl : OnAccountService {
             AuditRequest(
                 actionName = "DELETE",
                 objectId = req.jobId,
-                objectType = "account_utilizations",
+                objectType = "jobs",
                 data = req.docValues,
                 performedBy = req.performedBy,
                 performedByUserType = req.performedByUserType
