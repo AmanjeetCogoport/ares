@@ -280,7 +280,7 @@ open class SettlementServiceImpl : SettlementService {
                     plutusClient.getSidsForInvoiceIds(ids)?.map {
                         Sid(
                             documentId = it.invoiceId,
-                            jobNumber = it.jobNumber.toString()
+                            jobNumber = it.jobNumber
                         )
                     }
                 } else if (accType in listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)) {
