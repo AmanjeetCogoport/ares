@@ -354,7 +354,7 @@ class CpSettlementServiceImpl : CpSettlementService {
 
         for (doc in invoiceList) {
             val d = invoiceSids?.find { it.invoiceId == doc?.invoiceNo }
-            doc?.sid = d?.jobNumber?.toLong()
+            doc?.sid = d?.jobNumber?
             doc?.shipmentType = d?.shipmentType
             doc?.pdfUrl = d?.pdfUrl
         }
