@@ -1,0 +1,2 @@
+ALTER TYPE account_type ADD VALUE 'SREIMB';
+ALTER TYPE account_type ADD VALUE 'PREIMB';
