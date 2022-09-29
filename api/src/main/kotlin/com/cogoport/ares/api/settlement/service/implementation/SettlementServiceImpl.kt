@@ -1854,7 +1854,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
-        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY)
+        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.RSINV, SettlementType.RPINV)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
         return when (accType) {
             SettlementType.REC -> {
@@ -1867,10 +1867,10 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PINV, SettlementType.PDN)
             }
             SettlementType.PAY -> {
-                listOf(SettlementType.PINV, SettlementType.PDN,SettlementType.RPINV) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.RPINV) + jvList
             }
             SettlementType.SINV -> {
-                listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
+                listOf(SettlementType.REC, SettlementType.SCN) + jvList
             }
             SettlementType.SCN -> {
                 listOf(SettlementType.SINV, SettlementType.SDN)
@@ -1901,6 +1901,12 @@ open class SettlementServiceImpl : SettlementService {
             }
             SettlementType.JVNOS -> {
                 jvSettleList
+            }
+            SettlementType.RPINV -> {
+                listOf(SettlementType.PAY, SettlementType.RSINV) + jvList
+            }
+            SettlementType.RSINV -> {
+                listOf(SettlementType.PAY, SettlementType.RPINV) + jvList
             }
             else -> {
                 emptyList()
