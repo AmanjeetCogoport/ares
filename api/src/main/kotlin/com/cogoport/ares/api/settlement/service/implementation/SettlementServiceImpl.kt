@@ -1278,8 +1278,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PINV,
                 SettlementType.SDN,
                 SettlementType.PDN,
-                SettlementType.RPINV,
-                SettlementType.RSINV
+                SettlementType.PREIMB,
+                SettlementType.SREIMB
             )
         val jvType =
             listOf(
@@ -1854,11 +1854,11 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
-        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.RSINV, SettlementType.RPINV)
+        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
         return when (accType) {
             SettlementType.REC -> {
-                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.RSINV) + jvList
+                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SREIMB) + jvList
             }
             SettlementType.PINV -> {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
@@ -1867,7 +1867,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PINV, SettlementType.PDN)
             }
             SettlementType.PAY -> {
-                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.RPINV) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PREIMB) + jvList
             }
             SettlementType.SINV -> {
                 listOf(SettlementType.REC, SettlementType.SCN) + jvList
@@ -1902,11 +1902,11 @@ open class SettlementServiceImpl : SettlementService {
             SettlementType.JVNOS -> {
                 jvSettleList
             }
-            SettlementType.RPINV -> {
-                listOf(SettlementType.PAY, SettlementType.RSINV) + jvList
+            SettlementType.PREIMB -> {
+                listOf(SettlementType.PAY, SettlementType.SREIMB) + jvList
             }
-            SettlementType.RSINV -> {
-                listOf(SettlementType.PAY, SettlementType.RPINV) + jvList
+            SettlementType.SREIMB -> {
+                listOf(SettlementType.PAY, SettlementType.PREIMB) + jvList
             }
             else -> {
                 emptyList()

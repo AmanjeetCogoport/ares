@@ -122,7 +122,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     Messages.SUCCESS_INVOICE_CREATION
                 )
             )
-            if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.RSINV)) {
+            if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.SREIMB)) {
                 aresKafkaEmitter.emitInvoiceBalance(
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(

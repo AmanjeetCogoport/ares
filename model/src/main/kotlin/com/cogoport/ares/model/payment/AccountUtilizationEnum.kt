@@ -46,8 +46,8 @@ enum class InvoiceType(val value: String) {
     SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"),
     PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment"),
     WOFF("Write Off Voucher"), ROFF("Round Off Voucher"), EXCH("Exchange Voucher"), OUTST("Outstanding Voucher"), JVNOS("Nostro Voucher"),
-    RSINV("Reimbursement Sales Invoice"),
-    RPINV("Reimbursement Purchase Invoice")
+    SREIMB("Reimbursement Sales Invoice"),
+    PREIMB("Reimbursement Purchase Invoice")
 }
 
 /**
