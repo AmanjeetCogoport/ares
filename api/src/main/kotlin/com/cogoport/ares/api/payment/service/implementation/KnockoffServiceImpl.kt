@@ -97,7 +97,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
         if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr, accountUtilization.amountLoc)
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
         }
