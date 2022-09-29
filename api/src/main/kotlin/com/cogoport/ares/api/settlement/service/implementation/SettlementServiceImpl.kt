@@ -1277,7 +1277,9 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.SINV,
                 SettlementType.PINV,
                 SettlementType.SDN,
-                SettlementType.PDN
+                SettlementType.PDN,
+                SettlementType.RPINV,
+                SettlementType.RSINV
             )
         val jvType =
             listOf(
@@ -1856,7 +1858,7 @@ open class SettlementServiceImpl : SettlementService {
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
         return when (accType) {
             SettlementType.REC -> {
-                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
+                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.RSINV) + jvList
             }
             SettlementType.PINV -> {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
@@ -1865,7 +1867,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PINV, SettlementType.PDN)
             }
             SettlementType.PAY -> {
-                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN,SettlementType.RPINV) + jvList
             }
             SettlementType.SINV -> {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList

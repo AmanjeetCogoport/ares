@@ -18,7 +18,9 @@ enum class SettlementType(val dbValue: String) {
     ROFF("ROFF"),
     EXCH("EXCH"),
     JVNOS("JVNOS"),
-    OUTST("OUTST");
+    OUTST("OUTST"),
+    RSINV("RSINV"),
+    RPINV("RPINV");
 
     open operator fun contains(value: String?): Boolean {
         for (c in SettlementType.values()) {
