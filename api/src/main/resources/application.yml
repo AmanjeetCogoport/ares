@@ -19,9 +19,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://cogo-book.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares
-      username: postgres
-      password: postgres123
+      url: r2dbc:postgresql://ares.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares?preparedStatementCacheQueries=0
+      username: ares
+      password: kce,A,yW9Bp0qNrQTysEjv^l5kQI-N
       dialect: POSTGRES
 
 services:
