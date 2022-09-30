@@ -25,8 +25,8 @@ r2dbc:
       dialect: POSTGRES
 
 services:
-  service: https://api.dev.cogoport.io
-  namespace: ${DNS_NAMESPACE:cogoport.local}
+  service: https://api.stage.cogoport.io
+  namespace: ${DNS_NAMESPACE:cogoport.stage}
 
 kafka:
   bootstrap:
@@ -36,9 +36,9 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
-  host: ${OPENSEARCH_HOST:search.books.dev.cogoport.io}
-  user: ${OPENSEARCH_USER:books_search_dev}
-  pass: ${OPENSEARCH_PASS:F20guhTISeCQ93nRaD@}
+  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
+  user: ${OPENSEARCH_USER:awsadmin}
+  pass: ${OPENSEARCH_PASS:T|8+GvX"ob,Q%Be:1A<TRs:Ay%~Z1y41}
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
