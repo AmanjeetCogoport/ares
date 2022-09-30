@@ -13,6 +13,7 @@ import io.micronaut.http.client.annotation.Client
     Header(name = HttpHeaders.ACCEPT, value = "application/json"),
     Header(name = HttpHeaders.CONTENT_TYPE, value = "application/json"),
     Header(name = HttpHeaders.USER_AGENT, value = "Ares-Cogo-Client"),
+    Header(name = "auth-token", value = "\${cogoport.exchange_api.auth_token}")
 )
 interface ExchangeClient {
     @Get("/rate/exchange_rates{?request*}")
