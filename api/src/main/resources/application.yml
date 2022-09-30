@@ -35,6 +35,7 @@ kafka:
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
+
 opensearch:
   host: 'search.stage.cogoport.io'
   user: 'awsadmin'
