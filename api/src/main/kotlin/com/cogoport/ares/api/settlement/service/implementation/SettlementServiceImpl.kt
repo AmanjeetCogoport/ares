@@ -1317,7 +1317,9 @@ open class SettlementServiceImpl : SettlementService {
             dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
             dest.map { it.accountType }.contains(SettlementType.PREIMB)
         ) {
-            dest.filter { it.accountType == SettlementType.SINV }.forEach {
+
+            val allowedSettlementType = mutableListOf<SettlementType>(SettlementType.SREIMB, SettlementType.SINV)
+           val res =  dest.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
                 source.add(it)
                 dest.remove(it)
             }
@@ -1908,7 +1910,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.SREIMB) + jvList
             }
             SettlementType.SREIMB -> {
-                listOf(SettlementType.PAY, SettlementType.PREIMB) + jvList
+                listOf(SettlementType.REC, SettlementType.PREIMB) + jvList
             }
             else -> {
                 emptyList()
