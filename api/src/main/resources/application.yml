@@ -19,14 +19,14 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://cogo-book.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares
-      username: postgres
-      password: postgres123
+      url: r2dbc:postgresql://ares.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares?preparedStatementCacheQueries=0
+      username: ares
+      password: kce,A,yW9Bp0qNrQTysEjv^l5kQI-N
       dialect: POSTGRES
 
 services:
-  service: https://api.dev.cogoport.io
-  namespace: ${DNS_NAMESPACE:cogoport.local}
+  service: https://api.stage.cogoport.io
+  namespace: ${DNS_NAMESPACE:cogoport.stage}
 
 kafka:
   bootstrap:
@@ -36,9 +36,9 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
-  host: ${OPENSEARCH_HOST:search.books.dev.cogoport.io}
-  user: ${OPENSEARCH_USER:books_search_dev}
-  pass: ${OPENSEARCH_PASS:F20guhTISeCQ93nRaD@}
+  host: 'search.stage.cogoport.io'
+  user: 'awsadmin'
+  pass: "T|8+GvX\"ob,Q%Be:1A<TRs:Ay%~Z1y41"
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
