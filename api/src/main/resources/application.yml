@@ -38,7 +38,7 @@ jackson:
 opensearch:
   host: 'search.stage.cogoport.io'
   user: 'awsadmin'
-  pass: "T\|8+GvX\"ob\,Q\%Be\:1A\<TRs\:Ay\%~Z1y41"
+  pass: "T|8+GvX\"ob,Q%Be:1A<TRs:Ay%~Z1y41"
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
