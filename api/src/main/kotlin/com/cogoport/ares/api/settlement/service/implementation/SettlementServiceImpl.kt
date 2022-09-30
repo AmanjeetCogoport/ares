@@ -1319,7 +1319,7 @@ open class SettlementServiceImpl : SettlementService {
         ) {
 
             val allowedSettlementType = mutableListOf<SettlementType>(SettlementType.SREIMB, SettlementType.SINV)
-           val res =  dest.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
+            val res = dest.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
                 source.add(it)
                 dest.remove(it)
             }
