@@ -1872,7 +1872,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PREIMB) + jvList
             }
             SettlementType.SINV -> {
-                listOf(SettlementType.REC, SettlementType.SCN) + jvList
+                listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
             }
             SettlementType.SCN -> {
                 listOf(SettlementType.SINV, SettlementType.SDN)
