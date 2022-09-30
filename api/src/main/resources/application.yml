@@ -36,9 +36,15 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
+<<<<<<< Updated upstream
   host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
   user: ${OPENSEARCH_USER:awsadmin}
   pass: ${OPENSEARCH_PASS:T|8+GvX"ob,Q%Be:1A<TRs:Ay%~Z1y41}
+=======
+  host: 'search.stage.cogoport.io'
+  user: 'awsadmin'
+  pass: 'T|8+GvX"ob,Q%Be:1A<TRs:Ay%~Z1y41'
+>>>>>>> Stashed changes
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
