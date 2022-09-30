@@ -10,5 +10,7 @@ enum class SignSuffix(val sign: Short, val accountType: AccountType) {
     SALES_CREDIT_NOTE(-1, AccountType.SCN),
     PURCHASE_CREDIT_NOTE(1, AccountType.PCN),
     PURCHASE_DEBIT_NOTE(-1, AccountType.PDN),
-    SALES_DEBIT_NOTE(1, AccountType.SDN)
+    SALES_DEBIT_NOTE(1, AccountType.SDN),
+    PURCHASE_REMS_INVOICE(-1, AccountType.PREIMB),
+    SALES_REMS_INVOICE(1, AccountType.SREIMB)
 }
