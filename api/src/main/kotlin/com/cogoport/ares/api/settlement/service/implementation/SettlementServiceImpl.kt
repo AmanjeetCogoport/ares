@@ -1277,7 +1277,9 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.SINV,
                 SettlementType.PINV,
                 SettlementType.SDN,
-                SettlementType.PDN
+                SettlementType.PDN,
+                SettlementType.PREIMB,
+                SettlementType.SREIMB
             )
         val jvType =
             listOf(
@@ -1311,9 +1313,13 @@ open class SettlementServiceImpl : SettlementService {
         }
         if (source.isEmpty() &&
             dest.map { it.accountType }.contains(SettlementType.SINV) &&
-            dest.map { it.accountType }.contains(SettlementType.PINV)
+            dest.map { it.accountType }.contains(SettlementType.PINV) &&
+            dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
+            dest.map { it.accountType }.contains(SettlementType.PREIMB)
         ) {
-            dest.filter { it.accountType == SettlementType.SINV }.forEach {
+
+            val allowedSettlementType = mutableListOf<SettlementType>(SettlementType.SREIMB, SettlementType.SINV)
+            val res = dest.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
                 source.add(it)
                 dest.remove(it)
             }
@@ -1852,7 +1858,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
-        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY)
+        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
         return when (accType) {
             SettlementType.REC -> {
@@ -1899,6 +1905,12 @@ open class SettlementServiceImpl : SettlementService {
             }
             SettlementType.JVNOS -> {
                 jvSettleList
+            }
+            SettlementType.PREIMB -> {
+                listOf(SettlementType.SREIMB)
+            }
+            SettlementType.SREIMB -> {
+                listOf(SettlementType.PREIMB)
             }
             else -> {
                 emptyList()
