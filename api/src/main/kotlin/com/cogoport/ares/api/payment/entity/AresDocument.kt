@@ -6,6 +6,7 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
+import java.util.UUID
 
 @MappedEntity("ares_documents")
 data class AresDocument(
@@ -13,7 +14,7 @@ data class AresDocument(
     var documentUrl: String,
     var documentName: String,
     var documentType: String,
-    var uploadedBy: String? = "",
+    var uploadedBy: UUID,
     @DateCreated var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @DateUpdated var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis())
 )

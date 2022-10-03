@@ -1,7 +1,5 @@
 package com.cogoport.ares.model.payment.response
 
-import java.math.BigDecimal
-
 data class BulkUploadErrorResponse(
     var organizationSerialId: String,
     var tradePartySerialId: String,

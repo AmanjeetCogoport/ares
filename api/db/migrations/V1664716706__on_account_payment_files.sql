@@ -1,4 +1,4 @@
-CREATE TABLE payment_files(
+CREATE TABLE payment_files (
    id BIGSERIAL PRIMARY KEY,
    acc_mode public."account_mode" NOT NULL,
    file_name VARCHAR(250) NOT NULL,
@@ -8,6 +8,6 @@ CREATE TABLE payment_files(
    success_records INT NOT NULL DEFAULT 0,
    created_by UUID NOT NULL,
    updated_by UUID NOT NULL,
-   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

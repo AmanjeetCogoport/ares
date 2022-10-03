@@ -9,4 +9,3 @@ data class BulkUploadRequest(
     @field: NotNull(message = "Uploaded By is required")
     var uploadedBy: UUID
 )
-

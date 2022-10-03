@@ -14,6 +14,7 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.PaymentFile
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
@@ -23,6 +24,7 @@ import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -126,7 +128,8 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentFileRepository: PaymentFileRepository
     @Inject
     lateinit var s3Client: S3Client
-
+    @Inject
+    lateinit var aresDocumentRepository: AresDocumentRepository
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
@@ -639,7 +642,18 @@ open class OnAccountServiceImpl : OnAccountService {
         result.successRecords = successCount
         paymentFileRepository.update(result)
 
+        var document: AresDocument? = null
+        if (totalCount != successCount && fileUrl.isNotBlank()) {
+            document = AresDocument(
+                documentUrl = fileUrl,
+                documentName = fileName,
+                documentType = "AP_Upload_Error_list",
+                uploadedBy = request.uploadedBy
+            )
+            aresDocumentRepository.save(document)
+        }
 
+        return UploadSummary(errorFileUrlId = document?.id, successCount, totalCount - successCount)
     }
 
     private fun downloadExcelFile(fileUrl: String): File {
