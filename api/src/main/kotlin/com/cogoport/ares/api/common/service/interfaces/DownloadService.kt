@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.common.service.`interface`
+package com.cogoport.ares.api.common.service.interfaces
 
 import java.io.File
 

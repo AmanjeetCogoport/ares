@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.common.controller
 
-import com.cogoport.ares.api.common.service.`interface`.DownloadService
+import com.cogoport.ares.api.common.service.interfaces.DownloadService
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.MutableHttpResponse

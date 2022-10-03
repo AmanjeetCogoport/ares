@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.common.service.implementation
 
-import com.cogoport.ares.api.common.service.`interface`.DownloadService
+import com.cogoport.ares.api.common.service.interfaces.DownloadService
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.brahma.s3.client.S3Client
 import jakarta.inject.Inject
@@ -27,7 +27,7 @@ class DownloadServiceImpl : DownloadService {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) +
             ".${document?.documentType}"
         val file = File("/tmp/$fileName")
-        Files.copy(inputStreamFile, file.toPath(), null)
+        Files.copy(inputStreamFile.inputStream(), file.toPath(), null)
         return file
     }
 }
