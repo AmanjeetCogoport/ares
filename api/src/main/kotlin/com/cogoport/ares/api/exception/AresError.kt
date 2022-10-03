@@ -30,8 +30,8 @@ enum class AresError(
     ERR_1503("ERR_1503", "Document does not exist : ", HttpStatus.BAD_REQUEST),
     ERR_1504("ERR_1504", "Document Overpaid", HttpStatus.NOT_MODIFIED),
     ERR_1505("ERR_1503", "Exchange Rate not found for : ", HttpStatus.BAD_REQUEST),
-    ERR_1506("ERR_1506", "Cross Trade Party AP/AR Settlement is not allowed.", HttpStatus.BAD_REQUEST);
-
+    ERR_1506("ERR_1506", "Cross Trade Party AP/AR Settlement is not allowed.", HttpStatus.BAD_REQUEST),
+    ERR_1507("ERR_1507", "Invalid File format: ", HttpStatus.BAD_REQUEST);
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return message + param

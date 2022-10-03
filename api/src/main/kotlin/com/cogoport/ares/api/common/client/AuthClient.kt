@@ -10,6 +10,7 @@ import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
@@ -67,4 +68,7 @@ interface AuthClient {
 
     @Post("/get_organization_trade_party_mappings")
     suspend fun getSerialIdDetails(@Body request: SerialIdDetailsRequest): List<SerialIdDetailsResponse?>?
+
+    @Get("/validate_trade_party{?request*}")
+    suspend fun validateTradeParty(request: ValidateTradePartyRequest): Boolean?
 }
