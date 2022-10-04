@@ -592,11 +592,10 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun onAccountBulkAPPayments(request: BulkUploadRequest): UploadSummary {
         val excelFile = downloadExcelFile(request.fileUrl)
         val excelSheetReader = ExcelSheetReader(excelFile)
-        // entity_code, trade_party_serial_id, organization_serial_id, currency, amount, cogo_account_no, ref_account_no, payment_date, utr, remarks
         val paymentData = excelSheetReader.read()
         val noOfColumns = paymentData.first().size
         excelFile.delete()
-        if (noOfColumns != 10) {
+        if (noOfColumns != 11) {
             throw AresException(AresError.ERR_1507, "Number of columns mismatch")
         }
 
@@ -706,10 +705,9 @@ open class OnAccountServiceImpl : OnAccountService {
             val organizationSerialNo = it["organization_serial_id"].toString()
             val tradePartySerialNo = it["trade_party_serial_id"].toString()
             val entityCode = it["entity_code"].toString()
-            val cogoBank = it["cogo_bank"].toString()
-            val accountNumber = it["account_number"].toString()
+            val accountNumber = it["cogo_account_no"].toString()
             val currency = it["currency"].toString()
-            val paymentDate = it["uploaded_date"].toString()
+            val paymentDate = it["payment_date"].toString()
             val ledgerCurrency = cogoEntities.bankList.find { det -> det.entityCode.toString() == it["entity_code"].toString() }?.ledgerCurrency
             val utr = it["utr"].toString()
             val serialIdDetails = serialClientResponse?.find { detail ->
@@ -773,11 +771,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 errors.append("Invalid Entity Type")
             }
 
-            if (cogoBank.isNullOrEmpty()) {
-                hasErrors = true
-                errors.append("Cogo Bank is empty")
-            }
-
             if (accountNumber.isNullOrEmpty()) {
                 hasErrors = true
                 errors.append("Account Number is Empty")
@@ -809,7 +802,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 }
 
                 for (bankDetail in payableBankDetails) {
-                    if (bankDetail.beneficiaryName.equals(cogoBank) &&
+                    if (
                         bankDetail.accountNumber.equals(accountNumber) &&
                         bankDetail.currency.equals(currency)
                     ) {
@@ -894,8 +887,8 @@ open class OnAccountServiceImpl : OnAccountService {
             organizationSerialId = it["organization_serial_id"].toString(),
             tradePartySerialId = it["trade_party_serial_id"].toString(),
             entityCode = it["entity_code"].toString(),
-            cogoAccountNo = it["account_number"].toString(),
-            refAccountNo = it["ref_account_number"].toString(),
+            cogoAccountNo = it["cogo_account_no"].toString(),
+            refAccountNo = it["ref_account_no"].toString(),
             currency = it["currency"].toString(),
             amount = it["amount"].toString(),
             exchangeRate = it["exchange_rate"].toString(),

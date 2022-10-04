@@ -63,3 +63,7 @@ sage:
   databaseName: ${SAGE_DATABASE_NAME}
   restAPIUser: ${SAGE_REST_API_USER}
   restAPIPassword: ${SAGE_REST_API_PASSWORD}
+
+aws:
+  s3:
+    bucket: business-finance-prod

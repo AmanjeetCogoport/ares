@@ -3,7 +3,7 @@ CREATE TABLE payment_files (
    acc_mode public."account_mode" NOT NULL,
    file_name VARCHAR(250) NOT NULL,
    file_url TEXT NOT NULL,
-   error_file_url VARCHAR(100),
+   error_file_url TEXT,
    total_records INT NOT NULL DEFAULT 0,
    success_records INT NOT NULL DEFAULT 0,
    created_by UUID NOT NULL,

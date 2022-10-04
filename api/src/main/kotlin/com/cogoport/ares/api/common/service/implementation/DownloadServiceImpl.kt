@@ -27,7 +27,7 @@ class DownloadServiceImpl : DownloadService {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) +
             ".${document?.documentType}"
         val file = File("/tmp/$fileName")
-        Files.copy(inputStreamFile.inputStream(), file.toPath(), null)
+        Files.copy(inputStreamFile.inputStream(), file.toPath())
         return file
     }
 }
