@@ -901,7 +901,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private fun writeIntos3PaymentResponseExcel(paymentResponseList: List<BulkUploadErrorResponse>, excelName: String): File? {
         val file = ExcelSheetBuilder.Builder()
-            .filename(excelName) // Filename without extension
+            .filename(excelName)
             .sheetName("")
             .headerStyle( // Header style for all columns if you want to change the style of the individual header, you can pass style in the header object
                 Style(

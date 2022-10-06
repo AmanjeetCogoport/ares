@@ -25,7 +25,7 @@ class DownloadServiceImpl : DownloadService {
         val documentName = (document?.documentName)?.substringBeforeLast('.')
         val fileName = "${documentName}_${document?.id}_Error_List_" +
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) +
-            ".${document?.documentType}"
+            "${document?.documentType}.xlsx"
         val file = File("/tmp/$fileName")
         Files.copy(inputStreamFile.inputStream(), file.toPath())
         return file
