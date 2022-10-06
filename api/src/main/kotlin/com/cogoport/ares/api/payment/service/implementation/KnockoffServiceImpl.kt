@@ -31,6 +31,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -148,7 +149,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
-        if (leftAmount <= 0.toBigDecimal())
+        if (leftAmount <= 0.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 0.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
