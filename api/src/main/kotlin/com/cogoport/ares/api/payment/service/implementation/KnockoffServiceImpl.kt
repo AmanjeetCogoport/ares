@@ -97,7 +97,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
-        if (isOverPaid(accountUtilization,currTotalAmtPaid,ledTotalAmtPaid)) {
+        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
@@ -119,7 +119,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
-        if (isOverPaid(accountUtilization,currTotalAmtPaid,ledTotalAmtPaid)) {
+        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
@@ -165,7 +165,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
     private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
         if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid)
-                return true
+            return true
         return false
     }
     /**
