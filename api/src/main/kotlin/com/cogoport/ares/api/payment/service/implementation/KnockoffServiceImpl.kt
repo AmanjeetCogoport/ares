@@ -97,7 +97,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
-        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+        if (isOverPaid(accountUtilization,currTotalAmtPaid,ledTotalAmtPaid)) {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
@@ -119,7 +119,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
-        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid) {
+        if (isOverPaid(accountUtilization,currTotalAmtPaid,ledTotalAmtPaid)) {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
@@ -163,6 +163,11 @@ open class KnockoffServiceImpl : KnockoffService {
         return accPayResponse
     }
 
+    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
+        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid)
+                return true
+        return false
+    }
     /**
      * Emits Kafka message on topic <b>payables-bill-status</b>
      * @param : accPayResponseList
