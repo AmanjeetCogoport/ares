@@ -41,6 +41,7 @@ import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.OrgStatsResponse
+import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
@@ -595,7 +596,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val paymentData = excelSheetReader.read()
         val noOfColumns = paymentData.first().size
         excelFile.delete()
-        if (noOfColumns != 11) {
+        if (noOfColumns != 12) {
             throw AresException(AresError.ERR_1507, "Number of columns mismatch")
         }
 
@@ -706,6 +707,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val tradePartySerialNo = it["trade_party_serial_id"].toString()
             val entityCode = it["entity_code"].toString()
             val accountNumber = it["cogo_account_no"].toString()
+            val payMode = it["pay_mode"].toString()
             val currency = it["currency"].toString()
             val paymentDate = it["payment_date"].toString()
             val ledgerCurrency = cogoEntities.bankList.find { det -> det.entityCode.toString() == it["entity_code"].toString() }?.ledgerCurrency
@@ -714,6 +716,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 detail?.organization?.orgSerialId == organizationSerialNo.toLong() && detail?.tradePartySerial.toString() == tradePartySerialNo
             }
 
+            var payModeValue: PayMode? = null
             val bankAccounts = cogoEntities.bankList.find { it.entityCode.toString() == entityCode }?.bankDetails!!.map { it.accountNumber }
             var clientResponse: PlatformOrganizationResponse? = null
             var bankId = ""
@@ -735,6 +738,20 @@ open class OnAccountServiceImpl : OnAccountService {
             if (ledgerCurrency == null) {
                 hasErrors = true
                 errors.append("ledger currency for this entitiy type does not exist")
+            }
+
+            if (payMode.isNullOrEmpty()) {
+                hasErrors = true
+                errors.append("Payment Mode is empty")
+            } else {
+                try {
+                    if (!it["pay_mode"].toString().isNullOrEmpty()) {
+                        payModeValue = PayMode.valueOf(payMode)
+                    }
+                } catch (e: Exception) {
+                    hasErrors = true
+                    errors.append("Invalid Enum Format for pay_mode")
+                }
             }
 
             if (tradePartySerialNo.isNullOrEmpty()) {
@@ -835,7 +852,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 organizationName = serialIdDetails?.tradePartyBusinessName,
                 orgSerialId = it["trade_party_serial_id"].toString().toLong(),
                 entityType = if (!it["entity_code"].toString().isNullOrEmpty()) it.get("entity_code").toString().toInt() else 0,
-                bankAccountNumber = it["account_number"].toString(),
+                bankAccountNumber = it["cogo_account_no"].toString(),
+                refAccountNo = it["ref_account_no"].toString(),
                 amount = amount,
                 currency = it["currency"].toString(),
                 utr = it["utr"].toString(),
@@ -843,6 +861,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 accMode = AccMode.AP,
                 signFlag = 1,
                 paymentCode = PaymentCode.PAY,
+                payMode = payModeValue,
                 ledAmount = ledAmount,
                 ledCurrency = ledgerCurrency,
                 paymentNum = 0L,
@@ -893,6 +912,7 @@ open class OnAccountServiceImpl : OnAccountService {
             amount = it["amount"].toString(),
             exchangeRate = it["exchange_rate"].toString(),
             utr = it["utr"].toString(),
+            payMode = it["pay_mode"].toString(),
             paymentDate = it["payment_date"].toString(),
             remarks = it["remarks"].toString(),
             errorReason = errors.toString()

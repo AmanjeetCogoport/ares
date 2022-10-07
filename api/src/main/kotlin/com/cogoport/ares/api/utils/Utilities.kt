@@ -95,7 +95,8 @@ class Utilities {
 
         fun getDateFromString(stringDate: String): String {
             try {
-                val strDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(SimpleDateFormat("dd/MM/yyyy").parse(stringDate))
+                val formattingStringdate = stringDate.replace('-', '/')
+                val strDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(SimpleDateFormat("yyyy/MM/dd").parse(formattingStringdate))
                 return strDate
             } catch (ex: IllegalArgumentException) {
                 ex.printStackTrace() // log write
