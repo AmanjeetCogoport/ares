@@ -34,7 +34,8 @@ enum class AresError(
     ERR_1507("ERR_1507", "Ares Service Not Reachable.", HttpStatus.SERVICE_UNAVAILABLE),
     ERR_1508("ERR_1508", "Plutus Service Not Reachable.", HttpStatus.SERVICE_UNAVAILABLE),
     ERR_1509("ERR_1509", "Hades Service Not Reachable.", HttpStatus.SERVICE_UNAVAILABLE),
-    ERR_1510("ERR_1510", "Kuber Service Not Reachable.", HttpStatus.SERVICE_UNAVAILABLE);
+    ERR_1510("ERR_1510", "Kuber Service Not Reachable.", HttpStatus.SERVICE_UNAVAILABLE),
+    ERR_1511("ERR_1511", "Invalid File format: ", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

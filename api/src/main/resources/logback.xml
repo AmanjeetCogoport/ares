@@ -9,7 +9,7 @@
         </encoder>
     </appender>
     <logger name="io.micronaut.data.query" level="error"/>
-    <root level="INFO">
+    <root level="ERROR">
         <appender-ref ref="STDOUT"/>
     </root>
 
