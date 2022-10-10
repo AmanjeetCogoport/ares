@@ -74,7 +74,7 @@ class OnAccountController {
         onAccountService.deleteConsolidatedInvoices(req)
     }
 
-    @Post("/ap/bulk-upload")
+    @Post("/ap-bulk-upload")
     suspend fun bulkUpload(@Body request: BulkUploadRequest): UploadSummary {
         return onAccountService.onAccountBulkAPPayments(request)
     }
