@@ -83,6 +83,9 @@ data class Payment(
     @JsonProperty("refPaymentId")
     var refPaymentId: Long? = 0,
 
+    @JsonProperty("refAccountNo")
+    var refAccountNo: String?,
+
     @JsonProperty("transactionDate")
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
 

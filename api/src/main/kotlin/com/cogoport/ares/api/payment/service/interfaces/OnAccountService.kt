@@ -6,12 +6,14 @@ import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.response.UploadSummary
 import java.util.UUID
 
 interface OnAccountService {
@@ -24,4 +26,5 @@ interface OnAccountService {
     suspend fun getOrgStats(orgId: UUID?): OrgStatsResponse
     suspend fun getDataAccUtilization(request: PushAccountUtilizationRequest): List<AccountUtilization>
     suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq)
+    suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary
 }

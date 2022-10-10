@@ -63,3 +63,7 @@ sage:
 ares:
   settlement:
     crossTradeParty: ${CROSS_TRADE_PARTY_SETTLEMENT:false}
+
+aws:
+  s3:
+    bucket: business-finance-test
