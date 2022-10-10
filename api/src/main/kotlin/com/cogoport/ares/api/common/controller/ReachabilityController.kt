@@ -61,5 +61,4 @@ class ReachabilityController {
             throw AresException(AresError.ERR_1510, "")
         }
     }
-
 }
