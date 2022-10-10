@@ -34,4 +34,3 @@ data class BulkUploadErrorResponse(
     @ExcelColumn("error_reason")
     var errorReason: String
 )
-// entity_code, trade_party_serial_id, organization_serial_id, currency, amount, cogo_account_no, ref_account_no, payment_date, utr, remarks

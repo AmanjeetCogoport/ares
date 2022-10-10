@@ -20,7 +20,7 @@ class Validations {
 
         fun validateUTR(value: String): Boolean {
             var pattern = Regex("[a-zA-Z0-9]*")
-            return pattern.matches(value) && value.length > 10 && value.length < 20
+            return pattern.matches(value)
         }
 
         fun checkLocalDate(value: String): Boolean {

@@ -681,7 +681,6 @@ open class OnAccountServiceImpl : OnAccountService {
         var hasErrors = false
         var errorCount = 0
         var recordCount = 0
-        // entity_code, trade_party_serial_id, organization_serial_id, currency, amount, cogo_account_no, ref_account_no, payment_date, utr, remarks
         val cogoEntities = authClient.getCogoBank(CogoEntitiesRequest(""))
         val allEntityTypes = cogoEntities.bankList.map { it.entityCode }
         val orgTradeSerialIdMap = mutableListOf<SerialIdsInput>()
@@ -720,6 +719,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val bankAccounts = cogoEntities.bankList.find { it.entityCode.toString() == entityCode }?.bankDetails!!.map { it.accountNumber }
             var clientResponse: PlatformOrganizationResponse? = null
             var bankId = ""
+
             if (!Validations.validateUTR(utr)) {
                 errors.append(" Invalid UTR No,")
                 hasErrors = true
@@ -768,6 +768,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     errors.append("Invalid Trade Party Serial No")
                 }
             }
+
             if (organizationSerialNo.isNullOrEmpty()) {
                 errors.append("Organization Serial No is empty")
                 hasErrors = true
@@ -846,6 +847,8 @@ open class OnAccountServiceImpl : OnAccountService {
                     ledAmount = amount.multiply(it["exchange_rate"].toString().toBigDecimal())
                 }
             } catch (ex: NumberFormatException) {
+                hasErrors = true
+                errors.append("Invalid Number Format")
             }
 
             var paymentObj = Payment(

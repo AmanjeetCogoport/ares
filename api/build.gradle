@@ -56,7 +56,7 @@ dependencies {
 
     //Kuber Client
     implementation("com.cogoport.kuber:kuber-model:0.1.17-beta-1")
-    implementation("com.cogoport.kuber:kuber-client:0.1.10-beta-1")
+    implementation("com.cogoport.kuber:kuber-client:0.1.11-beta")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")

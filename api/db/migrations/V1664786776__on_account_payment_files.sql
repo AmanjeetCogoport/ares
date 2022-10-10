@@ -1,4 +1,4 @@
-CREATE TABLE payment_files (
+CREATE TABLE public.payment_files (
    id BIGSERIAL PRIMARY KEY,
    acc_mode public."account_mode" NOT NULL,
    file_name VARCHAR(250) NOT NULL,
