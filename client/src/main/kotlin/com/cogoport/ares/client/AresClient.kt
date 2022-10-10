@@ -40,6 +40,7 @@ import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.context.annotation.Parameter
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Delete
@@ -130,4 +131,7 @@ interface AresClient {
 
     @Delete("/payments/accounts/consolidated")
     suspend fun deleteConsolidatedInvoices(@Body req: DeleteConsolidatedInvoicesReq)
+
+    @Get("/payments/service-discovery/reachability")
+    suspend fun reachable(): HttpResponse<String>
 }
