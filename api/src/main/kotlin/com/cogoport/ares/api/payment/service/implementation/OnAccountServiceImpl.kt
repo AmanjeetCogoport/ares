@@ -70,6 +70,7 @@ import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
+import com.cogoport.plutus.model.invoice.GetUserRequest
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -90,6 +91,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
+import java.util.ArrayList
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -851,6 +853,13 @@ open class OnAccountServiceImpl : OnAccountService {
                 errors.append("Invalid Number Format")
             }
 
+            val uploadedByName = authClient.getUsers(
+                GetUserRequest(
+                    id = arrayListOf(uploadedBy.toString())
+                )
+            )
+
+
             var paymentObj = Payment(
                 organizationName = serialIdDetails?.tradePartyBusinessName,
                 orgSerialId = it["trade_party_serial_id"].toString().toLong(),
@@ -873,7 +882,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = ServiceType.NA,
                 bankId = null,
                 paymentDate = paymentDate,
-                uploadedBy = uploadedBy.toString(),
+                uploadedBy = uploadedByName?.get(0).toString(),
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId
             )
