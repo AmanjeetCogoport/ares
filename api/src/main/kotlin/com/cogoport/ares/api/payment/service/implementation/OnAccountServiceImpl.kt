@@ -91,7 +91,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
-import java.util.ArrayList
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -599,11 +598,11 @@ open class OnAccountServiceImpl : OnAccountService {
         val noOfColumns = paymentData.first().size
         excelFile.delete()
         if (noOfColumns != 12) {
-            throw AresException(AresError.ERR_1507, "Number of columns mismatch")
+            throw AresException(AresError.ERR_1511, "Number of columns mismatch")
         }
 
         if (paymentData.isEmpty()) {
-            throw AresException(AresError.ERR_1507, "No Data found!")
+            throw AresException(AresError.ERR_1511, "No Data found!")
         }
 
         val fileName: String = request.fileUrl.substring(request.fileUrl.lastIndexOf('/') + 1)
@@ -858,7 +857,6 @@ open class OnAccountServiceImpl : OnAccountService {
                     id = arrayListOf(uploadedBy.toString())
                 )
             )
-
 
             var paymentObj = Payment(
                 organizationName = serialIdDetails?.tradePartyBusinessName,
