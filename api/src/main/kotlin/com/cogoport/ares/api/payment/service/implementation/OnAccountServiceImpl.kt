@@ -880,7 +880,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = ServiceType.NA,
                 bankId = null,
                 paymentDate = paymentDate,
-                uploadedBy = uploadedByName?.get(0).toString(),
+                uploadedBy = uploadedByName?.get(0)?.userName,
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId
             )
