@@ -70,6 +70,7 @@ import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
+import com.cogoport.plutus.model.invoice.GetUserRequest
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -597,11 +598,11 @@ open class OnAccountServiceImpl : OnAccountService {
         val noOfColumns = paymentData.first().size
         excelFile.delete()
         if (noOfColumns != 12) {
-            throw AresException(AresError.ERR_1507, "Number of columns mismatch")
+            throw AresException(AresError.ERR_1511, "Number of columns mismatch")
         }
 
         if (paymentData.isEmpty()) {
-            throw AresException(AresError.ERR_1507, "No Data found!")
+            throw AresException(AresError.ERR_1511, "No Data found!")
         }
 
         val fileName: String = request.fileUrl.substring(request.fileUrl.lastIndexOf('/') + 1)
@@ -694,6 +695,12 @@ open class OnAccountServiceImpl : OnAccountService {
         val serialClientResponse = authClient.getSerialIdDetails(
             SerialIdDetailsRequest(
                 organizationTradePartyMappings = orgTradeSerialIdMap
+            )
+        )
+
+        val uploadedByName = authClient.getUsers(
+            GetUserRequest(
+                id = arrayListOf(uploadedBy.toString())
             )
         )
 
@@ -873,7 +880,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = ServiceType.NA,
                 bankId = null,
                 paymentDate = paymentDate,
-                uploadedBy = uploadedBy.toString(),
+                uploadedBy = uploadedByName?.get(0).toString(),
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId
             )

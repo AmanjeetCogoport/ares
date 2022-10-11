@@ -14,6 +14,8 @@ import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
+import com.cogoport.plutus.model.invoice.GetUserRequest
+import com.cogoport.plutus.model.invoice.GetUserResponse
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
@@ -71,4 +73,7 @@ interface AuthClient {
 
     @Get("/validate_trade_party{?request*}")
     suspend fun validateTradeParty(request: ValidateTradePartyRequest): Boolean?
+
+    @Post("/get_users")
+    suspend fun getUsers(@Body request: GetUserRequest): List<GetUserResponse>?
 }
