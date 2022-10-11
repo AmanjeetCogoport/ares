@@ -698,6 +698,12 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
 
+        val uploadedByName = authClient.getUsers(
+            GetUserRequest(
+                id = arrayListOf(uploadedBy.toString())
+            )
+        )
+
         paymentData.forEach {
             var errors = StringBuilder()
             hasErrors = false
@@ -851,12 +857,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 hasErrors = true
                 errors.append("Invalid Number Format")
             }
-
-            val uploadedByName = authClient.getUsers(
-                GetUserRequest(
-                    id = arrayListOf(uploadedBy.toString())
-                )
-            )
 
             var paymentObj = Payment(
                 organizationName = serialIdDetails?.tradePartyBusinessName,
