@@ -210,6 +210,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.ledCurrency = updateInvoiceRequest.ledCurrency
         accountUtilization.amountCurr = updateInvoiceRequest.currAmount
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
+        accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
         accUtilRepository.update(accountUtilization)
         auditService.createAudit(
