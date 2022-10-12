@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.data.annotation.Query
@@ -70,14 +71,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) > 365 then '365+'
              end, 'Unknown') as ageing_duration,
              zone_code as zone,
+             service_type,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
-             group by ageing_duration, zone
+             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
+             group by ageing_duration, zone, service_type
              order by 1
           """
     )
-    suspend fun getReceivableByAge(zone: String?): MutableList<AgeingBucketZone>
+    suspend fun getReceivableByAge(zone: String?, serviceType:ServiceType?): MutableList<AgeingBucketZone>
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'

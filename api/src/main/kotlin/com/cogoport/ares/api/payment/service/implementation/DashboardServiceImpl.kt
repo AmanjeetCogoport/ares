@@ -18,7 +18,9 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ReceivableByAgeViaServiceType
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
@@ -236,9 +238,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
-        val payment = accountUtilizationRepository.getReceivableByAge(request.zone)
+        val payment = accountUtilizationRepository.getReceivableByAge(request.zone, request.serviceType)
         if (payment.size == 0) {
-            return ReceivableAgeingResponse(listOf(request.zone))
+            return ReceivableAgeingResponse(listOf(request.zone), listOf(request.serviceType.name))
         }
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
         val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
@@ -246,7 +248,11 @@ class DashboardServiceImpl : DashboardService {
         val receivableWestBucket = mutableListOf<AgeingBucketZone>()
         val receivableZoneBucket = mutableListOf<AgeingBucketZone>()
         val receivableByAgeViaZone = mutableListOf<ReceivableByAgeViaZone>()
+        val receivableFclFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableServiceTypeBucket = mutableListOf<AgeingBucketZone>()
+        val receivableByAgeViaServiceType = mutableListOf<ReceivableByAgeViaServiceType>()
         var zoneData = listOf<String>()
+        var serviceTypeData = ServiceType
 
         if (request.zone.isNullOrBlank()) {
             zoneData = zoneData + listOf("East", "West", "North", "South")
@@ -264,7 +270,7 @@ class DashboardServiceImpl : DashboardService {
                 }
             }
 
-            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "")
+            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null)
             if (receivableNorthBucket.isEmpty()) {
                 receivableNorthBucket.add(res)
             }
@@ -296,9 +302,49 @@ class DashboardServiceImpl : DashboardService {
             receivableByAgeViaZone[0].ageingBucket = receivableZoneBucket
         }
 
+        if (request.serviceType?.name.isNullOrEmpty()) {
+            ServiceType.values().forEach {
+                serviceTypeData = serviceTypeData + it
+            }
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "FCL_FREIGHT",
+                    ageingBucket = receivableFclFreightBucket
+                )
+            )
+
+            payment.forEach {
+                when (it.serviceType.name) {
+                    "FCL_FREIGHT" -> receivableFclFreightBucket.add(receivableBucketAllZone(it))
+                }
+            }
+
+            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null)
+
+            if (receivableFclFreightBucket.isEmpty()) {
+                receivableFclFreightBucket.add(res)
+            }
+
+            receivableByAgeViaServiceType[0].ageingBucket = receivableFclFreightBucket
+        } else {
+            serviceTypeData = (((serviceTypeData + listOf(request.serviceType))))
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = request.serviceType?.name,
+                    ageingBucket = receivableServiceTypeBucket
+                )
+            )
+            payment.forEach {
+                if (it.serviceType.name == request.serviceType?.name) { receivableServiceTypeBucket.add(receivableBucketAllZone(it)) }
+            }
+            receivableByAgeViaServiceType[0].ageingBucket = receivableServiceTypeBucket
+        }
+
         return ReceivableAgeingResponse(
             zone = zoneData,
-            receivableByAgeViaZone = receivableByAgeViaZone
+            receivableByAgeViaZone = receivableByAgeViaZone,
+            serviceType = serviceTypeData,
+            receivableByAgeViaServiceType = receivableByAgeViaServiceType
         )
     }
 
@@ -306,7 +352,8 @@ class DashboardServiceImpl : DashboardService {
         return AgeingBucketZone(
             ageingDuration = response!!.ageingDuration,
             amount = response.amount,
-            zone = null
+            zone = null,
+            serviceType = null
         )
     }
 
