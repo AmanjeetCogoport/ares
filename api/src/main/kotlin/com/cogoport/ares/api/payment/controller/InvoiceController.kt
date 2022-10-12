@@ -33,5 +33,4 @@ class InvoiceController {
     suspend fun deleteInvoice(@Valid @Body deleteRequest: DeleteInvoiceRequest): Boolean {
         return accUtilService.delete(deleteRequest)
     }
-
 }
