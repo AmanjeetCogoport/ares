@@ -8,6 +8,7 @@ import com.cogoport.ares.model.payment.Operator
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Month
 import kotlin.math.ceil
@@ -90,6 +91,17 @@ class Utilities {
                 (currentYear) + 1
             }
             return (fiscalYear - 1).toString().substring(2, 4) + (fiscalYear).toString().substring(2, 4)
+        }
+
+        fun getDateFromString(stringDate: String): String {
+            try {
+                val formattingStringdate = stringDate.replace('-', '/')
+                val strDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(SimpleDateFormat("yyyy/MM/dd").parse(formattingStringdate))
+                return strDate
+            } catch (ex: IllegalArgumentException) {
+                ex.printStackTrace() // log write
+                throw AresException(AresError.ERR_1003, "") // Invalid date format
+            }
         }
     }
 }
