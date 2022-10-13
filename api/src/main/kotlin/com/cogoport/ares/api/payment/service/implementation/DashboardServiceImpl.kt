@@ -238,9 +238,11 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse {
-        val payment = accountUtilizationRepository.getReceivableByAge(request.zone, request.serviceType)
+        val serviceType: ServiceType? = request.serviceType
+        val currencyType: String? = request.currencyType
+        val payment = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType)
         if (payment.size == 0) {
-            return ReceivableAgeingResponse(listOf(request.zone), listOf(request.serviceType.name))
+            return ReceivableAgeingResponse(listOf(request.zone), listOf(serviceType))
         }
         val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
         val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
@@ -249,10 +251,27 @@ class DashboardServiceImpl : DashboardService {
         val receivableZoneBucket = mutableListOf<AgeingBucketZone>()
         val receivableByAgeViaZone = mutableListOf<ReceivableByAgeViaZone>()
         val receivableFclFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableLclFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableAirFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableFtlFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableLtlFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableHaulageFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableFclCustomsBucket = mutableListOf<AgeingBucketZone>()
+        val receivableLclCustomsBucket = mutableListOf<AgeingBucketZone>()
+        val receivableAirCustomsBucket = mutableListOf<AgeingBucketZone>()
+        val receivableTrailerFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableStoreOrderBucket = mutableListOf<AgeingBucketZone>()
+        val receivableAdditionalChargeBucket = mutableListOf<AgeingBucketZone>()
+        val receivableFclCfsBucket = mutableListOf<AgeingBucketZone>()
+        val receivableOriginServicesBucket = mutableListOf<AgeingBucketZone>()
+        val receivableDestinationServicesBucket = mutableListOf<AgeingBucketZone>()
+        val receivableFclCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableLclCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
+        val receivableAirCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
         val receivableServiceTypeBucket = mutableListOf<AgeingBucketZone>()
         val receivableByAgeViaServiceType = mutableListOf<ReceivableByAgeViaServiceType>()
         var zoneData = listOf<String>()
-        var serviceTypeData = ServiceType
+        var serviceTypeData = listOf<ServiceType>()
 
         if (request.zone.isNullOrBlank()) {
             zoneData = zoneData + listOf("East", "West", "North", "South")
@@ -270,7 +289,8 @@ class DashboardServiceImpl : DashboardService {
                 }
             }
 
-            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null)
+            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null, currency = "")
+
             if (receivableNorthBucket.isEmpty()) {
                 receivableNorthBucket.add(res)
             }
@@ -309,25 +329,213 @@ class DashboardServiceImpl : DashboardService {
             receivableByAgeViaServiceType.add(
                 ReceivableByAgeViaServiceType(
                     serviceTypeName = "FCL_FREIGHT",
-                    ageingBucket = receivableFclFreightBucket
+                    ageingBucket = receivableFclFreightBucket,
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "LCL_FREIGHT",
+                    ageingBucket = receivableLclFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "AIR_FREIGHT",
+                    ageingBucket = receivableAirFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "FTL_FREIGHT",
+                    ageingBucket = receivableFtlFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "LTL_FREIGHT",
+                    ageingBucket = receivableLtlFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "HAULAGE_FREIGHT",
+                    ageingBucket = receivableHaulageFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "FCL_CUSTOMS",
+                    ageingBucket = receivableFclCustomsBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "LCL_CUSTOMS",
+                    ageingBucket = receivableLclCustomsBucket,
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "AIR_CUSTOMS",
+                    ageingBucket = receivableAirCustomsBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "TRAILER_FREIGHT",
+                    ageingBucket = receivableTrailerFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "STORE_ORDER",
+                    ageingBucket = receivableStoreOrderBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "ADDITIONAL_CHARGE",
+                    ageingBucket = receivableAdditionalChargeBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "FCL_CFS",
+                    ageingBucket = receivableFclCfsBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "ORIGIN_SERVICES",
+                    ageingBucket = receivableOriginServicesBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "DESTINATION_SERVICES",
+                    ageingBucket = receivableDestinationServicesBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "FCL_CUSTOMS_FREIGHT",
+                    ageingBucket = receivableFclCustomsFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "LCL_CUSTOMS_FREIGHT",
+                    ageingBucket = receivableLclCustomsFreightBucket
+                )
+            )
+            receivableByAgeViaServiceType.add(
+                ReceivableByAgeViaServiceType(
+                    serviceTypeName = "AIR_CUSTOMS_FREIGHT",
+                    ageingBucket = receivableAirCustomsFreightBucket,
                 )
             )
 
             payment.forEach {
-                when (it.serviceType.name) {
+                when (it.serviceType) {
                     "FCL_FREIGHT" -> receivableFclFreightBucket.add(receivableBucketAllZone(it))
+                    "LCL_FREIGHT" -> receivableLclFreightBucket.add(receivableBucketAllZone(it))
+                    "AIR_FREIGHT" -> receivableAirFreightBucket.add(receivableBucketAllZone(it))
+                    "FTL_FREIGHT" -> receivableFtlFreightBucket.add(receivableBucketAllZone(it))
+                    "LTL_FREIGHT" -> receivableLtlFreightBucket.add(receivableBucketAllZone(it))
+                    "HAULAGE_FREIGHT" -> receivableHaulageFreightBucket.add(receivableBucketAllZone(it))
+                    "FCL_CUSTOMS" -> receivableFclCustomsBucket.add(receivableBucketAllZone(it))
+                    "LCL_CUSTOMS" -> receivableLclCustomsBucket.add(receivableBucketAllZone(it))
+                    "AIR_CUSTOMS" -> receivableAirCustomsBucket.add(receivableBucketAllZone(it))
+                    "TRAILER_FREIGHT" -> receivableTrailerFreightBucket.add(receivableBucketAllZone(it))
+                    "STORE_ORDER" -> receivableStoreOrderBucket.add(receivableBucketAllZone(it))
+                    "ADDITIONAL_CHARGE" -> receivableAdditionalChargeBucket.add(receivableBucketAllZone(it))
+                    "FCL_CFS" -> receivableFclCfsBucket.add(receivableBucketAllZone(it))
+                    "ORIGIN_SERVICES" -> receivableOriginServicesBucket.add(receivableBucketAllZone(it))
+                    "DESTINATION_SERVICES" -> receivableDestinationServicesBucket.add(receivableBucketAllZone(it))
+                    "FCL_CUSTOMS_FREIGHT" -> receivableFclCustomsFreightBucket.add(receivableBucketAllZone(it))
+                    "LCL_CUSTOMS_FREIGHT" -> receivableLclCustomsFreightBucket.add(receivableBucketAllZone(it))
+                    "AIR_CUSTOMS_FREIGHT" -> receivableAirCustomsFreightBucket.add(receivableBucketAllZone(it))
                 }
             }
 
-            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null)
+            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null, currency = "")
 
             if (receivableFclFreightBucket.isEmpty()) {
                 receivableFclFreightBucket.add(res)
             }
+            if (receivableLclFreightBucket.isEmpty()) {
+                receivableLclFreightBucket.add(res)
+            }
+            if (receivableAirFreightBucket.isEmpty()) {
+                receivableAirFreightBucket.add(res)
+            }
+            if (receivableFtlFreightBucket.isEmpty()) {
+                receivableFtlFreightBucket.add(res)
+            }
+            if (receivableLtlFreightBucket.isEmpty()) {
+                receivableLtlFreightBucket.add(res)
+            }
+            if (receivableHaulageFreightBucket.isEmpty()) {
+                receivableHaulageFreightBucket.add(res)
+            }
+            if (receivableFclCustomsBucket.isEmpty()) {
+                receivableFclCustomsBucket.add(res)
+            }
+            if (receivableLclCustomsBucket.isEmpty()) {
+                receivableLclCustomsBucket.add(res)
+            }
+            if (receivableAirCustomsBucket.isEmpty()) {
+                receivableAirCustomsBucket.add(res)
+            }
+            if (receivableTrailerFreightBucket.isEmpty()) {
+                receivableTrailerFreightBucket.add(res)
+            }
+            if (receivableStoreOrderBucket.isEmpty()) {
+                receivableStoreOrderBucket.add(res)
+            }
+            if (receivableAdditionalChargeBucket.isEmpty()) {
+                receivableAdditionalChargeBucket.add(res)
+            }
+            if (receivableFclCfsBucket.isEmpty()) {
+                receivableFclCfsBucket.add(res)
+            }
+            if (receivableOriginServicesBucket.isEmpty()) {
+                receivableOriginServicesBucket.add(res)
+            }
+            if (receivableDestinationServicesBucket.isEmpty()) {
+                receivableDestinationServicesBucket.add(res)
+            }
+            if (receivableFclCustomsFreightBucket.isEmpty()) {
+                receivableFclCustomsFreightBucket.add(res)
+            }
+            if (receivableLclCustomsFreightBucket.isEmpty()) {
+                receivableLclCustomsFreightBucket.add(res)
+            }
+            if (receivableAirCustomsFreightBucket.isEmpty()) {
+                receivableAirCustomsFreightBucket.add(res)
+            }
 
             receivableByAgeViaServiceType[0].ageingBucket = receivableFclFreightBucket
+            receivableByAgeViaServiceType[1].ageingBucket = receivableLclFreightBucket
+            receivableByAgeViaServiceType[2].ageingBucket = receivableAirFreightBucket
+            receivableByAgeViaServiceType[3].ageingBucket = receivableFtlFreightBucket
+            receivableByAgeViaServiceType[4].ageingBucket = receivableLtlFreightBucket
+            receivableByAgeViaServiceType[5].ageingBucket = receivableHaulageFreightBucket
+            receivableByAgeViaServiceType[6].ageingBucket = receivableFclCustomsBucket
+            receivableByAgeViaServiceType[7].ageingBucket = receivableLclCustomsBucket
+            receivableByAgeViaServiceType[8].ageingBucket = receivableAirCustomsBucket
+            receivableByAgeViaServiceType[9].ageingBucket = receivableTrailerFreightBucket
+            receivableByAgeViaServiceType[10].ageingBucket = receivableStoreOrderBucket
+            receivableByAgeViaServiceType[11].ageingBucket = receivableAdditionalChargeBucket
+            receivableByAgeViaServiceType[12].ageingBucket = receivableFclCfsBucket
+            receivableByAgeViaServiceType[13].ageingBucket = receivableOriginServicesBucket
+            receivableByAgeViaServiceType[14].ageingBucket = receivableDestinationServicesBucket
+            receivableByAgeViaServiceType[15].ageingBucket = receivableFclCustomsFreightBucket
+            receivableByAgeViaServiceType[16].ageingBucket = receivableLclCustomsFreightBucket
+            receivableByAgeViaServiceType[17].ageingBucket = receivableAirCustomsFreightBucket
+
         } else {
-            serviceTypeData = (((serviceTypeData + listOf(request.serviceType))))
+            serviceTypeData = serviceTypeData + listOf(request.serviceType!!)
             receivableByAgeViaServiceType.add(
                 ReceivableByAgeViaServiceType(
                     serviceTypeName = request.serviceType?.name,
@@ -335,7 +543,9 @@ class DashboardServiceImpl : DashboardService {
                 )
             )
             payment.forEach {
-                if (it.serviceType.name == request.serviceType?.name) { receivableServiceTypeBucket.add(receivableBucketAllZone(it)) }
+                if (it.serviceType == request.serviceType?.name) {
+                    receivableServiceTypeBucket.add(receivableBucketAllZone(it))
+                }
             }
             receivableByAgeViaServiceType[0].ageingBucket = receivableServiceTypeBucket
         }
@@ -353,7 +563,8 @@ class DashboardServiceImpl : DashboardService {
             ageingDuration = response!!.ageingDuration,
             amount = response.amount,
             zone = null,
-            serviceType = null
+            serviceType = null,
+            currency = response.currency,
         )
     }
 

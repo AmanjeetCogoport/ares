@@ -19,7 +19,7 @@ data class ReceivableAgeingResponse(
     @JsonProperty("zone")
     var zone: List<String?>,
     @JsonProperty("serviceType")
-    var serviceType: ServiceType,
+    var serviceType: List<ServiceType?>,
     @JsonProperty("receivableByAgeViaZone")
     var receivableByAgeViaZone: MutableList<ReceivableByAgeViaZone>? = null,
     @JsonProperty("receivableByAgeViaServiceType")

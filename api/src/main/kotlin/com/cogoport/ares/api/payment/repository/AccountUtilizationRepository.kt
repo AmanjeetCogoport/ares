@@ -72,14 +72,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              end, 'Unknown') as ageing_duration,
              zone_code as zone,
              service_type,
+             currency,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
-             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
-             group by ageing_duration, zone, service_type
+             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
+             and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
+             group by ageing_duration, zone, service_type, currency
              order by 1
           """
     )
-    suspend fun getReceivableByAge(zone: String?, serviceType:ServiceType?): MutableList<AgeingBucketZone>
+    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, currencyType: String?): MutableList<AgeingBucketZone>
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'
