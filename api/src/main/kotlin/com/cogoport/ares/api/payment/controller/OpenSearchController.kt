@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
+import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -21,6 +22,9 @@ class OpenSearchController {
 
     @Inject
     lateinit var pushToClientService: OpenSearchService
+
+    @Inject
+    lateinit var openSearchService: OpenSearchService
 
     @Post("/account-utilization")
     suspend fun getAccountUtilizationRequest(@Valid @Body request: PushAccountUtilizationRequest): List<AccountUtilization> {

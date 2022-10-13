@@ -1,5 +1,6 @@
 package com.cogoport.ares.model.payment.response
 
+import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -25,5 +26,10 @@ data class OverallStatsResponse(
     @JsonProperty("openOnAccountPaymentAmount")
     val openOnAccountPaymentAmount: BigDecimal = 0.toBigDecimal(),
     @JsonProperty("id")
-    var id: String?
+    var id: String?,
+    @JsonProperty("serviceType")
+    var serviceType: String? = null,
+    @JsonProperty("currency")
+    var currency: String? = null,
+
 )

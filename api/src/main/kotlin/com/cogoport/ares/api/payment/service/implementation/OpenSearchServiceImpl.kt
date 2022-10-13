@@ -19,12 +19,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.DueAmount
-import com.cogoport.ares.model.payment.InvoiceStats
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import jakarta.inject.Inject
@@ -76,40 +71,41 @@ class OpenSearchServiceImpl : OpenSearchService {
         val quarter = request.quarter
         val date = request.date
         val year = request.year
+        val serviceType = request.serviceType
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year)
-        updateCollectionTrend(zone, quarter, year, collectionZoneResponse)
-        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year)
-        updateCollectionTrend(null, quarter, year, collectionResponseAll)
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType)
+        updateCollectionTrend(zone, quarter, year, collectionZoneResponse,serviceType)
+        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year,serviceType)
+        updateCollectionTrend(null, quarter, year, collectionResponseAll, null)
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
-        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone)
-        updateOverallStats(zone, statsZoneData)
-        val statsAllData = accountUtilizationRepository.generateOverallStats(null)
-        updateOverallStats(null, statsAllData)
+        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType)
+        updateOverallStats(zone, statsZoneData, serviceType)
+        val statsAllData = accountUtilizationRepository.generateOverallStats(null, null)
+        updateOverallStats(null, statsAllData, null)
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
-        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone)
-        updateMonthlyTrend(zone, monthlyTrendZoneData)
-        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null)
-        updateMonthlyTrend(null, monthlyTrendAllData)
+        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone,serviceType)
+        updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType)
+        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null,serviceType)
+        updateMonthlyTrend(null, monthlyTrendAllData,null)
 
         /** Quarterly Outstanding */
         logger().info("Updating Quarterly Outstanding document")
-        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone)
-        updateQuarterlyTrend(zone, quarterlyTrendZoneData)
-        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null)
-        updateQuarterlyTrend(null, quarterlyTrendAllData)
+        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType)
+        updateQuarterlyTrend(zone, quarterlyTrendZoneData,serviceType)
+        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null,serviceType)
+        updateQuarterlyTrend(null, quarterlyTrendAllData, null)
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date)
-        updateDailySalesOutstanding(zone, year, dailySalesZoneData)
-        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date)
-        updateDailySalesOutstanding(null, year, dailySalesAllData)
+        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType)
+        updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType)
+        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null)
+        updateDailySalesOutstanding(null, year, dailySalesAllData,null)
     }
 
     /**
@@ -125,37 +121,79 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateDailyPayablesOutstanding(null, request.year, dailyPayableAllData)
     }
 
-    private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?) {
+    private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?, serviceType: ServiceType?) {
         if (data.isNullOrEmpty()) return
-        val collectionData = data.map { collectionTrendConverter.convertToModel(it) }
-        val collectionId = if (zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter" else AresConstants.COLLECTIONS_TREND_PREFIX + zone + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
-        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter))
+
+        val collectionData = data.map {
+            collectionTrendConverter.convertToModel(it)
+        }
+
+        var zoneKey:String? = null
+        var serviceTypeKey:String? = null
+
+        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+
+        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+
+        val collectionId = AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType))
     }
 
-    private fun updateOverallStats(zone: String?, data: OverallStats) {
+    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
-        val statsId = if (zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + zone
+
+        var zoneKey:String? = null
+        var serviceTypeKey:String? = null
+
+        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+
+        val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
         overallStatsData.id = statsId
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
     }
 
-    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?) {
+    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?) {
         if (data.isNullOrEmpty()) return
         val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
-        val monthlyTrendId = if (zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + zone
+
+        var zoneKey:String? = null
+        var serviceTypeKey:String? = null
+
+        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+
+        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+
+        val monthlyTrendId = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
 
-    private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?) {
+    private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?) {
         if (data.isNullOrEmpty()) return
-        val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + zone
+
+        var zoneKey:String? = null
+        var serviceTypeKey:String? = null
+
+        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+
+        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
+        val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+//        val quarterlyTrendId = if (zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + zone
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
 
-    private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
+    private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding, serviceType: ServiceType?) {
         val dsoResponse = dsoConverter.convertToModel(data)
-        val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year
+        var zoneKey =""
+        var serviceTypeKey = ""
+
+        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+
+        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
+
+        val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + dsoResponse.month + AresConstants.KEY_DELIMITER + year
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
     }
 
@@ -165,14 +203,14 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
     }
 
-    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int): CollectionResponse {
+    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int, serviceType: ServiceType?): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: BigDecimal? = null
         var totalCollected: BigDecimal? = null
         val monthList = mutableListOf<String?>()
         for (row in data) {
             if (row.duration != "Total") {
-                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount))
+                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount, row.serviceType, row.currency))
                 monthList.add(row.duration)
             } else {
                 totalAmount = row.receivableAmount
@@ -181,7 +219,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal()))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), serviceType, null))
             }
         }
         return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id)

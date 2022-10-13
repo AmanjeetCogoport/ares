@@ -18,5 +18,6 @@ data class DailyOutstandingResponse(
     @JsonProperty("outstandings") var outstandings: BigDecimal?,
     @JsonProperty("totalSales") var totalSales: BigDecimal?,
     @JsonProperty("days") var days: Int,
-    @JsonProperty("value") var value: BigDecimal
+    @JsonProperty("value") var value: BigDecimal,
+    @JsonProperty("currency") var currency: String
 )

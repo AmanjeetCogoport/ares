@@ -8,17 +8,7 @@ import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.payment.AgeingBucketZone
-import com.cogoport.ares.model.payment.CustomerStatsRequest
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.DsoRequest
-import com.cogoport.ares.model.payment.DueAmount
-import com.cogoport.ares.model.payment.KamPaymentRequest
-import com.cogoport.ares.model.payment.MonthlyOutstanding
-import com.cogoport.ares.model.payment.OrgPayableRequest
-import com.cogoport.ares.model.payment.PayableAgeingBucket
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
@@ -93,12 +83,18 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + request.zone
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        return AresConstants.OVERALL_STATS_PREFIX + zoneKey+ AresConstants.KEY_DELIMITER + serviceTypeKey
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType)
         var data = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
@@ -106,7 +102,7 @@ class DashboardServiceImpl : DashboardService {
         durationKey.forEach {
             if (!key.contains(it)) {
                 data.add(
-                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR")
+                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR", request?.serviceType?.name)
                 )
             }
         }
@@ -127,12 +123,29 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0] else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
         validateInput(request.zone, request.role)
-        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
+
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
@@ -143,7 +156,17 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
         validateInput(request.zone, request.role)
-        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
+
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
@@ -158,37 +181,37 @@ class DashboardServiceImpl : DashboardService {
         val dpoList = mutableListOf<DpoResponse>()
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
-            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
             val salesResponse = clientResponse(salesResponseKey)
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currency))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal()))
+                    dso.add(DsoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
 
-            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX)
+            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX, request.serviceType)
             val payablesResponse = clientResponse(payablesResponseKey)
             val dpo = mutableListOf<DpoResponse>()
             for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value))
+                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currency))
             }
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
         }
-        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
         var currentDso = 0.toFloat()
@@ -199,7 +222,7 @@ class DashboardServiceImpl : DashboardService {
                 currentDso = hts.source()!!.value.toFloat()
             }
         }
-        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth) })
+        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currency) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currency,) }, request.serviceType?.name, null)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -210,8 +233,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index)
+    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index,serviceType)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -224,13 +247,17 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-            keyList.add(
-                if (zone.isNullOrBlank()) index + "ALL" + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
-                else index + zone + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
-            )
+
+            var zoneKey: String?= null
+            var serviceTypeKey: String?= null
+
+            if (zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey= zone?.uppercase()
+            if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= serviceType.toString()
+
+            keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
