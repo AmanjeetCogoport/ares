@@ -69,9 +69,9 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
         exception?.let {
             logger.error(exception.message)
             Sentry.withScope {
-                it.setTag("traceId", MDC.get("traceId"))
-                it.setTag("spanId", MDC.get("spanId"))
-                it.setTag("environment", environment.activeNames.toString())
+                it.setTag("traceId", MDC.get("traceId") ?: "")
+                it.setTag("spanId", MDC.get("spanId") ?: "")
+                it.setTag("environment", environment.activeNames.toString() ?: "")
                 it.request = getRequest(request)
                 Sentry.captureException(exception)
             }
