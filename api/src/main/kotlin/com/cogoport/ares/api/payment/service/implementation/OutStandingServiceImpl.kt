@@ -129,7 +129,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getCurrOutstanding(req: List<Long>): Long {
         var outstandingDays = accountUtilizationRepository.getDateDiff(req)
-        if(outstandingDays < 0){
+        if (outstandingDays < 0) {
             outstandingDays = 0
         }
         return outstandingDays
