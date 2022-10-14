@@ -21,6 +21,6 @@ data class CollectionTrendResponse(
     var collectableAmount: BigDecimal,
     @JsonProperty("serviceType")
     var serviceType: ServiceType?,
-    @JsonProperty("currency")
+    @JsonProperty("currencyType")
     var currencyType: String?
 )
