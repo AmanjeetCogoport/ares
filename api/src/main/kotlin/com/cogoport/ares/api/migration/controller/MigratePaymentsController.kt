@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.migration.controller
 
-import com.cogoport.ares.api.migration.model.Data
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
@@ -36,8 +35,5 @@ class MigratePaymentsController {
         }
     }
 
-    @Post("/push-to-aresmigration")
-    suspend fun migrateToAres(@Body req: Data): String {
-        return migrationLog.migrateToAres(req)
-    }
+
 }

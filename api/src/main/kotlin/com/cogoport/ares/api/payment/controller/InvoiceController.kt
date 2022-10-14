@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.GetInformation
-import com.cogoport.ares.model.common.TestModel
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
@@ -34,10 +33,6 @@ class InvoiceController {
     @Post
     suspend fun addInvoice(@Valid @Body invoiceRequest: AccUtilizationRequest): CreateInvoiceResponse {
         return accUtilService.add(invoiceRequest)
-    }
-    @Get("/hello{?request*}")
-    suspend fun getBillingDetails(@Valid request: TestModel): String {
-        return "successs1"
     }
 
     @Get("/get-curr-outstanding-on-day-of-computation")
