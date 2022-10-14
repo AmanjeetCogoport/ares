@@ -1,8 +1,11 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.ExchangeRequest
+import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -33,11 +36,16 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.Date
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Month
+import java.time.Period
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import javax.print.DocFlavor.STRING
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -47,6 +55,20 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var overallAgeingConverter: OverallAgeingMapper
+
+    @Inject
+    lateinit var exchangeClient: ExchangeClient
+
+    private suspend fun getExchangeRate(to:String, from: String, date: String):BigDecimal{
+        val exchangeRequest = ExchangeRequest(
+            from_curr = from,
+            to_curr = to,
+            exchange_date = date
+        )
+        val exchangeRate = exchangeClient.getExchangeRate(exchangeRequest)
+
+        return exchangeRate.exchangeRate
+    }
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -74,11 +96,21 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
-        val data = OpenSearchClient().search(
+        var data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        if((request?.currencyType != data?.currency) and (data?.currency!=null)){
+            var exchangeRate = getExchangeRate(data?.currency, request?.currencyType)
+
+            data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
+            data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
+            data?.openOnAccountPaymentAmount = data?.openOnAccountPaymentAmount?.times(exchangeRate)!!
+        }
+//        data?.currency = request?.currencyType
+//        if(request?.serviceType?.name.equals(null)) data?.serviceType = "ALL"
+
         return data ?: OverallStatsResponse(id = searchKey)
     }
 
@@ -96,13 +128,20 @@ class DashboardServiceImpl : DashboardService {
         validateInput(request.zone, request.role)
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType)
         var data = mutableListOf<OverallAgeingStatsResponse>()
-        outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
+        outstandingResponse.map {
+            if(it.currency!=request.currencyType){
+                var exchangeRate = getExchangeRate(it?.currency, request?.currencyType)
+                it.amount = it.amount.times(exchangeRate)
+                it.currency = request?.currencyType!!
+            }
+            data.add(overallAgeingConverter.convertToModel(it))
+        }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
         val key = data.map { it.ageingDuration }
         durationKey.forEach {
             if (!key.contains(it)) {
                 data.add(
-                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR", request?.serviceType?.name)
+                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR", request?.serviceType?.name, request?.currencyType)
                 )
             }
         }
@@ -119,7 +158,28 @@ class DashboardServiceImpl : DashboardService {
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+
+        if (data != null){
+            if(data.currencyType != request.currencyType){
+                var exchangeRate = getExchangeRate(data?.currencyType, request.currencyType)
+
+                data?.totalReceivableAmount = data?.totalReceivableAmount?.times(exchangeRate)!!
+                data?.totalCollectedAmount = data?.totalCollectedAmount?.times(exchangeRate)!!
+                data?.currencyType = request.currencyType
+
+                data?.trend?.forEach {
+                    if(it?.currencyType == request.currencyType){
+                        var exchangeRate = getExchangeRate(it?.currencyType, request.currencyType)
+                        it?.collectableAmount = it?.collectableAmount?.times(exchangeRate)
+                        it?.receivableAmount = it?.receivableAmount?.times(exchangeRate)
+                        it?.currencyType = request.currencyType
+                    }
+                }
+            }
+        }
+
         return data ?: CollectionResponse(id = searchKey)
+
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
@@ -430,4 +490,21 @@ class DashboardServiceImpl : DashboardService {
         responseList.pageNo = request.pageIndex
         return responseList
     }
+
+    suspend fun getExchangeRate(from_currency: String?, to_currency: String?): BigDecimal{
+        val end_date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+        val start_date = LocalDateTime.now().minus(Period.ofDays( 30 )).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+
+        val exchangeRateRequest = ExchangeRequestPeriod(
+            from_currency,
+            to_currency,
+            start_date,
+            end_date
+        )
+
+        var response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
+
+        return response.exchangeRate
+    }
+
 }
