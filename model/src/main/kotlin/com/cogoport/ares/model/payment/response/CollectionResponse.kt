@@ -22,8 +22,6 @@ data class CollectionResponse(
     var trend: List<CollectionTrendResponse>? = null,
     @JsonProperty("id")
     var id: String,
-    @JsonProperty("serviceType")
-    var serviceType: String? = null,
-    @JsonProperty("currency")
-    var currency: String? = null,
+    @JsonProperty("currencyType")
+    var currencyType: String? = null,
 )

@@ -35,4 +35,9 @@ class OpenSearchController {
     suspend fun addToOpenSearch(@Valid @Body request: OpenSearchListRequest) {
         return pushToClientService.pushOutstandingListData(request)
     }
+
+    @Post("/update")
+    suspend fun update(@Valid @Body request: OpenSearchRequest) {
+        return openSearchService.pushDashboardData(request)
+    }
 }

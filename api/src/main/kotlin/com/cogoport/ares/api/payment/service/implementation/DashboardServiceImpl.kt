@@ -101,15 +101,17 @@ class DashboardServiceImpl : DashboardService {
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
-        if((request?.currencyType != data?.currency) and (data?.currency!=null)){
-            var exchangeRate = getExchangeRate(data?.currency, request?.currencyType)
+        if((request?.currencyType != data?.currencyType) and (data?.currencyType!=null)){
+            var exchangeRate = getExchangeRate(data?.currencyType, request?.currencyType)
 
             data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
             data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
             data?.openOnAccountPaymentAmount = data?.openOnAccountPaymentAmount?.times(exchangeRate)!!
+
+            data?.currencyType = request?.currencyType
         }
-//        data?.currency = request?.currencyType
-//        if(request?.serviceType?.name.equals(null)) data?.serviceType = "ALL"
+
+        if(request?.serviceType?.name.equals(null)) data?.serviceType = "ALL"
 
         return data ?: OverallStatsResponse(id = searchKey)
     }
@@ -168,8 +170,7 @@ class DashboardServiceImpl : DashboardService {
                 data?.currencyType = request.currencyType
 
                 data?.trend?.forEach {
-                    if(it?.currencyType == request.currencyType){
-                        var exchangeRate = getExchangeRate(it?.currencyType, request.currencyType)
+                    if(it?.currencyType != request.currencyType){
                         it?.collectableAmount = it?.collectableAmount?.times(exchangeRate)
                         it?.receivableAmount = it?.receivableAmount?.times(exchangeRate)
                         it?.currencyType = request.currencyType
@@ -211,6 +212,18 @@ class DashboardServiceImpl : DashboardService {
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+
+        if(data != null){
+            data?.list?.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it?.amount?.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+
+            }
+        }
+
         return data ?: MonthlyOutstanding(id = searchKey)
     }
 
@@ -246,7 +259,7 @@ class DashboardServiceImpl : DashboardService {
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currency))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currencyType))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
@@ -261,7 +274,7 @@ class DashboardServiceImpl : DashboardService {
             val dpo = mutableListOf<DpoResponse>()
             for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currency))
+                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currencyType))
             }
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
@@ -282,7 +295,7 @@ class DashboardServiceImpl : DashboardService {
                 currentDso = hts.source()!!.value.toFloat()
             }
         }
-        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currency) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currency,) }, request.serviceType?.name, null)
+        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType,) }, request.serviceType?.name, null)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {

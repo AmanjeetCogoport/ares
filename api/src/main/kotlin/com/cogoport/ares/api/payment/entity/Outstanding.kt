@@ -8,6 +8,6 @@ import java.math.BigDecimal
 data class Outstanding(
     var duration: String?,
     var amount: BigDecimal,
-    var currency: String?,
-    var serviceType: ServiceType
+    var currencyType: String?,
+    var serviceType: ServiceType?
 )

@@ -13,5 +13,6 @@ import io.micronaut.http.annotation.QueryValue
 data class OverallStatsRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String?,
     @QueryValue(AresModelConstants.ROLE) val role: String?,
-    @QueryValue("service_type") val serviceType: ServiceType?
+    @QueryValue("service_type") val serviceType: ServiceType?,
+    @QueryValue("currency_type") val currencyType: String?
 )

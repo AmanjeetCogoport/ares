@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.entity
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.MappedEntity
 import software.amazon.awssdk.services.servicediscovery.model.ServiceType
 import java.math.BigDecimal
@@ -9,6 +10,6 @@ data class CollectionTrend(
     var duration: String?,
     var receivableAmount: BigDecimal?,
     var collectableAmount: BigDecimal?,
-    var currency: String?,
+    var currencyType: String?,
     var serviceType: String?
 )

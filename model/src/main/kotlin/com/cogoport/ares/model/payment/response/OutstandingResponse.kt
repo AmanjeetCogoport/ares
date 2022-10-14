@@ -18,7 +18,7 @@ data class OutstandingResponse(
     @JsonProperty("amount")
     var amount: BigDecimal,
     @JsonProperty("serviceType")
-    var serviceType: ServiceType = ServiceType.NA,
-    @JsonProperty("currency")
-    var currency: String = "INR"
+    var serviceType: ServiceType? = ServiceType.NA,
+    @JsonProperty("currencyType")
+    var currencyType: String? = "INR"
 )
