@@ -243,8 +243,20 @@ class DashboardServiceImpl : DashboardService {
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
+            index =
+            AresConstants.SALES_DASHBOARD_INDEX
         )
+
+        if(data != null){
+            data?.list?.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it?.amount?.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+
+            }
+        }
         return data ?: QuarterlyOutstanding(id = searchKey)
     }
 
@@ -252,6 +264,7 @@ class DashboardServiceImpl : DashboardService {
         validateInput(request.zone, request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val dpoList = mutableListOf<DpoResponse>()
+        var currencyType: String? = null
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
             val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
@@ -284,18 +297,54 @@ class DashboardServiceImpl : DashboardService {
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
         }
+
         val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
+
         var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             averageDso += data!!.value.toFloat()
             if (data.month == AresConstants.CURR_MONTH) {
                 currentDso = hts.source()!!.value.toFloat()
+                currencyType =hts.source()!!.currencyType
             }
         }
-        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType,) }, request.serviceType?.name, null)
+
+        var dsoResponseData = dsoList.map {
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType)
+        }
+
+        var dpoResponseData = dpoList.map {
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType)
+        }
+
+        var avgDsoAmount = (averageDso / 3).toBigDecimal()
+
+        if((request.currencyType != currencyType) && (currencyType != null)){
+            var exchangeRate = getExchangeRate(currencyType, request.currencyType)
+            currentDso.toBigDecimal().times(exchangeRate)
+            avgDsoAmount.times(exchangeRate)
+
+            dsoResponseData.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it.dsoForTheMonth.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+            }
+
+            dpoResponseData.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it.dpoForTheMonth.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+            }
+        }
+        return DailySalesOutstanding(currentDso.toBigDecimal()
+            , avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.currencyType)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
