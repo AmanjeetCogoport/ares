@@ -2,6 +2,7 @@ package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TestModel
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -121,6 +122,9 @@ interface AresClient {
     @Get("/payments/accounts/ledger-summary{?request*}")
     suspend fun getOrganizationAccountUtilization(@Valid request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
 
+    @Get("/payments/invoice/hello{?request*}")
+    suspend fun getBillingDetails(@javax.validation.Valid request: TestModel): String
+
     @Post("/payments/dashboard/kam/overall-stats")
     suspend fun getOverallStatsForKam(@Valid @Body request: KamPaymentRequest): StatsForKamResponse
 
@@ -134,4 +138,7 @@ interface AresClient {
 
     @Get("/payments/service-discovery/reachability")
     suspend fun reachable(): HttpResponse<String>
+
+    @Get("/payments/invoice/get-curr-outstanding-on-day-of-computation")
+    suspend fun getCurrOutstanding(@QueryValue req:List<Long>)
 }
