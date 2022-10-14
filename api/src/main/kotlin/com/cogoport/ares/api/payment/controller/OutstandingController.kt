@@ -45,7 +45,7 @@ class OutstandingController {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
     }
 
-    @Get("/get-outstanding-days")
+    @Get("/outstanding-days")
     suspend fun getCurrOutstanding(@QueryValue invoiceIds: List<Long>): Long {
         return outStandingService.getCurrOutstanding(invoiceIds)
     }
