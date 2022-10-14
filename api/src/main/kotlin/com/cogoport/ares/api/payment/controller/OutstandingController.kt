@@ -12,6 +12,7 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -42,5 +43,10 @@ class OutstandingController {
     @Get("/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
+    }
+
+    @Get("/get-buyer-summary")
+    suspend fun getCurrOutstanding(@QueryValue req: List<Long>): Long {
+        return outStandingService.getCurrOutstanding(req)
     }
 }
