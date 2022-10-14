@@ -16,5 +16,4 @@ interface MigrationLogService {
         errorMessage: String?
     )
     suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, ex: String?, paymentNum: String?)
-
 }

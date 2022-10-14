@@ -13,7 +13,6 @@ class MigrationLogsImpl : MigrationLogService {
 
     @Inject lateinit var migrationLogsRepository: MigrationLogsRepository
 
-
     override suspend fun saveMigrationLogs(
         paymentId: Long?,
         accUtilId: Long?,
@@ -47,5 +46,4 @@ class MigrationLogsImpl : MigrationLogService {
             )
         )
     }
-
 }
