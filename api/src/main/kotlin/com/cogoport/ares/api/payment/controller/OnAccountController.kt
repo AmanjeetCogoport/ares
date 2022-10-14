@@ -6,15 +6,8 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.request.AccountCollectionRequest
-import com.cogoport.ares.model.payment.request.BulkUploadRequest
-import com.cogoport.ares.model.payment.request.DeletePaymentRequest
-import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
-import com.cogoport.ares.model.payment.response.AccountCollectionResponse
-import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.BulkPaymentResponse
-import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
-import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.payment.request.*
+import com.cogoport.ares.model.payment.response.*
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -77,5 +70,9 @@ class OnAccountController {
     @Post("/ap-bulk-upload")
     suspend fun bulkUpload(@Body request: BulkUploadRequest): UploadSummary {
         return onAccountService.onAccountBulkAPPayments(request)
+    }
+    @Post("/on-account-payment")
+    suspend fun onAccountTotalAmount(@Body request: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>{
+        return Response<MutableList<OnAccountTotalAmountResponse>>().ok(onAccountService.onAccountTotalAmountService(request))
     }
 }
