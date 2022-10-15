@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
@@ -75,8 +76,8 @@ class DashboardController {
     }
 
     @Get("/receivables-by-age{?request*}")
-    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
-        return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
+    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>{
+        return Response<HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>>().ok(dashboardService.getReceivableByAge(request))
     }
 
     @Get("/org-collection{?request*}")

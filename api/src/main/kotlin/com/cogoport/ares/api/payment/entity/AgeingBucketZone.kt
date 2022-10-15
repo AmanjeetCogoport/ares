@@ -9,8 +9,8 @@ import javax.persistence.Enumerated
 @MappedEntity
 data class AgeingBucketZone(
     val ageingDuration: String,
-    val amount: BigDecimal,
+    var amount: BigDecimal,
     val zone: String,
     val serviceType: String?,
-    val currency: String?
+    var currencyType: String?
 )

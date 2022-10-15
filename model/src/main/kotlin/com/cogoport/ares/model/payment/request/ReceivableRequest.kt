@@ -13,5 +13,5 @@ data class ReceivableRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String?,
     @QueryValue(AresModelConstants.ROLE) val role: String?,
     @QueryValue("service_type") val serviceType: ServiceType?,
-    @QueryValue("currency") val currencyType: String?
+    @QueryValue("currency_type") val currencyType: String?
 )

@@ -12,7 +12,7 @@ import java.util.Currency
 data class AgeingBucketZone(
     val ageingDuration: String?,
     val amount: BigDecimal?,
-    val zone: String?,
-    val serviceType: ServiceType?,
-    val currency: String?
+    val zone: String? = null,
+    val serviceType: ServiceType? = null,
+    val currencyType: String?
 )

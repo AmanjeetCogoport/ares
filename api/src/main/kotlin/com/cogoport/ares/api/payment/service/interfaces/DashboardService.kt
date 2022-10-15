@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
@@ -32,7 +33,7 @@ interface DashboardService {
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
     suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
-    suspend fun getReceivableByAge(request: ReceivableRequest): ReceivableAgeingResponse
+    suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
     suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>
