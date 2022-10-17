@@ -36,7 +36,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
-import java.sql.Date
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -45,7 +44,6 @@ import java.time.Month
 import java.time.Period
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import javax.print.DocFlavor.STRING
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -220,11 +218,61 @@ class DashboardServiceImpl : DashboardService {
                     it?.amount?.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
-
             }
         }
 
-        return data ?: MonthlyOutstanding(id = searchKey)
+        var newData = getMonthlyOutStandingData(data)
+
+        var newMonthlyOutstanding = MonthlyOutstanding(
+            list = newData,
+            id = searchKey
+        )
+
+        return newMonthlyOutstanding ?: MonthlyOutstanding(id = searchKey)
+    }
+
+     fun getMonthlyOutStandingData (data: MonthlyOutstanding?) :ArrayList<OutstandingResponse> {
+        var listOfOutStanding = ArrayList<OutstandingResponse>()
+
+        data?.list?.groupBy { it.duration }?.values?.map {
+            it.groupBy { it.serviceType }.values.map {
+                var outstandingData = OutstandingResponse(
+                    amount = it.sumOf { it.amount },
+                    duration = it.first().duration,
+                    currencyType = it.first().currencyType,
+                    serviceType = it.first().serviceType
+                )
+                return@map outstandingData
+            }
+        }?.map {
+            it.map { values ->
+                listOfOutStanding?.add(values)
+            }
+        }
+
+        return listOfOutStanding
+    }
+
+    fun getQuarterlyOutStandingData (data: QuarterlyOutstanding?) :ArrayList<OutstandingResponse> {
+        var listOfOutStanding = ArrayList<OutstandingResponse>()
+
+        data?.list?.groupBy { it.duration }?.values?.map {
+            it.groupBy { it.serviceType }.values.map {
+                var outstandingData = OutstandingResponse(
+                    amount = it.sumOf { it.amount },
+                    duration = it.first().duration,
+                    currencyType = it.first().currencyType,
+                    serviceType = it.first().serviceType
+                )
+                return@map outstandingData
+            }
+        }?.map {
+            it.map { values ->
+                listOfOutStanding?.add(values)
+            }
+        }
+
+        return listOfOutStanding
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
@@ -257,7 +305,15 @@ class DashboardServiceImpl : DashboardService {
 
             }
         }
-        return data ?: QuarterlyOutstanding(id = searchKey)
+
+        var newData = getQuarterlyOutStandingData(data)
+
+        var newQuarterlyOutstanding = QuarterlyOutstanding(
+            list = newData,
+            id = searchKey
+        )
+
+        return newQuarterlyOutstanding ?: QuarterlyOutstanding(id = searchKey)
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
