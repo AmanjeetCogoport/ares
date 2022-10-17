@@ -73,12 +73,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              zone_code as zone,
              service_type,
              led_currency as currency_type,
-             currency,
+             currency as invoice_currency,
              sum(sign_flag * (amount_loc - pay_loc)) as amount
              from account_utilizations
              where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
              and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
-             group by ageing_duration, zone, service_type, currency_type, currency
+             group by ageing_duration, zone, service_type, currency_type, invoice_currency
              order by 1
           """
     )
