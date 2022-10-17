@@ -299,8 +299,7 @@ class DashboardServiceImpl : DashboardService {
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
-            index =
-            AresConstants.SALES_DASHBOARD_INDEX
+            index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
         if(data != null){
@@ -609,5 +608,4 @@ class DashboardServiceImpl : DashboardService {
 
         return response.exchangeRate
     }
-
 }

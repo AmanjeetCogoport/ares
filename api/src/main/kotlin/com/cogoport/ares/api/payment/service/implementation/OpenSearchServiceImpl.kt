@@ -82,10 +82,10 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
-        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType)
-        updateOverallStats(zone, statsZoneData, serviceType)
-        val statsAllData = accountUtilizationRepository.generateOverallStats(null, null)
-        updateOverallStats(null, statsAllData, null)
+        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType,invoiceCurrency)
+        updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
+        val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
+        updateOverallStats(null, statsAllData, null, null)
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
@@ -140,7 +140,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType))
     }
 
-    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?) {
+    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency:String?) {
 
 
         val overallStatsData = overallStatsConverter.convertToModel(data)
@@ -148,10 +148,13 @@ class OpenSearchServiceImpl : OpenSearchService {
         var zoneKey:String? = null
         var serviceTypeKey:String? = null
 
+        var invoiceCurrencyKey:String? = null
+
         if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
         if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+        if(invoiceCurrency?.isNullOrBlank()!!) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
 
-        val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+        val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
         if(overallStatsData !=null){
             overallStatsData?.id = statsId
