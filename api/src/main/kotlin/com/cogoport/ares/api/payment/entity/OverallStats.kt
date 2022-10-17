@@ -10,5 +10,7 @@ data class OverallStats(
     val organizationCount: Int?,
     val openInvoicesAmount: BigDecimal?,
     val openOnAccountPaymentAmount: BigDecimal?,
-    var id: String?
+    var id: String?,
+    var serviceType: String?,
+    var currencyType: String?
 )

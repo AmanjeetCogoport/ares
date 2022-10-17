@@ -103,29 +103,54 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
-        val data = OpenSearchClient().search(
+        var data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+        if((request?.currencyType != data?.currencyType) and (data?.currencyType!=null)){
+            var exchangeRate = getExchangeRate(data?.currencyType, request?.currencyType)
+
+            data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
+            data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
+            data?.openOnAccountPaymentAmount = data?.openOnAccountPaymentAmount?.times(exchangeRate)!!
+
+            data?.currencyType = request?.currencyType
+        }
+
+        if(request?.serviceType?.name.equals(null)) data?.serviceType = "ALL"
+
         return data ?: OverallStatsResponse(id = searchKey)
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.OVERALL_STATS_PREFIX + "ALL" else AresConstants.OVERALL_STATS_PREFIX + request.zone
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        return AresConstants.OVERALL_STATS_PREFIX + zoneKey+ AresConstants.KEY_DELIMITER + serviceTypeKey
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType)
         var data = mutableListOf<OverallAgeingStatsResponse>()
-        outstandingResponse.map { data.add(overallAgeingConverter.convertToModel(it)) }
+        outstandingResponse.map {
+            if(it.currency!=request.currencyType){
+                var exchangeRate = getExchangeRate(it?.currency, request?.currencyType)
+                it.amount = it.amount.times(exchangeRate)
+                it.currency = request?.currencyType!!
+            }
+            data.add(overallAgeingConverter.convertToModel(it))
+        }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
         val key = data.map { it.ageingDuration }
         durationKey.forEach {
             if (!key.contains(it)) {
                 data.add(
-                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR")
+                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR", request?.serviceType?.name, request?.currencyType)
                 )
             }
         }
@@ -142,83 +167,248 @@ class DashboardServiceImpl : DashboardService {
             classType = CollectionResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
+
+        if (data != null){
+            if(data.currencyType != request.currencyType){
+                var exchangeRate = getExchangeRate(data?.currencyType, request.currencyType)
+
+                data?.totalReceivableAmount = data?.totalReceivableAmount?.times(exchangeRate)!!
+                data?.totalCollectedAmount = data?.totalCollectedAmount?.times(exchangeRate)!!
+                data?.currencyType = request.currencyType
+
+                data?.trend?.forEach {
+                    if(it?.currencyType != request.currencyType){
+                        it?.collectableAmount = it?.collectableAmount?.times(exchangeRate)
+                        it?.receivableAmount = it?.receivableAmount?.times(exchangeRate)
+                        it?.currencyType = request.currencyType
+                    }
+                }
+            }
+        }
+
         return data ?: CollectionResponse(id = searchKey)
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        return if (request.zone.isNullOrBlank()) AresConstants.COLLECTIONS_TREND_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0] else AresConstants.COLLECTIONS_TREND_PREFIX + request.zone + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
         validateInput(request.zone, request.role)
-        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.MONTHLY_TREND_PREFIX + "ALL" else AresConstants.MONTHLY_TREND_PREFIX + request.zone
+
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = MonthlyOutstanding ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
-        return data ?: MonthlyOutstanding(id = searchKey)
+
+        if(data != null){
+            data?.list?.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it?.amount?.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+            }
+        }
+
+        var newData = getMonthlyOutStandingData(data)
+
+        var newMonthlyOutstanding = MonthlyOutstanding(
+            list = newData,
+            id = searchKey
+        )
+
+        return newMonthlyOutstanding ?: MonthlyOutstanding(id = searchKey)
+    }
+
+     fun getMonthlyOutStandingData (data: MonthlyOutstanding?) :ArrayList<OutstandingResponse> {
+        var listOfOutStanding = ArrayList<OutstandingResponse>()
+
+        data?.list?.groupBy { it.duration }?.values?.map {
+            it.groupBy { it.serviceType }.values.map {
+                var outstandingData = OutstandingResponse(
+                    amount = it.sumOf { it.amount },
+                    duration = it.first().duration,
+                    currencyType = it.first().currencyType,
+                    serviceType = it.first().serviceType
+                )
+                return@map outstandingData
+            }
+        }?.map {
+            it.map { values ->
+                listOfOutStanding?.add(values)
+            }
+        }
+
+        return listOfOutStanding
+    }
+
+    fun getQuarterlyOutStandingData (data: QuarterlyOutstanding?) :ArrayList<OutstandingResponse> {
+        var listOfOutStanding = ArrayList<OutstandingResponse>()
+
+        data?.list?.groupBy { it.duration }?.values?.map {
+            it.groupBy { it.serviceType }.values.map {
+                var outstandingData = OutstandingResponse(
+                    amount = it.sumOf { it.amount },
+                    duration = it.first().duration,
+                    currencyType = it.first().currencyType,
+                    serviceType = it.first().serviceType
+                )
+                return@map outstandingData
+            }
+        }?.map {
+            it.map { values ->
+                listOfOutStanding?.add(values)
+            }
+        }
+
+        return listOfOutStanding
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
         validateInput(request.zone, request.role)
-        val searchKey = if (request.zone.isNullOrBlank()) AresConstants.QUARTERLY_TREND_PREFIX + "ALL" else AresConstants.QUARTERLY_TREND_PREFIX + request.zone
+
+        var zoneKey: String?= null
+        var serviceTypeKey: String?= null
+
+
+        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
+
+        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+
+        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
         val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = QuarterlyOutstanding ::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
+            index =
+            AresConstants.SALES_DASHBOARD_INDEX
         )
-        return data ?: QuarterlyOutstanding(id = searchKey)
+
+        if(data != null){
+            data?.list?.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it?.amount?.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+
+            }
+        }
+
+        var newData = getQuarterlyOutStandingData(data)
+
+        var newQuarterlyOutstanding = QuarterlyOutstanding(
+            list = newData,
+            id = searchKey
+        )
+
+        return newQuarterlyOutstanding ?: QuarterlyOutstanding(id = searchKey)
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
         validateInput(request.zone, request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val dpoList = mutableListOf<DpoResponse>()
+        var currencyType: String? = null
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
-            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
             val salesResponse = clientResponse(salesResponseKey)
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currencyType))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal()))
+                    dso.add(DsoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
 
-            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX)
+            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX, request.serviceType)
             val payablesResponse = clientResponse(payablesResponseKey)
             val dpo = mutableListOf<DpoResponse>()
             for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value))
+                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currencyType))
             }
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
         }
-        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX)
+
+        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
+
         var currentDso = 0.toFloat()
         for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             averageDso += data!!.value.toFloat()
             if (data.month == AresConstants.CURR_MONTH) {
                 currentDso = hts.source()!!.value.toFloat()
+                currencyType =hts.source()!!.currencyType
             }
         }
-        return DailySalesOutstanding(currentDso.toBigDecimal(), (averageDso / 3).toBigDecimal(), dsoList.map { DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth) }, dpoList.map { DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth) })
+
+        var dsoResponseData = dsoList.map {
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType)
+        }
+
+        var dpoResponseData = dpoList.map {
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType)
+        }
+
+        var avgDsoAmount = (averageDso / 3).toBigDecimal()
+
+        if((request.currencyType != currencyType) && (currencyType != null)){
+            var exchangeRate = getExchangeRate(currencyType, request.currencyType)
+            currentDso.toBigDecimal().times(exchangeRate)
+            avgDsoAmount.times(exchangeRate)
+
+            dsoResponseData.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it.dsoForTheMonth.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+            }
+
+            dpoResponseData.forEach {
+                if((it.currencyType != request.currencyType) && (it.currencyType != null)){
+                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    it.dpoForTheMonth.times(exchangeRate)
+                    it?.currencyType = request?.currencyType
+                }
+            }
+        }
+        return DailySalesOutstanding(currentDso.toBigDecimal()
+            , avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.currencyType)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -229,8 +419,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index)
+    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index,serviceType)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -243,13 +433,17 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-            keyList.add(
-                if (zone.isNullOrBlank()) index + "ALL" + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
-                else index + zone + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year
-            )
+
+            var zoneKey: String?= null
+            var serviceTypeKey: String?= null
+
+            if (zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey= zone?.uppercase()
+            if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= serviceType.toString()
+
+            keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
@@ -305,341 +499,6 @@ class DashboardServiceImpl : DashboardService {
          return data
     }
 
-//    if (payment.size == 0) {
-//            return ReceivableAgeingResponse(listOf(request.zone), listOf(serviceType))
-//        }
-//        val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableSouthBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableEastBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableWestBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableZoneBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableByAgeViaZone = mutableListOf<ReceivableByAgeViaZone>()
-//        val receivableFclFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableLclFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableAirFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableFtlFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableLtlFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableHaulageFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableFclCustomsBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableLclCustomsBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableAirCustomsBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableTrailerFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableStoreOrderBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableAdditionalChargeBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableFclCfsBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableOriginServicesBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableDestinationServicesBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableFclCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableLclCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableAirCustomsFreightBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableServiceTypeBucket = mutableListOf<AgeingBucketZone>()
-//        val receivableByAgeViaServiceType = mutableListOf<ReceivableByAgeViaServiceType>()
-//        var zoneData = listOf<String>()
-//        var serviceTypeData = listOf<ServiceType>()
-
-//     private fun getAgeingBucketZoneIndex(data: ArrayList<AgeingBucketZone>?, payment: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): Int? {
-//        data?.forEach {
-//            if(it.ageingDuration == payment?.ageingDuration){
-//                return data.indexOf(it)
-//            }
-//        }
-//         return -1
-//    }
-
-//        if (request.zone.isNullOrBlank()) {
-//            zoneData = zoneData + listOf("East", "West", "North", "South")
-//            receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "North", ageingBucket = receivableNorthBucket))
-//            receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "South", ageingBucket = receivableSouthBucket))
-//            receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "East", ageingBucket = receivableEastBucket))
-//            receivableByAgeViaZone.add(ReceivableByAgeViaZone(zoneName = "West", ageingBucket = receivableWestBucket))
-//
-//            payment.forEach {
-//                when (it.zone) {
-//                    "NORTH" -> receivableNorthBucket.add(receivableBucketAllZone(it))
-//                    "SOUTH" -> receivableSouthBucket.add(receivableBucketAllZone(it))
-//                    "EAST" -> receivableEastBucket.add(receivableBucketAllZone(it))
-//                    "WEST" -> receivableWestBucket.add(receivableBucketAllZone(it))
-//                }
-//            }
-//
-//            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null, currencyType = "")
-//
-//            if (receivableNorthBucket.isEmpty()) {
-//                receivableNorthBucket.add(res)
-//            }
-//            if (receivableSouthBucket.isEmpty()) {
-//                receivableSouthBucket.add(res)
-//            }
-//            if (receivableEastBucket.isEmpty()) {
-//                receivableEastBucket.add(res)
-//            }
-//            if (receivableWestBucket.isEmpty()) {
-//                receivableWestBucket.add(res)
-//            }
-//
-//            receivableByAgeViaZone[0].ageingBucket = receivableNorthBucket
-//            receivableByAgeViaZone[1].ageingBucket = receivableSouthBucket
-//            receivableByAgeViaZone[2].ageingBucket = receivableEastBucket
-//            receivableByAgeViaZone[3].ageingBucket = receivableWestBucket
-//        } else {
-//            zoneData = zoneData + listOf(request.zone.toString())
-//            receivableByAgeViaZone.add(
-//                ReceivableByAgeViaZone(
-//                    zoneName = request.zone,
-//                    ageingBucket = receivableZoneBucket
-//                )
-//            )
-//            payment.forEach {
-//                if (it.zone == request.zone) { receivableZoneBucket.add(receivableBucketAllZone(it)) }
-//            }
-//            receivableByAgeViaZone[0].ageingBucket = receivableZoneBucket
-//        }
-//
-//        if (request.serviceType?.name.isNullOrEmpty()) {
-//            ServiceType.values().forEach {
-//                serviceTypeData = serviceTypeData + it
-//            }
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "FCL_FREIGHT",
-//                    ageingBucket = receivableFclFreightBucket,
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "LCL_FREIGHT",
-//                    ageingBucket = receivableLclFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "AIR_FREIGHT",
-//                    ageingBucket = receivableAirFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "FTL_FREIGHT",
-//                    ageingBucket = receivableFtlFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "LTL_FREIGHT",
-//                    ageingBucket = receivableLtlFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "HAULAGE_FREIGHT",
-//                    ageingBucket = receivableHaulageFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "FCL_CUSTOMS",
-//                    ageingBucket = receivableFclCustomsBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "LCL_CUSTOMS",
-//                    ageingBucket = receivableLclCustomsBucket,
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "AIR_CUSTOMS",
-//                    ageingBucket = receivableAirCustomsBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "TRAILER_FREIGHT",
-//                    ageingBucket = receivableTrailerFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "STORE_ORDER",
-//                    ageingBucket = receivableStoreOrderBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "ADDITIONAL_CHARGE",
-//                    ageingBucket = receivableAdditionalChargeBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "FCL_CFS",
-//                    ageingBucket = receivableFclCfsBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "ORIGIN_SERVICES",
-//                    ageingBucket = receivableOriginServicesBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "DESTINATION_SERVICES",
-//                    ageingBucket = receivableDestinationServicesBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "FCL_CUSTOMS_FREIGHT",
-//                    ageingBucket = receivableFclCustomsFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "LCL_CUSTOMS_FREIGHT",
-//                    ageingBucket = receivableLclCustomsFreightBucket
-//                )
-//            )
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = "AIR_CUSTOMS_FREIGHT",
-//                    ageingBucket = receivableAirCustomsFreightBucket,
-//                )
-//            )
-//
-//            payment.forEach {
-//                when (it.serviceType) {
-//                    "FCL_FREIGHT" -> receivableFclFreightBucket.add(receivableBucketAllZone(it))
-//                    "LCL_FREIGHT" -> receivableLclFreightBucket.add(receivableBucketAllZone(it))
-//                    "AIR_FREIGHT" -> receivableAirFreightBucket.add(receivableBucketAllZone(it))
-//                    "FTL_FREIGHT" -> receivableFtlFreightBucket.add(receivableBucketAllZone(it))
-//                    "LTL_FREIGHT" -> receivableLtlFreightBucket.add(receivableBucketAllZone(it))
-//                    "HAULAGE_FREIGHT" -> receivableHaulageFreightBucket.add(receivableBucketAllZone(it))
-//                    "FCL_CUSTOMS" -> receivableFclCustomsBucket.add(receivableBucketAllZone(it))
-//                    "LCL_CUSTOMS" -> receivableLclCustomsBucket.add(receivableBucketAllZone(it))
-//                    "AIR_CUSTOMS" -> receivableAirCustomsBucket.add(receivableBucketAllZone(it))
-//                    "TRAILER_FREIGHT" -> receivableTrailerFreightBucket.add(receivableBucketAllZone(it))
-//                    "STORE_ORDER" -> receivableStoreOrderBucket.add(receivableBucketAllZone(it))
-//                    "ADDITIONAL_CHARGE" -> receivableAdditionalChargeBucket.add(receivableBucketAllZone(it))
-//                    "FCL_CFS" -> receivableFclCfsBucket.add(receivableBucketAllZone(it))
-//                    "ORIGIN_SERVICES" -> receivableOriginServicesBucket.add(receivableBucketAllZone(it))
-//                    "DESTINATION_SERVICES" -> receivableDestinationServicesBucket.add(receivableBucketAllZone(it))
-//                    "FCL_CUSTOMS_FREIGHT" -> receivableFclCustomsFreightBucket.add(receivableBucketAllZone(it))
-//                    "LCL_CUSTOMS_FREIGHT" -> receivableLclCustomsFreightBucket.add(receivableBucketAllZone(it))
-//                    "AIR_CUSTOMS_FREIGHT" -> receivableAirCustomsFreightBucket.add(receivableBucketAllZone(it))
-//                }
-//            }
-//
-//            val res = AgeingBucketZone(ageingDuration = "", amount = 0.toBigDecimal(), zone = "", serviceType = null, currencyType = "")
-//
-//            if (receivableFclFreightBucket.isEmpty()) {
-//                receivableFclFreightBucket.add(res)
-//            }
-//            if (receivableLclFreightBucket.isEmpty()) {
-//                receivableLclFreightBucket.add(res)
-//            }
-//            if (receivableAirFreightBucket.isEmpty()) {
-//                receivableAirFreightBucket.add(res)
-//            }
-//            if (receivableFtlFreightBucket.isEmpty()) {
-//                receivableFtlFreightBucket.add(res)
-//            }
-//            if (receivableLtlFreightBucket.isEmpty()) {
-//                receivableLtlFreightBucket.add(res)
-//            }
-//            if (receivableHaulageFreightBucket.isEmpty()) {
-//                receivableHaulageFreightBucket.add(res)
-//            }
-//            if (receivableFclCustomsBucket.isEmpty()) {
-//                receivableFclCustomsBucket.add(res)
-//            }
-//            if (receivableLclCustomsBucket.isEmpty()) {
-//                receivableLclCustomsBucket.add(res)
-//            }
-//            if (receivableAirCustomsBucket.isEmpty()) {
-//                receivableAirCustomsBucket.add(res)
-//            }
-//            if (receivableTrailerFreightBucket.isEmpty()) {
-//                receivableTrailerFreightBucket.add(res)
-//            }
-//            if (receivableStoreOrderBucket.isEmpty()) {
-//                receivableStoreOrderBucket.add(res)
-//            }
-//            if (receivableAdditionalChargeBucket.isEmpty()) {
-//                receivableAdditionalChargeBucket.add(res)
-//            }
-//            if (receivableFclCfsBucket.isEmpty()) {
-//                receivableFclCfsBucket.add(res)
-//            }
-//            if (receivableOriginServicesBucket.isEmpty()) {
-//                receivableOriginServicesBucket.add(res)
-//            }
-//            if (receivableDestinationServicesBucket.isEmpty()) {
-//                receivableDestinationServicesBucket.add(res)
-//            }
-//            if (receivableFclCustomsFreightBucket.isEmpty()) {
-//                receivableFclCustomsFreightBucket.add(res)
-//            }
-//            if (receivableLclCustomsFreightBucket.isEmpty()) {
-//                receivableLclCustomsFreightBucket.add(res)
-//            }
-//            if (receivableAirCustomsFreightBucket.isEmpty()) {
-//                receivableAirCustomsFreightBucket.add(res)
-//            }
-//
-//            receivableByAgeViaServiceType[0].ageingBucket = receivableFclFreightBucket
-//            receivableByAgeViaServiceType[1].ageingBucket = receivableLclFreightBucket
-//            receivableByAgeViaServiceType[2].ageingBucket = receivableAirFreightBucket
-//            receivableByAgeViaServiceType[3].ageingBucket = receivableFtlFreightBucket
-//            receivableByAgeViaServiceType[4].ageingBucket = receivableLtlFreightBucket
-//            receivableByAgeViaServiceType[5].ageingBucket = receivableHaulageFreightBucket
-//            receivableByAgeViaServiceType[6].ageingBucket = receivableFclCustomsBucket
-//            receivableByAgeViaServiceType[7].ageingBucket = receivableLclCustomsBucket
-//            receivableByAgeViaServiceType[8].ageingBucket = receivableAirCustomsBucket
-//            receivableByAgeViaServiceType[9].ageingBucket = receivableTrailerFreightBucket
-//            receivableByAgeViaServiceType[10].ageingBucket = receivableStoreOrderBucket
-//            receivableByAgeViaServiceType[11].ageingBucket = receivableAdditionalChargeBucket
-//            receivableByAgeViaServiceType[12].ageingBucket = receivableFclCfsBucket
-//            receivableByAgeViaServiceType[13].ageingBucket = receivableOriginServicesBucket
-//            receivableByAgeViaServiceType[14].ageingBucket = receivableDestinationServicesBucket
-//            receivableByAgeViaServiceType[15].ageingBucket = receivableFclCustomsFreightBucket
-//            receivableByAgeViaServiceType[16].ageingBucket = receivableLclCustomsFreightBucket
-//            receivableByAgeViaServiceType[17].ageingBucket = receivableAirCustomsFreightBucket
-//
-//        } else {
-//            serviceTypeData = serviceTypeData + listOf(request.serviceType!!)
-//            receivableByAgeViaServiceType.add(
-//                ReceivableByAgeViaServiceType(
-//                    serviceTypeName = request.serviceType?.name,
-//                    ageingBucket = receivableServiceTypeBucket
-//                )
-//            )
-//            payment.forEach {
-//                if (it.serviceType == request.serviceType?.name) {
-//                    receivableServiceTypeBucket.add(receivableBucketAllZone(it))
-//                }
-//            }
-//            receivableByAgeViaServiceType[0].ageingBucket = receivableServiceTypeBucket
-//        }
-
-//        return ReceivableAgeingResponse(
-//            zone = zoneData,
-//            receivableByAgeViaZone = receivableByAgeViaZone,
-//            serviceType = serviceTypeData,
-//            receivableByAgeViaServiceType = receivableByAgeViaServiceType
-//        )
-//    }
-
-//    private fun receivableBucketAllZone(response: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): AgeingBucketZone {
-//        return AgeingBucketZone(
-//            ageingDuration = response!!.ageingDuration,
-//            amount = response.amount,
-//            zone = null,
-//            serviceType = null,
-//            currencyType = response.currencyType,
-//        )
-//    }
 
     override suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse> {
         val startDate = YearMonth.of(request.year, request.month).minusMonths(request.count.toLong()).atDay(1).atStartOfDay()
@@ -746,8 +605,9 @@ class DashboardServiceImpl : DashboardService {
             end_date
         )
 
-        val response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
+        var response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
 
         return response.exchangeRate
     }
+
 }

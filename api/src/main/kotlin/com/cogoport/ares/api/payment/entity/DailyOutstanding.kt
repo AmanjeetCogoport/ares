@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.entity
 
+import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 @MappedEntity
@@ -10,5 +11,7 @@ data class DailyOutstanding(
     var outstandings: BigDecimal?,
     var totalSales: BigDecimal?,
     var days: Int,
-    var value: Double
+    var value: Double,
+    val serviceType: ServiceType? = null,
+    val currencyType: String? = null
 )
