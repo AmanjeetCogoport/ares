@@ -223,7 +223,7 @@ class DashboardServiceImpl : DashboardService {
             data?.list?.forEach {
                 if((it.currencyType != request.currencyType) && (it.currencyType != null)){
                     var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it?.amount?.times(exchangeRate)
+                    it?.amount = it?.amount?.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
             }
