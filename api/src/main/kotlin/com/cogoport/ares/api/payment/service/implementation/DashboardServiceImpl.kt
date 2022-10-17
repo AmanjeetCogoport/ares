@@ -257,8 +257,56 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>> {
         val serviceType: ServiceType? = request.serviceType
         val currencyType: String? = request.currencyType
-        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType)
-//        if (payment.size == 0) {
+        val invoiceCurrency: String? = request.invoiceCurrency
+        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType, invoiceCurrency)
+        val data = HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>()
+
+        payments.forEach { payment ->
+            val zone = payment.zone
+            val serviceType = payment.serviceType
+            val invoiceCurrency = payment.invoiceCurrency
+            val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
+
+            if (payment.currencyType != request.currencyType) {
+                var exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
+                payment.amount = payment.amount.times(exchangeRate)
+                payment.currencyType = request.currencyType
+            }
+
+            val ageingBucketData = AgeingBucketZone(
+                ageingDuration = payment.ageingDuration,
+                amount = payment.amount,
+                currencyType = payment.currencyType
+            )
+
+            if(data.keys.contains(zone)){
+                val zoneWiseData = data["$zone"]
+
+                if (zoneWiseData?.keys?.contains(serviceType)!!){
+                    val serviceWiseData = zoneWiseData["$serviceType"]
+
+                    val index = serviceWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
+                    if(index == -1){
+                        serviceWiseData.add(ageingBucketData)
+                    }else{
+                        serviceWiseData?.get(index!!)?.amount = serviceWiseData?.get(index!!)?.amount?.plus(payment.amount)
+                    }
+                }else{
+                    arrayListAgeingBucketZone.add(ageingBucketData)
+                    zoneWiseData[serviceType.toString()] = arrayListAgeingBucketZone
+                }
+
+            }else{
+                arrayListAgeingBucketZone.add(ageingBucketData)
+                val hashMapServiceType = HashMap<String, ArrayList<AgeingBucketZone>>()
+                hashMapServiceType.put(payment.serviceType.toString(), arrayListAgeingBucketZone)
+                data[payment.zone] =  hashMapServiceType
+            }
+        }
+         return data
+    }
+
+//    if (payment.size == 0) {
 //            return ReceivableAgeingResponse(listOf(request.zone), listOf(serviceType))
 //        }
 //        val receivableNorthBucket = mutableListOf<AgeingBucketZone>()
@@ -290,62 +338,14 @@ class DashboardServiceImpl : DashboardService {
 //        var zoneData = listOf<String>()
 //        var serviceTypeData = listOf<ServiceType>()
 
-        var data = HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>()
-
-
-        payments.forEach { payment ->
-            val zone = payment.zone
-            val serviceType = payment.serviceType
-            val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
-
-
-            if (payment.currencyType != request.currencyType) {
-                var exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
-                payment.amount = payment.amount.times(exchangeRate)
-                payment.currencyType = request.currencyType
-            }
-
-            val ageingBucketData = AgeingBucketZone(
-                ageingDuration = payment.ageingDuration,
-                amount = payment.amount,
-                currencyType = payment.currencyType
-            )
-
-            if(data.keys.contains(zone)){
-                var zoneWiseData = data["$zone"]
-
-                if (zoneWiseData?.keys?.contains(serviceType)!!){
-                    var serviceWiseData = zoneWiseData["$serviceType"]
-
-                    var index = serviceWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
-                    if(index == -1){
-                        serviceWiseData?.add(ageingBucketData)
-                    }else{
-                        serviceWiseData?.get(index!!)?.amount?.plus(payment.amount)
-                    }
-                }else{
-                    arrayListAgeingBucketZone.add(ageingBucketData)
-                    zoneWiseData[serviceType.toString()] = arrayListAgeingBucketZone
-                }
-
-            }else{
-                arrayListAgeingBucketZone.add(ageingBucketData)
-                val hashMapServiceType = HashMap<String, ArrayList<AgeingBucketZone>>()
-                hashMapServiceType.put(payment.serviceType.toString(), arrayListAgeingBucketZone)
-                data[payment.zone] =  hashMapServiceType
-            }
-        }
-         return data
-    }
-
-     private fun getAgeingBucketZoneIndex(data: ArrayList<AgeingBucketZone>?, payment: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): Int? {
-        data?.forEach {
-            if(it.ageingDuration == payment?.ageingDuration){
-                return data.indexOf(it)
-            }
-        }
-         return -1
-    }
+//     private fun getAgeingBucketZoneIndex(data: ArrayList<AgeingBucketZone>?, payment: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): Int? {
+//        data?.forEach {
+//            if(it.ageingDuration == payment?.ageingDuration){
+//                return data.indexOf(it)
+//            }
+//        }
+//         return -1
+//    }
 
 //        if (request.zone.isNullOrBlank()) {
 //            zoneData = zoneData + listOf("East", "West", "North", "South")

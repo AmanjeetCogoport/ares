@@ -12,5 +12,7 @@ data class AgeingBucketZone(
     var amount: BigDecimal,
     val zone: String,
     val serviceType: String?,
-    var currencyType: String?
+    var currencyType: String?,
+    val invoiceCurrency: String?
 )
+
