@@ -1,13 +1,15 @@
 package com.cogoport.ares.model.payment.response
 
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.MappedEntity
+import java.math.BigDecimal
 import java.util.UUID
 
 @MappedEntity(value = "account_utilizations")
 data class OnAccountTotalAmountResponse(
     var organizationId: UUID,
-    var accMode: String,
-    var accType: String,
-    var paymentValue: String
+    var accMode: AccMode,
+    var accType: AccountType,
+    var paymentValue: BigDecimal
 )
-

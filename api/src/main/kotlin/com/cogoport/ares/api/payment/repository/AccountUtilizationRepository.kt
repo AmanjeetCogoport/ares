@@ -17,7 +17,6 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -671,10 +670,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations 
             GROUP BY organization_id, acc_type, acc_mode 
             having organization_id in (:organizationIdList) 
-            and acc_type::varchar = :accType  and acc_mode::varchar =:accMode
+            and acc_type::varchar = :accType and acc_mode::varchar =:accMode
         """
     )
-    suspend fun onAccountPaymentAmount(accType: String, accMode: String, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
+    suspend fun onAccountPaymentAmount(accType: AccountType, accMode: AccMode, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
 
     @Query(
         """

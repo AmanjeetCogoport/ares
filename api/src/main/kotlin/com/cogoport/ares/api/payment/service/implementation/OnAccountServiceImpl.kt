@@ -48,8 +48,23 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
-import com.cogoport.ares.model.payment.request.*
-import com.cogoport.ares.model.payment.response.*
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
+import com.cogoport.ares.model.payment.request.DeletePaymentRequest
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
+import com.cogoport.ares.model.payment.response.AccountCollectionResponse
+import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.BulkPaymentResponse
+import com.cogoport.ares.model.payment.response.BulkUploadErrorResponse
+import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
+import com.cogoport.ares.model.payment.response.PaymentResponse
+import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
+import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.brahma.excel.ExcelSheetBuilder
 import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
@@ -526,8 +541,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     override suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse> {
-        val orgIdList = req.orgIdList.map { it -> UUID.fromString(it) }
-        val res = accountUtilizationRepository.onAccountPaymentAmount(req.accType,req.accMode, orgIdList)
+        val res = accountUtilizationRepository.onAccountPaymentAmount(req.accType, req.accMode, req.orgIdList)
         return res
     }
 
