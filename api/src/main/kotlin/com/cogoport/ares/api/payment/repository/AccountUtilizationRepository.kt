@@ -160,7 +160,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             service_type,
             led_currency as currency_type
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type:: varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type:: varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
             group by date_trunc('month',transaction_date), service_type, currency_type
         )
         select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
@@ -169,7 +169,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from x left join y on y.month = x.month
         """
     )
-    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?): MutableList<Outstanding>
+    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>
     @Query(
         """
             with x as (

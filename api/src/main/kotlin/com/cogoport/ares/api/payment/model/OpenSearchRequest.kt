@@ -15,5 +15,6 @@ data class OpenSearchRequest(
     @QueryValue(AresConstants.ORG_ID) val orgId: String = "",
     @QueryValue(AresConstants.ORG_NAME) val orgName: String? = null,
     @QueryValue(AresConstants.ACC_MODE) val accMode: AccMode? = null,
-    @QueryValue("service_type") val serviceType: ServiceType? = null
+    @QueryValue("service_type") val serviceType: ServiceType? = null,
+    @QueryValue("invoice_currency") val invoiceCurrency: String? = null
 )

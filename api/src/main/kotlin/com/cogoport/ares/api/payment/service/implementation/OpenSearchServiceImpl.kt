@@ -72,6 +72,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val date = request.date
         val year = request.year
         val serviceType = request.serviceType
+        val invoiceCurrency = request.invoiceCurrency
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType)
@@ -88,9 +89,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
-        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone,serviceType)
+        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone,serviceType, invoiceCurrency)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType)
-        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null,null)
+        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null,null, null)
         updateMonthlyTrend(null, monthlyTrendAllData,null)
 
         /** Quarterly Outstanding */
