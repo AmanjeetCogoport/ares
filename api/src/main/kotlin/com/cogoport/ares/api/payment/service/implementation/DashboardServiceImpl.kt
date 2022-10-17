@@ -264,11 +264,10 @@ class DashboardServiceImpl : DashboardService {
         payments.forEach { payment ->
             val zone = payment.zone
             val serviceType = payment.serviceType
-            val invoiceCurrency = payment.invoiceCurrency
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
             if (payment.currencyType != request.currencyType) {
-                var exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
+                val exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
                 payment.amount = payment.amount.times(exchangeRate)
                 payment.currencyType = request.currencyType
             }
@@ -747,7 +746,7 @@ class DashboardServiceImpl : DashboardService {
             end_date
         )
 
-        var response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
+        val response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
 
         return response.exchangeRate
     }
