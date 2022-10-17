@@ -876,4 +876,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun deleteConsolidatedInvoices(docValues: List<String>)
+
+    @Query("select current_date - min(due_date) from account_utilizations au where amount_loc - pay_loc != 0 and acc_type = 'SINV' and document_no in (:invoiceIds)")
+    suspend fun getCurrentOutstandingDays(invoiceIds: List<Long>): Long
 }
