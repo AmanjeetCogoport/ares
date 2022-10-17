@@ -82,7 +82,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
-        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType,invoiceCurrency)
+        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency)
         updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
         updateOverallStats(null, statsAllData, null, null)
@@ -90,16 +90,16 @@ class OpenSearchServiceImpl : OpenSearchService {
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
         val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone,serviceType, invoiceCurrency)
-        updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType)
+        updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null,null, null)
-        updateMonthlyTrend(null, monthlyTrendAllData,null)
+        updateMonthlyTrend(null, monthlyTrendAllData,null, null)
 
         /** Quarterly Outstanding */
         logger().info("Updating Quarterly Outstanding document")
-        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType)
-        updateQuarterlyTrend(zone, quarterlyTrendZoneData,serviceType)
-        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null,null)
-        updateQuarterlyTrend(null, quarterlyTrendAllData, null)
+        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
+        updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
+        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null,null, null)
+        updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Sales Outstanding document")
@@ -163,7 +163,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     }
 
-    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?) {
+    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency:String?) {
         if (data.isNullOrEmpty()) return
         val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
 
@@ -179,7 +179,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
 
-    private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?) {
+    private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency: String?) {
         if (data.isNullOrEmpty()) return
 
         var zoneKey:String? = null

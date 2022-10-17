@@ -180,10 +180,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount,
                 service_type,
-                led_currency as currency_type
+                led_currency as currency_type,
+                currency as invoice_currency
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type:: varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
-                group by date_trunc('quarter',transaction_date), service_type,currency_type
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type:: varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
+                group by date_trunc('quarter',transaction_date), service_type, currency_type, invoice_currency
             )
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
@@ -196,7 +197,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             left join y on x.quarter = y.quarter
         """
     )
-    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType? ): MutableList<Outstanding>
+    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String? ): MutableList<Outstanding>
     @Query(
         """
         with X as (
