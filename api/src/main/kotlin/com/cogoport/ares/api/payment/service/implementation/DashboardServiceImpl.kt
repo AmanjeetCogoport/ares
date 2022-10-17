@@ -21,8 +21,6 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.ReceivableByAgeViaServiceType
-import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
@@ -40,7 +38,6 @@ import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
@@ -294,11 +291,12 @@ class DashboardServiceImpl : DashboardService {
 //        var serviceTypeData = listOf<ServiceType>()
 
         var data = HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>()
-         val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
+
 
         payments.forEach { payment ->
             val zone = payment.zone
             val serviceType = payment.serviceType
+            val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
 
             if (payment.currencyType != request.currencyType) {
@@ -313,51 +311,40 @@ class DashboardServiceImpl : DashboardService {
                 currencyType = payment.currencyType
             )
 
+            if(data.keys.contains(zone)){
+                var zoneWiseData = data["$zone"]
 
-            if (data.keys.contains(zone)) {
-                val zoneData = data["$zone"]
+                if (zoneWiseData?.keys?.contains(serviceType)!!){
+                    var serviceWiseData = zoneWiseData["$serviceType"]
 
-                if (zoneData?.keys?.contains(serviceType)!!) {
-                    var index = getAgeingBucketZoneIndex(data, payment)
+                    var index = serviceWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
                     if(index == -1){
-                        zoneData["$serviceType"]?.add(ageingBucketData)
+                        serviceWiseData?.add(ageingBucketData)
                     }else{
-                        zoneData["$serviceType"]?.get(index)?.amount?.plus(payment.amount!!)
+                        serviceWiseData?.get(index!!)?.amount?.plus(payment.amount)
                     }
-                } else {
+                }else{
                     arrayListAgeingBucketZone.add(ageingBucketData)
-                    zoneData?.put(serviceType.toString(), arrayListAgeingBucketZone)
+                    zoneWiseData[serviceType.toString()] = arrayListAgeingBucketZone
                 }
 
-            } else {
+            }else{
                 arrayListAgeingBucketZone.add(ageingBucketData)
                 val hashMapServiceType = HashMap<String, ArrayList<AgeingBucketZone>>()
                 hashMapServiceType.put(payment.serviceType.toString(), arrayListAgeingBucketZone)
-                data.put(payment.zone, hashMapServiceType)
+                data[payment.zone] =  hashMapServiceType
             }
         }
-
-        return data
+         return data
     }
 
-     private fun getAgeingBucketZoneIndex(data: HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>, payment: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): Int {
-        var index : Int = -1
-        val zone = payment?.zone
-        val serviceType = payment?.serviceType
-        if (data != null) {
-            var  zoneData = data[zone]
-            var serviceData = (zoneData?.get(serviceType.toString()))
-            var length = serviceData?.size!! -1
-
-            for (i  in 0.. length){
-                return if ( serviceData.get(i).ageingDuration == payment?.ageingDuration && serviceData.get(i).currencyType == payment?.currencyType) {
-                    i
-                }else{
-                    -1
-                }
+     private fun getAgeingBucketZoneIndex(data: ArrayList<AgeingBucketZone>?, payment: com.cogoport.ares.api.payment.entity.AgeingBucketZone?): Int? {
+        data?.forEach {
+            if(it.ageingDuration == payment?.ageingDuration){
+                return data.indexOf(it)
             }
         }
-         return index
+         return -1
     }
 
 //        if (request.zone.isNullOrBlank()) {

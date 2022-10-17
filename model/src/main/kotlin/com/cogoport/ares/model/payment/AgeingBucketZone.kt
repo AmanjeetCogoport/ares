@@ -10,8 +10,8 @@ import java.util.Currency
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class AgeingBucketZone(
-    val ageingDuration: String?,
-    val amount: BigDecimal?,
+    var ageingDuration: String?,
+    var amount: BigDecimal?,
     val zone: String? = null,
     val serviceType: ServiceType? = null,
     val currencyType: String?
