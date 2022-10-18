@@ -136,4 +136,11 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
+
+    @Query(
+        """
+            update settlements set deleted_at = now() where destination_id = :destinationId
+        """
+    )
+    suspend fun deleleSettlement(destinationId: Long)
 }

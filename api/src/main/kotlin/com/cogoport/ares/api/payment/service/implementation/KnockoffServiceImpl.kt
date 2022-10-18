@@ -23,6 +23,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountPayablesFile
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
@@ -322,5 +323,22 @@ open class KnockoffServiceImpl : KnockoffService {
             updatedBy = knockOffRecord.updatedBy,
             settlementDate = Date(Timestamp.from(Instant.now()).time)
         )
+    }
+
+    override suspend fun reverseUtr(documentNo: Long,accountType: AccountType){
+        val accountUtilization = accountUtilizationRepository.findRecord(documentNo,accountType.name,AccMode.AP.name)
+
+        val paymentMappingData = invoicePayMappingRepo.findBydocumentNo(documentNo,AccMode.AP.name)
+        var payment: Payment? = null
+        for(paymentMap in paymentMappingData){
+             payment = paymentRepository.findByPaymentId(paymentMap.paymentId)
+            paymentRepository.deletedPayment(paymentMap.paymentId)
+            invoicePayMappingRepo.deletedPaymentMappings(paymentMap.id)
+
+        }
+        accountUtilizationRepository.deleteByPaymentNum(payment?.paymentNum)
+        settlementRepository.deleleSettlement(documentNo)
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization?.id!!,0.toBigDecimal(),0.toBigDecimal())
+
     }
 }

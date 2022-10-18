@@ -42,4 +42,11 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun findByPaymentNumIn(paymentNums: List<Long>, paymentCode: SettlementType): List<PaymentData>
+
+    @Query(
+        """
+            update payments set deleted_at = now() where id = :paymentId
+        """
+    )
+    suspend fun deletedPayment(paymentId: Long)
 }

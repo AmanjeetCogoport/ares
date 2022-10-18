@@ -879,4 +879,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query("select current_date - min(due_date) from account_utilizations au where amount_loc - pay_loc != 0 and acc_type = 'SINV' and document_no in (:invoiceIds)")
     suspend fun getCurrentOutstandingDays(invoiceIds: List<Long>): Long
+
+    @Query(
+        """
+            update account_utilizations set deleted_at = now() where payment_num = :paymentNum
+        """
+    )
+    suspend fun deleteByPaymentNum(paymentNum:Long?)
 }
