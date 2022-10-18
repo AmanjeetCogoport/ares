@@ -160,14 +160,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             select to_char(date_trunc('month',transaction_date),'Mon') as month,
             sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as amount,
             service_type,
-            led_currency as currency_type
+            led_currency as currency_type,
+            currency as invoice_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type:: varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
-            group by date_trunc('month',transaction_date), service_type, currency_type
+            group by date_trunc('month',transaction_date), service_type, currency_type, invoice_currency
         )
         select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
         y.service_type, 
-        y.currency_type
+        y.currency_type,
+        y.invoice_currency
         from x left join y on y.month = x.month
         """
     )
@@ -193,7 +195,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             when x.quarter = 4 then 'Oct - Dec' end as duration,
             coalesce(y.total_outstanding_amount, 0) as amount,
             y.service_type as service_type,
-            y.currency_type as currency_type
+            y.currency_type as currency_type,
+            y.invoice_currency as invoice_currency
             from x
             left join y on x.quarter = y.quarter
         """
@@ -221,7 +224,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
             coalesce((X.outstandings / X.total_sales) * X.days,0) as value,
             X.service_type as service_type,
-            X.currency_type as currency_type
+            X.currency_type as currency_type,
+            X.invoice_currency as invoice_currency
             from X
         """
     )

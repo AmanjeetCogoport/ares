@@ -211,12 +211,15 @@ class DashboardServiceImpl : DashboardService {
 
         var zoneKey: String?= null
         var serviceTypeKey: String?= null
+        var invoiceCurrencyKey: String?= null
 
         if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
 
         if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
 
-        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else  invoiceCurrencyKey=request?.invoiceCurrency?.uppercase()
+
+        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
         val data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -253,7 +256,8 @@ class DashboardServiceImpl : DashboardService {
                     amount = it.sumOf { it.amount },
                     duration = it.first().duration,
                     currencyType = it.first().currencyType,
-                    serviceType = it.first().serviceType
+                    serviceType = it.first().serviceType,
+                    invoiceCurrency = it.first().invoiceCurrency
                 )
                 return@map outstandingData
             }

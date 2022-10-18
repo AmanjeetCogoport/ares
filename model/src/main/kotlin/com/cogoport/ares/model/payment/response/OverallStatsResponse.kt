@@ -31,5 +31,6 @@ data class OverallStatsResponse(
     var serviceType: String? = null,
     @JsonProperty("currencyType")
     var currencyType: String? = null,
-
+    @JsonProperty("invoiceCurrency")
+    var invoiceCurrency: String? = null,
 )

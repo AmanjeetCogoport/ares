@@ -20,5 +20,9 @@ data class OutstandingResponse(
     @JsonProperty("serviceType")
     var serviceType: ServiceType? = ServiceType.NA,
     @JsonProperty("currencyType")
-    var currencyType: String? = "INR"
+    var currencyType: String? = "INR",
+    @JsonProperty("invoiceCurrency")
+    var invoiceCurrency: String? = null
 )
+
+

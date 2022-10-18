@@ -9,5 +9,6 @@ data class Outstanding(
     var duration: String?,
     var amount: BigDecimal,
     var currencyType: String?,
-    var serviceType: ServiceType?
+    var serviceType: ServiceType?,
+    var invoiceCurrency: String?
 )
