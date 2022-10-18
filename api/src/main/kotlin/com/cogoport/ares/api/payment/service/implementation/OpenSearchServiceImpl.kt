@@ -75,10 +75,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         val invoiceCurrency = request.invoiceCurrency
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType)
-        updateCollectionTrend(zone, quarter, year, collectionZoneResponse,serviceType)
-        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year,null)
-        updateCollectionTrend(null, quarter, year, collectionResponseAll, null)
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
+        updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
+        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year,null, null)
+        updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
@@ -103,10 +103,10 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType)
-        updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType)
-        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null)
-        updateDailySalesOutstanding(null, year, dailySalesAllData,null)
+        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
+        updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency)
+        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null)
+        updateDailySalesOutstanding(null, year, dailySalesAllData,null, null)
     }
 
     /**
@@ -122,7 +122,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateDailyPayablesOutstanding(null, request.year, dailyPayableAllData)
     }
 
-    private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?, serviceType: ServiceType?) {
+    private fun updateCollectionTrend(zone: String?, quarter: Int, year: Int, data: MutableList<CollectionTrend>?, serviceType: ServiceType?, invoiceCurrency: String?) {
         if (data.isNullOrEmpty()) return
 
         val collectionData = data.map {
@@ -193,7 +193,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
 
-    private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding, serviceType: ServiceType?) {
+    private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding, serviceType: ServiceType?, invoiceCurrency: String?) {
         val dsoResponse = dsoConverter.convertToModel(data)
         var zoneKey =""
         var serviceTypeKey = ""
