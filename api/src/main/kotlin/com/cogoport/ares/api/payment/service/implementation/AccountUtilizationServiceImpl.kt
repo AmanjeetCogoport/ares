@@ -18,7 +18,6 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
