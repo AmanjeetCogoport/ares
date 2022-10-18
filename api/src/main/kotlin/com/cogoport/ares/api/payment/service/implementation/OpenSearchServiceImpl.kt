@@ -145,8 +145,6 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency:String?) {
-
-
         val overallStatsData = overallStatsConverter.convertToModel(data)
 
         var zoneKey:String? = null
