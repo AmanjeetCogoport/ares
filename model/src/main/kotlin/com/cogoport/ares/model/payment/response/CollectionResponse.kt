@@ -27,4 +27,3 @@ data class CollectionResponse(
     @JsonProperty("invoiceCurrency")
     var invoiceCurrency: String? = null,
 )
-

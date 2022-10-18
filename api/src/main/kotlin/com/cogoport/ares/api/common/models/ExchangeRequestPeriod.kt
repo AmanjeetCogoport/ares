@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 
 @Introspected
-class ExchangeRequestPeriod (
+class ExchangeRequestPeriod(
     @JsonProperty("from_currency")
     var from_currency: String?,
     @JsonProperty("to_currency")

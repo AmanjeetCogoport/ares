@@ -21,7 +21,6 @@ import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 
@@ -33,7 +32,7 @@ interface DashboardService {
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
     suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
-    suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>
+    suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
     suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>

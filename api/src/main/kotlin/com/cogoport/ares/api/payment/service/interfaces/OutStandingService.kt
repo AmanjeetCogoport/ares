@@ -13,4 +13,6 @@ interface OutStandingService {
     suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList?
 
     suspend fun getCustomerOutstanding(orgId: String): MutableList<CustomerOutstanding?>
+
+    suspend fun getCurrOutstanding(invoiceIds: List<Long>): Long
 }

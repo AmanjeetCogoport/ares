@@ -24,5 +24,3 @@ data class OutstandingResponse(
     @JsonProperty("invoiceCurrency")
     var invoiceCurrency: String? = null
 )
-
-
