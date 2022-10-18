@@ -156,7 +156,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
         if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
-        if(invoiceCurrency?.isNullOrBlank()!!) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
+        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
 
         val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
