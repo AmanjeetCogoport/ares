@@ -20,5 +20,6 @@ data class DailyOutstandingResponse(
     @JsonProperty("days") var days: Int,
     @JsonProperty("value") var value: BigDecimal,
     @JsonProperty("serviceType") var serviceType: String?,
-    @JsonProperty("currencyType") var currencyType: String?
+    @JsonProperty("currencyType") var currencyType: String?,
+    @JsonProperty("invoiceCurrency") var invoiceCurrency: String?
 )

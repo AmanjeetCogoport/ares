@@ -13,5 +13,6 @@ data class DailyOutstanding(
     var days: Int,
     var value: Double,
     val serviceType: ServiceType? = null,
-    val currencyType: String? = null
+    val currencyType: String? = null,
+    val invoiceCurrency: String? = null
 )

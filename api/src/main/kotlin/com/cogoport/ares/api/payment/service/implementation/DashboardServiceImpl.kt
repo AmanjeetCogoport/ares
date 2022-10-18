@@ -114,7 +114,6 @@ class DashboardServiceImpl : DashboardService {
             data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
             data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
             data?.openOnAccountPaymentAmount = data?.openOnAccountPaymentAmount?.times(exchangeRate)!!
-
             data?.currencyType = request?.currencyType
         }
 

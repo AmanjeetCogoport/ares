@@ -191,11 +191,14 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         var zoneKey:String? = null
         var serviceTypeKey:String? = null
+        var invoiceCurrencyKey:String? = null
 
         if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
         if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
-        val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+
+        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
@@ -204,13 +207,16 @@ class OpenSearchServiceImpl : OpenSearchService {
         val dsoResponse = dsoConverter.convertToModel(data)
         var zoneKey =""
         var serviceTypeKey = ""
+        var invoiceCurrencyKey = ""
 
         if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
         if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
 
+        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+
         if(dsoResponse != null){
-            val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + dsoResponse?.month + AresConstants.KEY_DELIMITER + year
+            val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + dsoResponse?.month + AresConstants.KEY_DELIMITER + year
             OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
         }
     }
