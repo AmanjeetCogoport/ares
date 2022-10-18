@@ -136,5 +136,5 @@ interface AresClient {
     suspend fun reachable(): HttpResponse<String>
 
     @Get("/payments/outstanding/outstanding-days")
-    suspend fun getCurrOutstanding(@QueryValue req: List<Long>): Long
+    suspend fun getCurrOutstanding(@QueryValue("invoiceIds") invoiceIds: List<Long>): Long
 }
