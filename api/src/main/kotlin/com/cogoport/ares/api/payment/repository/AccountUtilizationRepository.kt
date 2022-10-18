@@ -129,10 +129,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
             coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount,
             service_type,
-            led_currency as currency_type
+            led_currency as currency_type,
+            currency as invoice_currency
             from account_utilizations
-            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
-            group by service_type, currency_type
+            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            group by service_type, currency_type , invoice_currency
         )
         union all
         (
