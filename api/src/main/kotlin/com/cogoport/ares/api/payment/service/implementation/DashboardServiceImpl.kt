@@ -194,12 +194,15 @@ class DashboardServiceImpl : DashboardService {
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
         var zoneKey: String?= null
         var serviceTypeKey: String?= null
+        var invoiceCurrencyKey: String?= null
 
         if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
 
         if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
 
-        return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else  invoiceCurrencyKey=request?.invoiceCurrency?.uppercase()
+
+        return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey +  AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
 
     }
 
