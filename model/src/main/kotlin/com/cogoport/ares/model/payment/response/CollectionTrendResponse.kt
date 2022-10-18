@@ -22,5 +22,7 @@ data class CollectionTrendResponse(
     @JsonProperty("serviceType")
     var serviceType: ServiceType?,
     @JsonProperty("currencyType")
-    var currencyType: String?
+    var currencyType: String?,
+    @JsonProperty("invoiceCurrency")
+    var invoiceCurrency: String?
 )

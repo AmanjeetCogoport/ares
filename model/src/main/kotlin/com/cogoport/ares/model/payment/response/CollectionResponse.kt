@@ -24,4 +24,7 @@ data class CollectionResponse(
     var id: String,
     @JsonProperty("currencyType")
     var currencyType: String? = null,
+    @JsonProperty("invoiceCurrency")
+    var invoiceCurrency: String? = null,
 )
+

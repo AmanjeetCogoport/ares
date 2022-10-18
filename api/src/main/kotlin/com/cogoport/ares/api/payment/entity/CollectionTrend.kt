@@ -11,5 +11,6 @@ data class CollectionTrend(
     var receivableAmount: BigDecimal?,
     var collectableAmount: BigDecimal?,
     var currencyType: String?,
-    var serviceType: String?
+    var serviceType: String?,
+    var invoiceCurrency: String?
 )

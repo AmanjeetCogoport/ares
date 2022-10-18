@@ -132,12 +132,16 @@ class OpenSearchServiceImpl : OpenSearchService {
         var zoneKey:String? = null
         var serviceTypeKey:String? = null
 
+        var invoiceCurrencyKey:String? = null
+
         if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
         if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
 
+        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+
         val collectionId = AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
-        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType))
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType, invoiceCurrency))
     }
 
     private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency:String?) {
@@ -216,17 +220,17 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
     }
 
-    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int, serviceType: ServiceType?): CollectionResponse {
+    private fun formatCollectionTrend(data: List<CollectionTrendResponse>, id: String, quarter: Int, serviceType: ServiceType?, invoiceCurrency: String?): CollectionResponse {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: BigDecimal? = null
         var totalCollected: BigDecimal? = null
         var currencyType:String? = null
-        var serviceType: ServiceType? = null
+//        var serviceType: ServiceType? = null
 
         val monthList = mutableListOf<String?>()
         for (row in data) {
             if (row.duration != "Total") {
-                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount, row.serviceType, row.currencyType))
+                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount, row.serviceType, row.currencyType, row.invoiceCurrency))
                 monthList.add(row.duration)
             } else {
                 totalAmount = row.receivableAmount
@@ -236,10 +240,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), serviceType, null))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), serviceType, null, invoiceCurrency))
             }
         }
-        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, currencyType)
+        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, currencyType, invoiceCurrency)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
