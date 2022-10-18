@@ -319,7 +319,7 @@ class DashboardServiceImpl : DashboardService {
             data?.list?.forEach {
                 if((it.currencyType != request.currencyType) && (it.currencyType != null)){
                     var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it?.amount?.times(exchangeRate)
+                    it?.amount = it?.amount?.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
 
@@ -400,8 +400,8 @@ class DashboardServiceImpl : DashboardService {
 
         if((request.currencyType != currencyType) && (currencyType != null)){
             var exchangeRate = getExchangeRate(currencyType, request.currencyType)
-            currentDso.toBigDecimal().times(exchangeRate)
-            avgDsoAmount.times(exchangeRate)
+            currentDso = currentDso.toBigDecimal().times(exchangeRate).toFloat()
+            avgDsoAmount = avgDsoAmount.times(exchangeRate)
 
             dsoResponseData.forEach {
                 if((it.currencyType != request.currencyType) && (it.currencyType != null)){
