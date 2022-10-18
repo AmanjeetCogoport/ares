@@ -885,5 +885,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             update account_utilizations set deleted_at = now() where payment_num = :paymentNum
         """
     )
-    suspend fun deleteByPaymentNum(paymentNum:Long?)
+    suspend fun deleteByPaymentNum(paymentNum: Long?)
 }

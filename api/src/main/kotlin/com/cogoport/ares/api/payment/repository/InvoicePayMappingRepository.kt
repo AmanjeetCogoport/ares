@@ -16,13 +16,12 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
 
     )
-    suspend fun findBydocumentNo(documentNo: Long,accMode: String? = null): MutableList<PaymentInvoiceMapping>
+    suspend fun findBydocumentNo(documentNo: Long, accMode: String? = null): MutableList<PaymentInvoiceMapping>
 
     @Query(
         """
             update payment_invoice_mapping set deleted_at = now() where id = :id
         """
     )
-    suspend fun deletedPaymentMappings(id:Long?)
-
+    suspend fun deletedPaymentMappings(id: Long?)
 }

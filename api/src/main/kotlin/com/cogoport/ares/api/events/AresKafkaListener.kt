@@ -67,7 +67,7 @@ class AresKafkaListener {
     }
 
     @Topic("reverse-utr")
-    fun reverseUtr(documentNo : Long,accountType: AccountType) = runBlocking {
-        knockoffService.reverseUtr(documentNo,accountType)
+    fun reverseUtr(documentNo: Long, accountType: AccountType) = runBlocking {
+        knockoffService.reverseUtr(documentNo, accountType)
     }
 }

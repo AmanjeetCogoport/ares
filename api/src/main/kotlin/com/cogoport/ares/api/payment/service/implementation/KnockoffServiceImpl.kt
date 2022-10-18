@@ -325,20 +325,18 @@ open class KnockoffServiceImpl : KnockoffService {
         )
     }
 
-    override suspend fun reverseUtr(documentNo: Long,accountType: AccountType){
-        val accountUtilization = accountUtilizationRepository.findRecord(documentNo,accountType.name,AccMode.AP.name)
+    override suspend fun reverseUtr(documentNo: Long, accountType: AccountType) {
+        val accountUtilization = accountUtilizationRepository.findRecord(documentNo, accountType.name, AccMode.AP.name)
 
-        val paymentMappingData = invoicePayMappingRepo.findBydocumentNo(documentNo,AccMode.AP.name)
+        val paymentMappingData = invoicePayMappingRepo.findBydocumentNo(documentNo, AccMode.AP.name)
         var payment: Payment? = null
-        for(paymentMap in paymentMappingData){
-             payment = paymentRepository.findByPaymentId(paymentMap.paymentId)
+        for (paymentMap in paymentMappingData) {
+            payment = paymentRepository.findByPaymentId(paymentMap.paymentId)
             paymentRepository.deletedPayment(paymentMap.paymentId)
             invoicePayMappingRepo.deletedPaymentMappings(paymentMap.id)
-
         }
         accountUtilizationRepository.deleteByPaymentNum(payment?.paymentNum)
         settlementRepository.deleleSettlement(documentNo)
-        accountUtilizationRepository.updateInvoicePayment(accountUtilization?.id!!,0.toBigDecimal(),0.toBigDecimal())
-
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization?.id!!, 0.toBigDecimal(), 0.toBigDecimal())
     }
 }
