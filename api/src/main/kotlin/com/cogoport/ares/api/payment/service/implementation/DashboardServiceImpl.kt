@@ -126,11 +126,13 @@ class DashboardServiceImpl : DashboardService {
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
         var zoneKey: String?= null
         var serviceTypeKey: String?= null
+        var invoiceCurrencyKey:String? = null
 
         if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
         if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
+        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else  invoiceCurrencyKey=request?.invoiceCurrency?.uppercase()
 
-        return AresConstants.OVERALL_STATS_PREFIX + zoneKey+ AresConstants.KEY_DELIMITER + serviceTypeKey
+        return AresConstants.OVERALL_STATS_PREFIX + zoneKey+ AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
