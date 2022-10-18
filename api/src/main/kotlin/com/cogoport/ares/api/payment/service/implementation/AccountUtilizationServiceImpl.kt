@@ -260,9 +260,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             proformaDate = accountUtilization.transactionDate
         }
 
-        if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-            throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
-        }
+//         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+//             throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
+//         }
 
         accountUtilization.documentNo = updateInvoiceStatusRequest.newDocumentNo
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
