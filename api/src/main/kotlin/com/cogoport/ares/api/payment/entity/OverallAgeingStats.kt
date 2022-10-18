@@ -6,6 +6,6 @@ import java.math.BigDecimal
 data class OverallAgeingStats(
     var ageingDuration: String,
     var amount: BigDecimal,
-    var currency: String,
-    var serviceType: String?
+    var serviceType: String?,
+    var currencyType: String,
 )

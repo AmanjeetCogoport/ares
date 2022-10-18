@@ -136,13 +136,13 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
         var data = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.map {
-            if (it.currency != request.currencyType) {
-                var exchangeRate = getExchangeRate(it?.currency, request?.currencyType)
+            if (it.currencyType != request.currencyType) {
+                var exchangeRate = getExchangeRate(it?.currencyType, request?.currencyType)
                 it.amount = it.amount.times(exchangeRate)
-                it.currency = request?.currencyType!!
+                it.currencyType = request?.currencyType!!
             }
             data.add(overallAgeingConverter.convertToModel(it))
         }

@@ -93,15 +93,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             end, 'Unknown') as ageing_duration, 
             sum(sign_flag * (amount_loc - pay_loc)) as amount,
             service_type,
-            'INR' as currency
+            led_currency as currency_type,
+            currency as invoice_currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType)
-            group by ageing_duration, service_type
+            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type:: varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            group by ageing_duration, service_type, currency_type, invoice_currency
             order by ageing_duration
         """
 
     )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?): MutableList<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallAgeingStats>
 
     @Query(
         """
