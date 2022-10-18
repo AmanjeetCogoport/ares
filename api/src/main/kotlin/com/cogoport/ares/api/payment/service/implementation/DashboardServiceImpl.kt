@@ -53,6 +53,7 @@ import java.time.Month
 import java.time.Period
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.util.Currency
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -278,7 +279,8 @@ class DashboardServiceImpl : DashboardService {
                     amount = it.sumOf { it.amount },
                     duration = it.first().duration,
                     currencyType = it.first().currencyType,
-                    serviceType = it.first().serviceType
+                    serviceType = it.first().serviceType,
+                    invoiceCurrency = it.first().invoiceCurrency
                 )
                 return@map outstandingData
             }
@@ -296,13 +298,16 @@ class DashboardServiceImpl : DashboardService {
 
         var zoneKey: String?= null
         var serviceTypeKey: String?= null
+        var invoiceCurrencyKey: String?= null
 
 
         if (request.zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey=request?.zone?.uppercase()
 
         if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= request.serviceType.toString()
 
-        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else  invoiceCurrencyKey=request?.invoiceCurrency?.uppercase()
+
+        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey  + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
         val data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -338,38 +343,38 @@ class DashboardServiceImpl : DashboardService {
         var currencyType: String? = null
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
-            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
+            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             val salesResponse = clientResponse(salesResponseKey)
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currencyType))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.currencyType, data.invoiceCurrency))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal(), null))
+                    dso.add(DsoResponse(it, 0.toBigDecimal(), null, null))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
 
-            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX, request.serviceType)
+            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             val payablesResponse = clientResponse(payablesResponseKey)
             val dpo = mutableListOf<DpoResponse>()
             for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currencyType))
+                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.currencyType, data?.invoiceCurrency))
             }
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null, null))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
         }
 
-        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType)
+        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
         val currResponse = clientResponse(currentKey)
         var averageDso = 0.toFloat()
 
@@ -384,11 +389,11 @@ class DashboardServiceImpl : DashboardService {
         }
 
         var dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType)
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.currencyType, it.invoiceCurrency)
         }
 
         var dpoResponseData = dpoList.map {
-            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType)
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.currencyType, it.invoiceCurrency)
         }
 
         var avgDsoAmount = (averageDso / 3).toBigDecimal()
@@ -401,7 +406,7 @@ class DashboardServiceImpl : DashboardService {
             dsoResponseData.forEach {
                 if((it.currencyType != request.currencyType) && (it.currencyType != null)){
                     exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it.dsoForTheMonth.times(exchangeRate)
+                    it.dsoForTheMonth = it.dsoForTheMonth.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
             }
@@ -409,7 +414,7 @@ class DashboardServiceImpl : DashboardService {
             dpoResponseData.forEach {
                 if((it.currencyType != request.currencyType) && (it.currencyType != null)){
                     exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it.dpoForTheMonth.times(exchangeRate)
+                    it.dpoForTheMonth = it.dpoForTheMonth.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
             }
@@ -426,8 +431,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index,serviceType)
+    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index,serviceType, invoiceCurrency)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -440,17 +445,20 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?, invoiceCurrency:String?): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
 
             var zoneKey: String?= null
             var serviceTypeKey: String?= null
+            var invoiceCurrencyKey: String? = null
+
 
             if (zone.isNullOrBlank()) zoneKey = "ALL" else  zoneKey= zone?.uppercase()
             if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else  serviceTypeKey= serviceType.toString()
+            if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else  invoiceCurrencyKey= invoiceCurrency?.uppercase()
 
-            keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
+            keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }

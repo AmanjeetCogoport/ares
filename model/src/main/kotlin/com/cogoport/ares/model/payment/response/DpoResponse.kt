@@ -15,7 +15,9 @@ data class DpoResponse(
     @JsonProperty("month")
     val month: String,
     @JsonProperty("dpoForTheMonth")
-    val dpoForTheMonth: BigDecimal,
+    var dpoForTheMonth: BigDecimal,
     @JsonProperty("currencyType")
-    var currencyType: String?
+    var currencyType: String?,
+    @JsonProperty("invoiceCurrency")
+    var invoiceCurrency: String?
 )
