@@ -243,13 +243,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', now()::date) end as days,
             service_type,
-            led_currency as currency_type
+            led_currency as currency_type,
+            currency as invoice_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
-            group by service_type, currency_type
+            group by service_type, currency_type, invoice_currency
         )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, service_type, currency_type
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, service_type, currency_type, invoice_currency
         from X
         """
     )
