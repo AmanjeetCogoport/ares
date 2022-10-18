@@ -46,7 +46,7 @@ class OutstandingController {
     }
 
     @Get("/outstanding-days")
-    suspend fun getCurrOutstanding(@QueryValue("invoiceIds") invoiceIds: List<Long>): Long {
+    suspend fun getCurrOutstanding(@QueryValue invoiceIds: List<Long>): Long {
         return Response<Long>().ok(outStandingService.getCurrOutstanding(invoiceIds))
     }
 }
