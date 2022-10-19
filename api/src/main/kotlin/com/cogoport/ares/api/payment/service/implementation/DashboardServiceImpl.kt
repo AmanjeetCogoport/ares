@@ -138,6 +138,8 @@ class DashboardServiceImpl : DashboardService {
         validateInput(request.zone, request.role)
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
         var data = mutableListOf<OverallAgeingStatsResponse>()
+        var formattedData = mutableListOf<OverallAgeingStatsResponse>()
+
         outstandingResponse.map {
             if (it.currencyType != request.currencyType) {
                 val exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
@@ -147,10 +149,20 @@ class DashboardServiceImpl : DashboardService {
             data.add(overallAgeingConverter.convertToModel(it))
         }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
-        val key = data.map { it.ageingDuration }
+
+        data.map { item ->
+            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! && (it.serviceType?.equals(item.serviceType))!!}
+            if(index == -1){
+                formattedData?.add(item)
+            }else{
+                formattedData?.get(index).amount == formattedData?.get(index).amount?.plus( item?.amount!!)
+            }
+        }
+
+        val key = formattedData.map { it.ageingDuration }
         durationKey.forEach {
             if (!key.contains(it)) {
-                data.add(
+                formattedData.add(
                     OverallAgeingStatsResponse(
                         it, 0.toBigDecimal(), "INR", request.serviceType?.name,
                         request.currencyType
@@ -158,9 +170,9 @@ class DashboardServiceImpl : DashboardService {
                 )
             }
         }
-        data = data.sortedBy { it.ageingDuration }.toMutableList()
-        data.add(0, data.removeAt(4))
-        return data
+        formattedData = formattedData.sortedBy { it.ageingDuration }.toMutableList()
+        formattedData.add(0, formattedData.removeAt(4))
+        return formattedData
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
