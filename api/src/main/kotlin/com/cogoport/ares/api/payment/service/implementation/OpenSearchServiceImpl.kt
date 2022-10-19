@@ -19,7 +19,12 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.payment.*
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.InvoiceStats
+import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import jakarta.inject.Inject
@@ -77,7 +82,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         logger().info("Updating Collection Trend document")
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
-        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year,null, null)
+        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null)
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
 
         /** Overall Stats */
@@ -89,16 +94,16 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
-        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone,serviceType, invoiceCurrency)
+        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
-        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null,null, null)
-        updateMonthlyTrend(null, monthlyTrendAllData,null, null)
+        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)
+        updateMonthlyTrend(null, monthlyTrendAllData, null, null)
 
         /** Quarterly Outstanding */
         logger().info("Updating Quarterly Outstanding document")
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
-        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null,null, null)
+        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null)
         updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
 
         /** Daily Sales Outstanding */
@@ -106,7 +111,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
         updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency)
         val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null)
-        updateDailySalesOutstanding(null, year, dailySalesAllData,null, null)
+        updateDailySalesOutstanding(null, year, dailySalesAllData, null, null)
     }
 
     /**
@@ -129,55 +134,54 @@ class OpenSearchServiceImpl : OpenSearchService {
             collectionTrendConverter.convertToModel(it)
         }
 
-        var zoneKey:String? = null
-        var serviceTypeKey:String? = null
+        var zoneKey: String? = null
+        var serviceTypeKey: String? = null
 
-        var invoiceCurrencyKey:String? = null
+        var invoiceCurrencyKey: String? = null
 
-        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
-        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+        if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
 
-        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
 
         val collectionId = AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType, invoiceCurrency))
     }
 
-    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency:String?) {
+    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency: String?) {
         val overallStatsData = overallStatsConverter.convertToModel(data)
 
-        var zoneKey:String? = null
-        var serviceTypeKey:String? = null
+        var zoneKey: String? = null
+        var serviceTypeKey: String? = null
 
-        var invoiceCurrencyKey:String? = null
+        var invoiceCurrencyKey: String? = null
 
-        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
-        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
-        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
 
         val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
-        if(overallStatsData !=null){
+        if (overallStatsData != null) {
             overallStatsData?.id = statsId
             OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
         }
-
     }
 
-    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency:String?) {
+    private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency: String?) {
         if (data.isNullOrEmpty()) return
         val monthlyTrend = data.map { outstandingConverter.convertToModel(it) }
 
-        var zoneKey:String? = null
-        var serviceTypeKey:String? = null
-        var invoiceCurrencyKey :String? = null
+        var zoneKey: String? = null
+        var serviceTypeKey: String? = null
+        var invoiceCurrencyKey: String? = null
 
-        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
-        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
+        if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
 
-        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
 
         val monthlyTrendId = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
@@ -187,15 +191,15 @@ class OpenSearchServiceImpl : OpenSearchService {
     private fun updateQuarterlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency: String?) {
         if (data.isNullOrEmpty()) return
 
-        var zoneKey:String? = null
-        var serviceTypeKey:String? = null
-        var invoiceCurrencyKey:String? = null
+        var zoneKey: String? = null
+        var serviceTypeKey: String? = null
+        var invoiceCurrencyKey: String? = null
 
-        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
-        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
+        if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
 
-        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
         val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
@@ -203,17 +207,17 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     private fun updateDailySalesOutstanding(zone: String?, year: Int, data: DailyOutstanding, serviceType: ServiceType?, invoiceCurrency: String?) {
         val dsoResponse = dsoConverter.convertToModel(data)
-        var zoneKey =""
+        var zoneKey = ""
         var serviceTypeKey = ""
         var invoiceCurrencyKey = ""
 
-        if(zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
 
-        if(serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
+        if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
 
-        if(invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
 
-        if(dsoResponse != null){
+        if (dsoResponse != null) {
             val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + dsoResponse?.month + AresConstants.KEY_DELIMITER + year
             OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dsoResponse)
         }
@@ -221,7 +225,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     private fun updateDailyPayablesOutstanding(zone: String?, year: Int, data: DailyOutstanding) {
         val dpoResponse = dpoConverter.convertToModel(data)
-        if(data!=null){
+        if (data != null) {
             val dailySalesId = if (zone.isNullOrBlank()) AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + "ALL" + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year else AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX + zone + AresConstants.KEY_DELIMITER + dpoResponse.month + AresConstants.KEY_DELIMITER + year
             OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, dailySalesId, dpoResponse)
         }
@@ -231,7 +235,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: BigDecimal? = null
         var totalCollected: BigDecimal? = null
-        var currencyType:String? = null
+        var currencyType: String? = null
 //        var serviceType: ServiceType? = null
 
         val monthList = mutableListOf<String?>()

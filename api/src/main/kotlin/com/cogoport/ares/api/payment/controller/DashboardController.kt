@@ -25,7 +25,6 @@ import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.http.annotation.Body
@@ -76,8 +75,8 @@ class DashboardController {
     }
 
     @Get("/receivables-by-age{?request*}")
-    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>{
-        return Response<HashMap<String,HashMap<String, ArrayList<AgeingBucketZone>>>>().ok(dashboardService.getReceivableByAge(request))
+    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>> {
+        return Response<HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>>().ok(dashboardService.getReceivableByAge(request))
     }
 
     @Get("/org-collection{?request*}")

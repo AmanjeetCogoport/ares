@@ -9,5 +9,4 @@ interface OpenSearchService {
 
     suspend fun pushOutstandingData(request: OpenSearchRequest)
     suspend fun pushOutstandingListData(request: OpenSearchListRequest)
-
 }

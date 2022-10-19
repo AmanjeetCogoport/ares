@@ -202,7 +202,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             left join y on x.quarter = y.quarter
         """
     )
-    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String? ): MutableList<Outstanding>
+    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>
     @Query(
         """
         with X as (
