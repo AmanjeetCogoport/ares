@@ -109,7 +109,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
         if ((request?.currencyType != data?.currencyType) and (data?.currencyType != null)) {
-            var exchangeRate = getExchangeRate(data?.currencyType, request?.currencyType)
+            var exchangeRate = getExchangeRateForPeriod(data?.currencyType, request?.currencyType)
 
             data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
             data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
@@ -140,7 +140,7 @@ class DashboardServiceImpl : DashboardService {
         var data = mutableListOf<OverallAgeingStatsResponse>()
         outstandingResponse.map {
             if (it.currencyType != request.currencyType) {
-                var exchangeRate = getExchangeRate(it?.currencyType, request?.currencyType)
+                var exchangeRate = getExchangeRateForPeriod(it?.currencyType, request?.currencyType)
                 it.amount = it.amount.times(exchangeRate)
                 it.currencyType = request?.currencyType!!
             }
@@ -171,7 +171,7 @@ class DashboardServiceImpl : DashboardService {
 
         if (data != null) {
             if (data.currencyType != request.currencyType) {
-                var exchangeRate = getExchangeRate(data?.currencyType, request.currencyType)
+                var exchangeRate = getExchangeRateForPeriod(data?.currencyType, request.currencyType)
 
                 data?.totalReceivableAmount = data?.totalReceivableAmount?.times(exchangeRate)!!
                 data?.totalCollectedAmount = data?.totalCollectedAmount?.times(exchangeRate)!!
@@ -228,7 +228,7 @@ class DashboardServiceImpl : DashboardService {
         if (data != null) {
             data?.list?.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    var exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it?.amount = it?.amount?.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
@@ -315,7 +315,7 @@ class DashboardServiceImpl : DashboardService {
         if (data != null) {
             data?.list?.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    var exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it?.amount = it?.amount?.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
@@ -395,13 +395,13 @@ class DashboardServiceImpl : DashboardService {
         var avgDsoAmount = (averageDso / 3).toBigDecimal()
 
         if ((request.currencyType != currencyType) && (currencyType != null)) {
-            var exchangeRate = getExchangeRate(currencyType, request.currencyType)
+            var exchangeRate = getExchangeRateForPeriod(currencyType, request.currencyType)
             currentDso = currentDso.toBigDecimal().times(exchangeRate).toFloat()
             avgDsoAmount = avgDsoAmount.times(exchangeRate)
 
             dsoResponseData.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it.dsoForTheMonth = it.dsoForTheMonth.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
@@ -409,7 +409,7 @@ class DashboardServiceImpl : DashboardService {
 
             dpoResponseData.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it.dpoForTheMonth = it.dpoForTheMonth.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
@@ -470,7 +470,7 @@ class DashboardServiceImpl : DashboardService {
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
             if (payment.currencyType != request.currencyType) {
-                val exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
+                val exchangeRate = getExchangeRateForPeriod(payment.currencyType, request.currencyType)
                 payment.amount = payment.amount.times(exchangeRate)
                 payment.currencyType = request.currencyType
             }
@@ -601,7 +601,7 @@ class DashboardServiceImpl : DashboardService {
         return responseList
     }
 
-    suspend fun getExchangeRate(from_currency: String?, to_currency: String?): BigDecimal {
+    suspend fun getExchangeRateForPeriod(from_currency: String?, to_currency: String?): BigDecimal {
         val end_date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
         val start_date = LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
 
