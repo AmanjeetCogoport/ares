@@ -460,16 +460,15 @@ class DashboardServiceImpl : DashboardService {
         return keyList
     }
 
-    override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>> {
+    override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
         val serviceType: ServiceType? = request.serviceType
         val currencyType: String? = request.currencyType
         val invoiceCurrency: String? = request.invoiceCurrency
         val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType, invoiceCurrency)
-        val data = HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>()
+        val data = HashMap<String, ArrayList<AgeingBucketZone>>()
 
         payments.forEach { payment ->
             val zone = payment.zone
-            val serviceType = payment.serviceType
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
             if (payment.currencyType != request.currencyType) {
@@ -487,24 +486,17 @@ class DashboardServiceImpl : DashboardService {
             if (data.keys.contains(zone)) {
                 val zoneWiseData = data[zone]
 
-                if (zoneWiseData?.keys?.contains(serviceType)!!) {
-                    val serviceWiseData = zoneWiseData["$serviceType"]
+                val index = zoneWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
 
-                    val index = serviceWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
-                    if (index == -1) {
-                        serviceWiseData.add(ageingBucketData)
-                    } else {
-                        serviceWiseData?.get(index!!)?.amount = serviceWiseData?.get(index!!)?.amount?.plus(payment.amount)
-                    }
+                if (index == -1) {
+                    zoneWiseData.add(ageingBucketData)
                 } else {
-                    arrayListAgeingBucketZone.add(ageingBucketData)
-                    zoneWiseData[serviceType.toString()] = arrayListAgeingBucketZone
+                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)
                 }
+
             } else {
                 arrayListAgeingBucketZone.add(ageingBucketData)
-                val hashMapServiceType = HashMap<String, ArrayList<AgeingBucketZone>>()
-                hashMapServiceType.put(payment.serviceType.toString(), arrayListAgeingBucketZone)
-                data[payment.zone] = hashMapServiceType
+                data[payment.zone] = arrayListAgeingBucketZone
             }
         }
         return data

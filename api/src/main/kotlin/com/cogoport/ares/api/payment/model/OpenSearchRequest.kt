@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.model
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.core.annotation.Introspected
@@ -15,6 +16,7 @@ data class OpenSearchRequest(
     @QueryValue(AresConstants.ORG_ID) val orgId: String = "",
     @QueryValue(AresConstants.ORG_NAME) val orgName: String? = null,
     @QueryValue(AresConstants.ACC_MODE) val accMode: AccMode? = null,
-    @QueryValue("service_type") val serviceType: ServiceType? = null,
-    @QueryValue("invoice_currency") val invoiceCurrency: String? = null
+    @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType? = null,
+    @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String? = null
+
 )

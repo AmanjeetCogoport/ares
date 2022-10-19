@@ -12,7 +12,7 @@ import io.micronaut.http.annotation.QueryValue
 data class ReceivableRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String?,
     @QueryValue(AresModelConstants.ROLE) val role: String?,
-    @QueryValue("service_type") val serviceType: ServiceType?,
-    @QueryValue("currency_type") val currencyType: String?,
-    @QueryValue("invoice_currency") val invoiceCurrency: String?
+    @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
+    @QueryValue(AresModelConstants.CURRENCY_TYPE) val currencyType: String?,
+    @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?
 )
