@@ -151,11 +151,11 @@ class DashboardServiceImpl : DashboardService {
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
 
         data.map { item ->
-            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! && (it.serviceType?.equals(item.serviceType))!!}
-            if(index == -1){
+            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! && (it.serviceType?.equals(item.serviceType))!! }
+            if (index == -1) {
                 formattedData?.add(item)
-            }else{
-                formattedData?.get(index).amount == formattedData?.get(index).amount?.plus( item?.amount!!)
+            } else {
+                formattedData?.get(index).amount == formattedData?.get(index).amount?.plus(item?.amount!!)
             }
         }
 
@@ -505,7 +505,6 @@ class DashboardServiceImpl : DashboardService {
                 } else {
                     zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)
                 }
-
             } else {
                 arrayListAgeingBucketZone.add(ageingBucketData)
                 data[payment.zone] = arrayListAgeingBucketZone
