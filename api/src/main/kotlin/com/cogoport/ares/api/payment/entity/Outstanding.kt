@@ -8,7 +8,5 @@ import java.math.BigDecimal
 data class Outstanding(
     var duration: String?,
     var amount: BigDecimal,
-    var currencyType: String?,
-    var serviceType: ServiceType?,
-    var invoiceCurrency: String?
+    var dashboardCurrency: String?
 )

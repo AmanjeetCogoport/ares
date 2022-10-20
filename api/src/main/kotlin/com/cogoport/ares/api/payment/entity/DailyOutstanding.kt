@@ -12,7 +12,5 @@ data class DailyOutstanding(
     var totalSales: BigDecimal?,
     var days: Int,
     var value: Double,
-    val serviceType: ServiceType? = null,
-    val currencyType: String? = null,
-    val invoiceCurrency: String? = null
+    val dashboardCurrency: String? = null,
 )

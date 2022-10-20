@@ -8,7 +8,5 @@ data class CollectionTrend(
     var duration: String?,
     var receivableAmount: BigDecimal?,
     var collectableAmount: BigDecimal?,
-    var currencyType: String?,
-    var serviceType: String?,
-    var invoiceCurrency: String?
+    var dashboardCurrency: String?
 )
