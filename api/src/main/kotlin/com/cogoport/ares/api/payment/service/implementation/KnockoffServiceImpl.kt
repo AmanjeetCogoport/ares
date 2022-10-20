@@ -27,6 +27,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
+import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
@@ -324,19 +325,77 @@ open class KnockoffServiceImpl : KnockoffService {
             settlementDate = Date(Timestamp.from(Instant.now()).time)
         )
     }
-
-    override suspend fun reverseUtr(documentNo: Long, accountType: AccountType) {
-        val accountUtilization = accountUtilizationRepository.findRecord(documentNo, accountType.name, AccMode.AP.name)
-
-        val paymentMappingData = invoicePayMappingRepo.findBydocumentNo(documentNo, AccMode.AP.name)
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
+        val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
+        val paymentMappingData = invoicePayMappingRepo.findBydocumentNo(reverseUtrRequest.documentNo)
+        val settlementId = settlementRepository.getIdBydestinationId(reverseUtrRequest.documentNo)
         var payment: Payment? = null
-        for (paymentMap in paymentMappingData) {
-            payment = paymentRepository.findByPaymentId(paymentMap.paymentId)
-            paymentRepository.deletedPayment(paymentMap.paymentId)
-            invoicePayMappingRepo.deletedPaymentMappings(paymentMap.id)
+
+        for (i in 0..1) {
+            if (i <= (paymentMappingData.size - 1)) {
+                payment = paymentRepository.findByPaymentId(paymentMappingData[i].paymentId)
+                paymentRepository.deletedPayment(paymentMappingData[i].paymentId)
+                invoicePayMappingRepo.deletedPaymentMappings(paymentMappingData[i].id)
+                auditService.createAudit(
+
+                    AuditRequest(
+                        objectType = AresConstants.PAYMENTS,
+                        objectId = paymentMappingData[i].paymentId,
+                        actionName = AresConstants.DELETE,
+                        data = null,
+                        performedBy = reverseUtrRequest.updatedBy.toString(),
+                        performedByUserType = reverseUtrRequest.performedByType
+                    )
+                )
+
+                auditService.createAudit(
+                    AuditRequest(
+                        objectType = "payment_invoice_map",
+                        objectId = paymentMappingData[i].id,
+                        actionName = AresConstants.DELETE,
+                        data = null,
+                        performedBy = reverseUtrRequest.updatedBy.toString(),
+                        performedByUserType = reverseUtrRequest.performedByType
+                    )
+                )
+            }
+            settlementRepository.deleleSettlement(settlementId[i])
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SETTLEMENT,
+                    objectId = settlementId[i],
+                    actionName = AresConstants.DELETE,
+                    data = null,
+                    performedBy = reverseUtrRequest.updatedBy.toString(),
+                    performedByUserType = reverseUtrRequest.performedByType
+                )
+            )
         }
-        accountUtilizationRepository.deleteByPaymentNum(payment?.paymentNum)
-        settlementRepository.deleleSettlement(documentNo)
-        accountUtilizationRepository.updateInvoicePayment(accountUtilization?.id!!, 0.toBigDecimal(), 0.toBigDecimal())
+        val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payment?.paymentNum)
+        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
+
+        accountUtilizationRepository.makeInvoicePaymentZero(accountUtilization?.id!!, 0.toBigDecimal(), 0.toBigDecimal())
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilizationId,
+                actionName = AresConstants.DELETE,
+                data = null,
+                performedBy = reverseUtrRequest.updatedBy.toString(),
+                performedByUserType = reverseUtrRequest.performedByType
+            )
+        )
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization?.id!!,
+                actionName = AresConstants.UPDATE,
+                data = null,
+                performedBy = reverseUtrRequest.updatedBy.toString(),
+                performedByUserType = reverseUtrRequest.performedByType
+            )
+        )
     }
 }

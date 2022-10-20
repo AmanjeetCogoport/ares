@@ -3,8 +3,8 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
-import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
@@ -67,7 +67,7 @@ class AresKafkaListener {
     }
 
     @Topic("reverse-utr")
-    fun reverseUtr(documentNo: Long, accountType: AccountType) = runBlocking {
-        knockoffService.reverseUtr(documentNo, accountType)
+    fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
+        knockoffService.reverseUtr(reverseUtrRequest)
     }
 }

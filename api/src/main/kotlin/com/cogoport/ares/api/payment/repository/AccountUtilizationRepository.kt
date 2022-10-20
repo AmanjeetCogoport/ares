@@ -882,8 +882,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            update account_utilizations set deleted_at = now() where payment_num = :paymentNum
+            update account_utilizations set deleted_at = now() where id = :id
         """
     )
-    suspend fun deleteByPaymentNum(paymentNum: Long?)
+    suspend fun deleteAccountUtilization(id: Long)
+
+    @Query(
+        """update account_utilizations set 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at =now() where id=:id"""
+    )
+    suspend fun makeInvoicePaymentZero(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+
+    @Query(
+        """
+            select id from account_utilizations where document_no = :paymentNum
+        """
+    )
+    suspend fun getIdByPaymentNum(paymentNum: Long?): Long
 }

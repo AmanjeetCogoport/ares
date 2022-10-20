@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
+import com.cogoport.ares.api.payment.model.PaymentMapResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -11,12 +12,11 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-             select * from payment_invoice_mapping where document_no = :documentNo and
-             (:accType is null or acc_type= :accType::account_type)
+             select id,payment_id from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP'
+             
         """
-
     )
-    suspend fun findBydocumentNo(documentNo: Long, accMode: String? = null): MutableList<PaymentInvoiceMapping>
+    suspend fun findBydocumentNo(documentNo: Long): List<PaymentMapResponse>
 
     @Query(
         """

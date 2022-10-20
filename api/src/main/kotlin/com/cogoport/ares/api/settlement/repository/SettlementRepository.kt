@@ -139,8 +139,15 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-            update settlements set deleted_at = now() where destination_id = :destinationId
+            update settlements set deleted_at = now() where id = :id 
         """
     )
-    suspend fun deleleSettlement(destinationId: Long)
+    suspend fun deleleSettlement(id: Long)
+
+    @Query(
+        """
+            select * from settlements where destination_id = :destinationId
+        """
+    )
+    suspend fun getIdBydestinationId(destinationId: Long): List<Long>
 }
