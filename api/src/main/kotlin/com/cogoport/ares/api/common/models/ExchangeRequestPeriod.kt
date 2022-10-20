@@ -6,11 +6,11 @@ import io.micronaut.core.annotation.Introspected
 @Introspected
 class ExchangeRequestPeriod(
     @JsonProperty("from_currency")
-    var from_currency: String?,
+    var fromCurrency: String?,
     @JsonProperty("to_currency")
-    var to_currency: String?,
+    var toCurrency: String?,
     @JsonProperty("start_date")
-    var start_date: String?,
+    var startDate: String?,
     @JsonProperty("end_date")
-    var end_date: String?
+    var endDate: String?
 )

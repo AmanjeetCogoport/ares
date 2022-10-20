@@ -25,6 +25,7 @@ import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import jakarta.inject.Inject

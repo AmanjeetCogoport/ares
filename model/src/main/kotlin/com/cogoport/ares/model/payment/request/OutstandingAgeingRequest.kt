@@ -12,6 +12,7 @@ import io.micronaut.http.annotation.QueryValue
 data class OutstandingAgeingRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String?,
     @QueryValue(AresModelConstants.ROLE) val role: String?,
-    @QueryValue("service_type") val serviceType: ServiceType?,
-    @QueryValue("currency_type") val currencyType: String?
+    @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
+    @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?,
+    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String?
 )

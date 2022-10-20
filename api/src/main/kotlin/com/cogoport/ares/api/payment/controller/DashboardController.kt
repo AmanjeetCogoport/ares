@@ -75,8 +75,8 @@ class DashboardController {
     }
 
     @Get("/receivables-by-age{?request*}")
-    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>> {
-        return Response<HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>>().ok(dashboardService.getReceivableByAge(request))
+    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
+        return Response<HashMap<String, ArrayList<AgeingBucketZone>>>().ok(dashboardService.getReceivableByAge(request))
     }
 
     @Get("/org-collection{?request*}")

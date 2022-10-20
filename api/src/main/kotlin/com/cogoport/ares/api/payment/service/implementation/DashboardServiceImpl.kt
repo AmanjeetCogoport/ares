@@ -103,21 +103,21 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
         validateInput(request.zone, request.role)
         val searchKey = searchKeyOverallStats(request)
-        var data = OpenSearchClient().search(
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse ::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
-        if ((request?.currencyType != data?.currencyType) and (data?.currencyType != null)) {
-            var exchangeRate = getExchangeRate(data?.currencyType, request?.currencyType)
+        if ((request.currencyType != data?.currencyType) and (data?.currencyType != null)) {
+            val exchangeRate = getExchangeRateForPeriod(data?.currencyType, request.currencyType)
 
             data?.totalOutstandingAmount = data?.totalOutstandingAmount?.times(exchangeRate)!!
-            data?.openInvoicesAmount = data?.openInvoicesAmount?.times(exchangeRate)!!
-            data?.openOnAccountPaymentAmount = data?.openOnAccountPaymentAmount?.times(exchangeRate)!!
-            data?.currencyType = request?.currencyType
+            data.openInvoicesAmount = data.openInvoicesAmount.times(exchangeRate)
+            data.openOnAccountPaymentAmount = data.openOnAccountPaymentAmount.times(exchangeRate)
+            data.currencyType = request.currencyType
         }
 
-        if (request?.serviceType?.name.equals(null)) data?.serviceType = "ALL"
+        if (request.serviceType?.name.equals(null)) data?.serviceType = "ALL"
 
         return data ?: OverallStatsResponse(id = searchKey)
     }
@@ -127,37 +127,52 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = request?.zone?.uppercase()
-        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = request.serviceType.toString()
-        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = request?.invoiceCurrency?.uppercase()
+        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
+        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
+        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
 
         return AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
         var data = mutableListOf<OverallAgeingStatsResponse>()
+        var formattedData = mutableListOf<OverallAgeingStatsResponse>()
+
         outstandingResponse.map {
-            if (it.currency != request.currencyType) {
-                var exchangeRate = getExchangeRate(it?.currency, request?.currencyType)
+            if (it.dashboardCurrency != request.dashboardCurrency) {
+                val exchangeRate = getExchangeRateForPeriod(it.dashboardCurrency, request.dashboardCurrency)
                 it.amount = it.amount.times(exchangeRate)
-                it.currency = request?.currencyType!!
+                it.dashboardCurrency = request.dashboardCurrency!!
             }
             data.add(overallAgeingConverter.convertToModel(it))
         }
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
-        val key = data.map { it.ageingDuration }
+
+        data.map { item ->
+            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! && (it.serviceType?.equals(item.serviceType))!! }
+            if (index == -1) {
+                formattedData?.add(item)
+            } else {
+                formattedData?.get(index).amount == formattedData?.get(index).amount?.plus(item?.amount!!)
+            }
+        }
+
+        val key = formattedData.map { it.ageingDuration }
         durationKey.forEach {
             if (!key.contains(it)) {
-                data.add(
-                    OverallAgeingStatsResponse(it, 0.toBigDecimal(), "INR", request?.serviceType?.name, request?.currencyType)
+                formattedData.add(
+                    OverallAgeingStatsResponse(
+                        it, 0.toBigDecimal(), "INR", request.serviceType?.name,
+                        request.dashboardCurrency
+                    )
                 )
             }
         }
-        data = data.sortedBy { it.ageingDuration }.toMutableList()
-        data.add(0, data.removeAt(4))
-        return data
+        formattedData = formattedData.sortedBy { it.ageingDuration }.toMutableList()
+        formattedData.add(0, formattedData.removeAt(4))
+        return formattedData
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
@@ -171,22 +186,21 @@ class DashboardServiceImpl : DashboardService {
 
         if (data != null) {
             if (data.currencyType != request.currencyType) {
-                var exchangeRate = getExchangeRate(data?.currencyType, request.currencyType)
+                val exchangeRate = getExchangeRateForPeriod(data.currencyType, request.currencyType)
 
-                data?.totalReceivableAmount = data?.totalReceivableAmount?.times(exchangeRate)!!
-                data?.totalCollectedAmount = data?.totalCollectedAmount?.times(exchangeRate)!!
-                data?.currencyType = request.currencyType
+                data.totalReceivableAmount = data.totalReceivableAmount?.times(exchangeRate)!!
+                data.totalCollectedAmount = data.totalCollectedAmount?.times(exchangeRate)!!
+                data.currencyType = request.currencyType
 
-                data?.trend?.forEach {
-                    if (it?.currencyType != request.currencyType) {
-                        it?.collectableAmount = it?.collectableAmount?.times(exchangeRate)
-                        it?.receivableAmount = it?.receivableAmount?.times(exchangeRate)
-                        it?.currencyType = request.currencyType
+                data.trend?.forEach {
+                    if (it.currencyType != request.currencyType) {
+                        it.collectableAmount = it.collectableAmount.times(exchangeRate)
+                        it.receivableAmount = it.receivableAmount.times(exchangeRate)
+                        it.currencyType = request.currencyType
                     }
                 }
             }
         }
-
         return data ?: CollectionResponse(id = searchKey)
     }
 
@@ -195,11 +209,11 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = request?.zone?.uppercase()
+        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
 
-        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = request.serviceType.toString()
+        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
 
-        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = request?.invoiceCurrency?.uppercase()
+        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
 
         return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
     }
@@ -211,11 +225,11 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = request?.zone?.uppercase()
+        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
 
-        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = request.serviceType.toString()
+        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
 
-        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = request?.invoiceCurrency?.uppercase()
+        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
 
         val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
@@ -226,18 +240,18 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data != null) {
-            data?.list?.forEach {
+            data.list?.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it?.amount = it?.amount?.times(exchangeRate)
-                    it?.currencyType = request?.currencyType
+                    val exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
+                    it.amount = it.amount.times(exchangeRate)
+                    it.currencyType = request.currencyType
                 }
             }
         }
 
-        var newData = getMonthlyOutStandingData(data)
+        val newData = getMonthlyOutStandingData(data)
 
-        var newMonthlyOutstanding = MonthlyOutstanding(
+        val newMonthlyOutstanding = MonthlyOutstanding(
             list = newData,
             id = searchKey
         )
@@ -245,12 +259,12 @@ class DashboardServiceImpl : DashboardService {
         return newMonthlyOutstanding ?: MonthlyOutstanding(id = searchKey)
     }
 
-    fun getMonthlyOutStandingData(data: MonthlyOutstanding?): ArrayList<OutstandingResponse> {
+    private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): ArrayList<OutstandingResponse> {
         var listOfOutStanding = ArrayList<OutstandingResponse>()
 
         data?.list?.groupBy { it.duration }?.values?.map {
             it.groupBy { it.serviceType }.values.map {
-                var outstandingData = OutstandingResponse(
+                val outstandingData = OutstandingResponse(
                     amount = it.sumOf { it.amount },
                     duration = it.first().duration,
                     currencyType = it.first().currencyType,
@@ -261,19 +275,19 @@ class DashboardServiceImpl : DashboardService {
             }
         }?.map {
             it.map { values ->
-                listOfOutStanding?.add(values)
+                listOfOutStanding.add(values)
             }
         }
 
         return listOfOutStanding
     }
 
-    fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): ArrayList<OutstandingResponse> {
-        var listOfOutStanding = ArrayList<OutstandingResponse>()
+    private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): ArrayList<OutstandingResponse> {
+        val listOfOutStanding = ArrayList<OutstandingResponse>()
 
         data?.list?.groupBy { it.duration }?.values?.map {
             it.groupBy { it.serviceType }.values.map {
-                var outstandingData = OutstandingResponse(
+                val outstandingData = OutstandingResponse(
                     amount = it.sumOf { it.amount },
                     duration = it.first().duration,
                     currencyType = it.first().currencyType,
@@ -284,7 +298,7 @@ class DashboardServiceImpl : DashboardService {
             }
         }?.map {
             it.map { values ->
-                listOfOutStanding?.add(values)
+                listOfOutStanding.add(values)
             }
         }
 
@@ -298,11 +312,11 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (request.zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = request?.zone?.uppercase()
+        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
 
-        if (request?.serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = request.serviceType.toString()
+        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
 
-        if (request.invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = request?.invoiceCurrency?.uppercase()
+        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
 
         val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
@@ -313,11 +327,11 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data != null) {
-            data?.list?.forEach {
+            data.list?.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    var exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
-                    it?.amount?.times(exchangeRate)
-                    it?.currencyType = request?.currencyType
+                    val exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
+                    it.amount = it.amount.times(exchangeRate)
+                    it.currencyType = request.currencyType
                 }
             }
         }
@@ -395,21 +409,21 @@ class DashboardServiceImpl : DashboardService {
         var avgDsoAmount = (averageDso / 3).toBigDecimal()
 
         if ((request.currencyType != currencyType) && (currencyType != null)) {
-            var exchangeRate = getExchangeRate(currencyType, request.currencyType)
-            currentDso.toBigDecimal().times(exchangeRate)
-            avgDsoAmount.times(exchangeRate)
+            var exchangeRate = getExchangeRateForPeriod(currencyType, request.currencyType)
+            currentDso = currentDso.toBigDecimal().times(exchangeRate).toFloat()
+            avgDsoAmount = avgDsoAmount.times(exchangeRate)
 
             dsoResponseData.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it.dsoForTheMonth = it.dsoForTheMonth.times(exchangeRate)
-                    it?.currencyType = request?.currencyType
+                    it.currencyType = request.currencyType
                 }
             }
 
             dpoResponseData.forEach {
                 if ((it.currencyType != request.currencyType) && (it.currencyType != null)) {
-                    exchangeRate = getExchangeRate(it.currencyType, request.currencyType)
+                    exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
                     it.dpoForTheMonth = it.dpoForTheMonth.times(exchangeRate)
                     it?.currencyType = request?.currencyType
                 }
@@ -448,60 +462,51 @@ class DashboardServiceImpl : DashboardService {
             var serviceTypeKey: String? = null
             var invoiceCurrencyKey: String? = null
 
-            if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
-            if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType.toString()
-            if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+            zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
+            serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
+            invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
 
             keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
 
-    override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>> {
+    override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
         val serviceType: ServiceType? = request.serviceType
-        val currencyType: String? = request.currencyType
+//        val dashboardCurrency: String? = request.dashboardCurrency
         val invoiceCurrency: String? = request.invoiceCurrency
-        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType, invoiceCurrency)
-        val data = HashMap<String, HashMap<String, ArrayList<AgeingBucketZone>>>()
+        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
+        val data = HashMap<String, ArrayList<AgeingBucketZone>>()
 
         payments.forEach { payment ->
             val zone = payment.zone
-            val serviceType = payment.serviceType
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
-            if (payment.currencyType != request.currencyType) {
-                val exchangeRate = getExchangeRate(payment.currencyType, request.currencyType)
+            if (payment.dashboardCurrency != request.dashboardCurrency) {
+                val exchangeRate = getExchangeRateForPeriod(payment.dashboardCurrency, request.dashboardCurrency)
                 payment.amount = payment.amount.times(exchangeRate)
-                payment.currencyType = request.currencyType
+                payment.dashboardCurrency = request.dashboardCurrency
             }
 
             val ageingBucketData = AgeingBucketZone(
                 ageingDuration = payment.ageingDuration,
                 amount = payment.amount,
-                currencyType = payment.currencyType
+                dashboardCurrency = payment.dashboardCurrency
             )
 
             if (data.keys.contains(zone)) {
-                val zoneWiseData = data["$zone"]
+                val zoneWiseData = data[zone]
 
-                if (zoneWiseData?.keys?.contains(serviceType)!!) {
-                    val serviceWiseData = zoneWiseData["$serviceType"]
+                val index = zoneWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
 
-                    val index = serviceWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
-                    if (index == -1) {
-                        serviceWiseData.add(ageingBucketData)
-                    } else {
-                        serviceWiseData?.get(index!!)?.amount = serviceWiseData?.get(index!!)?.amount?.plus(payment.amount)
-                    }
+                if (index == -1) {
+                    zoneWiseData.add(ageingBucketData)
                 } else {
-                    arrayListAgeingBucketZone.add(ageingBucketData)
-                    zoneWiseData[serviceType.toString()] = arrayListAgeingBucketZone
+                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)
                 }
             } else {
                 arrayListAgeingBucketZone.add(ageingBucketData)
-                val hashMapServiceType = HashMap<String, ArrayList<AgeingBucketZone>>()
-                hashMapServiceType.put(payment.serviceType.toString(), arrayListAgeingBucketZone)
-                data[payment.zone] = hashMapServiceType
+                data[payment.zone] = arrayListAgeingBucketZone
             }
         }
         return data
@@ -570,7 +575,7 @@ class DashboardServiceImpl : DashboardService {
         return data?.aggregations()?.get("currency")?.sterms()?.buckets()?.array()?.map {
             DueAmount(
                 currency = it.key(),
-                amount = it.aggregations().get("currAmount")?.sum()?.value()?.toBigDecimal(),
+                amount = it.aggregations()["currAmount"]?.sum()?.value()?.toBigDecimal(),
                 invoicesCount = it.docCount().toInt()
             )
         }
@@ -601,18 +606,18 @@ class DashboardServiceImpl : DashboardService {
         return responseList
     }
 
-    suspend fun getExchangeRate(from_currency: String?, to_currency: String?): BigDecimal {
-        val end_date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
-        val start_date = LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+    private suspend fun getExchangeRateForPeriod(fromCurrency: String?, toCurrency: String?): BigDecimal {
+        val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+        val startDate = LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
 
         val exchangeRateRequest = ExchangeRequestPeriod(
-            from_currency,
-            to_currency,
-            start_date,
-            end_date
+            fromCurrency,
+            toCurrency,
+            startDate,
+            endDate
         )
 
-        var response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
+        val response = exchangeClient.getExchangeRateForPeriod(exchangeRateRequest)
 
         return response.exchangeRate
     }
