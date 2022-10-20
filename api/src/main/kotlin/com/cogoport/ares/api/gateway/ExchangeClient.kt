@@ -25,5 +25,5 @@ interface ExchangeClient {
     suspend fun getExchangeRate(request: ExchangeRequest): ExchangeResponse
 
     @Post("/get_rate/avg-rate")
-    suspend fun getExchangeRateForPeriod(@Valid @Body request: List<ExchangeRequestPeriod>): ArrayList<ExchangeResponseForPeriod>
+    suspend fun getExchangeRateForPeriod(@Valid @Body request: HashMap<String,List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
 }

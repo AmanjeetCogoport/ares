@@ -518,7 +518,6 @@ class DashboardServiceImpl : DashboardService {
 
         val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
 
-
             payments.forEach { payment ->
             val zone = payment.zone
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
@@ -649,7 +648,7 @@ class DashboardServiceImpl : DashboardService {
 
     private suspend fun getExchangeRateForPeriod(
         request: ArrayList<String>,
-        dasboardCurrency: String
+        dashboardCurrency: String
     ): ArrayList<ExchangeResponseForPeriod> {
         val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
         val startDate =
@@ -658,24 +657,14 @@ class DashboardServiceImpl : DashboardService {
         val arrayListOfExchangeRateRequest: List<ExchangeRequestPeriod> = request.map { it ->
             ExchangeRequestPeriod(
                 fromCurrency = it,
-                toCurrency = dasboardCurrency,
+                toCurrency = dashboardCurrency,
                 startDate,
                 endDate
             )
         }
 
-        var exchangeRateDummmy = ArrayList<ExchangeResponseForPeriod>()
-
-        exchangeRateDummmy.add(
-            ExchangeResponseForPeriod(
-                fromCurrencyType = "USD",
-                toCurrencyType = "INR",
-                exchangeRate = 82.05.toBigDecimal()
-            )
-        )
-
-        return exchangeRateDummmy
-
-//        return exchangeClient.getExchangeRateForPeriod(arrayListOfExchangeRateRequest)
+        var hashMapForExchangeRequest = HashMap<String, List<ExchangeRequestPeriod>>()
+        hashMapForExchangeRequest.put("rate_request_body", arrayListOfExchangeRateRequest)
+        return exchangeClient.getExchangeRateForPeriod(hashMapForExchangeRequest)
     }
 }
