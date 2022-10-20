@@ -14,5 +14,5 @@ data class OutstandingAgeingRequest(
     @QueryValue(AresModelConstants.ROLE) val role: String?,
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?,
-    @QueryValue(AresModelConstants.CURRENCY_TYPE) val currencyType: String?
+    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String?
 )

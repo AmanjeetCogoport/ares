@@ -10,8 +10,9 @@ object AresModelConstants {
     val CURR_MONTH = LocalDate.now().monthValue
     const val ZONE = "zone"
     const val ROLE = "role"
-    const val SERVICE_TYPE = "service_type"
-    const val INVOICE_CURRENCY = "service_type"
+    const val SERVICE_TYPE = "serviceType"
+    const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val INVOICE_CURRENCY = "invoiceCurrency"
     const val YEAR = "year"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"

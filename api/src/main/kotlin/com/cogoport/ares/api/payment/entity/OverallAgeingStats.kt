@@ -7,5 +7,5 @@ data class OverallAgeingStats(
     var ageingDuration: String,
     var amount: BigDecimal,
     var serviceType: String?,
-    var currencyType: String,
+    var dashboardCurrency: String,
 )

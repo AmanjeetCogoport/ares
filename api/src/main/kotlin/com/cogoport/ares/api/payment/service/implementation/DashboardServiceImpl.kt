@@ -141,10 +141,10 @@ class DashboardServiceImpl : DashboardService {
         var formattedData = mutableListOf<OverallAgeingStatsResponse>()
 
         outstandingResponse.map {
-            if (it.currencyType != request.currencyType) {
-                val exchangeRate = getExchangeRateForPeriod(it.currencyType, request.currencyType)
+            if (it.dashboardCurrency != request.dashboardCurrency) {
+                val exchangeRate = getExchangeRateForPeriod(it.dashboardCurrency, request.dashboardCurrency)
                 it.amount = it.amount.times(exchangeRate)
-                it.currencyType = request.currencyType!!
+                it.dashboardCurrency = request.dashboardCurrency!!
             }
             data.add(overallAgeingConverter.convertToModel(it))
         }
@@ -165,7 +165,7 @@ class DashboardServiceImpl : DashboardService {
                 formattedData.add(
                     OverallAgeingStatsResponse(
                         it, 0.toBigDecimal(), "INR", request.serviceType?.name,
-                        request.currencyType
+                        request.dashboardCurrency
                     )
                 )
             }
@@ -201,7 +201,6 @@ class DashboardServiceImpl : DashboardService {
                 }
             }
         }
-
         return data ?: CollectionResponse(id = searchKey)
     }
 
@@ -474,25 +473,25 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
         val serviceType: ServiceType? = request.serviceType
-        val currencyType: String? = request.currencyType
+//        val dashboardCurrency: String? = request.dashboardCurrency
         val invoiceCurrency: String? = request.invoiceCurrency
-        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, currencyType, invoiceCurrency)
+        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
         val data = HashMap<String, ArrayList<AgeingBucketZone>>()
 
         payments.forEach { payment ->
             val zone = payment.zone
             val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
 
-            if (payment.currencyType != request.currencyType) {
-                val exchangeRate = getExchangeRateForPeriod(payment.currencyType, request.currencyType)
+            if (payment.dashboardCurrency != request.dashboardCurrency) {
+                val exchangeRate = getExchangeRateForPeriod(payment.dashboardCurrency, request.dashboardCurrency)
                 payment.amount = payment.amount.times(exchangeRate)
-                payment.currencyType = request.currencyType
+                payment.dashboardCurrency = request.dashboardCurrency
             }
 
             val ageingBucketData = AgeingBucketZone(
                 ageingDuration = payment.ageingDuration,
                 amount = payment.amount,
-                currencyType = payment.currencyType
+                dashboardCurrency = payment.dashboardCurrency
             )
 
             if (data.keys.contains(zone)) {
