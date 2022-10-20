@@ -27,5 +27,5 @@ data class OverallStatsResponse(
     @JsonProperty("id")
     var id: String?,
     @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String? = null
+    var dashboardCurrency: String?
 )

@@ -1,6 +1,5 @@
 package com.cogoport.ares.model.payment.response
 
-import com.cogoport.ares.model.payment.ReceivableByAgeViaServiceType
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
 import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
@@ -21,7 +20,5 @@ data class ReceivableAgeingResponse(
     @JsonProperty("serviceType")
     var serviceType: List<ServiceType?>,
     @JsonProperty("receivableByAgeViaZone")
-    var receivableByAgeViaZone: MutableList<ReceivableByAgeViaZone>? = null,
-    @JsonProperty("receivableByAgeViaServiceType")
-    var receivableByAgeViaServiceType: MutableList<ReceivableByAgeViaServiceType>? = null
+    var receivableByAgeViaZone: MutableList<ReceivableByAgeViaZone>? = null
 )
