@@ -121,7 +121,7 @@ class DashboardServiceImpl : DashboardService {
             data.dashboardCurrency = request.dashboardCurrency
         }
 
-        if (request.serviceType?.name.equals(null)) data?.serviceType = "ALL"
+//        if (request.serviceType?.name.equals(null)) data?.serviceType = "ALL"
 
         return data ?: OverallStatsResponse(id = searchKey)
     }
@@ -291,7 +291,6 @@ class DashboardServiceImpl : DashboardService {
                 amount = it.sumOf { it.amount },
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency,
-                invoiceCurrency = it.first().invoiceCurrency
             )
             return@map outstandingData
         }
@@ -305,8 +304,7 @@ class DashboardServiceImpl : DashboardService {
             val outstandingData = OutstandingResponse(
                 amount = it.sumOf { it.amount },
                 duration = it.first().duration,
-                dashboardCurrency = it.first().dashboardCurrency,
-                invoiceCurrency = it.first().invoiceCurrency
+                dashboardCurrency = it.first().dashboardCurrency
             )
             return@map outstandingData
         }
@@ -376,12 +374,12 @@ class DashboardServiceImpl : DashboardService {
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value, data.dashboardCurrency, data.invoiceCurrency))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.dashboardCurrency))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal(), null, null))
+                    dso.add(DsoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
@@ -391,12 +389,12 @@ class DashboardServiceImpl : DashboardService {
             val dpo = mutableListOf<DpoResponse>()
             for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.dashboardCurrency, data?.invoiceCurrency))
+                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.dashboardCurrency))
             }
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null, null))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
@@ -417,11 +415,11 @@ class DashboardServiceImpl : DashboardService {
         }
 
         var dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.dashboardCurrency, it.invoiceCurrency)
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.dashboardCurrency)
         }
 
         var dpoResponseData = dpoList.map {
-            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.dashboardCurrency, it.invoiceCurrency)
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.dashboardCurrency)
         }
 
         var avgDsoAmount = (averageDso / 3).toBigDecimal()

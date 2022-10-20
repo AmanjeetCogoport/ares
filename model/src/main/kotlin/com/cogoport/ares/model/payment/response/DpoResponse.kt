@@ -17,7 +17,5 @@ data class DpoResponse(
     @JsonProperty("dpoForTheMonth")
     var dpoForTheMonth: BigDecimal,
     @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String?,
-    @JsonProperty("invoiceCurrency")
-    var invoiceCurrency: String?
+    var dashboardCurrency: String?
 )
