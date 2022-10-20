@@ -5,8 +5,7 @@ import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.UUID
-
-@MappedEntity(value = "account_utilizations")
+@MappedEntity
 data class OnAccountTotalAmountResponse(
     var organizationId: UUID,
     var accMode: AccMode,
