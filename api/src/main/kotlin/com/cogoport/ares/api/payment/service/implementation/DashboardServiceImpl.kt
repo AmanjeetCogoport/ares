@@ -107,13 +107,14 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponse? {
-        validateInput(request.zone, request.role)
-        val searchKey = searchKeyOverallStats(request)
         val zone = request.zone
         val serviceType = request.serviceType
         val invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
+
+        validateInput(zone, request.role)
+        val searchKey = searchKeyOverallStats(request)
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -131,7 +132,7 @@ class DashboardServiceImpl : DashboardService {
             )
         }
         if ((request.dashboardCurrency != data?.dashboardCurrency) and (data?.dashboardCurrency != null)) {
-            val requestExchangeRate = ArrayList<String>()
+            val requestExchangeRate = ArrayList<String?>()
             requestExchangeRate.add(data?.dashboardCurrency!!)
             val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
             val avgExchangeRate = exchangeRate.find { (it.fromCurrencyType == data.dashboardCurrency) && ((it.toCurrencyType == request.dashboardCurrency)) }?.exchangeRate
@@ -162,7 +163,7 @@ class DashboardServiceImpl : DashboardService {
         val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
         val data = mutableListOf<OverallAgeingStatsResponse>()
         var formattedData = mutableListOf<OverallAgeingStatsResponse>()
-        val uniqueCurrencyList = ArrayList<String>()
+        val uniqueCurrencyList = ArrayList<String?>()
 
         outstandingResponse.map { it ->
             if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
@@ -232,7 +233,7 @@ class DashboardServiceImpl : DashboardService {
         }
 
         if (data?.dashboardCurrency != request.dashboardCurrency) {
-            val requestExchangeRate = ArrayList<String>()
+            val requestExchangeRate = ArrayList<String?>()
             requestExchangeRate.add(data?.dashboardCurrency!!)
             val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
             val avgExchangeRate = exchangeRate.find { (it.fromCurrencyType == data.dashboardCurrency) && ((it.toCurrencyType == request.dashboardCurrency)) }?.exchangeRate
@@ -279,7 +280,7 @@ class DashboardServiceImpl : DashboardService {
 
         validateInput(request.zone, request.role)
 
-        var uniqueCurrencyList =  ArrayList<String>()
+        var uniqueCurrencyList =  ArrayList<String?>()
 
         zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
 
@@ -359,9 +360,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
-        var zone = request.zone!!
-        var serviceType = request.serviceType!!
-        var invoiceCurrency = request.invoiceCurrency!!
+        var zone = request.zone
+        var serviceType = request.serviceType
+        var invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
@@ -371,7 +372,7 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        var uniqueCurrencyList =  ArrayList<String>()
+        var uniqueCurrencyList =  ArrayList<String?>()
 
         zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
 
@@ -398,11 +399,11 @@ class DashboardServiceImpl : DashboardService {
 
         data?.list?.map { it ->
             if(!uniqueCurrencyList.contains(it.dashboardCurrency)){
-                uniqueCurrencyList.add(it.dashboardCurrency!!)
+                uniqueCurrencyList.add(it.dashboardCurrency)
             }
         }
 
-            val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
 
         data?.list?.forEach { outstandingRes ->
             if ((outstandingRes.dashboardCurrency != request.dashboardCurrency) && (outstandingRes.dashboardCurrency != null)) {
@@ -506,7 +507,7 @@ class DashboardServiceImpl : DashboardService {
 
         if ((request.dashboardCurrency != dashboardCurrency) && (dashboardCurrency != null)) {
 
-            val uniqueCurrencyList = ArrayList<String>()
+            val uniqueCurrencyList = ArrayList<String?>()
 
             dsoResponseData.map { it ->
                 if(!uniqueCurrencyList.contains(it.dashboardCurrency)){
@@ -588,7 +589,7 @@ class DashboardServiceImpl : DashboardService {
         val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
         val data = HashMap<String, ArrayList<AgeingBucketZone>>()
 
-        val uniqueCurrencyList = ArrayList<String>()
+        val uniqueCurrencyList = ArrayList<String?>()
 
         payments.map { it ->
             if(!uniqueCurrencyList.contains(it.dashboardCurrency)){
@@ -727,7 +728,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private suspend fun getExchangeRateForPeriod(
-        request: ArrayList<String>,
+        request: ArrayList<String?>,
         dashboardCurrency: String
     ): ArrayList<ExchangeResponseForPeriod> {
         val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()

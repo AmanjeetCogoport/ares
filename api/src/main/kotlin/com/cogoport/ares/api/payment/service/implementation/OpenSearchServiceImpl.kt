@@ -122,7 +122,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
 
-    override suspend fun generateQuarterlyOutstanding (zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String){
+    override suspend fun generateQuarterlyOutstanding (zone: String?,quarter: Int?, year: Int?,serviceType: ServiceType?, invoiceCurrency: String?){
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
         val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null)
