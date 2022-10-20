@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment.request
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.AllCurrencyTypes
 import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
@@ -15,5 +16,5 @@ data class OverallStatsRequest(
     @QueryValue(AresModelConstants.ROLE) val role: String?,
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?,
-    @QueryValue(AresModelConstants.CURRENCY_TYPE) val currencyType: String?
+    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String?
 )

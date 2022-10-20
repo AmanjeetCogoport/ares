@@ -16,8 +16,8 @@ data class DsoResponse(
     val month: String,
     @JsonProperty("dsoForTheMonth")
     var dsoForTheMonth: BigDecimal,
-    @JsonProperty("currencyType")
-    var currencyType: String?,
+    @JsonProperty("dashboardCurrency")
+    var dashboardCurrency: String?,
     @JsonProperty("invoiceCurrency")
     var invoiceCurrency: String?
 )
