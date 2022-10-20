@@ -23,5 +23,5 @@ data class CollectionResponse(
     @JsonProperty("id")
     var id: String,
     @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String?
+    var dashboardCurrency: String? = "INR"
 )
