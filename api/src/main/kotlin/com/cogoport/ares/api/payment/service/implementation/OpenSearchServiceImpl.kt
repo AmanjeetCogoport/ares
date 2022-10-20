@@ -73,48 +73,69 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     private suspend fun updateReceivables(request: OpenSearchRequest) {
-        val zone = request.zone
+        val zone = request.zone!!
         val quarter = request.quarter
         val date = request.date
         val year = request.year
-        val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
+        val serviceType = request.serviceType!!
+        val invoiceCurrency = request.invoiceCurrency!!
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
+        generateCollectionTrend(zone, quarter, year, serviceType,invoiceCurrency)
+
+        /** Overall Stats */
+        logger().info("Updating Overall Stats document")
+        generateOverallStats(zone, quarter, year, serviceType,invoiceCurrency)
+
+        /** Monthly Outstanding */
+        logger().info("Updating Monthly Outstanding document")
+        generateMonthlyOutstanding(zone, quarter, year, serviceType,invoiceCurrency)
+
+        /** Quarterly Outstanding */
+        logger().info("Updating Quarterly Outstanding document")
+        generateQuarterlyOutstanding(zone, quarter, year, serviceType,invoiceCurrency)
+
+
+        /** Daily Sales Outstanding */
+        generateDailySalesOutstanding(zone, quarter, year, serviceType,invoiceCurrency,date)
+    }
+
+    override suspend fun generateCollectionTrend(zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String ){
         val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
         val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null)
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
+    }
 
-        /** Overall Stats */
-        logger().info("Updating Overall Stats document")
+    override suspend fun generateOverallStats (zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String){
         val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency)
         updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
         updateOverallStats(null, statsAllData, null, null)
+    }
 
-        /** Monthly Outstanding */
-        logger().info("Updating Monthly Outstanding document")
+    override suspend fun generateMonthlyOutstanding (zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String){
         val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)
+    }
 
-        /** Quarterly Outstanding */
-        logger().info("Updating Quarterly Outstanding document")
+
+    override suspend fun generateQuarterlyOutstanding (zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String){
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
         val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null)
         updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
+    }
 
-        /** Daily Sales Outstanding */
+    override suspend fun generateDailySalesOutstanding (zone: String,quarter: Int, year: Int,serviceType: ServiceType, invoiceCurrency: String, date:String){
         logger().info("Updating Daily Sales Outstanding document")
         val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
         updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency)
         val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null)
         updateDailySalesOutstanding(null, year, dailySalesAllData, null, null)
     }
-
     /**
      * This updates the data for Daily Payables Outstanding graph on OpenSearch on receipt of new Bill
      * @param : OpenSearchRequest
