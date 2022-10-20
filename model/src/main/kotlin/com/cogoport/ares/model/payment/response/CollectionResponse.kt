@@ -23,7 +23,5 @@ data class CollectionResponse(
     @JsonProperty("id")
     var id: String,
     @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String? = null,
-    @JsonProperty("invoiceCurrency")
-    var invoiceCurrency: String? = null,
+    var dashboardCurrency: String? = null
 )

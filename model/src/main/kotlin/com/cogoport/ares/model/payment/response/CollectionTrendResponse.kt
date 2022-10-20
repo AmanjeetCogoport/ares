@@ -19,10 +19,6 @@ data class CollectionTrendResponse(
     var receivableAmount: BigDecimal,
     @JsonProperty("collectableAmount")
     var collectableAmount: BigDecimal,
-    @JsonProperty("serviceType")
-    var serviceType: ServiceType?,
     @JsonProperty("dashboardCurrency")
     var dashboardCurrency: String?,
-    @JsonProperty("invoiceCurrency")
-    var invoiceCurrency: String?
 )

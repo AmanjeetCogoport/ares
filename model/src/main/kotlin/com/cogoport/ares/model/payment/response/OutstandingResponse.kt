@@ -18,7 +18,5 @@ data class OutstandingResponse(
     @JsonProperty("amount")
     var amount: BigDecimal,
     @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String? = "INR",
-    @JsonProperty("invoiceCurrency")
-    var invoiceCurrency: String? = null
+    var dashboardCurrency: String? = "INR"
 )

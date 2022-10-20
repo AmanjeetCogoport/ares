@@ -11,6 +11,5 @@ data class OverallStats(
     val openInvoicesAmount: BigDecimal?,
     val openOnAccountPaymentAmount: BigDecimal?,
     var id: String?,
-    var serviceType: String?,
     var dashboardCurrency: String?
 )

@@ -137,7 +137,6 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
-
         var invoiceCurrencyKey: String? = null
 
         if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
@@ -236,26 +235,26 @@ class OpenSearchServiceImpl : OpenSearchService {
         val trendData = mutableListOf<CollectionTrendResponse>()
         var totalAmount: BigDecimal? = null
         var totalCollected: BigDecimal? = null
-        var currencyType: String? = null
+        var dashboardCurrency: String? = null
 //        var serviceType: ServiceType? = null
 
         val monthList = mutableListOf<String?>()
         for (row in data) {
             if (row.duration != "Total") {
-                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount, row.serviceType, row.currencyType, row.invoiceCurrency))
+                trendData.add(CollectionTrendResponse(row.duration, row.receivableAmount, row.collectableAmount, row.dashboardCurrency))
                 monthList.add(row.duration)
             } else {
                 totalAmount = row.receivableAmount
                 totalCollected = row.collectableAmount
-                currencyType = row.currencyType
+                dashboardCurrency = row.dashboardCurrency
             }
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), serviceType, null, invoiceCurrency))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), null))
             }
         }
-        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, currencyType, invoiceCurrency)
+        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, dashboardCurrency)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {

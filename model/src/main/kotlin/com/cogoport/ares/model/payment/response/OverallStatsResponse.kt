@@ -26,8 +26,6 @@ data class OverallStatsResponse(
     var openOnAccountPaymentAmount: BigDecimal = 0.toBigDecimal(),
     @JsonProperty("id")
     var id: String?,
-    @JsonProperty("serviceType")
-    var serviceType: String? = null,
     @JsonProperty("dashboardCurrency")
     var dashboardCurrency: String? = null
 )

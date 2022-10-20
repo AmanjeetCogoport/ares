@@ -123,24 +123,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             select 'Total' as duration,
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as receivable_amount,
             coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
-            service_type,
-            led_currency as currency_type,
-            currency as invoice_currency
+            currency as dashboard_currency
             from account_utilizations
             where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
-            group by service_type, currency_type , invoice_currency
+            group by dashboard_currency
         )
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
             coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0::double precision end),0) as receivable_amount,
             coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
-            service_type,            
-            led_currency as currency_type,
-            currency as invoice_currency
+            currency as dashboard_currency
             from account_utilizations
             where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
-            group by date_trunc('month',transaction_date), service_type, currency_type, invoice_currency
+            group by date_trunc('month',transaction_date), dashboard_currency
             order by date_trunc('month',transaction_date)
         )
         """
@@ -155,17 +151,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         y as (
             select to_char(date_trunc('month',transaction_date),'Mon') as month,
             sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
-            service_type,
-            led_currency as currency_type,
-            currency as invoice_currency
+            currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
-            group by date_trunc('month',transaction_date), service_type, currency_type, invoice_currency
+            group by date_trunc('month',transaction_date), dashboard_currency
         )
         select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
-        y.service_type, 
-        y.currency_type,
-        y.invoice_currency
+        y.dashboard_currency
         from x left join y on y.month = x.month
         """
     )
@@ -178,21 +170,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             y as (
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
-                service_type,
-                led_currency as currency_type,
-                currency as invoice_currency
+                currency as dashboard_currency
                 from account_utilizations
                 where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
-                group by date_trunc('quarter',transaction_date), service_type, currency_type, invoice_currency
+                group by date_trunc('quarter',transaction_date), dashboard_currency
             )
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
             coalesce(y.total_outstanding_amount, 0) as amount,
-            y.service_type as service_type,
-            y.currency_type as currency_type,
-            y.invoice_currency as invoice_currency
+            y.dashboard_currency as dashboard_currency,
             from x
             left join y on x.quarter = y.quarter
         """
@@ -209,19 +197,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', now()::date) end as days,
-            service_type,
-            led_currency as currency_type,
-            currency as invoice_currency
+            currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
-            group by service_type, currency_type, invoice_currency
+            group by dashboard_currency
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
             coalesce((X.outstandings / X.total_sales) * X.days,0) as value,
-            X.service_type as service_type,
-            X.currency_type as currency_type,
-            X.invoice_currency as invoice_currency
+            X.dashboard_currency as dashboard_currency,
             from X
         """
     )
@@ -237,15 +221,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_curr end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', now()::date) end as days,
-            service_type,
-            led_currency as currency_type,
-            currency as invoice_currency
+            currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
-            group by service_type, currency_type, invoice_currency
+            group by dashboard_currency
         )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, service_type, currency_type, invoice_currency
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, dashboard_currency
         from X
         """
     )
