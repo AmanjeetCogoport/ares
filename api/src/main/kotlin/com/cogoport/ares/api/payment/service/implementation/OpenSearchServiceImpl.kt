@@ -99,8 +99,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         generateDailySalesOutstanding(zone, quarter, year, serviceType, invoiceCurrency, date)
     }
 
-    override suspend fun generateCollectionTrend(zone: String, quarter: Int, year: Int, serviceType: ServiceType, invoiceCurrency: String) {
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
+    override suspend fun generateCollectionTrend(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter!!, year!!, serviceType, invoiceCurrency)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
         val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null)
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
@@ -113,7 +113,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateOverallStats(null, statsAllData, null, null)
     }
 
-    override suspend fun generateMonthlyOutstanding(zone: String, quarter: Int, year: Int, serviceType: ServiceType, invoiceCurrency: String) {
+    override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
         val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)

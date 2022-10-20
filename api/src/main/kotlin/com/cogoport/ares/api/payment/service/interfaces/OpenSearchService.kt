@@ -10,10 +10,10 @@ interface OpenSearchService {
 
     suspend fun pushOutstandingData(request: OpenSearchRequest)
     suspend fun pushOutstandingListData(request: OpenSearchListRequest)
-    suspend fun generateCollectionTrend(zone: String, quarter: Int, year: Int, serviceType: ServiceType, invoiceCurrency: String)
+    suspend fun generateCollectionTrend(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?)
     suspend fun generateOverallStats(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?)
 
-    suspend fun generateMonthlyOutstanding(zone: String, quarter: Int, year: Int, serviceType: ServiceType, invoiceCurrency: String)
+    suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?)
 
     suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?)
 
