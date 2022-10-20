@@ -93,7 +93,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
-            group by ageing_duration, service_type, dashboard_currency
+            group by ageing_duration, dashboard_currency
             order by ageing_duration
         """
 
@@ -180,7 +180,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
             coalesce(y.total_outstanding_amount, 0) as amount,
-            y.dashboard_currency as dashboard_currency,
+            y.dashboard_currency as dashboard_currency
             from x
             left join y on x.quarter = y.quarter
         """
@@ -205,7 +205,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
             coalesce((X.outstandings / X.total_sales) * X.days,0) as value,
-            X.dashboard_currency as dashboard_currency,
+            X.dashboard_currency as dashboard_currency
             from X
         """
     )

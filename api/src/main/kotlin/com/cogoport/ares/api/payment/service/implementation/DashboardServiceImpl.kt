@@ -122,12 +122,7 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if(data == null){
-            var openSearchRequest = OpenSearchRequest (
-                serviceType = request.serviceType,
-                zone = request.zone,
-                invoiceCurrency = request.invoiceCurrency
-            )
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency )
+            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -253,7 +248,6 @@ class DashboardServiceImpl : DashboardService {
                 }
             }
         }
-
         return data ?: CollectionResponse(id = searchKey)
     }
 
