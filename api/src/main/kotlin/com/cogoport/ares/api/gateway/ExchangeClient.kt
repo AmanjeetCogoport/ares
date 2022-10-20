@@ -11,7 +11,6 @@ import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.client.annotation.Client
-import javax.validation.Valid
 
 @Client(value = "\${cogoport.exchange_api.url}" + "\${cogoport.exchange_api.version}")
 @Headers(
@@ -25,5 +24,5 @@ interface ExchangeClient {
     suspend fun getExchangeRate(request: ExchangeRequest): ExchangeResponse
 
     @Post("/get_rate/avg-rate")
-    suspend fun getExchangeRateForPeriod( @Body request: HashMap<String,List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
+    suspend fun getExchangeRateForPeriod(@Body request: HashMap<String, List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
 }
