@@ -182,7 +182,7 @@ class DashboardServiceImpl : DashboardService {
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
 
         data.map { item ->
-            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! && (it.serviceType?.equals(item.serviceType))!! }
+            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! }
             if (index == -1) {
                 formattedData?.add(item)
             } else {
@@ -195,7 +195,8 @@ class DashboardServiceImpl : DashboardService {
             if (!key.contains(it)) {
                 formattedData.add(
                     OverallAgeingStatsResponse(
-                        it, 0.toBigDecimal(), "INR", request.serviceType?.name,
+                        it,
+                        0.toBigDecimal(),
                         request.dashboardCurrency
                     )
                 )

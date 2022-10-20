@@ -16,10 +16,6 @@ data class OverallAgeingStatsResponse(
     var ageingDuration: String?,
     @JsonProperty("amount")
     var amount: BigDecimal?,
-    @JsonProperty("currency")
-    var invoiceCurrency: String?,
-    @JsonProperty("serviceType")
-    var serviceType: String?,
-    @JsonProperty("currencyType")
-    var currencyType: String?,
+    @JsonProperty("dashboardCurrency")
+    var dashboardCurrency: String?
 )
