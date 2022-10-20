@@ -664,6 +664,18 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        return exchangeClient.getExchangeRateForPeriod(arrayListOfExchangeRateRequest)
+        var exchangeRateDummmy = ArrayList<ExchangeResponseForPeriod>()
+
+        exchangeRateDummmy.add(
+            ExchangeResponseForPeriod(
+                fromCurrencyType = "USD",
+                toCurrencyType = "INR",
+                exchangeRate = 82.05 as BigDecimal
+            )
+        )
+
+        return exchangeRateDummmy
+
+//        return exchangeClient.getExchangeRateForPeriod(arrayListOfExchangeRateRequest)
     }
 }
