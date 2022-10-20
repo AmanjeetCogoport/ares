@@ -207,8 +207,8 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
-        var zone = request.zone!!
-        var serviceType = request.serviceType!!
+        var zone = request.zone
+        var serviceType = request.serviceType
         var invoiceCurrency = request.invoiceCurrency!!
         val quarter =  request.quarterYear.split("_")[0][1].toString().toInt()
         val year =  request.quarterYear.split("_")[1].toInt()
@@ -221,7 +221,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
         if(data == null){
-            openSearchService.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
+            openSearchService.generateCollectionTrend(zone!!, quarter, year, serviceType!!, invoiceCurrency)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
