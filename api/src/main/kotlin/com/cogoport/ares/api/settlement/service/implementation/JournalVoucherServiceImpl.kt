@@ -77,7 +77,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             jvListRequest.status,
             jvListRequest.category,
             jvListRequest.type,
-            "%${jvListRequest.query}%",
+            jvListRequest.query,
             jvListRequest.page,
             jvListRequest.pageLimit
         )
@@ -86,7 +86,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 jvListRequest.status,
                 jvListRequest.category,
                 jvListRequest.type,
-                "%${jvListRequest.query}%"
+                jvListRequest.query
             )
         val jvList = mutableListOf<JournalVoucherResponse>()
         documentEntity.forEach { doc ->
