@@ -71,16 +71,6 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var exchangeClient: ExchangeClient
 
-    private suspend fun getExchangeRate(to: String, from: String, date: String): BigDecimal {
-        val exchangeRequest = ExchangeRequest(
-            from_curr = from,
-            to_curr = to,
-            exchange_date = date
-        )
-        val exchangeRate = exchangeClient.getExchangeRate(exchangeRequest)
-
-        return exchangeRate.exchangeRate
-    }
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {

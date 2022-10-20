@@ -8,5 +8,5 @@ data class AgeingBucketZone(
     val ageingDuration: String,
     var amount: BigDecimal,
     val zone: String,
-    var dashboardCurrency: String?
+    var dashboardCurrency: String? = "INR"
 )

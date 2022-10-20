@@ -26,5 +26,4 @@ data class DailySalesOutstanding(
     val serviceType: String?,
     @JsonProperty("currencyType")
     val currencyType: String?
-
 )

@@ -8,5 +8,5 @@ data class CollectionTrend(
     var duration: String?,
     var receivableAmount: BigDecimal?,
     var collectableAmount: BigDecimal?,
-    var dashboardCurrency: String?
+    var dashboardCurrency: String? = "INR"
 )
