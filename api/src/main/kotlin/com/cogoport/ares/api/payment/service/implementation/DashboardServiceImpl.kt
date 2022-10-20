@@ -599,15 +599,15 @@ class DashboardServiceImpl : DashboardService {
         val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
         val data = HashMap<String, ArrayList<AgeingBucketZone>>()
 
-        val uniqueCurrencyList = ArrayList<String>()
+        val uniqueCurrencyList: List<String> = payments.map{it.dashboardCurrency!!}.distinct()
 
-        payments.map { it ->
-            if (it.dashboardCurrency != null) {
-                if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-                    uniqueCurrencyList.add(it.dashboardCurrency!!)
-                }
-            }
-        }
+//        payments.map { it ->
+//            if (it.dashboardCurrency != null) {
+//                if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
+//                    uniqueCurrencyList.add(it.dashboardCurrency!!)
+//                }
+//            }
+//        }
 
         val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
 
