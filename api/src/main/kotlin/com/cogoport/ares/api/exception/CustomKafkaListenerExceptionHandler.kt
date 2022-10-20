@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 public class CustomKafkaListenerExceptionHandler(private var environment: Environment) : KafkaListenerExceptionHandler {
 
     private val logger = logger()
+
     private val LOG = LoggerFactory.getLogger(KafkaListenerExceptionHandler::class.java)
     private val SERIALIZATION_EXCEPTION_MESSAGE_PATTERN =
         Pattern.compile(".+ for partition (.+)-(\\d+) at offset (\\d+)\\..+")
@@ -30,6 +31,7 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
     override fun handle(exception: KafkaListenerException) {
         val cause = exception.cause
         val consumerBean = exception.kafkaListener
+
         sendToSentry(exception)
 
         if (cause is SerializationException) {
@@ -38,7 +40,8 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
                 val kafkaConsumer = exception.kafkaConsumer
                 seekPastDeserializationError(cause, consumerBean, kafkaConsumer)
             }
-        } else {
+        }
+        else {
             if (LOG.isErrorEnabled) {
                 val consumerRecord = exception.consumerRecord
                 if (consumerRecord.isPresent) {
@@ -49,15 +52,17 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
                         cause!!.message,
                         cause
                     )
-                } else {
+                }
+                else {
                     LOG.error("Kafka consumer [{}] produced error: {}", consumerBean, cause!!.message, cause)
                 }
             }
         }
     }
 
-    private fun sendToSentry(exception: KafkaListenerException){
+    private fun sendToSentry(exception: KafkaListenerException) {
         logger.error(exception.toString())
+
         exception?.let {
             val request = exception.consumerRecord.get().value()
             Sentry.withScope {
