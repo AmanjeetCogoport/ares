@@ -228,7 +228,7 @@ open class SettlementServiceImpl : SettlementService {
             if (request.accountType == AresConstants.ALL) {
                 mutableListOf(
                     AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
-                    AccountType.SINV.toString()
+                    AccountType.SINV.toString(), AccountType.SCN.toString()
                 )
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
@@ -342,7 +342,7 @@ open class SettlementServiceImpl : SettlementService {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
             when (request.settlementType) {
-                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
+                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
                         getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
@@ -411,10 +411,8 @@ open class SettlementServiceImpl : SettlementService {
         }
         val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
             paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
-        } else if (settlementType == SettlementType.PCN) {
-            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.PCN.dbValue)
         } else {
-            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.SINV.dbValue)
+            accountUtilizationRepository.getPaymentDetails(paymentIds, settlementType.dbValue)
         }
         payments.forEach {
             if (it.documentNo == null) throw AresException(AresError.ERR_1503, "")
@@ -431,7 +429,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(

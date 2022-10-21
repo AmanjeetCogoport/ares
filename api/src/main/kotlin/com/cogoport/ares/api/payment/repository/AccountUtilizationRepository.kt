@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.data.annotation.Query
@@ -662,6 +663,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
+
+    @Query(
+        """             
+            SELECT organization_id, acc_type, acc_mode, SUM(amount_curr - pay_curr) as payment_value 
+            FROM account_utilizations 
+            GROUP BY organization_id, acc_type, acc_mode 
+            having organization_id in (:organizationIdList) 
+            and acc_type::varchar = :accType and acc_mode::varchar =:accMode
+        """
+    )
+    suspend fun onAccountPaymentAmount(accType: AccountType, accMode: AccMode, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
 
     @Query(
         """
