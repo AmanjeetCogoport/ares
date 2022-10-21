@@ -24,6 +24,6 @@ data class DailySalesOutstanding(
     val dpoResponse: List<DpoResponse>,
     @JsonProperty("serviceType")
     val serviceType: String?,
-    @JsonProperty("currencyType")
-    val currencyType: String?
+    @JsonProperty("dashboardCurrency")
+    val dashboardCurrency: String?
 )
