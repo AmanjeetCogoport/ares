@@ -145,15 +145,20 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
+        var keyMap = generatingOpenSearchKey(request.zone, request.serviceType, request.invoiceCurrency)
+        return AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
+    }
+
+    private fun generatingOpenSearchKey(zone:String?, serviceType: ServiceType?, invoiceCurrency: String?):Map<String, String?>{
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
-        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
-        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
+        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
+        serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
+        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency?.uppercase()
 
-        return AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
+        return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
@@ -314,6 +319,7 @@ class DashboardServiceImpl : DashboardService {
 
         val newData = getMonthlyOutStandingData(data)
 
+
         val newMonthlyOutstanding = MonthlyOutstanding(
             list = newData,
             id = searchKey
@@ -323,7 +329,6 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): List<OutstandingResponse>? {
-
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
             val outstandingData = OutstandingResponse(
                 amount = it.sumOf { it.amount },
