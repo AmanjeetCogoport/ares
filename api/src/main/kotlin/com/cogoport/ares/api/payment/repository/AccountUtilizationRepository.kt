@@ -161,7 +161,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from x left join y on y.month = x.month
         """
     )
-    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>
+    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
     @Query(
         """
             with x as (

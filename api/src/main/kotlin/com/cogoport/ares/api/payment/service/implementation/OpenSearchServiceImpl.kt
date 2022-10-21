@@ -114,7 +114,15 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
+        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
+
+        monthlyTrendZoneData?.forEach { it ->
+            if(it.dashboardCurrency.isNullOrEmpty()){
+                it.dashboardCurrency = invoiceCurrency
+            }
+        }
+
+        println(monthlyTrendZoneData)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)

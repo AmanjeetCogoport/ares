@@ -571,15 +571,7 @@ class DashboardServiceImpl : DashboardService {
 
         val uniqueCurrencyList: List<String> = payments.map { it.dashboardCurrency!! }.distinct()
 
-//        payments.map { it ->
-//            if (it.dashboardCurrency != null) {
-//                if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-//                    uniqueCurrencyList.add(it.dashboardCurrency!!)
-//                }
-//            }
-//        }
-
-        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
 
         payments.forEach { payment ->
             val zone = payment.zone

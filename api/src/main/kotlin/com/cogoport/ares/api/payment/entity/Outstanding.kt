@@ -7,5 +7,5 @@ import java.math.BigDecimal
 data class Outstanding(
     var duration: String?,
     var amount: BigDecimal,
-    var dashboardCurrency: String? = "INR"
+    var dashboardCurrency: String?
 )
