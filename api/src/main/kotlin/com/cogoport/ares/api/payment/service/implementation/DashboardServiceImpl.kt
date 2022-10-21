@@ -139,10 +139,10 @@ class DashboardServiceImpl : DashboardService {
             data.totalOutstandingAmount = data.totalOutstandingAmount.times(avgExchangeRate!!)
             data.openInvoicesAmount = data.openInvoicesAmount.times(avgExchangeRate)
             data.openOnAccountPaymentAmount = data.openOnAccountPaymentAmount.times(avgExchangeRate)
-            data.dashboardCurrency = request.dashboardCurrency
+            data.dashboardCurrency = request.dashboardCurrency!!
         }
 
-        return data ?: OverallStatsResponse(id = searchKey)
+        return data ?: OverallStatsResponse(id = searchKey, dashboardCurrency = request.dashboardCurrency!!)
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
@@ -163,22 +163,14 @@ class DashboardServiceImpl : DashboardService {
         val data = mutableListOf<OverallAgeingStatsResponse>()
         var formattedData = mutableListOf<OverallAgeingStatsResponse>()
         val uniqueCurrencyList: List<String> = outstandingResponse.map {it.dashboardCurrency!!}.distinct()
-//
-//        outstandingResponse.map { it ->
-//            if (it.dashboardCurrency != null) {
-//                if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-//                    uniqueCurrencyList.add(it.dashboardCurrency)
-//                }
-//            }
-//        }
 
-        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
 
         outstandingResponse.map { response ->
             if (response.dashboardCurrency != request.dashboardCurrency) {
-                var avgExchangeRate = exchangeRate.get(response.dashboardCurrency)
+                var avgExchangeRate = exchangeRate[response.dashboardCurrency]
                 response.amount = response.amount.times(avgExchangeRate!!)
-                response.dashboardCurrency = request.dashboardCurrency!!
+                response.dashboardCurrency = request.dashboardCurrency
             }
             data.add(overallAgeingConverter.convertToModel(response))
         }
@@ -211,9 +203,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
-        var zone = request.zone
-        var serviceType = request.serviceType
-        var invoiceCurrency = request.invoiceCurrency
+        val zone = request.zone
+        val serviceType = request.serviceType
+        val invoiceCurrency = request.invoiceCurrency
         val quarter = request.quarterYear.split("_")[0][1].toString().toInt()
         val year = request.quarterYear.split("_")[1].toInt()
 
@@ -225,7 +217,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
         if (data == null) {
-            openSearchService.generateCollectionTrend(zone!!, quarter, year, serviceType!!, invoiceCurrency!!)
+            openSearchService.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -235,10 +227,9 @@ class DashboardServiceImpl : DashboardService {
         }
 
         if (data?.dashboardCurrency != request.dashboardCurrency) {
-            val requestExchangeRate = ArrayList<String>()
-            requestExchangeRate.add(data?.dashboardCurrency!!)
-            val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
-            val avgExchangeRate = exchangeRate.get(data?.dashboardCurrency)
+            val requestExchangeRate: List<String> =  data?.trend?.map { it.dashboardCurrency!! }?.distinct()!!
+            val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
+            val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
 
             data.totalReceivableAmount = data.totalReceivableAmount?.times(avgExchangeRate!!)
             data.totalCollectedAmount = data.totalCollectedAmount?.times(avgExchangeRate!!)
@@ -246,13 +237,14 @@ class DashboardServiceImpl : DashboardService {
 
             data.trend?.forEach {
                 if (it.dashboardCurrency != request.dashboardCurrency) {
-                    it.collectableAmount = it.collectableAmount.times(avgExchangeRate!!)
-                    it.receivableAmount = it.receivableAmount.times(avgExchangeRate!!)
+                    val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
+                    it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
+                    it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
                     it.dashboardCurrency = request.dashboardCurrency
                 }
             }
         }
-        return data ?: CollectionResponse(id = searchKey)
+        return data ?: CollectionResponse(id = searchKey, dashboardCurrency = request.dashboardCurrency)
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
@@ -306,14 +298,6 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-//        data?.list?.map { it ->
-//            if (it.dashboardCurrency != null) {
-//                if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-//                    uniqueCurrencyList.add(it.dashboardCurrency!!)
-//                }
-//            }
-//        }
-
         val uniqueCurrencyList: List<String> = data?.list?.map {it.dashboardCurrency!!}?.distinct()!!
 
         var exchangeRate = HashMap<String, BigDecimal>()
@@ -325,7 +309,7 @@ class DashboardServiceImpl : DashboardService {
             if ((outstandingRes.dashboardCurrency != request.dashboardCurrency) && (outstandingRes.dashboardCurrency != null)) {
                 val avgExchangeRate = exchangeRate?.get(outstandingRes.dashboardCurrency)
                 outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
-                outstandingRes.dashboardCurrency = request.dashboardCurrency
+                outstandingRes.dashboardCurrency = request.dashboardCurrency!!
             }
         }
 
@@ -402,7 +386,7 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        val uniqueCurrencyList: List<String> = data?.list?.map {it.dashboardCurrency!!}?.distinct()!!
+        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency }?.distinct()!!
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
@@ -414,7 +398,7 @@ class DashboardServiceImpl : DashboardService {
             if ((outstandingRes.dashboardCurrency != request.dashboardCurrency) && (outstandingRes.dashboardCurrency != null)) {
                 val avgExchangeRate = exchangeRate?.get(outstandingRes.dashboardCurrency)
                 outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
-                outstandingRes.dashboardCurrency = request.dashboardCurrency
+                outstandingRes.dashboardCurrency = request.dashboardCurrency!!
             }
         }
 
@@ -438,20 +422,20 @@ class DashboardServiceImpl : DashboardService {
             val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             var salesResponse = clientResponse(salesResponseKey)
 
-            if (salesResponse == null) {
+            if (salesResponse!!.hits().hits().isNullOrEmpty()) {
                 val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                openSearchService.generateDailySalesOutstanding(request.zone!!, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType!!, request.invoiceCurrency!!, date)
+                openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
                 salesResponse = clientResponse(salesResponseKey)
             }
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse!!.hits().hits()) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value, data.dashboardCurrency))
+                dso.add(DsoResponse(data!!.month.toString(), data.value, data.dashboardCurrency!!))
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal(), null))
+                    dso.add(DsoResponse(it, 0.toBigDecimal(), request.dashboardCurrency))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
@@ -466,14 +450,17 @@ class DashboardServiceImpl : DashboardService {
             }
 
             val dpo = mutableListOf<DpoResponse>()
-            for (hts in payablesResponse!!.hits().hits()) {
-                val data = hts.source()
-                dpo.add(DpoResponse(data!!.month.toString(), data.value, data.dashboardCurrency))
+            if (!payablesResponse!!.hits().hits().isNullOrEmpty()) {
+                for (hts in payablesResponse.hits().hits()) {
+                    val data = hts.source()
+                    dpo.add(DpoResponse(data!!.month.toString(), data.value, data.dashboardCurrency!!))
+                }
             }
+
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal(), null))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal(), "INR"))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
@@ -512,26 +499,12 @@ class DashboardServiceImpl : DashboardService {
 
         if ((request.dashboardCurrency != dashboardCurrency) && (dashboardCurrency != null)) {
 
-            var uniqueCurrencyList: List<String> = dsoResponseData.map {it.dashboardCurrency!!}.distinct() + dpoResponseData.map {it.dashboardCurrency!!}.distinct()
 
-            uniqueCurrencyList
-//            dsoResponseData.map { it ->
-//                if (it.dashboardCurrency != null) {
-//                    if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-//                        uniqueCurrencyList.add(it.dashboardCurrency!!)
-//                    }
-//                }
-//            }
-//            dpoResponseData.map { it ->
-//                if (it.dashboardCurrency != null) {
-//                    if (!uniqueCurrencyList.contains(it.dashboardCurrency)) {
-//                        uniqueCurrencyList.add(it.dashboardCurrency!!)
-//                    }
-//                }
-//            }
+            var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct()
+            uniqueCurrencyList = uniqueCurrencyList.map { it }.distinct()
 
             val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
-            val avgExchangeRate = exchangeRate.get(dashboardCurrency)
+            val avgExchangeRate = exchangeRate[dashboardCurrency]
             currentDso = currentDso.toBigDecimal().times(avgExchangeRate!!).toFloat()
             avgDsoAmount = avgDsoAmount.times(avgExchangeRate)
 
@@ -655,7 +628,7 @@ class DashboardServiceImpl : DashboardService {
             monthList.add(monthStart.plusMonths(i.toLong()).toString())
         }
         val output = documents?.groupBy { SimpleDateFormat("yyyy-MM").format(it?.transactionDate) }!!.mapValues { it.value.sumOf { ((it?.amountLoc ?: 0.toBigDecimal()) - (it?.payLoc ?: 0.toBigDecimal())) * it?.signFlag.toString().toBigDecimal() } }
-        val outstandingResponse = monthList.map { OutstandingResponse(it, 0.toBigDecimal()) }
+        val outstandingResponse = monthList.map { OutstandingResponse(it, 0.toBigDecimal(), "INR") }
         for (res in outstandingResponse) {
             output.forEach {
                 if (it.key.uppercase() == res.duration) {

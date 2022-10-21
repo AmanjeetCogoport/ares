@@ -99,35 +99,35 @@ class OpenSearchServiceImpl : OpenSearchService {
         generateDailySalesOutstanding(zone, quarter, year, serviceType, invoiceCurrency, date)
     }
 
-    override suspend fun generateCollectionTrend(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter!!, year!!, serviceType, invoiceCurrency)
+    override suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
         val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null)
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
     }
 
-    override suspend fun generateOverallStats(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
+    override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency)
         updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
         updateOverallStats(null, statsAllData, null, null)
     }
 
-    override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
+    override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)
     }
 
-    override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int?, year: Int?, serviceType: ServiceType?, invoiceCurrency: String?) {
+    override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
         val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null)
         updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
     }
 
-    override suspend fun generateDailySalesOutstanding(zone: String, quarter: Int, year: Int, serviceType: ServiceType, invoiceCurrency: String, date: String) {
+    override suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String) {
         logger().info("Updating Daily Sales Outstanding document")
         val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
         updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency)
@@ -255,7 +255,6 @@ class OpenSearchServiceImpl : OpenSearchService {
         var totalAmount: BigDecimal? = null
         var totalCollected: BigDecimal? = null
         var dashboardCurrency: String? = null
-//        var serviceType: ServiceType? = null
 
         val monthList = mutableListOf<String?>()
         for (row in data) {
@@ -270,10 +269,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), null))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(),"INR"))
             }
         }
-        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, dashboardCurrency)
+        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, dashboardCurrency!!)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {

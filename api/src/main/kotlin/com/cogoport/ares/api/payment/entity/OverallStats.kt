@@ -11,5 +11,5 @@ data class OverallStats(
     val openInvoicesAmount: BigDecimal?,
     val openOnAccountPaymentAmount: BigDecimal?,
     var id: String?,
-    var dashboardCurrency: String? = "INR"
+    var dashboardCurrency: String
 )
