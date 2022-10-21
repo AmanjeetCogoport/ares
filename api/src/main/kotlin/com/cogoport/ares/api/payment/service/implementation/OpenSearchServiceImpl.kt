@@ -269,7 +269,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
         getMonthFromQuarter(quarter).forEach {
             if (!monthList.contains(it)) {
-                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(),"INR"))
+                trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), "INR"))
             }
         }
         return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, id, dashboardCurrency!!)
