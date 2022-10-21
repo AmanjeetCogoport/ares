@@ -116,7 +116,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
 
-        monthlyTrendZoneData.forEach { it ->
+        monthlyTrendZoneData?.forEach { it ->
             if(it.dashboardCurrency.isNullOrEmpty()){
                 it.dashboardCurrency = invoiceCurrency
             }
@@ -129,7 +129,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
-        quarterlyTrendZoneData.forEach { it ->
+        quarterlyTrendZoneData?.forEach { it ->
             if(it.dashboardCurrency.isNullOrEmpty()){
                 it.dashboardCurrency = invoiceCurrency
             }
@@ -175,11 +175,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone.uppercase()
 
         if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
 
-        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency.uppercase()
 
         val collectionId = AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + "Q$quarter"
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType, invoiceCurrency))
@@ -193,14 +193,14 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         var invoiceCurrencyKey: String? = null
 
-        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone.uppercase()
         if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
         if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency
 
         val statsId = AresConstants.OVERALL_STATS_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
         if (overallStatsData != null) {
-            overallStatsData?.id = statsId
+            overallStatsData.id = statsId
             OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
         }
     }
@@ -213,11 +213,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone.uppercase()
 
         if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name
 
-        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency.uppercase()
 
         val monthlyTrendId = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
@@ -231,11 +231,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone.uppercase()
 
         if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
 
-        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency.uppercase()
         val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
@@ -247,11 +247,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         var serviceTypeKey = ""
         var invoiceCurrencyKey = ""
 
-        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone?.uppercase()
+        if (zone.isNullOrBlank()) zoneKey = "ALL" else zoneKey = zone.uppercase()
 
         if (serviceType?.name.equals(null)) serviceTypeKey = "ALL" else serviceTypeKey = serviceType?.name!!
 
-        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency?.uppercase()
+        if (invoiceCurrency.isNullOrBlank()) invoiceCurrencyKey = "ALL" else invoiceCurrencyKey = invoiceCurrency.uppercase()
 
         if (dsoResponse != null) {
             val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + dsoResponse?.month + AresConstants.KEY_DELIMITER + year

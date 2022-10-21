@@ -266,9 +266,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
-        var zone = request.zone
-        var serviceType = request.serviceType
-        var invoiceCurrency = request.invoiceCurrency
+        val zone = request.zone
+        val serviceType = request.serviceType
+        val invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
@@ -278,11 +278,11 @@ class DashboardServiceImpl : DashboardService {
 
         validateInput(request.zone, request.role)
 
-        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
+        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
 
         serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
 
-        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency?.uppercase()
+        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
 
         val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
@@ -302,16 +302,16 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency!! }?.distinct()!!
+        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency }?.distinct()!!
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
             exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
         }
 
-        data?.list?.forEach { outstandingRes ->
+        data.list?.forEach { outstandingRes ->
             if ((outstandingRes.dashboardCurrency != request.dashboardCurrency) && (outstandingRes.dashboardCurrency != null)) {
-                val avgExchangeRate = exchangeRate?.get(outstandingRes.dashboardCurrency)
+                val avgExchangeRate = exchangeRate.get(outstandingRes.dashboardCurrency)
                 outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
                 outstandingRes.dashboardCurrency = request.dashboardCurrency!!
             }
@@ -355,9 +355,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
-        var zone = request.zone
-        var serviceType = request.serviceType
-        var invoiceCurrency = request.invoiceCurrency
+        val zone = request.zone
+        val serviceType = request.serviceType
+        val invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
@@ -367,11 +367,11 @@ class DashboardServiceImpl : DashboardService {
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
 
-        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
+        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
 
         serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
 
-        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency?.uppercase()
+        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
 
         val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
 
