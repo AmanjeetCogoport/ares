@@ -11,5 +11,5 @@ data class DailyOutstanding(
     var totalSales: BigDecimal?,
     var days: Int,
     var value: Double,
-    val dashboardCurrency: String?
+    var dashboardCurrency: String?
 )

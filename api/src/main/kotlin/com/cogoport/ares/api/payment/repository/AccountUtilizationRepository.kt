@@ -209,7 +209,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): DailyOutstanding
+    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): DailyOutstanding?
     @Query(
         """
         with X as (

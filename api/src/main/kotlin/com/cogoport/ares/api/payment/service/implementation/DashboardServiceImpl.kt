@@ -157,7 +157,6 @@ class DashboardServiceImpl : DashboardService {
         zoneKey = if (zone.isNullOrBlank()) "ALL" else zone?.uppercase()
         serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
         invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency?.uppercase()
-
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
@@ -252,39 +251,22 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        var zoneKey: String? = null
-        var serviceTypeKey: String? = null
-        var invoiceCurrencyKey: String? = null
-
-        zoneKey = if (request.zone.isNullOrBlank()) "ALL" else request.zone?.uppercase()
-
-        serviceTypeKey = if (request.serviceType?.name.equals(null)) "ALL" else request.serviceType.toString()
-
-        invoiceCurrencyKey = if (request.invoiceCurrency.isNullOrBlank()) "ALL" else request.invoiceCurrency?.uppercase()
-
-        return AresConstants.COLLECTIONS_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
+        var keyMap = generatingOpenSearchKey(request.zone, request.serviceType, request.invoiceCurrency)
+        return AresConstants.COLLECTIONS_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
-        val zone = request.zone
-        val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
+        var zone = request.zone
+        var serviceType = request.serviceType
+        var invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
-        var zoneKey: String? = null
-        var serviceTypeKey: String? = null
-        var invoiceCurrencyKey: String? = null
-
         validateInput(request.zone, request.role)
 
-        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
+        var keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
 
-        serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-
-        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
-
-        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
+        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -342,7 +324,6 @@ class DashboardServiceImpl : DashboardService {
     }
 
     private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): List<OutstandingResponse>? {
-
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
             val outstandingData = OutstandingResponse(
                 amount = it.sumOf { it.amount },
@@ -363,17 +344,9 @@ class DashboardServiceImpl : DashboardService {
 
         validateInput(zone, request.role)
 
-        var zoneKey: String? = null
-        var serviceTypeKey: String? = null
-        var invoiceCurrencyKey: String? = null
+        var keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
 
-        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
-
-        serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-
-        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
-
-        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey
+        val searchKey = AresConstants.QUARTERLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -554,16 +527,8 @@ class DashboardServiceImpl : DashboardService {
     private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<String> {
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-
-            var zoneKey: String? = null
-            var serviceTypeKey: String? = null
-            var invoiceCurrencyKey: String? = null
-
-            zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
-            serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-            invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
-
-            keyList.add(index + zoneKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + invoiceCurrencyKey + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
+            var keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
+            keyList.add(index + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"] + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
