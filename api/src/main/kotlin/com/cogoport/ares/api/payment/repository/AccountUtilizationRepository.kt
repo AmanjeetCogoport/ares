@@ -103,12 +103,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc - pay_loc <> 0) then 1 else 0 end),0) as open_invoices_count,
-        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as open_invoices_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
+        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
         currency as dashboard_currency,
-        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and  (:invoiceCurrency is null or currency = :invoiceCurrency)) as organization_count, 
+        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and  (:invoiceCurrency is null or currency = :invoiceCurrency)) as organization_count, 
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
