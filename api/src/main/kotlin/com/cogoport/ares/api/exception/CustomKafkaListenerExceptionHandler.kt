@@ -40,8 +40,7 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
                 val kafkaConsumer = exception.kafkaConsumer
                 seekPastDeserializationError(cause, consumerBean, kafkaConsumer)
             }
-        }
-        else {
+        } else {
             if (LOG.isErrorEnabled) {
                 val consumerRecord = exception.consumerRecord
                 if (consumerRecord.isPresent) {
@@ -52,8 +51,7 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
                         cause!!.message,
                         cause
                     )
-                }
-                else {
+                } else {
                     LOG.error("Kafka consumer [{}] produced error: {}", consumerBean, cause!!.message, cause)
                 }
             }
