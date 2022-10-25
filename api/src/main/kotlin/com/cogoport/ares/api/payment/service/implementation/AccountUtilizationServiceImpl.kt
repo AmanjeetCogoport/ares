@@ -329,7 +329,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     orgId = accUtilizationRequest.organizationId.toString(),
-                    orgName = accUtilizationRequest.organizationName
+                    orgName = accUtilizationRequest.organizationName,
+                    serviceType = accUtilizationRequest.serviceType,
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )
@@ -350,7 +352,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                         .get(IsoFields.QUARTER_OF_YEAR),
                     year = date.toInstant().atZone(ZoneId.systemDefault())
                         .toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
+                    accMode = accUtilizationRequest.accMode,
+                    serviceType = accUtilizationRequest.serviceType,
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )

@@ -117,7 +117,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
 
         monthlyTrendZoneData?.forEach { it ->
-            if(it.dashboardCurrency.isNullOrEmpty()){
+            if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = invoiceCurrency
             }
         }
@@ -130,7 +130,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
         quarterlyTrendZoneData?.forEach { it ->
-            if(it.dashboardCurrency.isNullOrEmpty()){
+            if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = invoiceCurrency
             }
         }
@@ -142,7 +142,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String) {
         logger().info("Updating Daily Sales Outstanding document")
         val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
-        if(dailySalesZoneServiceTypeData?.dashboardCurrency == null){
+        if (dailySalesZoneServiceTypeData?.dashboardCurrency == null) {
             dailySalesZoneServiceTypeData?.dashboardCurrency = invoiceCurrency
         }
         if (dailySalesZoneServiceTypeData != null) {
@@ -321,8 +321,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
     }
 
-
-    private fun generatingOpenSearchKey(zone:String?, serviceType: ServiceType?, invoiceCurrency: String?):Map<String, String?>{
+    private fun generatingOpenSearchKey(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): Map<String, String?> {
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null

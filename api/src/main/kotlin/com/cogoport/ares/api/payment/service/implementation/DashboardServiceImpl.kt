@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -70,17 +69,6 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var exchangeClient: ExchangeClient
 
-    private suspend fun getExchangeRate(to: String, from: String, date: String): BigDecimal {
-        val exchangeRequest = ExchangeRequest(
-            from_curr = from,
-            to_curr = to,
-            exchange_date = date
-        )
-        val exchangeRate = exchangeClient.getExchangeRate(exchangeRequest)
-
-        return exchangeRate.exchangeRate
-    }
-
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
@@ -116,7 +104,7 @@ class DashboardServiceImpl : DashboardService {
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
-            classType = OverallStatsResponse ::class.java,
+            classType = OverallStatsResponse::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
@@ -149,7 +137,7 @@ class DashboardServiceImpl : DashboardService {
         return AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
     }
 
-    private fun generatingOpenSearchKey(zone:String?, serviceType: ServiceType?, invoiceCurrency: String?):Map<String, String?>{
+    private fun generatingOpenSearchKey(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): Map<String, String?> {
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
@@ -300,7 +288,6 @@ class DashboardServiceImpl : DashboardService {
         }
 
         val newData = getMonthlyOutStandingData(data)
-
 
         val newMonthlyOutstanding = MonthlyOutstanding(
             list = newData,
