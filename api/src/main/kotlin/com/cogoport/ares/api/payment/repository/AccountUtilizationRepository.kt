@@ -112,7 +112,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
-        group by service_type, dashboard_currency
+        group by dashboard_currency
     """
     )
     suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): OverallStats
