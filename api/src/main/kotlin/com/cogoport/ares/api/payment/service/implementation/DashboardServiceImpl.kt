@@ -462,10 +462,10 @@ class DashboardServiceImpl : DashboardService {
 
         if ((request.dashboardCurrency != dashboardCurrency) && (dashboardCurrency != null)) {
 
-            var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct()
+            var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct() + dashboardCurrency
             uniqueCurrencyList = uniqueCurrencyList.map { it }.distinct()
 
-            val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+            val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
             val avgExchangeRate = exchangeRate[dashboardCurrency]
             currentDso = currentDso.toBigDecimal().times(avgExchangeRate!!).toFloat()
             avgDsoAmount = avgDsoAmount.times(avgExchangeRate)
