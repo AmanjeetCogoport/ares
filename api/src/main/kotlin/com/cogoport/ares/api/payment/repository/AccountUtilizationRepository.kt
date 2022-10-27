@@ -682,7 +682,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             transaction_date::timestamp AS transaction_date, 
             null as exchange_rate
         FROM account_utilizations
-        WHERE acc_type::varchar = :accType 
+        WHERE acc_type::varchar in (:accType,'REC','PAY') 
         AND document_no in (:documentNo)
     """
     )
