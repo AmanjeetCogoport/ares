@@ -69,7 +69,7 @@ public class CustomKafkaListenerExceptionHandler(private var environment: Enviro
                 it.setTag("Kafka_Topic", exception.consumerRecord.get().topic() ?: "")
                 it.setTag("Cause", exception.cause.toString() ?: "")
                 it.setTag("environmentName", "Kafka Listner")
-                it.setTag("Data", request.toString())
+                it.setContexts("Data", request)
                 Sentry.captureException(exception)
             }
         }
