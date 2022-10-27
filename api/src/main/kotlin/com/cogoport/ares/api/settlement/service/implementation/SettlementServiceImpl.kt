@@ -1310,10 +1310,14 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         if (source.isEmpty() &&
-            dest.map { it.accountType }.contains(SettlementType.SINV) &&
-            dest.map { it.accountType }.contains(SettlementType.PINV) &&
-            dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
-            dest.map { it.accountType }.contains(SettlementType.PREIMB)
+            (
+                dest.map { it.accountType }.contains(SettlementType.SINV) &&
+                    dest.map { it.accountType }.contains(SettlementType.PINV)
+                ) ||
+            (
+                dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
+                    dest.map { it.accountType }.contains(SettlementType.PREIMB)
+                )
         ) {
 
             val allowedSettlementType = mutableListOf<SettlementType>(SettlementType.SREIMB, SettlementType.SINV)
