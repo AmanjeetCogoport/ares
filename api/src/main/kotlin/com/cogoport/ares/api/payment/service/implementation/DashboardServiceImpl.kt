@@ -127,7 +127,7 @@ class DashboardServiceImpl : DashboardService {
             val requestExchangeRate = ArrayList<String>()
             requestExchangeRate.add(data?.dashboardCurrency!!)
             val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
-            val avgExchangeRate = exchangeRate.get(data?.dashboardCurrency)
+            val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
 
             data.totalOutstandingAmount = data.totalOutstandingAmount.times(avgExchangeRate!!)
             data.openInvoicesAmount = data.openInvoicesAmount.times(avgExchangeRate)

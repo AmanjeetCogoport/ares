@@ -187,41 +187,44 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     private suspend fun updateOverallStats(zone: String?, data: MutableList<OverallStats>, serviceType: ServiceType?, invoiceCurrency: String?, dashboardCurrency: String) {
-//        val overallStatsData = overallStatsConverter.convertToModel(data)
         val overallStatsDataList =  mutableListOf<OverallStatsResponse>()
         val overallStatsData =  mutableListOf<OverallStatsResponse>()
 
-//        data.forEach {
-//            overallStatsDataList.add(overallStatsConverter.convertToModel(it))
-//        }
-
-        val uniqueCurrencyList: List<String> = data.map { it.dashboardCurrency }.distinct()
+        val uniqueCurrencyList: List<String> = data.filter { it.dashboardCurrency != "SDG" }.map{it.dashboardCurrency}.distinct()
 
         val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
 
-        data.map { response ->
-            if (response.dashboardCurrency != dashboardCurrency) {
-                val avgExchangeRate = exchangeRate[response.dashboardCurrency]
-                response.totalOutstandingAmount = response.totalOutstandingAmount?.times(avgExchangeRate!!)
-                response.openInvoicesAmount = response.openInvoicesAmount?.times(avgExchangeRate!!)
-                response.openOnAccountPaymentAmount = response.openOnAccountPaymentAmount?.times(avgExchangeRate!!)
-                response.dashboardCurrency = dashboardCurrency
+        var formattedData = OverallStats(
+            totalOutstandingAmount = 0.toBigDecimal(),
+            openInvoicesCount = 0,
+            organizationCount = 0,
+            openInvoicesAmount = 0.toBigDecimal(),
+            openOnAccountPaymentAmount = 0.toBigDecimal(),
+            id = null,
+            dashboardCurrency = dashboardCurrency
+        )
+
+        data.map{
+            if ( it.dashboardCurrency!="SDG" ) {
+                val avgExchangeRate = exchangeRate[it.dashboardCurrency]
+                formattedData.totalOutstandingAmount= formattedData.totalOutstandingAmount?.plus(it.totalOutstandingAmount?.times(avgExchangeRate!!)!!)
+                formattedData.openInvoicesAmount = formattedData.openInvoicesAmount?.plus(it.openInvoicesAmount?.times(avgExchangeRate!!)!!)
+                formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount?.plus(it.openOnAccountPaymentAmount?.times(avgExchangeRate!!)!!)
+                formattedData.dashboardCurrency = dashboardCurrency
             }
-            overallStatsData.add(overallStatsConverter.convertToModel(response))
+            formattedData.openInvoicesCount = formattedData.openInvoicesCount?.plus(it.openInvoicesCount!!)
+            formattedData.organizationCount  = formattedData.organizationCount?.plus(it.organizationCount!!)
         }
 
-        overallStatsData.map { item ->
-
-        }
+        overallStatsData.add(overallStatsConverter.convertToModel(formattedData))
 
         val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
 
         val statsId = AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
-        overallStatsData.forEach {
-            it.id = statsId
-            OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, it)
-        }
+        formattedData.id = statsId
+
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, formattedData)
 
     }
 

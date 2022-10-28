@@ -6,8 +6,8 @@ import java.math.BigDecimal
 @MappedEntity
 data class OverallStats(
     var totalOutstandingAmount: BigDecimal?,
-    val openInvoicesCount: Int?,
-    val organizationCount: Int?,
+    var openInvoicesCount: Int?,
+    var organizationCount: Int?,
     var openInvoicesAmount: BigDecimal?,
     var openOnAccountPaymentAmount: BigDecimal?,
     var id: String?,
