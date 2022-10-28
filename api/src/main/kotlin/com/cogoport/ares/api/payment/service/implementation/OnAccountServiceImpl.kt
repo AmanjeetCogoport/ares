@@ -415,7 +415,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         val accountUtilization = accountUtilizationRepository.findRecord(
             payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
-        ) ?: throw AresException(AresError.ERR_1208, "")
+        ) ?: throw AresException(AresError.ERR_1005, "")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
