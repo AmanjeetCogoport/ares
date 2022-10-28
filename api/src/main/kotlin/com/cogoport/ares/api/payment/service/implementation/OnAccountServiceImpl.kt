@@ -409,8 +409,13 @@ open class OnAccountServiceImpl : OnAccountService {
         )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
-
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name) ?: throw AresException(AresError.ERR_1202, "")
+        var accType = AccountType.REC
+        if (deletePaymentRequest.accMode == AccMode.AP) {
+            accType = AccountType.PAY
+        }
+        val accountUtilization = accountUtilizationRepository.findRecord(
+            payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
+        ) ?: throw AresException(AresError.ERR_1208, "")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
