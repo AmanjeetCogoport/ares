@@ -332,16 +332,16 @@ open class KnockoffServiceImpl : KnockoffService {
         val settlementId = settlementRepository.getIdBydestinationId(reverseUtrRequest.documentNo)
         var payment: Payment? = null
 
-        for (i in 0..1) {
-            if (i <= (paymentMappingData.size - 1)) {
-                payment = paymentRepository.findByPaymentId(paymentMappingData[i].paymentId)
-                paymentRepository.deletedPayment(paymentMappingData[i].paymentId)
-                invoicePayMappingRepo.deletedPaymentMappings(paymentMappingData[i].id)
+        for (index in 0..1) {
+            if (index <= (paymentMappingData.size - 1)) {
+                payment = paymentRepository.findByPaymentId(paymentMappingData[index].paymentId)
+                paymentRepository.deletedPayment(paymentMappingData[index].paymentId)
+                invoicePayMappingRepo.deletedPaymentMappings(paymentMappingData[index].id)
                 auditService.createAudit(
 
                     AuditRequest(
                         objectType = AresConstants.PAYMENTS,
-                        objectId = paymentMappingData[i].paymentId,
+                        objectId = paymentMappingData[index].paymentId,
                         actionName = AresConstants.DELETE,
                         data = null,
                         performedBy = reverseUtrRequest.updatedBy.toString(),
@@ -352,7 +352,7 @@ open class KnockoffServiceImpl : KnockoffService {
                 auditService.createAudit(
                     AuditRequest(
                         objectType = "payment_invoice_map",
-                        objectId = paymentMappingData[i].id,
+                        objectId = paymentMappingData[index].id,
                         actionName = AresConstants.DELETE,
                         data = null,
                         performedBy = reverseUtrRequest.updatedBy.toString(),
@@ -360,11 +360,11 @@ open class KnockoffServiceImpl : KnockoffService {
                     )
                 )
             }
-            settlementRepository.deleleSettlement(settlementId[i])
+            settlementRepository.deleleSettlement(settlementId[index])
             auditService.createAudit(
                 AuditRequest(
                     objectType = AresConstants.SETTLEMENT,
-                    objectId = settlementId[i],
+                    objectId = settlementId[index],
                     actionName = AresConstants.DELETE,
                     data = null,
                     performedBy = reverseUtrRequest.updatedBy.toString(),
