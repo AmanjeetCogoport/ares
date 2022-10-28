@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
+import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.ExchangeClient
@@ -66,8 +67,12 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var openSearchService: OpenSearchService
 
+//    @Inject
+//    lateinit var exchangeClient: ExchangeClient
+
     @Inject
-    lateinit var exchangeClient: ExchangeClient
+    lateinit var exchangeRateHelper: ExchangeRateHelper
+
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -121,7 +126,7 @@ class DashboardServiceImpl : DashboardService {
         if ((request.dashboardCurrency != data?.dashboardCurrency) and (data?.dashboardCurrency != null)) {
             val requestExchangeRate = ArrayList<String>()
             requestExchangeRate.add(data?.dashboardCurrency!!)
-            val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
             val avgExchangeRate = exchangeRate.get(data?.dashboardCurrency)
 
             data.totalOutstandingAmount = data.totalOutstandingAmount.times(avgExchangeRate!!)
@@ -156,7 +161,7 @@ class DashboardServiceImpl : DashboardService {
         var formattedData = mutableListOf<OverallAgeingStatsResponse>()
         val uniqueCurrencyList: List<String> = outstandingResponse.map { it.dashboardCurrency!! }.distinct()
 
-        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
 
         outstandingResponse.map { response ->
             if (response.dashboardCurrency != request.dashboardCurrency) {
@@ -220,7 +225,7 @@ class DashboardServiceImpl : DashboardService {
 
         if (data?.dashboardCurrency != request.dashboardCurrency) {
             val requestExchangeRate: List<String> = data?.trend?.map { it.dashboardCurrency!! }?.distinct()!!
-            val exchangeRate = getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
             val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
 
             data.totalReceivableAmount = data.totalReceivableAmount?.times(avgExchangeRate!!)
@@ -277,7 +282,7 @@ class DashboardServiceImpl : DashboardService {
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
-            exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
         }
 
         data.list?.forEach { outstandingRes ->
@@ -355,7 +360,7 @@ class DashboardServiceImpl : DashboardService {
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
-            exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
         }
 
         data?.list?.forEach { outstandingRes ->
@@ -466,7 +471,7 @@ class DashboardServiceImpl : DashboardService {
             var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct() + dashboardCurrency
             uniqueCurrencyList = uniqueCurrencyList.map { it }.distinct()
 
-            val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
             val avgExchangeRate = exchangeRate[dashboardCurrency]
             currentDso = currentDso.toBigDecimal().times(avgExchangeRate!!).toFloat()
             avgDsoAmount = avgDsoAmount.times(avgExchangeRate)
@@ -529,7 +534,7 @@ class DashboardServiceImpl : DashboardService {
 
         val uniqueCurrencyList: List<String> = payments.map { it.dashboardCurrency!! }.distinct()
 
-        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
 
         payments.forEach { payment ->
             val zone = payment.zone
@@ -659,33 +664,33 @@ class DashboardServiceImpl : DashboardService {
         return responseList
     }
 
-    private suspend fun getExchangeRateForPeriod(
-        request: List<String>,
-        dashboardCurrency: String
-    ): HashMap<String, BigDecimal> {
-        val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
-        val startDate =
-            LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
-
-        val arrayListOfExchangeRateRequest: List<ExchangeRequestPeriod> = request.map { it ->
-            ExchangeRequestPeriod(
-                fromCurrency = it,
-                toCurrency = dashboardCurrency,
-                startDate,
-                endDate
-            )
-        }
-
-        var hashMapForExchangeRequest = HashMap<String, List<ExchangeRequestPeriod>>()
-        hashMapForExchangeRequest["rate_request_body"] = arrayListOfExchangeRateRequest
-
-        var response = exchangeClient.getExchangeRateForPeriod(hashMapForExchangeRequest)
-
-        var responseData = HashMap<String, BigDecimal>()
-
-        response.map {
-            responseData.put(it.fromCurrencyType, it.exchangeRate)
-        }
-        return responseData
-    }
+//    private suspend fun getExchangeRateForPeriod(
+//        request: List<String>,
+//        dashboardCurrency: String
+//    ): HashMap<String, BigDecimal> {
+//        val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+//        val startDate =
+//            LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
+//
+//        val arrayListOfExchangeRateRequest: List<ExchangeRequestPeriod> = request.map { it ->
+//            ExchangeRequestPeriod(
+//                fromCurrency = it,
+//                toCurrency = dashboardCurrency,
+//                startDate,
+//                endDate
+//            )
+//        }
+//
+//        var hashMapForExchangeRequest = HashMap<String, List<ExchangeRequestPeriod>>()
+//        hashMapForExchangeRequest["rate_request_body"] = arrayListOfExchangeRateRequest
+//
+//        var response = exchangeClient.getExchangeRateForPeriod(hashMapForExchangeRequest)
+//
+//        var responseData = HashMap<String, BigDecimal>()
+//
+//        response.map {
+//            responseData.put(it.fromCurrencyType, it.exchangeRate)
+//        }
+//        return responseData
+//    }
 }

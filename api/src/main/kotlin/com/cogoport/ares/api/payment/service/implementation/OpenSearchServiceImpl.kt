@@ -18,7 +18,6 @@ import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
-import com.cogoport.ares.api.utils.Utilities.Utils.getExchangeRateForPeriod
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -30,6 +29,7 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -59,6 +59,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
+
+    @Inject
+    lateinit var exchangeRateHelper: ExchangeRateHelper
 
     /**
      * @param: OpenSearchRequest
@@ -192,9 +195,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 //            overallStatsDataList.add(overallStatsConverter.convertToModel(it))
 //        }
 
-        val uniqueCurrencyList: List<String> = overallStatsData.map { it.dashboardCurrency }.distinct()
+        val uniqueCurrencyList: List<String> = data.map { it.dashboardCurrency }.distinct()
 
-        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
 
         data.map { response ->
             if (response.dashboardCurrency != dashboardCurrency) {
