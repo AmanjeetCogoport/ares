@@ -1,0 +1,56 @@
+name: Commit Report
+
+on:
+  workflow_dispatch:
+
+env:
+  REPO: ares
+  COMMIT_COUNT_FILE_NAME: ares-commits-count
+  INSERTION_COUNT: ares-insertion-count
+
+jobs:
+  report:
+    name: Create Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m')"
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Create Number of commits report
+        run: git shortlog  --since='last month' -sn --all >> ${{ env.COMMIT_COUNT_FILE_NAME }}-${{ steps.date.outputs.date }}.csv
+      - name: Create Insertion count
+        run: git log --since='last month' --numstat --pretty="%ae %H" | sed 's/@.*//g' | awk '{ if (NF == 1){ name = $1}; if(NF == 3) {plus[name] += $1; minus[name] += $2}} END { for (name in plus) {print name",+"plus[name]",-"minus[name]}}' | sort -k2 -gr >> ${{ env.INSERTION_COUNT }}-${{ steps.date.outputs.date }}.csv
+      - name: Upload Commit Count Monthly Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.COMMIT_COUNT_FILE_NAME }}-${{ steps.date.outputs.date }}
+          path: ${{ env.COMMIT_COUNT_FILE_NAME }}-${{ steps.date.outputs.date }}.csv
+      - name: Upload Insertions
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.INSERTION_COUNT }}-${{ steps.date.outputs.date }}
+          path: ${{ env.INSERTION_COUNT }}-${{ steps.date.outputs.date }}.csv
+      - name: Upload s3 count data
+        uses: medlypharmacy/s3-artifacts-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_GITHUB_PERFORMANCE_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_GITHUB_PERFORMANCE_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          aws_s3_bucket_name: ${{ secrets.AWS_GITHUB_PERFORMANCE_BUCKET }}
+          source_path: './${{ env.COMMIT_COUNT_FILE_NAME }}-${{ steps.date.outputs.date }}.csv'
+          destination_path: "./commit-count/${{ steps.date.outputs.date }}/${{ env.REPO }}.csv"
+          exclude_repo_from_destination_path: true
+      - name: Upload s3 insertion data
+        uses: medlypharmacy/s3-artifacts-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_GITHUB_PERFORMANCE_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_GITHUB_PERFORMANCE_SECRET_ACCESS_KEY }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          aws_s3_bucket_name: ${{ secrets.AWS_GITHUB_PERFORMANCE_BUCKET }}
+          source_path: './${{ env.INSERTION_COUNT }}-${{ steps.date.outputs.date }}.csv'
+          destination_path: "./insertion-count/${{ steps.date.outputs.date }}/${{ env.REPO }}.csv"
+          exclude_repo_from_destination_path: true
