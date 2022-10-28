@@ -40,6 +40,7 @@ object AresConstants {
     const val ACC_MODE = "AccMode"
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
+    const val DASHBOARD_CURRENCY = "dashboardCurrency"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 

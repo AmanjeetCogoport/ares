@@ -18,6 +18,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.utils.Utilities.Utils.getExchangeRateForPeriod
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -28,6 +29,7 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -79,13 +81,14 @@ class OpenSearchServiceImpl : OpenSearchService {
         val year = request.year
         val serviceType = request.serviceType!!
         val invoiceCurrency = request.invoiceCurrency!!
-        /** Collection Trend */
+        val dashboardCurrency = request.dashboardCurrency!!
+            /** Collection Trend */
         logger().info("Updating Collection Trend document")
         generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
-        generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
+        generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, dashboardCurrency)
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
@@ -106,11 +109,11 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
     }
 
-    override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
+    override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, dashboardCurrency: String) {
         val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency)
-        updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
+        updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency, dashboardCurrency)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
-        updateOverallStats(null, statsAllData, null, null)
+        updateOverallStats(null, statsAllData, null, null, dashboardCurrency)
     }
 
     override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
@@ -180,16 +183,43 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType, invoiceCurrency))
     }
 
-    private fun updateOverallStats(zone: String?, data: OverallStats, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val overallStatsData = overallStatsConverter.convertToModel(data)
-        var keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
+    private suspend fun updateOverallStats(zone: String?, data: MutableList<OverallStats>, serviceType: ServiceType?, invoiceCurrency: String?, dashboardCurrency: String) {
+//        val overallStatsData = overallStatsConverter.convertToModel(data)
+        val overallStatsDataList =  mutableListOf<OverallStatsResponse>()
+        val overallStatsData =  mutableListOf<OverallStatsResponse>()
+
+//        data.forEach {
+//            overallStatsDataList.add(overallStatsConverter.convertToModel(it))
+//        }
+
+        val uniqueCurrencyList: List<String> = overallStatsData.map { it.dashboardCurrency }.distinct()
+
+        val exchangeRate = getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
+
+        data.map { response ->
+            if (response.dashboardCurrency != dashboardCurrency) {
+                val avgExchangeRate = exchangeRate[response.dashboardCurrency]
+                response.totalOutstandingAmount = response.totalOutstandingAmount?.times(avgExchangeRate!!)
+                response.openInvoicesAmount = response.openInvoicesAmount?.times(avgExchangeRate!!)
+                response.openOnAccountPaymentAmount = response.openOnAccountPaymentAmount?.times(avgExchangeRate!!)
+                response.dashboardCurrency = dashboardCurrency
+            }
+            overallStatsData.add(overallStatsConverter.convertToModel(response))
+        }
+
+        overallStatsData.map { item ->
+
+        }
+
+        val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
 
         val statsId = AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
-        if (overallStatsData != null) {
-            overallStatsData.id = statsId
-            OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, overallStatsData)
+        overallStatsData.forEach {
+            it.id = statsId
+            OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, statsId, it)
         }
+
     }
 
     private fun updateMonthlyTrend(zone: String?, data: MutableList<Outstanding>?, serviceType: ServiceType?, invoiceCurrency: String?) {

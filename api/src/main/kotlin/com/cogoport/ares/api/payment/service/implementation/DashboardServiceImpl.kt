@@ -96,6 +96,7 @@ class DashboardServiceImpl : DashboardService {
         val zone = request.zone
         val serviceType = request.serviceType
         val invoiceCurrency = request.invoiceCurrency
+        val dashboardCurrency = request.dashboardCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
@@ -109,7 +110,7 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data == null) {
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
+            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, dashboardCurrency!!)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,

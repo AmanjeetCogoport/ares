@@ -115,7 +115,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by dashboard_currency
     """
     )
-    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): OverallStats
+    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallStats>
 
     @Query(
         """
