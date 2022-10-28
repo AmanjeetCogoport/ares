@@ -404,16 +404,26 @@ open class SettlementServiceImpl : SettlementService {
         paymentIds: MutableList<Long>,
         settlementType: SettlementType
     ): List<PaymentData> {
+        val tdsType = mutableListOf<SettlementType>()
         settlementGrouped.forEach { docList ->
             docList.value.forEach {
-                if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
+                if (it.tdsDocumentNo != null)
+                    paymentIds.add(it.tdsDocumentNo)
+                it.tdsType?.let { it1 ->
+                    when (it1) {
+                        SettlementType.CTDS -> tdsType.addAll(
+                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
+                        )
+                        SettlementType.VTDS -> tdsType.addAll(
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
+                        )
+                        else -> tdsType.add(it1)
+                    }
+                }
             }
         }
-        val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
-            paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
-        } else {
-            accountUtilizationRepository.getPaymentDetails(paymentIds, settlementType.dbValue)
-        }
+
+        val payments = accountUtilizationRepository.getPaymentDetails(paymentIds.distinct(), tdsType.distinct())
         payments.forEach {
             if (it.documentNo == null) throw AresException(AresError.ERR_1503, "")
             if (it.transactionDate == null) throw AresException(AresError.ERR_1005, "transactionDate")

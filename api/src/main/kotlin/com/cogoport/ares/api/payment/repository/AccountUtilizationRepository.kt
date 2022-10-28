@@ -20,6 +20,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -277,7 +278,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             '' as status,
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
-            COALESCE(sum(s.amount), 0) as settled_tds
+            COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -680,13 +682,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             document_no,
             transaction_date::timestamp AS transaction_date, 
-            null as exchange_rate
+            amount_loc/amount_curr as exchange_rate
         FROM account_utilizations
-        WHERE acc_type::varchar in (:accType,'REC','PAY') 
+        WHERE acc_type::varchar in (:documentType) 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, documentType: List<SettlementType>): List<PaymentData>
 
     @Query(
         """
