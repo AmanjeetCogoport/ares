@@ -28,7 +28,6 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
 
-
     @Query(
         """
             update payments set deleted_at = now() where id = :paymentId
