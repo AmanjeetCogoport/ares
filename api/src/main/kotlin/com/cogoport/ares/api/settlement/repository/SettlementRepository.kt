@@ -98,7 +98,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         ),
         TAX AS (
-            SELECT s.destination_id, s.currency, s.source_id as tds_document_no,
+            SELECT s.destination_id, s.currency, s.source_id as tds_document_no, s.source_type as tds_type,
                 sum(CASE WHEN s.source_id = :sourceId AND s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS tds,
                 sum(CASE WHEN s.source_type IN ('NOSTRO') THEN s.amount ELSE 0 END) AS nostro_amount,
                 sum(CASE WHEN s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS settled_tds
@@ -106,12 +106,12 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
                 AND s.destination_type in (SELECT DISTINCT destination_type from INVOICES)
                 AND s.source_type IN ('NOSTRO','VTDS','CTDS')
-            GROUP BY s.destination_id, s.currency, s.source_id
+            GROUP BY s.destination_id, s.currency, s.source_id, s.source_type
         )
         SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
             I.acc_type, I.current_balance, I.currency, I.payment_currency, I.document_amount, I.settled_amount, 
             I.led_currency, I.led_amount, I.sign_flag, I.taxable_amount, I.transaction_date, I.exchange_rate,
-            T.tds_document_no, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
+            T.tds_document_no, T.tds_type, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
             COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency, I.acc_mode
         FROM INVOICES I
         LEFT JOIN TAX T ON T.destination_id = I.destination_id
@@ -137,4 +137,21 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
+
+    @Query(
+        """
+            SELECT 
+                s.source_id
+            FROM 
+                settlements s
+            JOIN 
+                account_utilizations au 
+                    ON au.document_no = s.destination_id 
+                    AND s.destination_type::varchar = au.acc_type::varchar
+            WHERE 
+                au.document_value ILIKE :query || '%'
+                AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
+        """
+    )
+    suspend fun getPaymentIds(query: String): List<Long>
 }
