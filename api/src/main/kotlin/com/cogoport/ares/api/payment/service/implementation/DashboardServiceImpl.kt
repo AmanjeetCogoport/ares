@@ -1,11 +1,9 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -31,6 +29,7 @@ import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DpoResponse
 import com.cogoport.ares.model.payment.response.DsoResponse
@@ -49,9 +48,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.Month
-import java.time.Period
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -223,25 +220,34 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        if (data?.dashboardCurrency != request.dashboardCurrency) {
-            val requestExchangeRate: List<String> = data?.trend?.map { it.dashboardCurrency!! }?.distinct()!!
-            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
-            val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
+        val requestExchangeRate: List<String> = data?.trend?.filter{it.dashboardCurrency !="SDG"}?.map { it.dashboardCurrency!! }?.distinct()!!
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
+        val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
 
-            data.totalReceivableAmount = data.totalReceivableAmount?.times(avgExchangeRate!!)
-            data.totalCollectedAmount = data.totalCollectedAmount?.times(avgExchangeRate!!)
-            data.dashboardCurrency = request.dashboardCurrency
+        data.totalReceivableAmount = data.totalReceivableAmount?.times(avgExchangeRate!!)
+        data.totalCollectedAmount = data.totalCollectedAmount?.times(avgExchangeRate!!)
+        data.dashboardCurrency = request.dashboardCurrency
 
-            data.trend?.forEach {
-                if (it.dashboardCurrency != request.dashboardCurrency) {
-                    val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
-                    it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
-                    it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
-                    it.dashboardCurrency = request.dashboardCurrency
-                }
+        data.trend?.forEach {
+            if ( it.dashboardCurrency!="SDG") {
+                val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
+                it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
+                it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
+                it.dashboardCurrency = request.dashboardCurrency
             }
         }
-        return data ?: CollectionResponse(id = searchKey, dashboardCurrency = request.dashboardCurrency)
+
+        var formattedData = getCollectionTrendData(data)
+
+        var formattedCollectionTrendResponseData = CollectionResponse(
+            id =searchKey,
+            totalReceivableAmount = data.totalReceivableAmount,
+            totalCollectedAmount = data.totalCollectedAmount,
+            trend = formattedData,
+            dashboardCurrency = request.dashboardCurrency
+        )
+
+        return formattedCollectionTrendResponseData ?: CollectionResponse(id = searchKey, dashboardCurrency = request.dashboardCurrency)
     }
 
     private fun searchKeyCollectionTrend(request: CollectionRequest): String {
@@ -278,7 +284,7 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency }?.distinct()!!
+        val uniqueCurrencyList: List<String> = data?.list?.filter{it.dashboardCurrency!="SDG"}?.map { it.dashboardCurrency }?.distinct()!!
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
@@ -314,6 +320,19 @@ class DashboardServiceImpl : DashboardService {
         }
 
         return listOfOutStanding
+    }
+
+    private fun getCollectionTrendData(data: CollectionResponse?): List<CollectionTrendResponse>? {
+        val listOfCollectionTrend: List<CollectionTrendResponse>? = data?.trend?.groupBy { it.duration }?.values?.map { it ->
+            return@map CollectionTrendResponse(
+                receivableAmount = it.sumOf { it.receivableAmount },
+                collectableAmount = it.sumOf { it.collectableAmount },
+                duration = it.first().duration,
+                dashboardCurrency = it.first().dashboardCurrency,
+            )
+        }
+
+        return listOfCollectionTrend
     }
 
     private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): List<OutstandingResponse>? {
