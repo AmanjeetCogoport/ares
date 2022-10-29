@@ -65,9 +65,6 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var openSearchService: OpenSearchService
 
-//    @Inject
-//    lateinit var exchangeClient: ExchangeClient
-
     @Inject
     lateinit var exchangeRateHelper: ExchangeRateHelper
 
@@ -323,12 +320,11 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): List<OutstandingResponse>? {
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
-            val outstandingData = OutstandingResponse(
+            return@map OutstandingResponse(
                 amount = it.sumOf { it.amount },
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency,
             )
-            return@map outstandingData
         }
 
         return listOfOutStanding
@@ -349,12 +345,11 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): List<OutstandingResponse>? {
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
-            val outstandingData = OutstandingResponse(
+            return@map OutstandingResponse(
                 amount = it.sumOf { it.amount },
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency
             )
-            return@map outstandingData
         }
         return listOfOutStanding
     }
@@ -694,34 +689,4 @@ class DashboardServiceImpl : DashboardService {
         responseList.pageNo = request.pageIndex
         return responseList
     }
-
-//    private suspend fun getExchangeRateForPeriod(
-//        request: List<String>,
-//        dashboardCurrency: String
-//    ): HashMap<String, BigDecimal> {
-//        val endDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
-//        val startDate =
-//            LocalDateTime.now().minus(Period.ofDays(30)).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toString()
-//
-//        val arrayListOfExchangeRateRequest: List<ExchangeRequestPeriod> = request.map { it ->
-//            ExchangeRequestPeriod(
-//                fromCurrency = it,
-//                toCurrency = dashboardCurrency,
-//                startDate,
-//                endDate
-//            )
-//        }
-//
-//        var hashMapForExchangeRequest = HashMap<String, List<ExchangeRequestPeriod>>()
-//        hashMapForExchangeRequest["rate_request_body"] = arrayListOfExchangeRateRequest
-//
-//        var response = exchangeClient.getExchangeRateForPeriod(hashMapForExchangeRequest)
-//
-//        var responseData = HashMap<String, BigDecimal>()
-//
-//        response.map {
-//            responseData.put(it.fromCurrencyType, it.exchangeRate)
-//        }
-//        return responseData
-//    }
 }
