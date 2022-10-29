@@ -13,7 +13,7 @@ import java.math.BigDecimal
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DpoResponse(
     @JsonProperty("month")
-    val month: String,
+    var month: String,
     @JsonProperty("dpoForTheMonth")
     var dpoForTheMonth: BigDecimal,
     @JsonProperty("dashboardCurrency")

@@ -425,7 +425,13 @@ class DashboardServiceImpl : DashboardService {
             val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse!!.hits().hits()) {
                 val data = hts.source()
-                dso.add(DsoResponse(data!!.month.toString(), data.value, data.dashboardCurrency!!))
+                var dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal(), dashboardCurrency = "")
+                data?.list?.map {
+                    dsoResponse.month = it.month.toString()
+                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
+                    dsoResponse.dashboardCurrency = it.dashboardCurrency!!
+                }
+              dso.add(dsoResponse)
             }
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
@@ -448,7 +454,13 @@ class DashboardServiceImpl : DashboardService {
             if (!payablesResponse!!.hits().hits().isNullOrEmpty()) {
                 for (hts in payablesResponse.hits().hits()) {
                     val data = hts.source()
-                    dpo.add(DpoResponse(data!!.month.toString(), data.value, data.dashboardCurrency!!))
+                    var dpoResponse = DpoResponse(month = "", dpoForTheMonth = 0.toBigDecimal(), dashboardCurrency = "")
+                    data?.list?.map {
+                        dpoResponse.month = it.month.toString()
+                        dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.plus(it.value)
+                        dpoResponse.dashboardCurrency = it.dashboardCurrency!!
+                    }
+                    dpo.add(dpoResponse)
                 }
             }
 
@@ -475,11 +487,14 @@ class DashboardServiceImpl : DashboardService {
 
         for (hts in currResponse!!.hits().hits()) {
             val data = hts.source()
-            averageDso += data!!.value.toFloat()
-            if (data.month == AresConstants.CURR_MONTH) {
-                currentDso = hts.source()!!.value.toFloat()
-                dashboardCurrency = hts.source()!!.dashboardCurrency
+            data?.list?.map{
+                averageDso = averageDso?.plus(it.value.toFloat())
+                if (it.month == AresConstants.CURR_MONTH) {
+                    currentDso = currentDso.plus(it.value.toFloat())
+                    dashboardCurrency = it.dashboardCurrency
+                }
             }
+
         }
 
         val dsoResponseData = dsoList.map {
@@ -492,9 +507,9 @@ class DashboardServiceImpl : DashboardService {
 
         var avgDsoAmount = (averageDso / 3).toBigDecimal()
 
-        if ((request.dashboardCurrency != dashboardCurrency) && (dashboardCurrency != null)) {
+        if (dashboardCurrency != null) {
 
-            var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct() + dashboardCurrency
+            var uniqueCurrencyList: List<String> = dsoResponseData.map { it.dashboardCurrency }.distinct() + dpoResponseData.map { it.dashboardCurrency }.distinct() + dashboardCurrency!!
             uniqueCurrencyList = uniqueCurrencyList.map { it }.distinct()
 
             val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
@@ -519,6 +534,7 @@ class DashboardServiceImpl : DashboardService {
             }
         }
         return DailySalesOutstanding(currentDso.toBigDecimal(), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
+
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {

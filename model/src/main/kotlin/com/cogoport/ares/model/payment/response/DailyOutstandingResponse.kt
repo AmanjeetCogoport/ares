@@ -12,12 +12,5 @@ import java.math.BigDecimal
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DailyOutstandingResponse(
-    @JsonProperty("month") var month: Int,
-    @JsonProperty("openInvoiceAmount") var openInvoiceAmount: BigDecimal?,
-    @JsonProperty("onAccountPayment") var onAccountPayment: BigDecimal?,
-    @JsonProperty("outstandings") var outstandings: BigDecimal?,
-    @JsonProperty("totalSales") var totalSales: BigDecimal?,
-    @JsonProperty("days") var days: Int,
-    @JsonProperty("value") var value: BigDecimal,
-    @JsonProperty("dashboardCurrency") var dashboardCurrency: String?,
+    @JsonProperty("list") var list: List<DailyOutstandingResponseData>?= null
 )
