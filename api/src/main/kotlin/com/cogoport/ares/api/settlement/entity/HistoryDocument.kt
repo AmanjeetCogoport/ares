@@ -23,6 +23,7 @@ data class HistoryDocument(
     val settledAmount: BigDecimal,
     val lastEditedDate: Date,
     var status: String?,
+    val tds: BigDecimal,
     val settledTds: BigDecimal,
     val accMode: AccMode
 )
