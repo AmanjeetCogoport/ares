@@ -147,8 +147,9 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-            select * from settlements where destination_id = :destinationId
+          select id from settlements where source_id = :sourceId and destination_id = :destinationId and deleted_at is null
+           
         """
     )
-    suspend fun getIdBydestinationId(destinationId: Long): List<Long>
+    suspend fun getIdBydestinationId(destinationId: Long, sourceId: Long): List<Long>
 }

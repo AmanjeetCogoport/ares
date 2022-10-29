@@ -3,6 +3,7 @@ package com.cogoport.ares.model.payment
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
+import java.math.BigDecimal
 import java.util.UUID
 
 @Introspected
@@ -11,5 +12,9 @@ import java.util.UUID
 data class ReverseUtrRequest(
     val documentNo: Long,
     var updatedBy: UUID?,
-    var performedByType: String?
+    var performedByType: String?,
+    var currencyAmount: BigDecimal,
+    var tdsAmount: BigDecimal,
+    var ledgerAmount: BigDecimal,
+    var ledgerTdsAmount: BigDecimal
 )

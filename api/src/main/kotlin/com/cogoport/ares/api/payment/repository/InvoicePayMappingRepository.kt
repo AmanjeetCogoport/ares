@@ -12,7 +12,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-             select id,payment_id from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP'
+             select id,payment_id from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP' and deleted_at is null
              
         """
     )
