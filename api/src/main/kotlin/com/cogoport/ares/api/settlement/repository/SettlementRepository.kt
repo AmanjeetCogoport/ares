@@ -137,4 +137,21 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
+
+    @Query(
+        """
+            SELECT 
+                s.source_id
+            FROM 
+                settlements s
+            JOIN 
+                account_utilizations au 
+                    ON au.document_no = s.destination_id 
+                    AND s.destination_type::varchar = au.acc_type::varchar
+            WHERE 
+                au.document_value ILIKE :query || '%'
+                AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
+        """
+    )
+    suspend fun getPaymentIds(query: String): List<Long>
 }

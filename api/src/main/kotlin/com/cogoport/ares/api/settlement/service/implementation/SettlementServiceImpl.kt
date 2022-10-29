@@ -16,7 +16,6 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -92,9 +91,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var settlementRepository: SettlementRepository
-
-    @Inject
-    lateinit var paymentRepository: PaymentRepository
 
     @Inject
     lateinit var historyDocumentConverter: HistoryDocumentMapper
@@ -188,6 +184,10 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementHistoryRequest
     ): ResponseList<HistoryDocument?> {
         val accountTypes = stringAccountTypes(request)
+        var paymentIds: List<Long> = emptyList()
+        if (request.query != "") {
+            paymentIds = settlementRepository.getPaymentIds(query = request.query)
+        }
         val documents =
             accountUtilizationRepository.getHistoryDocument(
                 request.orgId!!,
@@ -196,7 +196,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.pageLimit,
                 request.startDate,
                 request.endDate,
-                request.query
+                request.query,
+                paymentIds
             )
         val totalRecords =
             accountUtilizationRepository.countHistoryDocument(
@@ -204,7 +205,8 @@ open class SettlementServiceImpl : SettlementService {
                 accountTypes,
                 request.startDate,
                 request.endDate,
-                request.query
+                request.query,
+                paymentIds
             )
 
         val historyDocuments = mutableListOf<HistoryDocument>()

@@ -27,17 +27,4 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     """
     )
     suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
-
-//    @Query(
-//        """
-//            SELECT
-//                payment_num as document_no,
-//                transaction_date::timestamp AS transaction_date,
-//                exchange_rate AS exchange_rate
-//                FROM payments
-//                WHERE payment_code::varchar = :paymentCode
-//                AND payment_num IN (:paymentNums)
-//        """
-//    )
-//    suspend fun findByPaymentNumIn(paymentNums: List<Long>, paymentCode: SettlementType): List<PaymentData>
 }
