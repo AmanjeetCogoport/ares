@@ -14,7 +14,7 @@ interface HistoryDocumentMapper {
     @Mapping(source = "settledAmount", target = "allocationAmount")
     @Mapping(target = "balanceAfterAllocation", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(target = "settledAllocation", expression = "java(java.math.BigDecimal.ZERO)")
-    @Mapping(target = "tds", expression = "java(java.math.BigDecimal.ZERO)")
     @Mapping(source = "currentBalance", target = "balanceAmount")
+    @Mapping(target = "settledTds", expression = "java(historyDocument.getSettledTds().subtract(historyDocument.getTds()))")
     fun convertToModel(historyDocument: HistoryDocument?): com.cogoport.ares.model.settlement.HistoryDocument
 }
