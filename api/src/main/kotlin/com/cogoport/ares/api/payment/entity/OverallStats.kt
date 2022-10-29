@@ -10,6 +10,5 @@ data class OverallStats(
     var organizationCount: Int?,
     var openInvoicesAmount: BigDecimal?,
     var openOnAccountPaymentAmount: BigDecimal?,
-    var id: String?,
     var dashboardCurrency: String
 )

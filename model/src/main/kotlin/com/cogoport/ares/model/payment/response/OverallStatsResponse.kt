@@ -14,18 +14,8 @@ import java.math.BigDecimal
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OverallStatsResponse(
-    @JsonProperty("totalOutstandingAmount")
-    var totalOutstandingAmount: BigDecimal = 0.toBigDecimal(),
-    @JsonProperty("openInvoicesCount")
-    val openInvoicesCount: Int = 0,
-    @JsonProperty("organizationCount")
-    val organizationCount: Int = 0,
-    @JsonProperty("openInvoicesAmount")
-    var openInvoicesAmount: BigDecimal = 0.toBigDecimal(),
-    @JsonProperty("openOnAccountPaymentAmount")
-    var openOnAccountPaymentAmount: BigDecimal = 0.toBigDecimal(),
+    @JsonProperty("list")
+    var list: List<OverallStatsResponseData>? = null,
     @JsonProperty("id")
-    var id: String?,
-    @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String
+    var id: String?
 )

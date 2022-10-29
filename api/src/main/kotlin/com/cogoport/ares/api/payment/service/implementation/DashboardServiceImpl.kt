@@ -37,6 +37,7 @@ import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -98,11 +99,11 @@ class DashboardServiceImpl : DashboardService {
         val zone = request.zone
         val serviceType = request.serviceType
         val invoiceCurrency = request.invoiceCurrency
-        val dashboardCurrency = request.dashboardCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
 
         validateInput(zone, request.role)
+
         val searchKey = searchKeyOverallStats(request)
 
         var data = OpenSearchClient().search(
@@ -112,27 +113,38 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data == null) {
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, dashboardCurrency!!)
+            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
-                classType = OverallStatsResponse ::class.java,
+                classType = OverallStatsResponse::class.java,
                 index = AresConstants.SALES_DASHBOARD_INDEX
             )
         }
-        if ((request.dashboardCurrency != data?.dashboardCurrency) and (data?.dashboardCurrency != null)) {
-            val requestExchangeRate = ArrayList<String>()
-            requestExchangeRate.add(data?.dashboardCurrency!!)
-            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency!!)
-            val avgExchangeRate = exchangeRate[data?.dashboardCurrency]
 
-            data.totalOutstandingAmount = data.totalOutstandingAmount.times(avgExchangeRate!!)
-            data.openInvoicesAmount = data.openInvoicesAmount.times(avgExchangeRate)
-            data.openOnAccountPaymentAmount = data.openOnAccountPaymentAmount.times(avgExchangeRate)
-            data.dashboardCurrency = request.dashboardCurrency!!
+        var uniqueCurrencyList = data?.list?.map { it.dashboardCurrency }?.distinct()!!
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+
+        var formattedData = OverallStatsResponseData(dashboardCurrency = request.dashboardCurrency!!)
+
+        data?.list?.map {
+            if (it.dashboardCurrency != null) {
+                val avgExchangeRate = exchangeRate[it?.dashboardCurrency]
+                formattedData.totalOutstandingAmount=formattedData.totalOutstandingAmount.plus(it.totalOutstandingAmount.times(avgExchangeRate!!))
+                formattedData.openInvoicesAmount = formattedData.openInvoicesAmount.plus(it.openInvoicesAmount.times(avgExchangeRate))
+                formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount.times(avgExchangeRate))
+                formattedData.dashboardCurrency = request.dashboardCurrency!!
+                formattedData.openInvoicesCount = formattedData.openInvoicesCount.plus(it.openInvoicesCount)
+                formattedData.organizationCount = formattedData.organizationCount.plus(it.organizationCount)
+
+            }
         }
+        var listOfOverallStatsResponse = listOf(formattedData)
 
-        return data ?: OverallStatsResponse(id = searchKey, dashboardCurrency = request.dashboardCurrency!!)
+        return OverallStatsResponse(
+            id = data?.id,
+            list = listOfOverallStatsResponse
+        )
     }
 
     private fun searchKeyOverallStats(request: OverallStatsRequest): String {
