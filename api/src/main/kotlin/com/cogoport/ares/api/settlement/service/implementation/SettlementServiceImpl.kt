@@ -1007,9 +1007,10 @@ open class SettlementServiceImpl : SettlementService {
                 ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
         val tdsResponse = getSelfOrgTdsProfile(orgId)
-        var tdsStyle = TdsStyle(
+        val tdsStyle = TdsStyle(
             style = tdsResponse.tdsDeductionStyle,
-            rate = tdsResponse.tdsDeductionRate
+            rate = tdsResponse.tdsDeductionRate,
+            type = tdsResponse.tdsDeductionType
         )
         responseModel.tdsStyle = tdsStyle
         return responseModel
