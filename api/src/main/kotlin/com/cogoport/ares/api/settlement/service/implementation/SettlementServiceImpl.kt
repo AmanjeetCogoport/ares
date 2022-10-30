@@ -16,7 +16,6 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
-import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -93,9 +92,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var settlementRepository: SettlementRepository
-
-    @Inject
-    lateinit var paymentRepository: PaymentRepository
 
     @Inject
     lateinit var historyDocumentConverter: HistoryDocumentMapper
@@ -189,6 +185,10 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementHistoryRequest
     ): ResponseList<HistoryDocument?> {
         val accountTypes = stringAccountTypes(request)
+        var paymentIds: List<Long> = emptyList()
+        if (request.query != "") {
+            paymentIds = settlementRepository.getPaymentIds(query = request.query)
+        }
         val documents =
             accountUtilizationRepository.getHistoryDocument(
                 request.orgId!!,
@@ -197,7 +197,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.pageLimit,
                 request.startDate,
                 request.endDate,
-                request.query
+                request.query,
+                paymentIds
             )
         val totalRecords =
             accountUtilizationRepository.countHistoryDocument(
@@ -205,7 +206,8 @@ open class SettlementServiceImpl : SettlementService {
                 accountTypes,
                 request.startDate,
                 request.endDate,
-                request.query
+                request.query,
+                paymentIds
             )
 
         val historyDocuments = mutableListOf<HistoryDocument>()
@@ -229,7 +231,7 @@ open class SettlementServiceImpl : SettlementService {
             if (request.accountType == AresConstants.ALL) {
                 mutableListOf(
                     AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
-                    AccountType.SINV.toString()
+                    AccountType.SINV.toString(), AccountType.SCN.toString()
                 )
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
@@ -343,7 +345,7 @@ open class SettlementServiceImpl : SettlementService {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
             when (request.settlementType) {
-                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
+                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
                     // Calculate Settled Amount in Invoice Currency
                     settlement.settledAmount =
                         getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
@@ -405,18 +407,26 @@ open class SettlementServiceImpl : SettlementService {
         paymentIds: MutableList<Long>,
         settlementType: SettlementType
     ): List<PaymentData> {
+        val tdsType = mutableListOf<SettlementType>()
         settlementGrouped.forEach { docList ->
             docList.value.forEach {
-                if (it.tdsDocumentNo != null) paymentIds.add(it.tdsDocumentNo)
+                if (it.tdsDocumentNo != null)
+                    paymentIds.add(it.tdsDocumentNo)
+                it.tdsType?.let { it1 ->
+                    when (it1) {
+                        SettlementType.CTDS -> tdsType.addAll(
+                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
+                        )
+                        SettlementType.VTDS -> tdsType.addAll(
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
+                        )
+                        else -> tdsType.add(it1)
+                    }
+                }
             }
         }
-        val payments = if (settlementType in listOf(SettlementType.REC, SettlementType.PAY)) {
-            paymentRepository.findByPaymentNumIn(paymentIds, settlementType)
-        } else if (settlementType == SettlementType.PCN) {
-            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.PCN.dbValue)
-        } else {
-            accountUtilizationRepository.getPaymentDetails(paymentIds, SettlementType.SINV.dbValue)
-        }
+
+        val payments = accountUtilizationRepository.getPaymentDetails(paymentIds.distinct(), tdsType.distinct())
         payments.forEach {
             if (it.documentNo == null) throw AresException(AresError.ERR_1503, "")
             if (it.transactionDate == null) throw AresException(AresError.ERR_1005, "transactionDate")
@@ -432,7 +442,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
         when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV -> {
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
                 @Suppress("UNCHECKED_CAST")
                 settlements =
                     settlementRepository.findSettlement(
@@ -998,9 +1008,10 @@ open class SettlementServiceImpl : SettlementService {
                 ?: throw AresException(AresError.ERR_1005, "")
         val responseModel = orgSummaryConverter.convertToModel(responseEntity)
         val tdsResponse = getSelfOrgTdsProfile(orgId)
-        var tdsStyle = TdsStyle(
+        val tdsStyle = TdsStyle(
             style = tdsResponse.tdsDeductionStyle,
-            rate = tdsResponse.tdsDeductionRate
+            rate = tdsResponse.tdsDeductionRate,
+            type = tdsResponse.tdsDeductionType
         )
         responseModel.tdsStyle = tdsStyle
         return responseModel
@@ -1313,10 +1324,14 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         if (source.isEmpty() &&
-            dest.map { it.accountType }.contains(SettlementType.SINV) &&
-            dest.map { it.accountType }.contains(SettlementType.PINV) &&
-            dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
-            dest.map { it.accountType }.contains(SettlementType.PREIMB)
+            (
+                dest.map { it.accountType }.contains(SettlementType.SINV) &&
+                    dest.map { it.accountType }.contains(SettlementType.PINV)
+                ) ||
+            (
+                dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
+                    dest.map { it.accountType }.contains(SettlementType.PREIMB)
+                )
         ) {
 
             val allowedSettlementType = mutableListOf<SettlementType>(SettlementType.SREIMB, SettlementType.SINV)
