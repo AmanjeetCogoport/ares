@@ -148,7 +148,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         dailySalesZoneServiceTypeData?.map {
             if (it.dashboardCurrency == null) {
                 it.dashboardCurrency = invoiceCurrency
-            } 
+            }
         }
 
         if (dailySalesZoneServiceTypeData != null) {

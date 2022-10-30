@@ -229,7 +229,6 @@ class DashboardServiceImpl : DashboardService {
             it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
             it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
             it.dashboardCurrency = request.dashboardCurrency
-
         }
 
         val formattedData = getCollectionTrendData(data)
