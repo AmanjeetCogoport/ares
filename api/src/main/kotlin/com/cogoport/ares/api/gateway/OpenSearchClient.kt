@@ -380,20 +380,25 @@ class OpenSearchClient {
                                             )
                                     }
                                 }
-                                if (request.startDate != null) {
-                                    b.must { t ->
-                                        t.range { r -> r.field("transactionDate").gte(JsonData.of(request.startDate!!.time.toString())) }
-                                    }
-                                }
-                                if (request.endDate != null) {
-                                    b.must { t ->
-                                        t.range { r -> r.field("transactionDate").lte(JsonData.of(request.endDate!!.time.toString())) }
+                                if (request.startDate != null && request.endDate != null) {
+                                    b.must { m ->
+                                        m.range { r ->
+                                            r.field(AresConstants.TRANSACTION_DATE)
+                                                .lte(
+                                                    JsonData.of(
+                                                        Timestamp.valueOf(
+                                                            request.endDate
+                                                                .toString()
+                                                        )
+                                                    )
+                                                )
+                                        }
                                     }
                                 }
                                 b
                             }
                         }
-                        .size(10000)
+                        .size(8000)
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
