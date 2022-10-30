@@ -225,12 +225,11 @@ class DashboardServiceImpl : DashboardService {
         data.dashboardCurrency = request.dashboardCurrency
 
         data.trend?.forEach {
-            if (it.dashboardCurrency != "SDG") {
-                val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
-                it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
-                it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
-                it.dashboardCurrency = request.dashboardCurrency
-            }
+            val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
+            it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
+            it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
+            it.dashboardCurrency = request.dashboardCurrency
+
         }
 
         val formattedData = getCollectionTrendData(data)
@@ -280,7 +279,7 @@ class DashboardServiceImpl : DashboardService {
         }
 
         val uniqueCurrencyList: List<String> =
-            data?.list?.filter { it.dashboardCurrency != "SDG" }?.map { it.dashboardCurrency }?.distinct()!!
+            data?.list?.map { it.dashboardCurrency }?.distinct()!!
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
