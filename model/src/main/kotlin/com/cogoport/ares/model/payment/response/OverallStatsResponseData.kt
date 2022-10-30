@@ -8,13 +8,12 @@ import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 
-
 @Introspected
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class OverallStatsResponseData (
+data class OverallStatsResponseData(
     @JsonProperty("totalOutstandingAmount")
     var totalOutstandingAmount: BigDecimal = 0.toBigDecimal(),
     @JsonProperty("openInvoicesCount")

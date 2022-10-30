@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.mapper
 
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
-import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponseData
 import org.mapstruct.Mapper
 

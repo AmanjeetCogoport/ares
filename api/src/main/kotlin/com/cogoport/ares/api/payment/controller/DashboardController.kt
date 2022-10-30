@@ -24,7 +24,7 @@ import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.http.annotation.Body
@@ -45,8 +45,8 @@ class DashboardController {
     @Inject
     lateinit var pushToClientService: OpenSearchService
     @Get("/overall-stats{?request*}")
-    suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse? {
-        return Response<OverallStatsResponse?>().ok(dashboardService.getOverallStats(request))
+    suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData? {
+        return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
     }
 
     @Get("/daily-sales-outstanding{?request*}")

@@ -11,7 +11,7 @@ import java.time.Period
 import java.time.format.DateTimeFormatter
 
 @Singleton
-class ExchangeRateHelperImpl: ExchangeRateHelper {
+class ExchangeRateHelperImpl : ExchangeRateHelper {
     @Inject
     lateinit var exchangeClient: ExchangeClient
 
