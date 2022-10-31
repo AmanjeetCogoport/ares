@@ -6,6 +6,7 @@ import com.cogoport.ares.api.gateway.ExchangeClient
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.Period
 import java.time.format.DateTimeFormatter
@@ -40,7 +41,7 @@ class ExchangeRateHelperImpl : ExchangeRateHelper {
         val responseData = HashMap<String, BigDecimal>()
 
         response.map {
-            responseData.put(it.fromCurrencyType, it.exchangeRate)
+            responseData.put(it.fromCurrencyType, it.exchangeRate.setScale(4, RoundingMode.UP))
         }
         return responseData
     }

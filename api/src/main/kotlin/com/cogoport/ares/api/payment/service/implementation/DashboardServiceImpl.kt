@@ -46,6 +46,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -125,9 +126,9 @@ class DashboardServiceImpl : DashboardService {
 
         data.list?.map {
             val avgExchangeRate = exchangeRate[it.dashboardCurrency]
-            formattedData.totalOutstandingAmount = formattedData.totalOutstandingAmount.plus(it.totalOutstandingAmount.times(avgExchangeRate!!))
-            formattedData.openInvoicesAmount = formattedData.openInvoicesAmount.plus(it.openInvoicesAmount.times(avgExchangeRate))
-            formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount.times(avgExchangeRate))
+            formattedData.totalOutstandingAmount = formattedData.totalOutstandingAmount.plus(it.totalOutstandingAmount.times(avgExchangeRate!!)).setScale(4, RoundingMode.UP)
+            formattedData.openInvoicesAmount = formattedData.openInvoicesAmount.plus(it.openInvoicesAmount.times(avgExchangeRate)).setScale(4, RoundingMode.UP)
+            formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount.times(avgExchangeRate)).setScale(4, RoundingMode.UP)
             formattedData.dashboardCurrency = request.dashboardCurrency!!
             formattedData.openInvoicesCount = formattedData.openInvoicesCount.plus(it.openInvoicesCount)
             formattedData.organizationCount = formattedData.organizationCount.plus(it.organizationCount)
@@ -159,7 +160,7 @@ class DashboardServiceImpl : DashboardService {
         outstandingResponse.map { response ->
             if (response.dashboardCurrency != request.dashboardCurrency) {
                 val avgExchangeRate = exchangeRate[response.dashboardCurrency]
-                response.amount = response.amount.times(avgExchangeRate!!)
+                response.amount = response.amount.times(avgExchangeRate!!).setScale(4, RoundingMode.UP)
                 response.dashboardCurrency = request.dashboardCurrency
             }
             data.add(overallAgeingConverter.convertToModel(response))
@@ -235,8 +236,8 @@ class DashboardServiceImpl : DashboardService {
 
         return CollectionResponse(
             id = searchKey,
-            totalReceivableAmount = data.totalReceivableAmount,
-            totalCollectedAmount = data.totalCollectedAmount,
+            totalReceivableAmount = data.totalReceivableAmount?.setScale(4, RoundingMode.UP),
+            totalCollectedAmount = data.totalCollectedAmount?.setScale(4, RoundingMode.UP),
             trend = formattedData,
             dashboardCurrency = request.dashboardCurrency
         )
@@ -304,7 +305,7 @@ class DashboardServiceImpl : DashboardService {
     private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): List<OutstandingResponse>? {
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map { it ->
             return@map OutstandingResponse(
-                amount = it.sumOf { it.amount },
+                amount = it.sumOf { it.amount }.setScale(4, RoundingMode.UP),
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency,
             )
@@ -316,8 +317,8 @@ class DashboardServiceImpl : DashboardService {
     private fun getCollectionTrendData(data: CollectionResponse?): List<CollectionTrendResponse>? {
         val listOfCollectionTrend: List<CollectionTrendResponse>? = data?.trend?.groupBy { it.duration }?.values?.map { it ->
             return@map CollectionTrendResponse(
-                receivableAmount = it.sumOf { it.receivableAmount },
-                collectableAmount = it.sumOf { it.collectableAmount },
+                receivableAmount = it.sumOf { it.receivableAmount }.setScale(4, RoundingMode.UP),
+                collectableAmount = it.sumOf { it.collectableAmount }.setScale(4, RoundingMode.UP),
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency,
             )
@@ -329,7 +330,7 @@ class DashboardServiceImpl : DashboardService {
     private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): List<OutstandingResponse>? {
         val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
             return@map OutstandingResponse(
-                amount = it.sumOf { it.amount },
+                amount = it.sumOf { it.amount }.setScale(4, RoundingMode.UP),
                 duration = it.first().duration,
                 dashboardCurrency = it.first().dashboardCurrency
             )
@@ -487,16 +488,16 @@ class DashboardServiceImpl : DashboardService {
         }
 
         val dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, it.dashboardCurrency)
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth.setScale(4, RoundingMode.UP), it.dashboardCurrency)
         }
 
         val dpoResponseData = dpoList.map {
-            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth, it.dashboardCurrency)
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth.setScale(4, RoundingMode.UP), it.dashboardCurrency)
         }
 
-        val avgDsoAmount = (averageDso / 3).toBigDecimal()
+        val avgDsoAmount = (averageDso / 3).toBigDecimal().setScale(4, RoundingMode.UP)
 
-        return DailySalesOutstanding(currentDso.toBigDecimal(), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
+        return DailySalesOutstanding(currentDso.toBigDecimal().setScale(4, RoundingMode.UP), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -552,7 +553,7 @@ class DashboardServiceImpl : DashboardService {
 
             val ageingBucketData = AgeingBucketZone(
                 ageingDuration = payment.ageingDuration,
-                amount = payment.amount,
+                amount = payment.amount.setScale(4, RoundingMode.UP),
                 dashboardCurrency = payment.dashboardCurrency
             )
 
@@ -564,7 +565,7 @@ class DashboardServiceImpl : DashboardService {
                 if (index == -1) {
                     zoneWiseData.add(ageingBucketData)
                 } else {
-                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)
+                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)?.setScale(4, RoundingMode.UP)
                 }
             } else {
                 arrayListAgeingBucketZone.add(ageingBucketData)
