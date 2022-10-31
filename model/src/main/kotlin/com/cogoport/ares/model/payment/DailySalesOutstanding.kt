@@ -21,5 +21,9 @@ data class DailySalesOutstanding(
     @JsonProperty("dsoResponse")
     val dsoResponse: List<DsoResponse>,
     @JsonProperty("dpoResponse")
-    val dpoResponse: List<DpoResponse>
+    val dpoResponse: List<DpoResponse>,
+    @JsonProperty("serviceType")
+    val serviceType: String?,
+    @JsonProperty("dashboardCurrency")
+    val dashboardCurrency: String
 )
