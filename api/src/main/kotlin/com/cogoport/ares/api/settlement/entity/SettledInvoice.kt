@@ -12,6 +12,7 @@ data class SettledInvoice(
     val id: Long?,
     val paymentDocumentNo: Long,
     val tdsDocumentNo: Long?,
+    val tdsType: SettlementType?,
     val destinationId: Long?,
     val documentValue: String,
     val destinationType: SettlementType,

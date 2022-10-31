@@ -55,11 +55,13 @@ import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.BulkUploadErrorResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
+import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.PaymentResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
@@ -407,8 +409,13 @@ open class OnAccountServiceImpl : OnAccountService {
         )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
         openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
-
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, AccountType.REC.name, AccMode.AR.name) ?: throw AresException(AresError.ERR_1202, "")
+        var accType = AccountType.REC
+        if (deletePaymentRequest.accMode == AccMode.AP) {
+            accType = AccountType.PAY
+        }
+        val accountUtilization = accountUtilizationRepository.findRecord(
+            payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
+        ) ?: throw AresException(AresError.ERR_1005, "")
         accountUtilization.documentStatus = DocumentStatus.DELETED
 
         /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
@@ -536,6 +543,11 @@ open class OnAccountServiceImpl : OnAccountService {
                 }
             }
         }
+    }
+
+    override suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse> {
+        val res = accountUtilizationRepository.onAccountPaymentAmount(req.accType, req.accMode, req.orgIdList)
+        return res
     }
 
     override suspend fun getOrgStats(orgId: UUID?): OrgStatsResponse {
