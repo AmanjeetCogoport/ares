@@ -402,7 +402,7 @@ class DashboardServiceImpl : DashboardService {
             val quarter = q.split("_")[0][1].toString().toInt()
             val year = q.split("_")[1].toInt()
             val monthList = getMonthFromQuarter(quarter).map { it ->
-                when (it.toInt() <10) {
+                when (it.toInt() < 10) {
                     true -> "0$it"
                     false -> it
                 }
