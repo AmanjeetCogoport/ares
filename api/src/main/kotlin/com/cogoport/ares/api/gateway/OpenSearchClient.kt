@@ -398,7 +398,7 @@ class OpenSearchClient {
                                 b
                             }
                         }
-                        .size(8000)
+                        .size(10000)
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
