@@ -6,6 +6,7 @@ import java.math.BigDecimal
 @MappedEntity
 data class AgeingBucketZone(
     val ageingDuration: String,
-    val amount: BigDecimal,
-    val zone: String
+    var amount: BigDecimal,
+    val zone: String,
+    var dashboardCurrency: String? = "INR"
 )

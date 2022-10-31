@@ -5,10 +5,10 @@ import java.math.BigDecimal
 
 @MappedEntity
 data class OverallStats(
-    val totalOutstandingAmount: BigDecimal?,
-    val openInvoicesCount: Int?,
-    val organizationCount: Int?,
-    val openInvoicesAmount: BigDecimal?,
-    val openOnAccountPaymentAmount: BigDecimal?,
-    var id: String?
+    var totalOutstandingAmount: BigDecimal?,
+    var openInvoicesCount: Int?,
+    var organizationCount: Int?,
+    var openInvoicesAmount: BigDecimal?,
+    var openOnAccountPaymentAmount: BigDecimal?,
+    var dashboardCurrency: String
 )
