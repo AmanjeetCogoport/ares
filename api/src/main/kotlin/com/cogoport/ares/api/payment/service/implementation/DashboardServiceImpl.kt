@@ -399,10 +399,20 @@ class DashboardServiceImpl : DashboardService {
         for (q in sortQuarterList) {
             val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             var salesResponse = clientResponse(salesResponseKey)
+            val quarter = q.split("_")[0][1].toString().toInt()
+            val year = q.split("_")[1].toInt()
+            val monthList = getMonthFromQuarter(quarter).map { it ->
+                when (it.toInt()<10) {
+                    true -> "0$it"
+                    false -> it
+                }
+            }
 
             if (salesResponse!!.hits().hits().isNullOrEmpty()) {
-                val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                monthList.forEach{
+                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                }
                 salesResponse = clientResponse(salesResponseKey)
             }
 
@@ -434,8 +444,10 @@ class DashboardServiceImpl : DashboardService {
             var payablesResponse = clientResponse(payablesResponseKey)
 
             if (payablesResponse!!.hits().hits().isNullOrEmpty()) {
-                val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                openSearchService.generateDailyPayableOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                monthList.forEach{
+                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    openSearchService.generateDailyPayableOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                }
                 payablesResponse = clientResponse(payablesResponseKey)
             }
 

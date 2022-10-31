@@ -206,7 +206,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-            coalesce((X.outstandings / X.total_sales) * X.days,0) as value,
+            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales END) * X.days,0) as value,
             X.dashboard_currency as dashboard_currency
             from X
         """
