@@ -413,6 +413,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             au.id,
             s.source_id,
+            s.source_type,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
@@ -640,15 +641,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 organization_id as org_id,
                 organization_name as org_name,
                 led_currency as currency,
-                coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as outstanding
+                sum(
+                    CASE WHEN 
+                        acc_mode::varchar = :accMode AND
+                        acc_type NOT IN ('REC', 'PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') 
+                    THEN 
+                        sign_flag * (amount_loc - pay_loc) else 0 END
+                ) + 
+                sum(
+                    CASE WHEN 
+                        acc_mode::varchar = :accMode AND
+                        acc_type IN ('REC','PAY') AND document_status = 'FINAL' 
+                    THEN 
+                        sign_flag * (amount_loc - pay_loc) else 0 END
+                ) as outstanding
                 FROM account_utilizations
                 WHERE organization_id = :orgId
+                    AND document_status in ('FINAL', 'PROFORMA')
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
                     GROUP BY organization_id, organization_name, led_currency
         """
     )
-    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
+    suspend fun getOrgSummary(orgId: UUID, accMode: AccMode, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 
     @Query(
         """

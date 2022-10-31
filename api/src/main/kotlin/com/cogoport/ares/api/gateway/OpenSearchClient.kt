@@ -177,7 +177,7 @@ class OpenSearchClient {
                                 if (request.query != null) {
                                     b.must { m ->
                                         m.queryString { q ->
-                                            q.query("*" + request.query + "*")
+                                            q.query(escapeSpace(request.query) + "*")
                                                 .fields("organizationName", "utr")
                                         }
                                     }
@@ -194,6 +194,10 @@ class OpenSearchClient {
                 classType
             )
         return response
+    }
+
+    private fun escapeSpace(string: String?): String? {
+        return string?.replace(" ", " AND ")
     }
 
     fun getOrgCollection(

@@ -16,10 +16,9 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
-import java.sql.Timestamp
-import java.util.UUID
 
 interface SettlementService {
 
@@ -49,5 +48,5 @@ interface SettlementService {
 
     suspend fun reject(request: RejectSettleApproval): String
 
-    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummaryResponse
+    suspend fun getOrgSummary(request: OrgSummaryRequest): OrgSummaryResponse
 }

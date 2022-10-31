@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
@@ -10,6 +11,7 @@ import java.util.UUID
 data class Document(
     var id: Long,
     var sourceId: Long?,
+    var sourceType: SettlementType?,
     var settledTds: BigDecimal,
     var tdsCurrency: String?,
     var documentNo: Long,
