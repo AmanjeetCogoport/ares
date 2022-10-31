@@ -9,8 +9,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 
 @Introspected
-@ReflectiveAccess
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OverallStatsResponseData(
