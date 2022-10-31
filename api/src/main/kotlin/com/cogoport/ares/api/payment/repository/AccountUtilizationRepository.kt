@@ -17,8 +17,10 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -276,7 +278,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             '' as status,
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
-            COALESCE(sum(s.amount), 0) as settled_tds
+            COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -290,7 +293,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
-                AND (document_value ilike :query || '%')
+                AND (
+                    document_value ilike :query || '%' 
+                    OR au.document_no in (:paymentIds)
+                )
             GROUP BY au.id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
@@ -302,7 +308,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageSize: Int?,
         startDate: String?,
         endDate: String?,
-        query: String
+        query: String,
+        paymentIds: List<Long>
     ): List<HistoryDocument?>
 
     @Query(
@@ -319,7 +326,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
-            AND (document_value ilike :query || '%')
+            AND (
+                    document_value ilike :query || '%' 
+                    OR document_no in (:paymentIds)
+                )
         """
     )
     fun countHistoryDocument(
@@ -327,7 +337,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accountTypes: List<String>,
         startDate: String?,
         endDate: String?,
-        query: String
+        query: String,
+        paymentIds: List<Long>
     ): Long
 
     @Query(
@@ -664,17 +675,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
 
     @Query(
+        """             
+            SELECT organization_id, acc_type, acc_mode, SUM(amount_curr - pay_curr) as payment_value 
+            FROM account_utilizations 
+            GROUP BY organization_id, acc_type, acc_mode 
+            having organization_id in (:organizationIdList) 
+            and acc_type::varchar = :accType and acc_mode::varchar =:accMode
+        """
+    )
+    suspend fun onAccountPaymentAmount(accType: AccountType, accMode: AccMode, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
+
+    @Query(
         """
         SELECT 
             document_no,
             transaction_date::timestamp AS transaction_date, 
-            null as exchange_rate
+            amount_loc/amount_curr as exchange_rate
         FROM account_utilizations
-        WHERE acc_type::varchar = :accType 
+        WHERE acc_type::varchar in (:documentType) 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, documentType: List<SettlementType>): List<PaymentData>
 
     @Query(
         """
