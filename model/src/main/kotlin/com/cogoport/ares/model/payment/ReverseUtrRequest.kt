@@ -2,7 +2,6 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.util.UUID
 
