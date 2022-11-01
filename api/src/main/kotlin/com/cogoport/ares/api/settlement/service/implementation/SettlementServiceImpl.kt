@@ -37,6 +37,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -1870,7 +1871,9 @@ open class SettlementServiceImpl : SettlementService {
                         .get(IsoFields.QUARTER_OF_YEAR),
                     year = date.toInstant().atZone(ZoneId.systemDefault())
                         .toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
+                    accMode = accUtilizationRequest.accMode,
+                    serviceType = if (accUtilizationRequest.serviceType.isNullOrBlank()) null else ServiceType.valueOf(accUtilizationRequest.serviceType.uppercase()),
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )
@@ -1882,7 +1885,9 @@ open class SettlementServiceImpl : SettlementService {
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     orgId = accUtilizationRequest.organizationId.toString(),
-                    orgName = accUtilizationRequest.organizationName
+                    orgName = accUtilizationRequest.organizationName,
+                    serviceType = if (accUtilizationRequest.serviceType.isNullOrBlank()) null else ServiceType.valueOf(accUtilizationRequest.serviceType.uppercase()),
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )

@@ -93,7 +93,7 @@ class OpenSearchClient {
     }
 
     fun <T> updateDocument(index: String, docId: String, docData: T) {
-        Client.updateDocument(index, docId, docData)
+        Client.updateDocument(index, docId, docData, true)
     }
 
     fun listCustomerSaleOutstanding(

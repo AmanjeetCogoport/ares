@@ -15,5 +15,7 @@ data class OutstandingResponse(
     @JsonProperty("duration")
     var duration: String?,
     @JsonProperty("amount")
-    var amount: BigDecimal
+    var amount: BigDecimal,
+    @JsonProperty("dashboardCurrency")
+    var dashboardCurrency: String
 )

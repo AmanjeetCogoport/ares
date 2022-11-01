@@ -6,5 +6,6 @@ import java.math.BigDecimal
 @MappedEntity
 data class Outstanding(
     var duration: String?,
-    var amount: BigDecimal
+    var amount: BigDecimal,
+    var dashboardCurrency: String?
 )
