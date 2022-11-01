@@ -416,18 +416,13 @@ class DashboardServiceImpl : DashboardService {
                 salesResponse = clientResponse(salesResponseKey)
             }
 
-            var uniqueCurrencyList = salesResponse!!.hits().hits().map { it -> it.source()?.list?.map { it.dashboardCurrency!! }?.distinct()!! }.flatten()
-            var exchangeRateHashMap = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
-
             val dso = mutableListOf<DsoResponse>()
-            for (hts in salesResponse.hits().hits()) {
+            for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal(), dashboardCurrency = "")
+                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
                 data?.list?.map {
-                    val avgExchangeRate = exchangeRateHashMap[it.dashboardCurrency]
                     dsoResponse.month = it.month.toString()
-                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value.times(avgExchangeRate!!))
-                    dsoResponse.dashboardCurrency = request.dashboardCurrency
+                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
                 }
                 dso.add(dsoResponse)
             }
@@ -435,7 +430,7 @@ class DashboardServiceImpl : DashboardService {
             val monthListDso = dso.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal(), request.dashboardCurrency))
+                    dso.add(DsoResponse(it, 0.toBigDecimal()))
                 }
             }
             dso.sortedBy { it.month }.forEach { dsoList.add(it) }
@@ -452,16 +447,12 @@ class DashboardServiceImpl : DashboardService {
             }
 
             val dpo = mutableListOf<DpoResponse>()
-            uniqueCurrencyList = payablesResponse!!.hits().hits().map { it -> it.source()?.list?.map { it.dashboardCurrency!! }?.distinct()!! }.flatten()
-            exchangeRateHashMap = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
-            for (hts in payablesResponse.hits().hits()) {
+            for (hts in payablesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                val dpoResponse = DpoResponse(month = "", dpoForTheMonth = 0.toBigDecimal(), dashboardCurrency = "")
+                val dpoResponse = DpoResponse(month = "", dpoForTheMonth = 0.toBigDecimal())
                 data?.list?.map {
-                    val avgExchangeRate = exchangeRateHashMap[it.dashboardCurrency]
                     dpoResponse.month = it.month.toString()
-                    dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.plus(it.value.times(avgExchangeRate!!))
-                    dpoResponse.dashboardCurrency = request.dashboardCurrency
+                    dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.plus(it.value)
                 }
                 dpo.add(dpoResponse)
             }
@@ -469,7 +460,7 @@ class DashboardServiceImpl : DashboardService {
             val monthListDpo = dpo.map { it.month }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal(), "INR"))
+                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
                 }
             }
             dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
@@ -486,30 +477,27 @@ class DashboardServiceImpl : DashboardService {
             currResponse = clientResponse(currentKey)
         }
 
-        val uniqueCurrencyList = currResponse!!.hits().hits().map { it -> it.source()?.list?.map { it.dashboardCurrency!! }?.distinct()!! }.flatten()
-        val exchangeRateHashMap = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
-        for (hts in currResponse.hits().hits()) {
+        for (hts in currResponse?.hits()?.hits()!!) {
             val data = hts.source()
             data?.list?.map {
-                averageDso = averageDso.plus(it.value.times(exchangeRateHashMap[it.dashboardCurrency]!!).toFloat())
+                averageDso = averageDso.plus(it.value.toFloat())
                 if (it.month == AresConstants.CURR_MONTH) {
-                    currentDso = currentDso.plus(it.value.times(exchangeRateHashMap[it.dashboardCurrency]!!).toFloat())
-                    dashboardCurrency = it.dashboardCurrency
+                    currentDso = currentDso.plus(it.value.toFloat())
                 }
             }
         }
 
         val dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth.setScale(4, RoundingMode.UP), it.dashboardCurrency)
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
         }
 
         val dpoResponseData = dpoList.map {
-            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth.setScale(4, RoundingMode.UP), it.dashboardCurrency)
+            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth)
         }
 
-        val avgDsoAmount = (averageDso / 3).toBigDecimal().setScale(4, RoundingMode.UP)
+        val avgDsoAmount = (averageDso / 3).toBigDecimal()
 
-        return DailySalesOutstanding(currentDso.toBigDecimal().setScale(4, RoundingMode.UP), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
+        return DailySalesOutstanding(currentDso.toBigDecimal(), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
