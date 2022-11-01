@@ -17,7 +17,22 @@ jar {
 }
 
 group = "com.cogoport.ares"
+<<<<<<< Updated upstream
 version = "0.1.45"
+=======
+version = "0.1.53"
+
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/brahma")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+>>>>>>> Stashed changes
 
 dependencies {
     implementation("io.micronaut:micronaut-runtime")

@@ -18,7 +18,11 @@ jar {
 
 
 group = "com.cogoport.ares"
+<<<<<<< Updated upstream
 version = "0.1.28"
+=======
+version = "0.1.38"
+>>>>>>> Stashed changes
 
 dependencies {
     // Use the model subproject
