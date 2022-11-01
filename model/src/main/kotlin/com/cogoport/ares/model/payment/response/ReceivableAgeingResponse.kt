@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment.response
 
 import com.cogoport.ares.model.payment.ReceivableByAgeViaZone
+import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -16,6 +17,8 @@ import io.micronaut.core.annotation.ReflectiveAccess
 data class ReceivableAgeingResponse(
     @JsonProperty("zone")
     var zone: List<String?>,
+    @JsonProperty("serviceType")
+    var serviceType: List<ServiceType?>,
     @JsonProperty("receivableByAgeViaZone")
     var receivableByAgeViaZone: MutableList<ReceivableByAgeViaZone>? = null
 )

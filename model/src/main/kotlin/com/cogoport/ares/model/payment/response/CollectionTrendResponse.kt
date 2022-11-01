@@ -17,5 +17,7 @@ data class CollectionTrendResponse(
     @JsonProperty("receivableAmount")
     var receivableAmount: BigDecimal,
     @JsonProperty("collectableAmount")
-    var collectableAmount: BigDecimal
+    var collectableAmount: BigDecimal,
+    @JsonProperty("dashboardCurrency")
+    var dashboardCurrency: String
 )

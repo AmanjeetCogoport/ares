@@ -1,11 +1,15 @@
 package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.models.ExchangeRequest
+import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.common.models.ExchangeResponse
+import com.cogoport.ares.api.common.models.ExchangeResponseForPeriod
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.client.annotation.Client
 
 @Client(value = "\${cogoport.exchange_api.url}" + "\${cogoport.exchange_api.version}")
@@ -18,4 +22,7 @@ import io.micronaut.http.client.annotation.Client
 interface ExchangeClient {
     @Get("/rate/exchange_rates{?request*}")
     suspend fun getExchangeRate(request: ExchangeRequest): ExchangeResponse
+
+    @Post("/get_rate/avg-rate")
+    suspend fun getExchangeRateForPeriod(@Body request: HashMap<String, List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
 }
