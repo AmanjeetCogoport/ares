@@ -109,7 +109,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (data == null) {
+        if (data?.list == null) {
             openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
 
             data = OpenSearchClient().search(
