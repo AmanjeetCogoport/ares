@@ -1116,7 +1116,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
         val sourceDoc =
             request.stackDetails!!.first {
-                it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SCN)
+                it.accountType in listOf(SettlementType.REC, SettlementType.PCN, SettlementType.PAY)
             }
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy!!, request.createdByUserType)
         return runSettlement(request, true)
