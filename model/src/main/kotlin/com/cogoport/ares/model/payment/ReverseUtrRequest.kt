@@ -7,7 +7,6 @@ import java.math.BigDecimal
 import java.util.UUID
 
 @Introspected
-@ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class ReverseUtrRequest(
     val documentNo: Long,

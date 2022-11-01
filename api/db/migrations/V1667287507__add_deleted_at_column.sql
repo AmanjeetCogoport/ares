@@ -12,4 +12,3 @@ ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
 
 alter table audits alter column object_type type VARCHAR(100);
 alter table audits alter column action_name type VARCHAR(100);
-

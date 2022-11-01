@@ -164,7 +164,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-          select id from settlements where source_id = :sourceId and destination_id = :destinationId and deleted_at is null
+          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null
            
         """
     )
