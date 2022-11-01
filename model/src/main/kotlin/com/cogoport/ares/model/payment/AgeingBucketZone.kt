@@ -9,7 +9,8 @@ import java.math.BigDecimal
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class AgeingBucketZone(
-    val ageingDuration: String?,
-    val amount: BigDecimal?,
-    val zone: String?
+    var ageingDuration: String?,
+    var amount: BigDecimal?,
+    val zone: String? = null,
+    val dashboardCurrency: String? = "INR"
 )

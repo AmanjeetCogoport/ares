@@ -10,5 +10,6 @@ data class DailyOutstanding(
     var outstandings: BigDecimal?,
     var totalSales: BigDecimal?,
     var days: Int,
-    var value: Double
+    var value: Double,
+    var dashboardCurrency: String?
 )

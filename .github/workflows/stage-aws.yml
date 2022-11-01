@@ -78,7 +78,7 @@ jobs:
 
       - name: Generate docker image name
         id: image_name
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build jar file
         run: ./gradlew build -x test
