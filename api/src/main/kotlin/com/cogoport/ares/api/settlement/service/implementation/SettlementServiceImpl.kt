@@ -738,29 +738,14 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun calculateSettledTds(doc: com.cogoport.ares.api.settlement.entity.Document): BigDecimal {
         return if (!doc.tdsCurrency.isNullOrBlank() && (doc.currency != doc.tdsCurrency)) {
             if (doc.ledCurrency == doc.tdsCurrency) {
-                convertSettleTds(doc.settledTds, doc.exchangeRate, true)
+                getExchangeValue(doc.settledTds, doc.exchangeRate, true)
             } else {
                 val rate = fetchRateSettledTds(doc)
-                convertSettleTds(doc.settledTds, rate)
+                getExchangeValue(doc.settledTds, rate)
             }
         } else {
             doc.settledTds
         }
-    }
-
-    /**
-     * This takes rate and amount and returns the exchanged value
-     * @param settledTds
-     * @param exchangeRate
-     * @param reverse
-     * @return BigDecimal
-     */
-    private fun convertSettleTds(
-        settledTds: BigDecimal,
-        exchangeRate: BigDecimal,
-        reverse: Boolean = false
-    ): BigDecimal {
-        return getExchangeValue(settledTds, exchangeRate, reverse)
     }
 
     /**
