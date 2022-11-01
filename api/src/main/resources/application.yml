@@ -45,7 +45,7 @@ sentry:
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
 
 cogoport:
-  api_url: https://api-mustangs1.dev.cogoport.io
+  api_url: https://api-mustangs5.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
   exchange_api:
     url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
@@ -63,3 +63,7 @@ sage:
 ares:
   settlement:
     crossTradeParty: ${CROSS_TRADE_PARTY_SETTLEMENT:false}
+
+aws:
+  s3:
+    bucket: business-finance-test

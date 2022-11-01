@@ -9,9 +9,11 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
+import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -42,5 +44,10 @@ class OutstandingController {
     @Get("/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
+    }
+
+    @Post("/outstanding-days")
+    suspend fun getCurrOutstanding(@Body invoiceIds: List<Long>): Long {
+        return Response<Long>().ok(outStandingService.getCurrOutstanding(invoiceIds))
     }
 }

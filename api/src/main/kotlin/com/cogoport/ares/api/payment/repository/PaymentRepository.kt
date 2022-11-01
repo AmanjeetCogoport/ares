@@ -1,8 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
-import com.cogoport.ares.api.payment.entity.PaymentData
-import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -29,17 +27,4 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     """
     )
     suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
-
-    @Query(
-        """
-            SELECT 
-                payment_num as document_no,
-                transaction_date::timestamp AS transaction_date, 
-                exchange_rate AS exchange_rate
-                FROM payments 
-                WHERE payment_code::varchar = :paymentCode
-                AND payment_num IN (:paymentNums)
-        """
-    )
-    suspend fun findByPaymentNumIn(paymentNums: List<Long>, paymentCode: SettlementType): List<PaymentData>
 }

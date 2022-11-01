@@ -18,6 +18,8 @@ data class CogoBanksDetails(
     var id: UUID,
     @JsonProperty("entity_code")
     var entityCode: Int,
+    @JsonProperty("ledger_currency")
+    var ledgerCurrency: String?,
     @JsonProperty("bank_details")
     var bankDetails: List<BankDetails>? = null
 )

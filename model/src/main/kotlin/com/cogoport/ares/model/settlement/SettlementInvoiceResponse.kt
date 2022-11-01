@@ -20,7 +20,7 @@ class SettlementInvoiceResponse(
     var status: String,
     var invoiceStatus: String,
     var currency: String,
-    var sid: Long?,
+    var sid: String?,
     var shipmentType: String? = null,
     var pdfUrl: String? = null,
     var tdsPercentage: BigDecimal = BigDecimal.ZERO,

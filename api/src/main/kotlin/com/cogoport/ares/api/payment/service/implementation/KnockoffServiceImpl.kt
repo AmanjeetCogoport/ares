@@ -31,6 +31,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -93,9 +94,15 @@ open class KnockoffServiceImpl : KnockoffService {
         )
 
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
-        val currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
-        val ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
-        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
+        var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
+
+        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
+        } else {
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        }
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -111,10 +118,19 @@ open class KnockoffServiceImpl : KnockoffService {
         saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
-        saveAccountUtilization(
-            savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-            currTotalAmtPaid, ledTotalAmtPaid
-        )
+
+        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
+            saveAccountUtilization(
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
+                accountUtilization.amountLoc - accountUtilization.payLoc
+            )
+        } else {
+            saveAccountUtilization(
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid
+            )
+        }
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
         saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
@@ -133,7 +149,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
-        if (leftAmount <= 0.toBigDecimal())
+        if (leftAmount <= 0.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 0.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null)
@@ -147,6 +163,11 @@ open class KnockoffServiceImpl : KnockoffService {
         return accPayResponse
     }
 
+    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
+        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid)
+            return true
+        return false
+    }
     /**
      * Emits Kafka message on topic <b>payables-bill-status</b>
      * @param : accPayResponseList
@@ -209,7 +230,9 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         accountUtilization: AccountUtilization,
         currTotalAmtPaid: BigDecimal,
-        ledTotalAmtPaid: BigDecimal
+        ledTotalAmtPaid: BigDecimal,
+        utilizedCurrTotalAmtPaid: BigDecimal,
+        utilizedLedTotalAmtPaid: BigDecimal
     ) {
         val accountUtilEntity = AccountUtilization(
             id = null,
@@ -233,8 +256,8 @@ open class KnockoffServiceImpl : KnockoffService {
             ledCurrency = knockOffRecord.ledgerCurrency,
             amountCurr = currTotalAmtPaid,
             amountLoc = ledTotalAmtPaid,
-            payCurr = currTotalAmtPaid,
-            payLoc = ledTotalAmtPaid,
+            payCurr = utilizedCurrTotalAmtPaid,
+            payLoc = utilizedLedTotalAmtPaid,
             taxableAmount = BigDecimal.ZERO,
             dueDate = accountUtilization.dueDate,
             transactionDate = knockOffRecord.transactionDate,

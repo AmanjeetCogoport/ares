@@ -40,7 +40,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:status is null OR  status = :status::JV_STATUS) AND
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
-                (:query is null OR trade_party_name like :query)
+                (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%')
                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
@@ -61,7 +61,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:status is null OR  status = :status::JV_STATUS) AND
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
-                (:query is null OR trade_party_name like :query)
+                (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%')
         """
     )
     fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long

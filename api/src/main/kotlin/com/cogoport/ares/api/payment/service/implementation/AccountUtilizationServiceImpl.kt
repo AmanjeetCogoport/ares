@@ -18,7 +18,6 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
@@ -210,6 +209,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.ledCurrency = updateInvoiceRequest.ledCurrency
         accountUtilization.amountCurr = updateInvoiceRequest.currAmount
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
+        accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
         accUtilRepository.update(accountUtilization)
         auditService.createAudit(
@@ -259,9 +259,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             proformaDate = accountUtilization.transactionDate
         }
 
-        if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-            throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
-        }
+//         if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+//             throw AresException(AresError.ERR_1202, updateInvoiceStatusRequest.oldDocumentNo.toString())
+//         }
 
         accountUtilization.documentNo = updateInvoiceStatusRequest.newDocumentNo
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
@@ -328,7 +328,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
                     orgId = accUtilizationRequest.organizationId.toString(),
-                    orgName = accUtilizationRequest.organizationName
+                    orgName = accUtilizationRequest.organizationName,
+                    serviceType = accUtilizationRequest.serviceType,
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )
@@ -349,7 +351,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                         .get(IsoFields.QUARTER_OF_YEAR),
                     year = date.toInstant().atZone(ZoneId.systemDefault())
                         .toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
+                    accMode = accUtilizationRequest.accMode,
+                    serviceType = accUtilizationRequest.serviceType,
+                    invoiceCurrency = accUtilizationRequest.currency
                 )
             )
         )
