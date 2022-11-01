@@ -17,9 +17,6 @@ jar {
 }
 
 group = "com.cogoport.ares"
-<<<<<<< Updated upstream
-version = "0.1.45"
-=======
 version = "0.1.53"
 
 repositories {
@@ -32,7 +29,6 @@ repositories {
         }
     }
 }
->>>>>>> Stashed changes
 
 dependencies {
     implementation("io.micronaut:micronaut-runtime")
