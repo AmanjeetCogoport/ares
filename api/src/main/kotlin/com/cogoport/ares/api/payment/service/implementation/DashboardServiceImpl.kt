@@ -485,11 +485,13 @@ class DashboardServiceImpl : DashboardService {
             val data = hts.source()
             val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
             data?.list?.map {
-                averageDso = averageDso.plus(it.value.div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat())
+                averageDso = averageDso.plus(it.value.toFloat())
                 if (it.month == AresConstants.CURR_MONTH) {
-                    currentDso = currentDso.plus(it.value.div(uniqueCurrencyListSize.toBigDecimal()).toFloat())
+                    currentDso = currentDso.plus(it.value.toFloat())
                 }
             }
+            averageDso = averageDso.toBigDecimal().div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat()
+            currentDso = currentDso.toBigDecimal().div(uniqueCurrencyListSize.toBigDecimal()).toFloat()
         }
 
         val dsoResponseData = dsoList.map {
@@ -500,9 +502,9 @@ class DashboardServiceImpl : DashboardService {
             DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth)
         }
 
-        val avgDsoAmount = (averageDso / 3).toBigDecimal()
+        val avgDsoAmount = averageDso.div(3.toFloat()).toBigDecimal()
 
-        return DailySalesOutstanding(currentDso.toBigDecimal().divide(3.toBigDecimal()), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
+        return DailySalesOutstanding(currentDso.toBigDecimal(), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
