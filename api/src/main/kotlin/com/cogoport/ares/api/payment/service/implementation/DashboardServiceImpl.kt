@@ -150,10 +150,24 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType?.name, request.invoiceCurrency)
+
+        val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
+
+        if (outstandingResponse.isNullOrEmpty()) {
+            return durationKey.map {
+                OverallAgeingStatsResponse(
+                    ageingDuration = it,
+                    amount = 0.toBigDecimal(),
+                    dashboardCurrency = request.dashboardCurrency
+                )
+            }
+        }
+
         val data = mutableListOf<OverallAgeingStatsResponse>()
         var formattedData = mutableListOf<OverallAgeingStatsResponse>()
-        val uniqueCurrencyList: List<String> = outstandingResponse.map { it.dashboardCurrency!! }.distinct()
+
+        val uniqueCurrencyList: List<String> = outstandingResponse.map { it.dashboardCurrency!! }
 
         val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
 
@@ -165,7 +179,6 @@ class DashboardServiceImpl : DashboardService {
             }
             data.add(overallAgeingConverter.convertToModel(response))
         }
-        val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
 
         data.map { item ->
             val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! }
