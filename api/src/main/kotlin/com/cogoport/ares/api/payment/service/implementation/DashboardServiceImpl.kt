@@ -425,7 +425,7 @@ class DashboardServiceImpl : DashboardService {
                     dsoResponse.month = it.month.toString()
                     dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
                 }
-                dsoResponse.dsoForTheMonth =dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
+                dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
                 dso.add(dsoResponse)
             }
 
