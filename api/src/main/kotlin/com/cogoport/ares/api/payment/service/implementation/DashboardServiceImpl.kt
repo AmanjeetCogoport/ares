@@ -425,7 +425,7 @@ class DashboardServiceImpl : DashboardService {
                     dsoResponse.month = it.month.toString()
                     dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
                 }
-                dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.divide(uniqueCurrencyListSize?.toBigDecimal())
+                dsoResponse.dsoForTheMonth =dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
                 dso.add(dsoResponse)
             }
 
@@ -457,7 +457,7 @@ class DashboardServiceImpl : DashboardService {
                     dpoResponse.month = it.month.toString()
                     dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.plus(it.value)
                 }
-                dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.divide(uniqueCurrencyListSize?.toBigDecimal())
+                dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
                 dpo.add(dpoResponse)
             }
 
@@ -485,13 +485,13 @@ class DashboardServiceImpl : DashboardService {
             val data = hts.source()
             val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
             data?.list?.map {
-                averageDso = averageDso.plus(it.value.toFloat())
+                averageDso = averageDso.plus(it.value.div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat())
                 if (it.month == AresConstants.CURR_MONTH) {
-                    currentDso = currentDso.plus(it.value.toFloat())
+                    currentDso = currentDso.plus(it.value.div(uniqueCurrencyListSize.toBigDecimal()).toFloat())
                 }
             }
-            averageDso = averageDso.toBigDecimal().divide(uniqueCurrencyListSize?.toBigDecimal()).toFloat()
-            currentDso = currentDso.toBigDecimal().divide(uniqueCurrencyListSize?.toBigDecimal()).toFloat()
+//            averageDso = averageDso.toBigDecimal().div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat()
+//            currentDso = currentDso.toBigDecimal().div(uniqueCurrencyListSize.toBigDecimal()).toFloat()
         }
 
         val dsoResponseData = dsoList.map {
