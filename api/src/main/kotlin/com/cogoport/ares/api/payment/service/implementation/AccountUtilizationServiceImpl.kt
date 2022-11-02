@@ -22,7 +22,9 @@ import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.brahma.opensearch.Client
@@ -299,6 +301,26 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             logger().error(e.stackTraceToString())
         }
         // emitAccUtilizationToDemeter(accUtilizationRequest)
+    }
+
+    /**
+     * Returns Balance Amount and Payment Status for an Invoice
+     * @param invoiceRequest
+     */
+    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse {
+        val accountUtilization = accUtilRepository.findRecord(
+            invoiceRequest.documentNo,
+            invoiceRequest.accType.name
+        ) ?: throw AresException(AresError.ERR_1005, invoiceRequest.documentNo.toString())
+
+        return InvoicePaymentResponse(
+            documentNo = invoiceRequest.documentNo,
+            accType = invoiceRequest.accType,
+            balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+            balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
+            paymentStatus = accountUtilization.getPaymentStatus()
+        )
+
     }
 
     /**
