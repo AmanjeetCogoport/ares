@@ -490,8 +490,6 @@ class DashboardServiceImpl : DashboardService {
                     currentDso = currentDso.plus(it.value.div(uniqueCurrencyListSize.toBigDecimal()).toFloat())
                 }
             }
-//            averageDso = averageDso.toBigDecimal().div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat()
-//            currentDso = currentDso.toBigDecimal().div(uniqueCurrencyListSize.toBigDecimal()).toFloat()
         }
 
         val dsoResponseData = dsoList.map {
