@@ -415,12 +415,7 @@ class DashboardServiceImpl : DashboardService {
             var salesResponse = clientResponse(salesResponseKey)
             val quarter = q.split("_")[0][1].toString().toInt()
             val year = q.split("_")[1].toInt()
-            val monthList = getMonthFromQuarter(quarter).map {
-                when (it.toInt() < 10) {
-                    true -> "0$it"
-                    false -> it
-                }
-            }
+            val monthList = getMonthFromQuarter(quarter)
 
             if (salesResponse!!.hits().hits().isNullOrEmpty()) {
                 monthList.forEach {
@@ -443,7 +438,12 @@ class DashboardServiceImpl : DashboardService {
                 dso.add(dsoResponse)
             }
 
-            val monthListDso = dso.map { it.month }
+            val monthListDso = dso.map {
+                when (it.month.toInt() < 10) {
+                    true -> "0${it.month}"
+                    false -> it.month
+                }
+            }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDso.contains(it)) {
                     dso.add(DsoResponse(it, 0.toBigDecimal()))
@@ -475,7 +475,12 @@ class DashboardServiceImpl : DashboardService {
                 dpo.add(dpoResponse)
             }
 
-            val monthListDpo = dpo.map { it.month }
+            val monthListDpo = dpo.map {
+                when (it.month.toInt() < 10) {
+                    true -> "0${it.month}"
+                    false -> it.month
+                }
+            }
             getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
                 if (!monthListDpo.contains(it)) {
                     dpo.add(DpoResponse(it, 0.toBigDecimal()))
@@ -536,9 +541,9 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
         return when (quarter) {
-            1 -> { listOf("1", "2", "3") }
-            2 -> { listOf("4", "5", "6") }
-            3 -> { listOf("7", "8", "9") }
+            1 -> { listOf("01", "02", "03") }
+            2 -> { listOf("04", "05", "06") }
+            3 -> { listOf("07", "08", "09") }
             4 -> { listOf("10", "11", "12") }
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
