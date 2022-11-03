@@ -109,7 +109,7 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (data?.list == null) {
+        if (data?.list.isNullOrEmpty()) {
             openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
 
             data = OpenSearchClient().search(
@@ -408,13 +408,14 @@ class DashboardServiceImpl : DashboardService {
         val dsoList = mutableListOf<DsoResponse>()
         val dpoList = mutableListOf<DpoResponse>()
         var dashboardCurrency: String? = null
+
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
             val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             var salesResponse = clientResponse(salesResponseKey)
             val quarter = q.split("_")[0][1].toString().toInt()
             val year = q.split("_")[1].toInt()
-            val monthList = getMonthFromQuarter(quarter).map { it ->
+            val monthList = getMonthFromQuarter(quarter).map {
                 when (it.toInt() < 10) {
                     true -> "0$it"
                     false -> it
@@ -424,7 +425,7 @@ class DashboardServiceImpl : DashboardService {
             if (salesResponse!!.hits().hits().isNullOrEmpty()) {
                 monthList.forEach {
                     val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency)
                 }
                 salesResponse = clientResponse(salesResponseKey)
             }
@@ -456,7 +457,7 @@ class DashboardServiceImpl : DashboardService {
             if (payablesResponse!!.hits().hits().isNullOrEmpty()) {
                 monthList.forEach {
                     val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailyPayableOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date)
+                    openSearchService.generateDailyPayableOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency)
                 }
                 payablesResponse = clientResponse(payablesResponseKey)
             }
@@ -490,7 +491,7 @@ class DashboardServiceImpl : DashboardService {
 
         if (currResponse == null) {
             val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            openSearchService.generateDailySalesOutstanding(request.zone!!, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, request.serviceType!!, request.invoiceCurrency!!, date)
+            openSearchService.generateDailySalesOutstanding(request.zone!!, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, request.serviceType!!, request.invoiceCurrency!!, date, request.dashboardCurrency)
             currResponse = clientResponse(currentKey)
         }
 
@@ -503,6 +504,7 @@ class DashboardServiceImpl : DashboardService {
                     currentDso = currentDso.plus(it.value.toFloat())
                 }
             }
+
             averageDso = averageDso.toBigDecimal().div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat()
             currentDso = currentDso.toBigDecimal().div(uniqueCurrencyListSize.toBigDecimal()).toFloat()
         }
