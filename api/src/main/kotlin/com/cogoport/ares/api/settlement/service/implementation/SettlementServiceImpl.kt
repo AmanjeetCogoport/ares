@@ -255,7 +255,7 @@ open class SettlementServiceImpl : SettlementService {
         request.documentNo = Hashids.decode(request.documentNo)[0].toString()
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
-        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds)
+        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments, request.documentNo.toLong())
         // Fetch Sid for invoices
         val docIds = settlements.map { it.destinationId.toString() }
@@ -405,9 +405,10 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getPaymentDataForSettledInvoices(
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
-        paymentIds: MutableList<Long>
+        paymentIds: MutableList<Long>,
+        settlementType: SettlementType
     ): List<PaymentData> {
-        val tdsType = mutableListOf<SettlementType>()
+        val tdsType = mutableListOf(settlementType)
         settlementGrouped.forEach { docList ->
             docList.value.forEach {
                 if (it.tdsDocumentNo != null)
