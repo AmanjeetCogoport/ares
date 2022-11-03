@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
@@ -23,8 +24,7 @@ import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.http.annotation.Body
@@ -45,8 +45,8 @@ class DashboardController {
     @Inject
     lateinit var pushToClientService: OpenSearchService
     @Get("/overall-stats{?request*}")
-    suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse? {
-        return Response<OverallStatsResponse?>().ok(dashboardService.getOverallStats(request))
+    suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData? {
+        return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
     }
 
     @Get("/daily-sales-outstanding{?request*}")
@@ -75,8 +75,8 @@ class DashboardController {
     }
 
     @Get("/receivables-by-age{?request*}")
-    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse {
-        return Response<ReceivableAgeingResponse>().ok(dashboardService.getReceivableByAge(request))
+    suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
+        return Response<HashMap<String, ArrayList<AgeingBucketZone>>>().ok(dashboardService.getReceivableByAge(request))
     }
 
     @Get("/org-collection{?request*}")

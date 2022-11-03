@@ -7,5 +7,6 @@ import java.math.BigDecimal
 data class CollectionTrend(
     var duration: String?,
     var receivableAmount: BigDecimal?,
-    var collectableAmount: BigDecimal?
+    var collectableAmount: BigDecimal?,
+    var dashboardCurrency: String? = "INR"
 )

@@ -5,4 +5,5 @@ import java.math.BigDecimal
 data class TdsStyle(
     val style: String?,
     val rate: BigDecimal?,
+    val type: String?
 )

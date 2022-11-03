@@ -3,7 +3,6 @@ package com.cogoport.ares.api.settlement.controller
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -25,6 +24,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
+import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import io.micronaut.http.annotation.Body
@@ -35,7 +35,6 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.sql.Timestamp
 import java.util.UUID
 import javax.validation.Valid
 
@@ -146,16 +145,10 @@ class SettlementController {
         )
     }
 
-    @Get("/org-summary")
-    suspend fun getOrgSummary(
-        @QueryValue(AresModelConstants.ORG_ID) orgId: UUID,
-        @QueryValue(AresModelConstants.START_DATE) startDate: Timestamp? = null,
-        @QueryValue(AresModelConstants.END_DATE) endDate: Timestamp? = null
-    ): OrgSummaryResponse {
+    @Get("/org-summary{?request*}")
+    suspend fun getOrgSummary(@Valid request: OrgSummaryRequest): OrgSummaryResponse {
         return Response<OrgSummaryResponse>().ok(
-            settlementService.getOrgSummary(
-                orgId, startDate, endDate
-            )
+            settlementService.getOrgSummary(request)
         )
     }
 }
