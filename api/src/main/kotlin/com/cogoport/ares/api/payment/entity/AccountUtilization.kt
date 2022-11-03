@@ -51,7 +51,7 @@ data class AccountUtilization(
     fun getPaymentStatus(): PaymentStatus {
         if (amountCurr == payCurr) {
             return PaymentStatus.PAID
-        } else if(amountCurr - payCurr > 0.toBigDecimal() && payCurr != 0.toBigDecimal()) {
+        } else if (amountCurr - payCurr > 0.toBigDecimal() && payCurr != 0.toBigDecimal()) {
             return PaymentStatus.PARTIAL_PAID
         }
         return PaymentStatus.PAID

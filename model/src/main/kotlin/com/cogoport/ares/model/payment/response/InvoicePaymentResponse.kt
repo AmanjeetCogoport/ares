@@ -11,4 +11,3 @@ data class InvoicePaymentResponse(
     var balanceAmountInLedgerCurrency: BigDecimal,
     var paymentStatus: PaymentStatus
 )
-

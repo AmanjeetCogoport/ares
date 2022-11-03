@@ -320,7 +320,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
             paymentStatus = accountUtilization.getPaymentStatus()
         )
-
     }
 
     /**
