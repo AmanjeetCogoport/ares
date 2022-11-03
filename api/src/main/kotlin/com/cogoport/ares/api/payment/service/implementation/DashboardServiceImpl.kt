@@ -563,42 +563,57 @@ class DashboardServiceImpl : DashboardService {
         val invoiceCurrency: String? = request.invoiceCurrency
         val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
         val data = HashMap<String, ArrayList<AgeingBucketZone>>()
+        val zoneList = listOf<String>("NORTH", "EAST", "WEST", "SOUTH")
+        val ageingDurationList = listOf<String>("1-30", "31-60", "61-90", ">90", "91-180", "181-365", "365+", "Not Due")
 
-        val uniqueCurrencyList: List<String> = payments.map { it.dashboardCurrency!! }.distinct()
-
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
-
-        payments.forEach { payment ->
-            val zone = payment.zone
-            val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
-
-            if (payment.dashboardCurrency != request.dashboardCurrency) {
-                val avgExchangeRate = exchangeRate[payment.dashboardCurrency]
-                payment.amount = payment.amount.times(avgExchangeRate!!)
-                payment.dashboardCurrency = request.dashboardCurrency
-            }
-
-            val ageingBucketData = AgeingBucketZone(
-                ageingDuration = payment.ageingDuration,
-                amount = payment.amount.setScale(4, RoundingMode.UP),
-                dashboardCurrency = payment.dashboardCurrency
-            )
-
-            if (data.keys.contains(zone)) {
-                val zoneWiseData = data[zone]
-
-                val index = zoneWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
-
-                if (index == -1) {
-                    zoneWiseData.add(ageingBucketData)
-                } else {
-                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)?.setScale(4, RoundingMode.UP)
+        if (payments.isEmpty()) {
+            zoneList.forEach {
+                val listData = ageingDurationList.map { duration ->
+                    AgeingBucketZone(
+                        ageingDuration = duration,
+                        amount = 0.toBigDecimal()
+                    )
                 }
-            } else {
-                arrayListAgeingBucketZone.add(ageingBucketData)
-                data[payment.zone] = arrayListAgeingBucketZone
+                data[it] = listData as ArrayList<AgeingBucketZone>
+            } 
+        } else {
+            val uniqueCurrencyList: List<String> = payments.map { it.dashboardCurrency!! }.distinct()
+
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
+
+            payments.forEach { payment ->
+                val zone = payment.zone
+                val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
+
+                if (payment.dashboardCurrency != request.dashboardCurrency) {
+                    val avgExchangeRate = exchangeRate[payment.dashboardCurrency]
+                    payment.amount = payment.amount.times(avgExchangeRate!!)
+                    payment.dashboardCurrency = request.dashboardCurrency
+                }
+
+                val ageingBucketData = AgeingBucketZone(
+                    ageingDuration = payment.ageingDuration,
+                    amount = payment.amount.setScale(4, RoundingMode.UP),
+                    dashboardCurrency = payment.dashboardCurrency
+                )
+
+                if (data.keys.contains(zone)) {
+                    val zoneWiseData = data[zone]
+
+                    val index = zoneWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
+
+                    if (index == -1) {
+                        zoneWiseData.add(ageingBucketData)
+                    } else {
+                        zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)?.setScale(4, RoundingMode.UP)
+                    }
+                } else {
+                    arrayListAgeingBucketZone.add(ageingBucketData)
+                    data[payment.zone] = arrayListAgeingBucketZone
+                }
             }
         }
+
         return data
     }
 
