@@ -150,11 +150,11 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType?.name, request.invoiceCurrency)
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
 
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
 
-        if (outstandingResponse.isNullOrEmpty()) {
+        if (outstandingResponse.isEmpty()) {
             return durationKey.map {
                 OverallAgeingStatsResponse(
                     ageingDuration = it,

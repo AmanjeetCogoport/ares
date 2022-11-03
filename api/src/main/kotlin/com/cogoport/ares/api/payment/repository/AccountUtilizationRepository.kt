@@ -100,7 +100,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
 
     )
-    suspend fun getAgeingBucket(zone: String?, serviceType: String?, invoiceCurrency: String?): List<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
 
     @Query(
         """
