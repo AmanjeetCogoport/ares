@@ -17,8 +17,7 @@ jar {
 }
 
 group = "com.cogoport.ares"
-
-version = "0.1.57"
+version = "0.1.59"
 
 repositories {
     mavenCentral()

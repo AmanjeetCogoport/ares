@@ -255,7 +255,7 @@ open class SettlementServiceImpl : SettlementService {
         request.documentNo = Hashids.decode(request.documentNo)[0].toString()
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
-        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds)
+        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments, request.documentNo.toLong())
         // Fetch Sid for invoices
         val docIds = settlements.map { it.destinationId.toString() }
@@ -405,9 +405,10 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getPaymentDataForSettledInvoices(
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
-        paymentIds: MutableList<Long>
+        paymentIds: MutableList<Long>,
+        settlementType: SettlementType
     ): List<PaymentData> {
-        val tdsType = mutableListOf<SettlementType>()
+        val tdsType = mutableListOf(settlementType)
         settlementGrouped.forEach { docList ->
             docList.value.forEach {
                 if (it.tdsDocumentNo != null)
@@ -1187,6 +1188,7 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
+                SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1780,7 +1782,7 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
-            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization)
+            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS ->
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
@@ -1796,12 +1798,18 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private fun updateBalanceAmount(accountUtilization: AccountUtilization) {
+    private fun updateBalanceAmount(
+        accountUtilization: AccountUtilization,
+        performedBy: UUID?,
+        performedByUserType: String?
+    ) {
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
-                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr
+                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+                    performedBy = performedBy,
+                    performedByUserType = performedByUserType
                 )
             )
         )

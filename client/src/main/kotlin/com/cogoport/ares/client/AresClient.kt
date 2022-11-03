@@ -40,7 +40,7 @@ import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.context.annotation.Parameter
@@ -60,7 +60,7 @@ import jakarta.validation.Valid
 @Client(id = "ares")
 interface AresClient {
     @Get("/payments/dashboard/overall-stats{?request*}")
-    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?
+    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData?
 
     @Get("/payments/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?

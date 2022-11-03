@@ -128,7 +128,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(
                             invoiceId = accUtilRes.documentNo,
-                            balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr)
+                            balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
+                            performedBy = accUtilizationRequest.performedBy,
+                            performedByUserType = accUtilizationRequest.performedByType
+
                         )
                     )
                 )
