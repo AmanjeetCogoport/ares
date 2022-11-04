@@ -15,7 +15,5 @@ data class DsoResponse(
     @JsonProperty("month")
     var month: String,
     @JsonProperty("dsoForTheMonth")
-    var dsoForTheMonth: BigDecimal,
-    @JsonProperty("dashboardCurrency")
-    var dashboardCurrency: String
+    var dsoForTheMonth: BigDecimal
 )

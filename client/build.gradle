@@ -16,9 +16,10 @@ jar {
     archivesBaseName = 'ares-client'
 }
 
-group = "com.cogoport.ares"
-version = "0.1.39"
 
+group = "com.cogoport.ares"
+
+version = "0.1.42-beta"
 
 dependencies {
     // Use the model subproject
