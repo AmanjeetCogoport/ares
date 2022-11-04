@@ -97,7 +97,9 @@ open class KnockoffServiceImpl : KnockoffService {
         var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
         var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
 
-        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
+        val isOverPaid = isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)
+
+        if (isOverPaid) {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
@@ -114,12 +116,12 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
 
-        saveSettlements(knockOffRecord, false, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
-        saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum)
+        saveSettlements(knockOffRecord, false, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
+        saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
 
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
-        if (isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)) {
+        if (isOverPaid) {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
@@ -283,9 +285,12 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         isTDSEntry: Boolean,
         destinationId: Long?,
-        sourceId: Long?
+        sourceId: Long?,
+        isOverPaid: Boolean,
+        accountUtilization: AccountUtilization
     ) {
-        val settlement = generateSettlementEntity(knockOffRecord, isTDSEntry, destinationId, sourceId)
+
+        val settlement = generateSettlementEntity(knockOffRecord, isTDSEntry, destinationId, sourceId, isOverPaid, accountUtilization)
         val settleObj = settlementRepository.save(settlement)
         auditService.createAudit(
             AuditRequest(
@@ -303,8 +308,24 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         isTDSEntry: Boolean,
         destinationId: Long?,
-        sourceId: Long?
+        sourceId: Long?,
+        isOverPaid: Boolean,
+        accountUtilization: AccountUtilization
     ): Settlement {
+        var ledAmount: BigDecimal
+        var amount: BigDecimal
+        if (isTDSEntry) {
+            ledAmount = knockOffRecord.ledTdsAmount
+            amount = knockOffRecord.currTdsAmount
+        } else {
+            if (isOverPaid) {
+                ledAmount = accountUtilization.amountLoc - accountUtilization.payLoc
+                amount = accountUtilization.amountCurr - accountUtilization.payCurr
+            } else {
+                ledAmount = knockOffRecord.ledgerAmount
+                amount = knockOffRecord.currencyAmount
+            }
+        }
         return Settlement(
             id = null,
             sourceId = sourceId,
@@ -312,9 +333,9 @@ open class KnockoffServiceImpl : KnockoffService {
             destinationId = destinationId!!,
             destinationType = SettlementType.PINV,
             ledCurrency = knockOffRecord.ledgerCurrency,
-            ledAmount = if (isTDSEntry) knockOffRecord.ledTdsAmount else knockOffRecord.ledgerAmount,
+            ledAmount = ledAmount,
             currency = knockOffRecord.currency,
-            amount = if (isTDSEntry) knockOffRecord.currTdsAmount else knockOffRecord.currencyAmount,
+            amount = amount,
             signFlag = if (isTDSEntry) -1 else 1,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
