@@ -24,7 +24,8 @@ enum class ServiceType {
     FCL_CUSTOMS_FREIGHT,
     LCL_CUSTOMS_FREIGHT,
     AIR_CUSTOMS_FREIGHT,
-    FCL_FREIGHT_LOCAL
+    FCL_FREIGHT_LOCAL,
+    DOMESTIC_AIR_FREIGHT
 }
 
 enum class ZoneCode {
