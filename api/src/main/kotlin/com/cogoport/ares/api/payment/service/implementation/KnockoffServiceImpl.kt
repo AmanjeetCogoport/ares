@@ -312,8 +312,6 @@ open class KnockoffServiceImpl : KnockoffService {
         isOverPaid: Boolean,
         accountUtilization: AccountUtilization
     ): Settlement {
-        accountUtilization.amountCurr - accountUtilization.payCurr
-        accountUtilization.amountLoc - accountUtilization.payLoc
         var ledAmount: BigDecimal
         var amount: BigDecimal
         if (isTDSEntry) {
