@@ -30,8 +30,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
     @Query(
         """
-            update payments set deleted_at = now() where id = :paymentId
+            UPDATE payments SET deleted_at = NOW(),updated_at = NOW() WHERE id = :paymentId
         """
     )
-    suspend fun deletedPayment(paymentId: Long)
+    suspend fun deletePayment(paymentId: Long)
 }

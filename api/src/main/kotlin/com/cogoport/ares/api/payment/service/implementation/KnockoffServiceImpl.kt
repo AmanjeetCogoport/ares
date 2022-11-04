@@ -334,54 +334,20 @@ open class KnockoffServiceImpl : KnockoffService {
 
         for (paymentMappingData in paymentMappingDatas) {
             payment = paymentRepository.findByPaymentId(paymentMappingData.paymentId)
-            paymentRepository.deletedPayment(paymentMappingData.paymentId)
-            invoicePayMappingRepo.deletedPaymentMappings(paymentMappingData.id)
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = AresConstants.PAYMENTS,
-                    objectId = paymentMappingData.paymentId,
-                    actionName = AresConstants.DELETE,
-                    data = null,
-                    performedBy = reverseUtrRequest.updatedBy.toString(),
-                    performedByUserType = reverseUtrRequest.performedByType
-                )
-            )
+            paymentRepository.deletePayment(paymentMappingData.paymentId)
+            invoicePayMappingRepo.deletePaymentMappings(paymentMappingData.id)
+            createAudit(AresConstants.PAYMENTS,paymentMappingData.paymentId,AresConstants.DELETE,null,reverseUtrRequest.updatedBy.toString(),reverseUtrRequest.performedByType)
+            createAudit("payment_invoice_map",paymentMappingData.id,AresConstants.DELETE,null,reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = "payment_invoice_map",
-                    objectId = paymentMappingData.id,
-                    actionName = AresConstants.DELETE,
-                    data = null,
-                    performedBy = reverseUtrRequest.updatedBy.toString(),
-                    performedByUserType = reverseUtrRequest.performedByType
-                )
-            )
         }
 
-        val settlementId = settlementRepository.getIdBydestinationId(reverseUtrRequest.documentNo, payment?.paymentNum!!)
+        val settlementId = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, payment?.paymentNum!!)
         settlementRepository.deleleSettlement(settlementId[0])
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.SETTLEMENT,
-                objectId = settlementId[0],
-                actionName = AresConstants.DELETE,
-                data = null,
-                performedBy = reverseUtrRequest.updatedBy.toString(),
-                performedByUserType = reverseUtrRequest.performedByType
-            )
-        )
+
+        createAudit(AresConstants.SETTLEMENT,settlementId[0],AresConstants.DELETE,null,reverseUtrRequest.updatedBy.toString(),reverseUtrRequest.performedByType)
         settlementRepository.deleleSettlement(settlementId[1])
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.SETTLEMENT,
-                objectId = settlementId[1],
-                actionName = AresConstants.DELETE,
-                data = null,
-                performedBy = reverseUtrRequest.updatedBy.toString(),
-                performedByUserType = reverseUtrRequest.performedByType
-            )
-        )
+
+        createAudit(AresConstants.SETTLEMENT,settlementId[1],AresConstants.DELETE,null,reverseUtrRequest.updatedBy.toString(),reverseUtrRequest.performedByType)
         val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payment?.paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
         var leftAmountPayCurr = accountUtilization?.payCurr?.minus(reverseUtrRequest.tdsAmount + reverseUtrRequest.currencyAmount)
@@ -398,26 +364,31 @@ open class KnockoffServiceImpl : KnockoffService {
         }
 
         accountUtilizationRepository.makeInvoicePaymentZero(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
+
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS,accountUtilizationId, AresConstants.DELETE,null,reverseUtrRequest.updatedBy.toString(),reverseUtrRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS,accountUtilization?.id!!,AresConstants.UPDATE,null,reverseUtrRequest.updatedBy.toString(),reverseUtrRequest.performedByType)
+    }
+
+    private suspend fun createAudit(
+        objectType: String,
+        objectId: Long,
+        actionName: String,
+        data: Any?,
+        performedBy: String,
+        performedByUserType: String?
+
+
+    ){
         auditService.createAudit(
             AuditRequest(
-                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                objectId = accountUtilizationId,
-                actionName = AresConstants.DELETE,
-                data = null,
-                performedBy = reverseUtrRequest.updatedBy.toString(),
-                performedByUserType = reverseUtrRequest.performedByType
+                objectType = objectType,
+                objectId = objectId,
+                actionName = actionName,
+                data = data,
+                performedBy = performedBy,
+                performedByUserType = performedByUserType
             )
         )
 
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                objectId = accountUtilization?.id!!,
-                actionName = AresConstants.UPDATE,
-                data = null,
-                performedBy = reverseUtrRequest.updatedBy.toString(),
-                performedByUserType = reverseUtrRequest.performedByType
-            )
-        )
     }
 }

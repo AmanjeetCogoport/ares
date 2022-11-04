@@ -23,5 +23,5 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
             update payment_invoice_mapping set deleted_at = now() where id = :id
         """
     )
-    suspend fun deletedPaymentMappings(id: Long?)
+    suspend fun deletePaymentMappings(id: Long?)
 }

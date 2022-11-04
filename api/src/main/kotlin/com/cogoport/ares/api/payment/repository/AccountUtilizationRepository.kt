@@ -923,20 +923,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            update account_utilizations set deleted_at = now() where id = :id
+            UPDATE account_utilizations SET deleted_at = NOW() WHERE id = :id
         """
     )
     suspend fun deleteAccountUtilization(id: Long)
 
     @Query(
-        """update account_utilizations set 
-              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at =now() where id=:id"""
+        """UPDATE account_utilizations SET 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id=:id"""
     )
     suspend fun makeInvoicePaymentZero(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
     @Query(
         """
-            select id from account_utilizations where document_no = :paymentNum
+            SELECT id FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
         """
     )
     suspend fun getIdByPaymentNum(paymentNum: Long?): Long
