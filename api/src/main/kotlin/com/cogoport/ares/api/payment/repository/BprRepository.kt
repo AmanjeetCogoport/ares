@@ -16,10 +16,10 @@ interface BprRepository : CoroutineCrudRepository<Bpr, Long> {
     @Query(
         """
             SELECT
-            id, business_name,trade_party_detail_serial_id
+            id, business_name,trade_party_detail_serial_id,sage_org_id
             FROM bpr
             WHERE
-            (:q IS NULL OR business_name iLIKE :q)
+            (:q IS NULL OR business_name iLIKE :q OR trade_party_detail_serial_id iLIKE :q)
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
@@ -30,10 +30,10 @@ interface BprRepository : CoroutineCrudRepository<Bpr, Long> {
         SELECT count(*) FROM
         (
         SELECT
-        id, business_name,trade_party_detail_serial_id
+        id, business_name,trade_party_detail_serial_id,sage_org_id
         FROM bpr
         WHERE
-        (:q IS NULL OR business_name iLIKE :q)
+        (:q IS NULL OR business_name iLIKE :q OR trade_party_detail_serial_id iLIKE :q)
         ) as output
     """
     )

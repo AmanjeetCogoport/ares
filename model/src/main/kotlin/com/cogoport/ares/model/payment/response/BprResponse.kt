@@ -14,5 +14,7 @@ data class BprResponse(
     @JsonProperty("businessName")
     var businessName: String,
     @JsonProperty("tradePartyDetailSerialId")
-    var tradePartyDetailSerialId: Long
+    var tradePartyDetailSerialId: Long,
+    @JsonProperty("sageOrgId")
+    var sageOrgId: String
 )
