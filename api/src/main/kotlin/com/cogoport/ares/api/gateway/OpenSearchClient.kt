@@ -11,6 +11,7 @@ import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
+import org.opensearch.client.opensearch._types.query_dsl.Operator
 import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -92,7 +93,7 @@ class OpenSearchClient {
     }
 
     fun <T> updateDocument(index: String, docId: String, docData: T) {
-        Client.updateDocument(index, docId, docData)
+        Client.updateDocument(index, docId, docData, true)
     }
 
     fun listCustomerSaleOutstanding(
@@ -177,8 +178,9 @@ class OpenSearchClient {
                                 if (request.query != null) {
                                     b.must { m ->
                                         m.queryString { q ->
-                                            q.query("*" + request.query + "*")
+                                            q.query(request.query + "*")
                                                 .fields("organizationName", "utr")
+                                                .defaultOperator(Operator.And)
                                         }
                                     }
                                 }

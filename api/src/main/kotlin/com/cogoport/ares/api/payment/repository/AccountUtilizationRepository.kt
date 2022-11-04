@@ -17,9 +17,11 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -71,14 +73,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) > 365 then '365+'
              end, 'Unknown') as ageing_duration,
              zone_code as zone,
-             sum(sign_flag * (amount_loc - pay_loc)) as amount
+             currency as dashboard_currency,
+             sum(sign_flag * (amount_curr - pay_curr)) as amount
              from account_utilizations
-             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
-             group by ageing_duration, zone
+             where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
+             and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+             group by ageing_duration, zone, dashboard_currency
              order by 1
           """
     )
-    suspend fun getReceivableByAge(zone: String?): MutableList<AgeingBucketZone>
+    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<AgeingBucketZone>
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'
@@ -87,54 +91,59 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             when (now()::date - due_date) between 61 and 90 then '61-90'
             when (now()::date - due_date) > 90 then '>90' 
             end, 'Unknown') as ageing_duration, 
-            sum(sign_flag * (amount_loc - pay_loc)) as amount,
-            'INR' as currency
+            sum(sign_flag * (amount_curr - pay_curr)) as amount,
+            currency as dashboard_currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA')
-            group by ageing_duration
+            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            group by ageing_duration, dashboard_currency
             order by ageing_duration
         """
 
     )
-    suspend fun getAgeingBucket(zone: String?): MutableList<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
 
     @Query(
         """
         select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoices_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_loc - pay_loc <> 0) then 1 else 0 end),0) as open_invoices_count,
-        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as open_on_account_payment_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
-        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_loc - pay_loc <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' ) as organization_count, 
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as open_invoices_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
+        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
+        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
+        currency as dashboard_currency,
+        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and  (:invoiceCurrency is null or currency = :invoiceCurrency)) as organization_count, 
         null as id
         from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA')
+        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+        group by dashboard_currency
     """
     )
-    suspend fun generateOverallStats(zone: String?): OverallStats
+    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallStats>
 
     @Query(
         """
         (
             select 'Total' as duration,
-            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
+            currency as dashboard_currency
             from account_utilizations
-            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA')
+            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            group by dashboard_currency
         )
         union all
         (
             select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_loc - pay_loc) else 0::double precision end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)),0) as collectable_amount 
+            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0::double precision end),0) as receivable_amount,
+            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
+            currency as dashboard_currency
             from account_utilizations
-            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA')
-            group by date_trunc('month',transaction_date)
+            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            group by date_trunc('month',transaction_date), dashboard_currency
             order by date_trunc('month',transaction_date)
         )
         """
     )
-    suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int): MutableList<CollectionTrend>
+    suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<CollectionTrend>
 
     @Query(
         """
@@ -143,15 +152,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         ),
         y as (
             select to_char(date_trunc('month',transaction_date),'Mon') as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as amount
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
+            currency as dashboard_currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
-            group by date_trunc('month',transaction_date)
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
+            group by date_trunc('month',transaction_date), dashboard_currency
         )
-        select x.month duration, coalesce(y.amount, 0::double precision) as amount from x left join y on y.month = x.month
+        select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
+        y.dashboard_currency
+        from x left join y on y.month = x.month
         """
     )
-    suspend fun generateMonthlyOutstanding(zone: String?): MutableList<Outstanding>
+    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
     @Query(
         """
             with x as (
@@ -159,61 +171,69 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ),
             y as (
                 select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-                sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as total_outstanding_amount 
+                sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
+                currency as dashboard_currency
                 from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
-                group by date_trunc('quarter',transaction_date)
+                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval)
+                group by date_trunc('quarter',transaction_date), dashboard_currency
             )
             select case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
-            coalesce(y.total_outstanding_amount, 0) as amount 
+            coalesce(y.total_outstanding_amount, 0) as amount,
+            y.dashboard_currency as dashboard_currency
             from x
             left join y on x.quarter = y.quarter
         """
     )
-    suspend fun generateQuarterlyOutstanding(zone: String?): MutableList<Outstanding>
+    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
     @Query(
         """
         with X as (
             select 
             extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
+            abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days
+            else date_part('days', now()::date) end as days,
+            currency as dashboard_currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
+            where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
+            group by dashboard_currency
             )
-        select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((X.outstandings / X.total_sales) * X.days,0) as value
-        from X
+            select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
+            coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
+            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales END) * X.days,0) as value,
+            X.dashboard_currency as dashboard_currency
+            from X
         """
     )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String): DailyOutstanding
+    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
     @Query(
         """
         with X as (
             select 
             extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_loc end) as total_sales,
+            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
+            abs(sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
+            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
+            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_curr end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days
+            else date_part('days', now()::date) end as days,
+            currency as dashboard_currency
             from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
+            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
+            group by dashboard_currency
         )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((X.outstandings / X.total_sales) * X.days,0) as value
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, dashboard_currency
         from X
         """
     )
-    suspend fun generateDailyPayablesOutstanding(zone: String?, date: String): DailyOutstanding
+    suspend fun generateDailyPayableOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
     @Query(
         """
         select organization_id,
@@ -277,7 +297,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             '' as status,
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
-            COALESCE(sum(s.amount), 0) as settled_tds
+            COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -291,7 +312,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND acc_type::varchar in (:accountTypes)
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
-                AND (document_value ilike :query || '%')
+                AND (
+                    document_value ilike :query || '%' 
+                    OR au.document_no in (:paymentIds)
+                )
             GROUP BY au.id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
@@ -303,7 +327,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageSize: Int?,
         startDate: String?,
         endDate: String?,
-        query: String
+        query: String,
+        paymentIds: List<Long>
     ): List<HistoryDocument?>
 
     @Query(
@@ -320,7 +345,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND acc_type::varchar in (:accountTypes)
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
-            AND (document_value ilike :query || '%')
+            AND (
+                    document_value ilike :query || '%' 
+                    OR document_no in (:paymentIds)
+                )
         """
     )
     fun countHistoryDocument(
@@ -328,7 +356,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accountTypes: List<String>,
         startDate: String?,
         endDate: String?,
-        query: String
+        query: String,
+        paymentIds: List<Long>
     ): Long
 
     @Query(
@@ -403,6 +432,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             au.id,
             s.source_id,
+            s.source_type,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
@@ -630,15 +660,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 organization_id as org_id,
                 organization_name as org_name,
                 led_currency as currency,
-                coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as outstanding
+                sum(
+                    CASE WHEN 
+                        acc_mode::varchar = :accMode AND
+                        acc_type NOT IN ('REC', 'PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') 
+                    THEN 
+                        sign_flag * (amount_loc - pay_loc) else 0 END
+                ) + 
+                sum(
+                    CASE WHEN 
+                        acc_mode::varchar = :accMode AND
+                        acc_type IN ('REC','PAY') AND document_status = 'FINAL' 
+                    THEN 
+                        sign_flag * (amount_loc - pay_loc) else 0 END
+                ) as outstanding
                 FROM account_utilizations
                 WHERE organization_id = :orgId
+                    AND document_status in ('FINAL', 'PROFORMA')
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
                     GROUP BY organization_id, organization_name, led_currency
         """
     )
-    suspend fun getOrgSummary(orgId: UUID, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
+    suspend fun getOrgSummary(orgId: UUID, accMode: AccMode, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 
     @Query(
         """
@@ -680,13 +724,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             document_no,
             transaction_date::timestamp AS transaction_date, 
-            null as exchange_rate
+            amount_loc/amount_curr as exchange_rate
         FROM account_utilizations
-        WHERE acc_type::varchar = :accType 
+        WHERE acc_type::varchar in (:documentType) 
         AND document_no in (:documentNo)
     """
     )
-    suspend fun getPaymentDetails(documentNo: List<Long>, accType: String): List<PaymentData>
+    suspend fun getPaymentDetails(documentNo: List<Long>, documentType: List<SettlementType>): List<PaymentData>
 
     @Query(
         """
