@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.entity
 
-import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -47,13 +46,4 @@ data class AccountUtilization(
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var migrated: Boolean?
-) {
-    fun getPaymentStatus(): PaymentStatus {
-        if (amountCurr == payCurr) {
-            return PaymentStatus.PAID
-        } else if ((amountCurr - payCurr).compareTo(0.toBigDecimal()) > 0 && payCurr.compareTo(0.toBigDecimal()) != 0) {
-            return PaymentStatus.PARTIAL_PAID
-        }
-        return PaymentStatus.UNPAID
-    }
-}
+)
