@@ -1800,7 +1800,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private fun updateBalanceAmount(
         accountUtilization: AccountUtilization,
-        performedBy: UUID?,
+        performedBy: UUID,
         performedByUserType: String?
     ) {
         aresKafkaEmitter.emitInvoiceBalance(
