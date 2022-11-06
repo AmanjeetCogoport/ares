@@ -329,17 +329,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             accType = invoiceRequest.accType,
             balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
-            paymentStatus = getPaymentStatus(accountUtilization)
+            paymentStatus = Utilities.getPaymentStatus(accountUtilization)
         )
-    }
-
-    private fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
-        if (accountUtilization.amountCurr == accountUtilization.payCurr) {
-            return PaymentStatus.PAID
-        } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
-            return PaymentStatus.PARTIAL_PAID
-        }
-        return PaymentStatus.UNPAID
     }
 
     /**

@@ -1809,7 +1809,8 @@ open class SettlementServiceImpl : SettlementService {
                     invoiceId = accountUtilization.documentNo,
                     balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
                     performedBy = performedBy,
-                    performedByUserType = performedByUserType
+                    performedByUserType = performedByUserType,
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 )
             )
         )
