@@ -107,7 +107,7 @@ class Utilities {
         }
 
         fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
-            if (accountUtilization.amountCurr == accountUtilization.payCurr) {
+            if (accountUtilization.amountCurr.compareTo(accountUtilization.payCurr) == 0) {
                 return PaymentStatus.PAID
             } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
                 return PaymentStatus.PARTIAL_PAID
