@@ -6,7 +6,6 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -132,8 +131,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             invoiceId = accUtilRes.documentNo,
                             balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
                             performedBy = accUtilizationRequest.performedBy,
-                            performedByUserType = accUtilizationRequest.performedByType
-
+                            performedByUserType = accUtilizationRequest.performedByType,
+                            paymentStatus = Utilities.getPaymentStatus(accUtilRes)
                         )
                     )
                 )
