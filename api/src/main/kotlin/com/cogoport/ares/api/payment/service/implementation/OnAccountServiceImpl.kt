@@ -431,11 +431,11 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel)
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel, true)
 
         try {
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
             // Emitting Kafka message to Update Outstanding and Dashboard
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
