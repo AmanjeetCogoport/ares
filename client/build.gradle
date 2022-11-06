@@ -19,7 +19,7 @@ jar {
 
 group = "com.cogoport.ares"
 
-version = "0.1.42-beta"
+version = "0.1.43"
 
 dependencies {
     // Use the model subproject
