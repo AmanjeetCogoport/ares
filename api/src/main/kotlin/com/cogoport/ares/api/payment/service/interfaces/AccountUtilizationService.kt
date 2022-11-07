@@ -4,7 +4,9 @@ import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 
 interface AccountUtilizationService {
     suspend fun add(accUtilizationRequestList: List<AccUtilizationRequest>): List<CreateInvoiceResponse>
@@ -12,4 +14,5 @@ interface AccountUtilizationService {
     suspend fun delete(request: DeleteInvoiceRequest): Boolean
     suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest)
     suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest)
+    suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse
 }
