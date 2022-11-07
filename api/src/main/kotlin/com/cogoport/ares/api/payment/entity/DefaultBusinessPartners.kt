@@ -7,11 +7,11 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.UUID
 
-@MappedEntity("bpr")
-data class Bpr(
+@MappedEntity("default_business_partners")
+data class DefaultBusinessPartners(
     @field:Id @GeneratedValue var id: Long?,
     var businessName: String,
-    var tradePartyDetailSerialId: Long,
+    var tradePartyDetailSerialId: String,
     var sageOrgId: String?,
     var tradePartyDetailId: UUID,
     var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
