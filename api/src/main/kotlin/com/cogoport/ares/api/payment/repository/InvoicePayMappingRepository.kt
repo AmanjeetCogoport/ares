@@ -12,11 +12,11 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-             select id,payment_id from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP' and deleted_at is null
+             select id,mapping_type,amount,led_amount from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP' AND payment_id = :paymentId  AND deleted_at is null
              
         """
     )
-    suspend fun findBydocumentNo(documentNo: Long): List<PaymentMapResponse>
+    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse
 
     @Query(
         """

@@ -157,10 +157,10 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
     @Query(
         """
-            UPDATE settlements SET deleted_at = NOW() WHERE id = :id 
+            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
         """
     )
-    suspend fun deleleSettlement(id: Long)
+    suspend fun deleleSettlement(id: List<Long>)
 
     @Query(
         """

@@ -33,5 +33,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             UPDATE payments SET deleted_at = NOW(),updated_at = NOW() WHERE id = :paymentId
         """
     )
-    suspend fun deletePayment(paymentId: Long)
+    suspend fun deletePayment(paymentId: Long?)
+
+    @Query(
+        """
+            SELECT * from payments where trans_ref_number = :transRefNumber
+        """
+    )
+    suspend fun findByTransRef(transRefNumber: String?): List<Payment>
 }

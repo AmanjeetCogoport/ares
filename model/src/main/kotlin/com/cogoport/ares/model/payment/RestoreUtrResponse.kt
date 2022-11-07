@@ -2,13 +2,14 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
-import java.util.UUID
+import java.math.BigDecimal
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class ReverseUtrRequest(
+data class RestoreUtrResponse(
     val documentNo: Long,
-    var transactionRef: String?,
-    var updatedBy: UUID?,
-    var performedByType: String?,
+    var currencyAmount: BigDecimal,
+    var tdsAmount: BigDecimal,
+    var ledgerAmount: BigDecimal,
+    var ledgerTdsAmount: BigDecimal
 )

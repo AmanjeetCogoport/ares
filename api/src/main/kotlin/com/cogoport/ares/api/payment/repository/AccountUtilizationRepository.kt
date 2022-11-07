@@ -945,9 +945,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """UPDATE account_utilizations SET 
-              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id=:id"""
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id =:id"""
     )
-    suspend fun makeInvoicePaymentZero(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+    suspend fun updateAccountUtilization(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
     @Query(
         """
