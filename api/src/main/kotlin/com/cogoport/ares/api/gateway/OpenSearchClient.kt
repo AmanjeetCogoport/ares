@@ -400,7 +400,7 @@ class OpenSearchClient {
                                 b
                             }
                         }
-                        .size(10000)
+                        .size(AresConstants.LIMIT)
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
