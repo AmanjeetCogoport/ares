@@ -14,7 +14,7 @@ data class DefaultBusinessPartnersResponse(
     @JsonProperty("businessName")
     var businessName: String,
     @JsonProperty("tradePartyDetailSerialId")
-    var tradePartyDetailSerialId: Long,
+    var tradePartyDetailSerialId: String,
     @JsonProperty("sageOrgId")
     var sageOrgId: String
 )
