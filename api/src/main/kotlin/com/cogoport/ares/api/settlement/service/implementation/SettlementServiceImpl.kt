@@ -577,17 +577,17 @@ open class SettlementServiceImpl : SettlementService {
         val listBillRequest = ListBillRequest(
             jobNumbers = null,
             jobType = JobType.SHIPMENT,
-            status =null,
-            excludeStatus=  null,
+            status = null,
+            excludeStatus = null,
             organizationId = null,
             serviceProviderOrgId = null,
-            paymentStatus= null,
-            serviceType= null,
+            paymentStatus = null,
+            serviceType = null,
             billNumber = null,
             urgencyTag = null,
             from = null,
             to = null,
-            q =null,
+            q = null,
             billType = null,
             proforma = null,
             serviceOpIds = null,
@@ -596,10 +596,10 @@ open class SettlementServiceImpl : SettlementService {
 
         val responseList = kuberClient.billListByIds(listBillRequest)
 
-        //flow is not going here as kuberclient is not properly returning data ---> need to look at it properly.
+        // flow is not going here as kuberclient is not properly returning data ---> need to look at it properly.
         responseList.data?.map { it ->
             val documentId = it?.billId
-            documentModel.filter {k ->  k.id == documentId }[0].hasPayrun = it?.hasPayrun!!
+            documentModel.filter { k -> k.id == documentId }[0].hasPayrun = it?.hasPayrun!!
         }
 
         return ResponseList(
@@ -1434,7 +1434,7 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         businessValidation(source, dest)
-        if (source.any { it.hasPayrun } || dest.any{it.hasPayrun}){
+        if (source.any { it.hasPayrun } || dest.any { it.hasPayrun }) {
             AresException(AresError.ERR_1512, "")
         }
         val settledList = settleDocuments(request, source, dest, performDbOperation)
