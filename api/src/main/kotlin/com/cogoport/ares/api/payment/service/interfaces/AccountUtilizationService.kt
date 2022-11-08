@@ -14,5 +14,5 @@ interface AccountUtilizationService {
     suspend fun delete(request: DeleteInvoiceRequest): Boolean
     suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest)
     suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest)
-    suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse
+    suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 }

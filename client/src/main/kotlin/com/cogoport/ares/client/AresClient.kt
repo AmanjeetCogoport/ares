@@ -145,5 +145,5 @@ interface AresClient {
     suspend fun getCurrOutstanding(@Body invoiceIds: List<Long>): Long
 
     @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
-    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse
+    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 }
