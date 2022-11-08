@@ -130,8 +130,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             invoiceId = accUtilRes.documentNo,
                             balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
                             performedBy = accUtilizationRequest.performedBy,
-                            performedByUserType = accUtilizationRequest.performedByType
-
+                            performedByUserType = accUtilizationRequest.performedByType,
+                            paymentStatus = Utilities.getPaymentStatus(accUtilRes)
                         )
                     )
                 )
@@ -310,18 +310,18 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Returns Balance Amount and Payment Status for an Invoice
      * @param invoiceRequest
      */
-    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse {
+    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse? {
         val accountUtilization = accUtilRepository.findRecord(
             invoiceRequest.documentNo,
             invoiceRequest.accType.name
-        ) ?: throw AresException(AresError.ERR_1005, invoiceRequest.documentNo.toString())
+        ) ?: return null
 
         return InvoicePaymentResponse(
             documentNo = invoiceRequest.documentNo,
             accType = invoiceRequest.accType,
             balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
-            paymentStatus = accountUtilization.getPaymentStatus()
+            paymentStatus = Utilities.getPaymentStatus(accountUtilization)
         )
     }
 
