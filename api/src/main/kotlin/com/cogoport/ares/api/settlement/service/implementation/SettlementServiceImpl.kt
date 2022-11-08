@@ -596,9 +596,11 @@ open class SettlementServiceImpl : SettlementService {
 
         val responseList = kuberClient.billListByIds(listBillRequest)
 
-        responseList.data?.map { it ->
-            val documentId = it?.billId
-            documentModel.filter { k -> k.id == documentId }[0].hasPayrun = it?.hasPayrun!!
+        responseList.list?.map { it ->
+            val documentId = it.billId
+            if(documentModel.any { k -> k.documentNo == documentId }){
+                documentModel.first { k -> k.documentNo == documentId }.hasPayrun = it.hasPayrun!!
+            }
         }
 
         return ResponseList(
