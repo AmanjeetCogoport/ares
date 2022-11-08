@@ -34,5 +34,6 @@ data class CheckDocument(
     var nostroAmount: BigDecimal?,
     var settledNostro: BigDecimal?,
     var accMode: AccMode,
-    var signFlag: Short
+    var signFlag: Short,
+    var hasPayrun: Boolean = false
 )

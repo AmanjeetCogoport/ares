@@ -67,7 +67,9 @@ import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
+import com.cogoport.loki.model.common.enums.JobType
 import com.cogoport.plutus.client.PlutusClient
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
@@ -569,6 +571,37 @@ open class SettlementServiceImpl : SettlementService {
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
+
+        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "SREIMB") }.map { it.documentNo }
+
+        val listBillRequest = ListBillRequest(
+            jobNumbers = null,
+            jobType = JobType.SHIPMENT,
+            status =null,
+            excludeStatus=  null,
+            organizationId = null,
+            serviceProviderOrgId = null,
+            paymentStatus= null,
+            serviceType= null,
+            billNumber = null,
+            urgencyTag = null,
+            from = null,
+            to = null,
+            q =null,
+            billType = null,
+            proforma = null,
+            serviceOpIds = null,
+            billIds = billListIds
+        )
+
+        val responseList = kuberClient.billListByIds(listBillRequest)
+
+        //flow is not going here as kuberclient is not properly returning data ---> need to look at it properly.
+        responseList.data?.map { it ->
+            val documentId = it?.billId
+            documentModel.filter {k ->  k.id == documentId }[0].hasPayrun = it?.hasPayrun!!
+        }
+
         return ResponseList(
             list = documentModel,
             totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
@@ -1401,6 +1434,9 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         businessValidation(source, dest)
+        if (source.any { it.hasPayrun } || dest.any{it.hasPayrun}){
+            AresException(AresError.ERR_1512, "")
+        }
         val settledList = settleDocuments(request, source, dest, performDbOperation)
         settledList.forEach {
             it.id = Hashids.encode(it.id.toLong())
