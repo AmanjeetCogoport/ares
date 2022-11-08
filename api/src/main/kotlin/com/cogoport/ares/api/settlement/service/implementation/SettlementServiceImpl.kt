@@ -69,7 +69,6 @@ import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
 import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
-import com.cogoport.loki.model.common.enums.JobType
 import com.cogoport.plutus.client.PlutusClient
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
@@ -598,7 +597,7 @@ open class SettlementServiceImpl : SettlementService {
 
         responseList.list?.map { it ->
             val documentId = it.billId
-            if(documentModel.any { k -> k.documentNo == documentId }){
+            if (documentModel.any { k -> k.documentNo == documentId }) {
                 documentModel.first { k -> k.documentNo == documentId }.hasPayrun = it.hasPayrun!!
             }
         }
