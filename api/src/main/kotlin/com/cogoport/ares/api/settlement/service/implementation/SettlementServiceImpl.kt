@@ -576,7 +576,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val listBillRequest = ListBillRequest(
             jobNumbers = null,
-            jobType = JobType.SHIPMENT,
+            jobType = null,
             status = null,
             excludeStatus = null,
             organizationId = null,
@@ -596,7 +596,6 @@ open class SettlementServiceImpl : SettlementService {
 
         val responseList = kuberClient.billListByIds(listBillRequest)
 
-        // flow is not going here as kuberclient is not properly returning data ---> need to look at it properly.
         responseList.data?.map { it ->
             val documentId = it?.billId
             documentModel.filter { k -> k.id == documentId }[0].hasPayrun = it?.hasPayrun!!
