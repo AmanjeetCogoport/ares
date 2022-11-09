@@ -15,7 +15,6 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
-import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -311,17 +310,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Returns Balance Amount and Payment Status for an Invoice
      * @param invoiceRequest
      */
-    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse {
+    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse? {
         val accountUtilization = accUtilRepository.findRecord(
             invoiceRequest.documentNo,
             invoiceRequest.accType.name
-        ) ?: return InvoicePaymentResponse(
-            documentNo = invoiceRequest.documentNo,
-            accType = invoiceRequest.accType,
-            balanceAmount = 0.toBigDecimal(),
-            balanceAmountInLedgerCurrency = 0.toBigDecimal(),
-            paymentStatus = PaymentStatus.UNPAID
-        )
+        ) ?: return null
 
         return InvoicePaymentResponse(
             documentNo = invoiceRequest.documentNo,

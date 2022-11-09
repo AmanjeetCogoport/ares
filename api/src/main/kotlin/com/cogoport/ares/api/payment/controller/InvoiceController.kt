@@ -38,7 +38,7 @@ class InvoiceController {
     }
 
     @Get("/payment-status{?invoicePaymentRequest*}")
-    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse {
+    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse? {
         return accUtilService.getInvoicePaymentStatus(invoicePaymentRequest)
     }
 }
