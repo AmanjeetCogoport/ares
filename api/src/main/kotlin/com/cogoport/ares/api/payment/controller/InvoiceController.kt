@@ -3,10 +3,13 @@ package com.cogoport.ares.api.payment.controller
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
+import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
+import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
@@ -32,5 +35,10 @@ class InvoiceController {
     @Delete
     suspend fun deleteInvoice(@Valid @Body deleteRequest: DeleteInvoiceRequest): Boolean {
         return accUtilService.delete(deleteRequest)
+    }
+
+    @Get("/payment-status{?invoicePaymentRequest*}")
+    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse? {
+        return accUtilService.getInvoicePaymentStatus(invoicePaymentRequest)
     }
 }

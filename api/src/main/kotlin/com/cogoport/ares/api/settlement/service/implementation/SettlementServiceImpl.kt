@@ -67,6 +67,7 @@ import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import io.micronaut.context.annotation.Value
@@ -255,7 +256,7 @@ open class SettlementServiceImpl : SettlementService {
         request.documentNo = Hashids.decode(request.documentNo)[0].toString()
         val settlementGrouped = getSettlementFromDB(request)
         val paymentIds = mutableListOf(request.documentNo.toLong())
-        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds)
+        val payments = getPaymentDataForSettledInvoices(settlementGrouped, paymentIds, request.settlementType)
         val settlements = getSettledInvoices(settlementGrouped, payments, request.documentNo.toLong())
         // Fetch Sid for invoices
         val docIds = settlements.map { it.destinationId.toString() }
@@ -405,9 +406,10 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getPaymentDataForSettledInvoices(
         settlementGrouped: Map<Long?, List<SettledInvoice>>,
-        paymentIds: MutableList<Long>
+        paymentIds: MutableList<Long>,
+        settlementType: SettlementType
     ): List<PaymentData> {
-        val tdsType = mutableListOf<SettlementType>()
+        val tdsType = mutableListOf(settlementType)
         settlementGrouped.forEach { docList ->
             docList.value.forEach {
                 if (it.tdsDocumentNo != null)
@@ -568,6 +570,38 @@ open class SettlementServiceImpl : SettlementService {
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
+
+        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "SREIMB") }.map { it.documentNo }
+
+        val listBillRequest = ListBillRequest(
+            jobNumbers = null,
+            jobType = null,
+            status = null,
+            excludeStatus = null,
+            organizationId = null,
+            serviceProviderOrgId = null,
+            paymentStatus = null,
+            serviceType = null,
+            billNumber = null,
+            urgencyTag = null,
+            from = null,
+            to = null,
+            q = null,
+            billType = null,
+            proforma = null,
+            serviceOpIds = null,
+            billIds = billListIds
+        )
+
+        val responseList = kuberClient.billListByIds(listBillRequest)
+
+        responseList.list?.map { it ->
+            val documentId = it.billId
+            if (documentModel.any { k -> k.documentNo == documentId }) {
+                documentModel.first { k -> k.documentNo == documentId }.hasPayrun = it.hasPayrun!!
+            }
+        }
+
         return ResponseList(
             list = documentModel,
             totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
@@ -1187,6 +1221,7 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
+                SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1399,6 +1434,9 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         businessValidation(source, dest)
+        if (source.any { it.hasPayrun } || dest.any { it.hasPayrun }) {
+            AresException(AresError.ERR_1512, "")
+        }
         val settledList = settleDocuments(request, source, dest, performDbOperation)
         settledList.forEach {
             it.id = Hashids.encode(it.id.toLong())
@@ -1780,7 +1818,7 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
-            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization)
+            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS ->
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
@@ -1796,12 +1834,19 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private fun updateBalanceAmount(accountUtilization: AccountUtilization) {
+    private fun updateBalanceAmount(
+        accountUtilization: AccountUtilization,
+        performedBy: UUID,
+        performedByUserType: String?
+    ) {
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
-                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr
+                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+                    performedBy = performedBy,
+                    performedByUserType = performedByUserType,
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 )
             )
         )

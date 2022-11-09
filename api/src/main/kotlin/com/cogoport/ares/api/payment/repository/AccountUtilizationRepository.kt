@@ -100,7 +100,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
 
     )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
 
     @Query(
         """
@@ -211,7 +211,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>?
+    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
     @Query(
         """
         with X as (
@@ -410,7 +410,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND (amount_curr - pay_curr) <> 0
+                AND (amount_curr - pay_curr) > 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
@@ -519,6 +519,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             au.id,
             s.source_id,
+            s.source_type,
             coalesce(s.amount,0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
@@ -584,7 +585,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND (amount_curr - pay_curr) <> 0
+                    AND (amount_curr - pay_curr) > 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)

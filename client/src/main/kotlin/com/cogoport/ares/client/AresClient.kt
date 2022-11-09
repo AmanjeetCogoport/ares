@@ -3,6 +3,7 @@ package com.cogoport.ares.client
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccountPayablesFile
+import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -17,6 +18,7 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
+import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
@@ -32,13 +34,13 @@ import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.ReceivableAgeingResponse
+import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import io.micronaut.context.annotation.Parameter
@@ -58,7 +60,7 @@ import jakarta.validation.Valid
 @Client(id = "ares")
 interface AresClient {
     @Get("/payments/dashboard/overall-stats{?request*}")
-    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponse?
+    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData?
 
     @Get("/payments/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
@@ -76,7 +78,7 @@ interface AresClient {
     public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
     @Get("/payments/dashboard/receivables-by-age{?request*}")
-    public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): ReceivableAgeingResponse
+    public suspend fun getReceivablesByAge(@Valid request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>>
 
     @Get("/payments/dashboard/org-collection{?request*}")
     public suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse>
@@ -141,4 +143,7 @@ interface AresClient {
     suspend fun onAccountPaymentValue(@Valid request: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>
     @Post("/payments/outstanding/outstanding-days")
     suspend fun getCurrOutstanding(@Body invoiceIds: List<Long>): Long
+
+    @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
+    suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 }
