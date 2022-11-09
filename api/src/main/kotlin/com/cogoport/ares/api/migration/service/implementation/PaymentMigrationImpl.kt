@@ -6,6 +6,7 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.SageBankMapping
+import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
@@ -15,10 +16,10 @@ import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
+import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
 import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
@@ -51,6 +52,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -109,8 +112,7 @@ class PaymentMigrationImpl : PaymentMigration {
             }
 
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
-            val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-
+            val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
                 emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -240,7 +242,7 @@ class PaymentMigrationImpl : PaymentMigration {
         receivableRequest.id = savedPayment.id
 
         val accUtilEntity = setAccountUtilizations(receivableRequest, payment)
-        val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+        val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
 
         try {
@@ -300,8 +302,8 @@ class PaymentMigrationImpl : PaymentMigration {
         )
     }
 
-    private fun setAccountUtilizations(receivableRequest: PaymentMigrationModel, paymentEntity: PaymentMigrationEntity): AccountUtilization {
-        return AccountUtilization(
+    private fun setAccountUtilizations(receivableRequest: PaymentMigrationModel, paymentEntity: PaymentMigrationEntity): AccountUtilizationMigration {
+        return AccountUtilizationMigration(
             id = null,
             documentNo = receivableRequest.paymentNum,
             documentValue = receivableRequest.paymentNumValue,
@@ -335,7 +337,7 @@ class PaymentMigrationImpl : PaymentMigration {
         )
     }
 
-    private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse): AccountUtilization {
+    private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse): AccountUtilizationMigration {
 
         // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
         val serialIdInputs = SerialIdsInput(orgDetailsResponse.organizationSerialId!!.toLong(), orgDetailsResponse.tradePartySerialId!!.toLong())
@@ -345,7 +347,7 @@ class PaymentMigrationImpl : PaymentMigration {
         )
         val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
 
-        return AccountUtilization(
+        return AccountUtilizationMigration(
             id = null,
             documentNo = getPaymentNum(receivableRequest.paymentNum),
             documentValue = receivableRequest.paymentNum,
