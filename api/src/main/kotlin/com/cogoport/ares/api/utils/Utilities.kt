@@ -3,6 +3,8 @@ package com.cogoport.ares.api.utils
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.Operator
 import java.math.BigDecimal
@@ -102,6 +104,15 @@ class Utilities {
                 ex.printStackTrace() // log write
                 throw AresException(AresError.ERR_1003, "") // Invalid date format
             }
+        }
+
+        fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
+            if (accountUtilization.amountCurr.compareTo(accountUtilization.payCurr) == 0) {
+                return PaymentStatus.PAID
+            } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
+                return PaymentStatus.PARTIAL_PAID
+            }
+            return PaymentStatus.UNPAID
         }
     }
 }

@@ -67,6 +67,7 @@ import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import io.micronaut.context.annotation.Value
@@ -569,6 +570,38 @@ open class SettlementServiceImpl : SettlementService {
             doc.allocationAmount = doc.balanceAmount
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
+
+        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "SREIMB") }.map { it.documentNo }
+
+        val listBillRequest = ListBillRequest(
+            jobNumbers = null,
+            jobType = null,
+            status = null,
+            excludeStatus = null,
+            organizationId = null,
+            serviceProviderOrgId = null,
+            paymentStatus = null,
+            serviceType = null,
+            billNumber = null,
+            urgencyTag = null,
+            from = null,
+            to = null,
+            q = null,
+            billType = null,
+            proforma = null,
+            serviceOpIds = null,
+            billIds = billListIds
+        )
+
+        val responseList = kuberClient.billListByIds(listBillRequest)
+
+        responseList.list?.map { it ->
+            val documentId = it.billId
+            if (documentModel.any { k -> k.documentNo == documentId }) {
+                documentModel.first { k -> k.documentNo == documentId }.hasPayrun = it.hasPayrun!!
+            }
+        }
+
         return ResponseList(
             list = documentModel,
             totalPages = ceil(total?.toDouble()?.div(request.pageLimit) ?: 0.0).toLong(),
@@ -1401,6 +1434,9 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         businessValidation(source, dest)
+        if (source.any { it.hasPayrun } || dest.any { it.hasPayrun }) {
+            AresException(AresError.ERR_1512, "")
+        }
         val settledList = settleDocuments(request, source, dest, performDbOperation)
         settledList.forEach {
             it.id = Hashids.encode(it.id.toLong())
@@ -1800,7 +1836,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private fun updateBalanceAmount(
         accountUtilization: AccountUtilization,
-        performedBy: UUID?,
+        performedBy: UUID,
         performedByUserType: String?
     ) {
         aresKafkaEmitter.emitInvoiceBalance(
@@ -1809,7 +1845,8 @@ open class SettlementServiceImpl : SettlementService {
                     invoiceId = accountUtilization.documentNo,
                     balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
                     performedBy = performedBy,
-                    performedByUserType = performedByUserType
+                    performedByUserType = performedByUserType,
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 )
             )
         )

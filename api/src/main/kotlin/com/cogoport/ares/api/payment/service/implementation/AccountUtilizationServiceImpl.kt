@@ -6,7 +6,6 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -16,7 +15,6 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
-import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -132,8 +130,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             invoiceId = accUtilRes.documentNo,
                             balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
                             performedBy = accUtilizationRequest.performedBy,
-                            performedByUserType = accUtilizationRequest.performedByType
-
+                            performedByUserType = accUtilizationRequest.performedByType,
+                            paymentStatus = Utilities.getPaymentStatus(accUtilRes)
                         )
                     )
                 )
@@ -312,34 +310,19 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Returns Balance Amount and Payment Status for an Invoice
      * @param invoiceRequest
      */
-    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse {
+    override suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse? {
         val accountUtilization = accUtilRepository.findRecord(
             invoiceRequest.documentNo,
             invoiceRequest.accType.name
-        ) ?: return InvoicePaymentResponse(
-            documentNo = invoiceRequest.documentNo,
-            accType = invoiceRequest.accType,
-            balanceAmount = 0.toBigDecimal(),
-            balanceAmountInLedgerCurrency = 0.toBigDecimal(),
-            paymentStatus = PaymentStatus.UNPAID
-        )
+        ) ?: return null
 
         return InvoicePaymentResponse(
             documentNo = invoiceRequest.documentNo,
             accType = invoiceRequest.accType,
             balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
-            paymentStatus = getPaymentStatus(accountUtilization)
+            paymentStatus = Utilities.getPaymentStatus(accountUtilization)
         )
-    }
-
-    private fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
-        if (accountUtilization.amountCurr == accountUtilization.payCurr) {
-            return PaymentStatus.PAID
-        } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
-            return PaymentStatus.PARTIAL_PAID
-        }
-        return PaymentStatus.UNPAID
     }
 
     /**

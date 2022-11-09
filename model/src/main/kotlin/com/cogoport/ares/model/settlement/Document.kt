@@ -39,5 +39,6 @@ data class Document(
     var signFlag: Short,
     var nostroAmount: BigDecimal,
     var approved: Boolean?,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var hasPayrun: Boolean = false
 )
