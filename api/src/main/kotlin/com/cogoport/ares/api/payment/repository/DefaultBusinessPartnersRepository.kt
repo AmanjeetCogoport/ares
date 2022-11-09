@@ -34,4 +34,7 @@ interface DefaultBusinessPartnersRepository : CoroutineCrudRepository<DefaultBus
        """
     )
     suspend fun getCount(q: String?): Long?
+
+    @Query("SELECT trade_party_detail_serial_id FROM default_business_partners WHERE trade_party_detail_serial_id = :tradePartyDetailSerialId")
+    suspend fun findTradePartyDetailSerialId(tradePartyDetailSerialId: String): String
 }

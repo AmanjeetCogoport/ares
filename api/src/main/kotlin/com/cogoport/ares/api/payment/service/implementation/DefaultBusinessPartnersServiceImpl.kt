@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.DefaultBusinessPartners
 import com.cogoport.ares.api.payment.repository.DefaultBusinessPartnersRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultBusinessPartnersService
@@ -9,6 +11,7 @@ import com.cogoport.ares.model.payment.request.BprRequest
 import com.cogoport.ares.model.payment.request.ListBprRequest
 import com.cogoport.ares.model.payment.response.DefaultBusinessPartnersResponse
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
@@ -23,12 +26,22 @@ open class DefaultBusinessPartnersServiceImpl : DefaultBusinessPartnersService {
     lateinit var cogoClient: AuthClient
 
     override suspend fun add(request: BprRequest): Long {
-        val sageOrganization = cogoClient.getSageOrganization(
-            SageOrganizationRequest(
-                request.tradePartyDetailSerialId.toString(),
-                "importer_exporter"
+        val sageOrganization: SageOrganizationResponse
+        try {
+            sageOrganization = cogoClient.getSageOrganization(
+                SageOrganizationRequest(
+                    request.tradePartyDetailSerialId.toString(),
+                    "importer_exporter"
+                )
             )
-        )
+        } catch (e: Exception) {
+            throw AresException(AresError.ERR_1002, "")
+        }
+
+        if (bprRepo.findTradePartyDetailSerialId(request.tradePartyDetailSerialId.toString()) == request.tradePartyDetailSerialId.toString()) {
+            throw AresException(AresError.ERR_1512, "")
+        }
+
         val response = bprRepo.save(
             DefaultBusinessPartners(
                 id = null,
