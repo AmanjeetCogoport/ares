@@ -1,11 +1,11 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.payment.service.interfaces.DefaultBusinessPartnersService
+import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.payment.request.BprRequest
-import com.cogoport.ares.model.payment.request.ListBprRequest
-import com.cogoport.ares.model.payment.response.DefaultBusinessPartnersResponse
+import com.cogoport.ares.model.payment.request.DefaultedBusinessPartnerRequest
+import com.cogoport.ares.model.payment.request.ListDefaultedBusinessPartnersRequest
+import com.cogoport.ares.model.payment.response.DefaultedBusinessPartnersResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -18,13 +18,13 @@ import javax.validation.Valid
 
 @Validated
 @Controller("/bpr")
-class DefaultBusinessPartnersController {
+class DefaultedBusinessPartnersController {
 
     @Inject
-    lateinit var bprService: DefaultBusinessPartnersService
+    lateinit var bprService: DefaultedBusinessPartnersService
 
     @Post
-    suspend fun addBpr(@Valid @Body request: BprRequest): Response<Long> {
+    suspend fun addOrganization(@Valid @Body request: DefaultedBusinessPartnerRequest): Response<Long> {
         return Response<Long>().ok("Saved", bprService.add(request))
     }
 
@@ -34,7 +34,7 @@ class DefaultBusinessPartnersController {
     }
 
     @Get("/list{?request*}")
-    suspend fun listBpr(@Valid request: ListBprRequest): ResponseList<DefaultBusinessPartnersResponse?> {
-        return Response<ResponseList<DefaultBusinessPartnersResponse?>>().ok(bprService.list(request))
+    suspend fun listOrganization(@Valid request: ListDefaultedBusinessPartnersRequest): ResponseList<DefaultedBusinessPartnersResponse?> {
+        return Response<ResponseList<DefaultedBusinessPartnersResponse?>>().ok(bprService.list(request))
     }
 }

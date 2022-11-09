@@ -7,14 +7,14 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.UUID
 
-@MappedEntity("default_business_partners")
-data class DefaultBusinessPartners(
+@MappedEntity("defaulted_business_partners")
+data class DefaultedBusinessPartners(
     @field:Id @GeneratedValue var id: Long?,
     var businessName: String,
-    var tradePartyDetailSerialId: String,
-    var sageOrgId: String?,
+    var tradePartyDetailSerialId: Long,
+    var sageOrgId: String,
     var tradePartyDetailId: UUID,
-    var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
-    var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
+    var createdAt: Timestamp = Timestamp.valueOf(LocalDateTime.now()),
+    var updatedAt: Timestamp = Timestamp.valueOf(LocalDateTime.now()),
     var deletedAt: Timestamp?
 )

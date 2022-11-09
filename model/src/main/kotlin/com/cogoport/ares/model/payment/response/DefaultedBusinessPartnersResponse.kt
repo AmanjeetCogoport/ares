@@ -8,7 +8,7 @@ import io.micronaut.core.annotation.Introspected
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
-data class DefaultBusinessPartnersResponse(
+data class DefaultedBusinessPartnersResponse(
     @JsonProperty("id")
     var id: String,
     @JsonProperty("businessName")
