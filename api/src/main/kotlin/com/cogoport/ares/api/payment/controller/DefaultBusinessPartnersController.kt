@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.response.DefaultBusinessPartnersResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
@@ -25,10 +26,10 @@ class DefaultBusinessPartnersController {
 
     @Post
     suspend fun addBpr(@Valid @Body request: BprRequest): Response<Long> {
-        return Response<Long>().ok(HttpStatus.CREATED.name, bprService.add(request))
+        return Response<Long>().ok("Saved", bprService.add(request))
     }
 
-    @Post("/delete/{id}")
+    @Delete("/delete/{id}")
     suspend fun remove(@PathVariable("id") id: Long): Response<Long> {
         return Response<Long>().ok("Deleted", bprService.delete(id))
     }
