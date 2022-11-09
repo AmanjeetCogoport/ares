@@ -16,7 +16,7 @@ class SageServiceImpl : SageService {
     @Value("\${sage.databaseName}")
     var sageSchema: String? = null
 
-    override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?): ArrayList<PaymentRecord> {
+    override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """
         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
@@ -59,7 +59,7 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in('AR','SC') 
+            where P.BPRSAC_0 = '$mode'  and P.BPR_0 = '$bpr'
             and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
              """
         //  -- and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
