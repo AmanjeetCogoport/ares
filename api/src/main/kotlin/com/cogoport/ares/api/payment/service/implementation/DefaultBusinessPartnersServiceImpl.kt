@@ -39,7 +39,7 @@ open class DefaultBusinessPartnersServiceImpl : DefaultBusinessPartnersService {
         }
 
         if (bprRepo.findTradePartyDetailSerialId(request.tradePartyDetailSerialId.toString()) == request.tradePartyDetailSerialId.toString()) {
-            throw AresException(AresError.ERR_1512, "")
+            throw AresException(AresError.ERR_1513, "")
         }
 
         val response = bprRepo.save(

@@ -6,7 +6,6 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.BprRequest
 import com.cogoport.ares.model.payment.request.ListBprRequest
 import com.cogoport.ares.model.payment.response.DefaultBusinessPartnersResponse
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
