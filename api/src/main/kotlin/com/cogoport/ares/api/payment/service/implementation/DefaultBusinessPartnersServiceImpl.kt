@@ -35,7 +35,7 @@ open class DefaultBusinessPartnersServiceImpl : DefaultBusinessPartnersService {
                 )
             )
         } catch (e: Exception) {
-            throw AresException(AresError.ERR_1002, "")
+            throw AresException(AresError.ERR_1514, "")
         }
 
         if (bprRepo.findTradePartyDetailSerialId(request.tradePartyDetailSerialId.toString()) == request.tradePartyDetailSerialId.toString()) {
