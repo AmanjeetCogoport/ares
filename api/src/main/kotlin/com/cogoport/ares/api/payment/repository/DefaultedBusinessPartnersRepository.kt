@@ -20,6 +20,7 @@ interface DefaultedBusinessPartnersRepository : CoroutineCrudRepository<Defaulte
             FROM defaulted_business_partners
             WHERE
             (:q IS NULL OR business_name iLIKE :q OR trade_party_detail_serial_id::text iLIKE :q)
+            ORDER BY created_at DESC
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
