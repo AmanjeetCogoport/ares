@@ -77,5 +77,8 @@ data class JournalVoucherRecord(
     val ledgerCurrency: String? = null,
 
     @JsonProperty("account_type")
-    val accountType: String? = null
+    val accountType: String? = null,
+
+    @JsonProperty("exchange_rate")
+    val exchangeRate: BigDecimal? = null
 )
