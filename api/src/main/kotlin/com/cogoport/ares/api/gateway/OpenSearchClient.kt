@@ -374,12 +374,15 @@ class OpenSearchClient {
                                 }
                                 b.must { m ->
                                     m.match { n ->
-                                        n.field(AresConstants.ORGANIZATION_ID)
-                                            .query(FieldValue.of(request.orgId))
+                                        n.field("organizationId.keyword")
+                                            .query(
+                                                FieldValue.of(
+                                                    request.orgId
+                                                )
+                                            )
                                     }
                                 }
-                                if (request.startDate != null && request.endDate != null
-                                ) {
+                                if (request.startDate != null && request.endDate != null) {
                                     b.must { m ->
                                         m.range { r ->
                                             r.field(AresConstants.TRANSACTION_DATE)
@@ -397,7 +400,7 @@ class OpenSearchClient {
                                 b
                             }
                         }
-                        .size(1000)
+                        .size(AresConstants.LIMIT)
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
