@@ -15,10 +15,16 @@ class MigratePaymentsController {
     @Inject lateinit var paymentMigration: PaymentMigrationWrapper
 
     @Get("/migrate")
-    suspend fun migratePayments(@QueryValue startDate: String, @QueryValue endDate: String, @QueryValue migrationType: String): Response<String> {
+    suspend fun migratePayments(
+        @QueryValue startDate: String,
+        @QueryValue endDate: String,
+        @QueryValue migrationType: String,
+        @QueryValue bpr: String,
+        @QueryValue mode: String
+    ): Response<String> {
 
         if (migrationType.equals("PAYMENTS", ignoreCase = true)) {
-            val size = paymentMigration.migratePaymentsFromSage(startDate, endDate)
+            val size = paymentMigration.migratePaymentsFromSage(startDate, endDate, bpr, mode)
             return Response<String>().ok(
                 HttpStatus.OK.name,
                 "Request for payment migration received, total number of payments to migrate is $size"
