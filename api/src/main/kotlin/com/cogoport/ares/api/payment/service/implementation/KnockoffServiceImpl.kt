@@ -19,6 +19,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
+import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
@@ -351,7 +352,6 @@ open class KnockoffServiceImpl : KnockoffService {
     override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
         val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
         val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
-        val isTds = payments.size == 2
         var tdsPaid = 0.toBigDecimal()
         var ledTdsPaid = 0.toBigDecimal()
         var amountPaid: BigDecimal = 0.toBigDecimal()
@@ -390,9 +390,23 @@ open class KnockoffServiceImpl : KnockoffService {
         leftAmountLedgerCurr = if (leftAmountLedgerCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
         } else {
-            leftAmountPayCurr
+            leftAmountLedgerCurr
         }
 
+        var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
+        if (leftAmountPayCurr != null) {
+            paymentStatus = when (leftAmountPayCurr) {
+                0.toBigDecimal() -> {
+                    KnockOffStatus.UNPAID
+                }
+                accountUtilization?.payCurr -> {
+                    KnockOffStatus.FULL
+                }
+                else -> {
+                    KnockOffStatus.PARTIAL
+                }
+            }
+        }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
 
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
@@ -401,10 +415,13 @@ open class KnockoffServiceImpl : KnockoffService {
         aresKafkaEmitter.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,
-                currencyAmount = amountPaid,
-                tdsAmount = tdsPaid,
-                ledgerAmount = ledTotalAmtPaid,
-                ledgerTdsAmount = ledTdsPaid
+                paidAmount = amountPaid,
+                paidTds = tdsPaid,
+                paymentStatus = paymentStatus,
+                paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
+                updatedBy = reverseUtrRequest.updatedBy,
+                performedByType = reverseUtrRequest.performedByType
+
             )
         )
     }

@@ -8,7 +8,8 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class ReverseUtrRequest(
     val documentNo: Long,
-    var transactionRef: String?,
+    var transactionRef: String,
     var updatedBy: UUID?,
     var performedByType: String?,
+    var paymentUploadAuditId: Long
 )
