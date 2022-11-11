@@ -16,6 +16,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.*
 
 @Singleton
 open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersService {
@@ -73,5 +74,9 @@ open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersServi
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageLimit!!) + 1 else 1
         responseList.pageNo = request.page
         return responseList
+    }
+
+    override suspend fun listTradePartyDetailIds(): List<UUID> {
+        return bprRepo.listTradePartyDetailIds()
     }
 }

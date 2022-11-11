@@ -14,6 +14,7 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.*
 import javax.validation.Valid
 
 @Validated
@@ -37,4 +38,10 @@ class DefaultedBusinessPartnersController {
     suspend fun listOrganization(@Valid request: ListDefaultedBusinessPartnersRequest): ResponseList<DefaultedBusinessPartnersResponse?> {
         return Response<ResponseList<DefaultedBusinessPartnersResponse?>>().ok(bprService.list(request))
     }
+
+    @Get("/list/trade-party-detail-ids")
+    suspend fun listTradePartyDetailIds(): List<UUID> {
+        return Response<List<UUID>>().ok(bprService.listTradePartyDetailIds())
+    }
+
 }

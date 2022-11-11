@@ -6,6 +6,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.DefaultedBusinessPartnersRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -31,6 +32,9 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
+    @Inject
+    lateinit var businessPartnersRepository: DefaultedBusinessPartnersRepository
+
     private fun validateInput(request: OutstandingListRequest) {
         try {
             if (request.orgId != null)
@@ -45,7 +49,8 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
+        val defaultersOrgIds = businessPartnersRepository.listTradePartyDetailIds()
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit,defaultersOrgIds)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->

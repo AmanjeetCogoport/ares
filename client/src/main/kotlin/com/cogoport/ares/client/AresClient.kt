@@ -56,6 +56,9 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
+import java.util.UUID
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 @Client(id = "ares")
 interface AresClient {
@@ -146,4 +149,7 @@ interface AresClient {
 
     @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
     suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
+
+    @Get("/list/trade-party-detail-ids")
+    suspend fun listTradePartyDetailIds(): List<UUID>
 }
