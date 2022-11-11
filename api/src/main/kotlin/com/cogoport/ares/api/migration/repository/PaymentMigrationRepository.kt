@@ -10,8 +10,10 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationEntity, Long> {
     @Query(
         """
-            select exists (select id from payments p where migrated=true and payment_num_value=:paymentNumValue)
+            SELECT EXISTS
+            (SELECT id FROM payments p WHERE migrated=true and payment_num_value=:paymentNumValue
+            and acc_mode  = :accMode::account_mode  and "payment_code"=:paymentCode::payment_code)
         """
     )
-    suspend fun checkPaymentExists(paymentNumValue: String): Boolean
+    suspend fun checkPaymentExists(paymentNumValue: String, accMode: String, paymentCode: String): Boolean
 }
