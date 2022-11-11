@@ -154,4 +154,19 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun getPaymentIds(query: String): List<Long>
+
+    @Query(
+        """
+            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
+        """
+    )
+    suspend fun deleleSettlement(id: List<Long>)
+
+    @Query(
+        """
+          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null
+           
+        """
+    )
+    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
 }

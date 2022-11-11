@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
@@ -63,5 +64,10 @@ class AresKafkaListener {
     @Topic("knockoff-payables")
     fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)
+    }
+
+    @Topic("reverse-utr")
+    fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
+        knockoffService.reverseUtr(reverseUtrRequest)
     }
 }
