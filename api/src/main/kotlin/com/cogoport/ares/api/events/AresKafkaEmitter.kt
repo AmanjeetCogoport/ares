@@ -2,6 +2,7 @@ package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
+import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
@@ -37,4 +38,7 @@ interface AresKafkaEmitter {
 
     @Topic("update-invoice-archive")
     fun emitUpdateInvoicesToArchive(invoiceId: Long)
+
+    @Topic("post-restore-utr")
+    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
 }
