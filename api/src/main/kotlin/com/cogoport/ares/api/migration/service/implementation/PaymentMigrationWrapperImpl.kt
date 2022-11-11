@@ -19,8 +19,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     @Inject
     lateinit var paymentMigration: PaymentMigration
 
-    override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?): Int {
-        val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate)
+    override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
+        val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
         logger().info("Total number of payment record to process : ${paymentRecords.size}")
         for (paymentRecord in paymentRecords) {
             aresKafkaEmitter.emitPaymentMigration(paymentRecord)
@@ -35,5 +35,14 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             aresKafkaEmitter.emitJournalVoucherMigration(jvRecord)
         }
         return jvRecords.size
+    }
+
+    override suspend fun migratePaymentsByBpr(bpr: String, mode: String): Int {
+        val paymentRecords = sageService.getPaymentDataByBpr(bpr, mode)
+        logger().info("Total number of payment record to process : ${paymentRecords.size}")
+        for (paymentRecord in paymentRecords) {
+            aresKafkaEmitter.emitPaymentMigration(paymentRecord)
+        }
+        return paymentRecords.size
     }
 }
