@@ -1,6 +1,5 @@
 package com.cogoport.ares.model.payment
 
-import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected

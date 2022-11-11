@@ -24,7 +24,7 @@ class KnockoffController {
     }
 
     @Post("/test-restore-utr")
-    suspend fun test(@Body reverseUtrRequest: ReverseUtrRequest){
+    suspend fun test(@Body reverseUtrRequest: ReverseUtrRequest) {
         return knockoffService.reverseUtr(reverseUtrRequest)
     }
 }

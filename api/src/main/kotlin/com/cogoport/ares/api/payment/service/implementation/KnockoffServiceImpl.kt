@@ -19,7 +19,6 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
-import com.cogoport.ares.model.PaymentStatus
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
@@ -395,11 +394,11 @@ open class KnockoffServiceImpl : KnockoffService {
 
         var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
         if (leftAmountPayCurr != null) {
-            if(leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0){
+            if (leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0) {
                 paymentStatus = KnockOffStatus.UNPAID
-            }else if(leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0){
+            } else if (leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0) {
                 paymentStatus = KnockOffStatus.FULL
-            }else{
+            } else {
                 KnockOffStatus.PARTIAL
             }
         }
