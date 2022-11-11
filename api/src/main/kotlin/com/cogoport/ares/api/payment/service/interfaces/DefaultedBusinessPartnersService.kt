@@ -4,7 +4,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DefaultedBusinessPartnerRequest
 import com.cogoport.ares.model.payment.request.ListDefaultedBusinessPartnersRequest
 import com.cogoport.ares.model.payment.response.DefaultedBusinessPartnersResponse
-import java.util.*
+import java.util.UUID
 
 interface DefaultedBusinessPartnersService {
 
@@ -14,5 +14,5 @@ interface DefaultedBusinessPartnersService {
 
     suspend fun list(request: ListDefaultedBusinessPartnersRequest): ResponseList<DefaultedBusinessPartnersResponse?>
 
-    suspend fun listTradePartyDetailIds(): List<UUID>
+    suspend fun listTradePartyDetailIds(): List<UUID>?
 }

@@ -16,7 +16,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Singleton
 open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersService {
@@ -76,7 +76,7 @@ open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersServi
         return responseList
     }
 
-    override suspend fun listTradePartyDetailIds(): List<UUID> {
+    override suspend fun listTradePartyDetailIds(): List<UUID>? {
         return bprRepo.listTradePartyDetailIds()
     }
 }

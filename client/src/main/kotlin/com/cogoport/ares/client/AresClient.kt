@@ -150,6 +150,6 @@ interface AresClient {
     @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
     suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 
-    @Get("/list/trade-party-detail-ids")
-    suspend fun listTradePartyDetailIds(): List<UUID>
+    @Get("/payments/defaulters/list/trade-party-detail-ids")
+    suspend fun listTradePartyDetailIds(): List<UUID>?
 }

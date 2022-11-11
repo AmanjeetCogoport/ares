@@ -255,11 +255,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
         and (:orgId is null or organization_id = :orgId::uuid) 
-        and organization_id NOT IN (:defaultersOrgIds) and  acc_type = 'SINV'
+        AND CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
+                 WHEN :flag = 'non-defaulters' THEN organization_id NOT IN (:defaultersOrgIds)
+            END
+        and  acc_type = 'SINV'
         group by organization_id
         """
     )
-    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>): List<OutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>, flag: String): List<OutstandingAgeing>
     @Query(
         """
         select organization_id::varchar, currency,
