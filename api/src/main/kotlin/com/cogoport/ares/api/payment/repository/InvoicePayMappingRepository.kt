@@ -12,7 +12,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-             select id,mapping_type,amount,led_amount from payment_invoice_mapping where document_no = :documentNo and account_mode = 'AP' AND payment_id = :paymentId  AND deleted_at is null
+             SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId  AND deleted_at is null
              
         """
     )
@@ -20,7 +20,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-            update payment_invoice_mapping set deleted_at = now() where id = :id
+            UPDATE payment_invoice_mapping SET deleted_at = NOW() WHERE id = :id
         """
     )
     suspend fun deletePaymentMappings(id: Long?)
