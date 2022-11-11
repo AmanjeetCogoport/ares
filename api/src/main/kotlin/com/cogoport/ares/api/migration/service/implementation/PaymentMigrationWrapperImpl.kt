@@ -45,4 +45,19 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         return paymentRecords.size
     }
+
+    override suspend fun migratePaymentsByPaymentNum(paymentNums: List<String>): Int {
+        val payments = StringBuilder()
+        for (paymentNum in paymentNums) {
+            payments.append("'")
+            payments.append(paymentNum)
+            payments.append("',")
+        }
+        val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
+        logger().info("Total number of payment record to process : ${paymentRecords.size}")
+        for (paymentRecord in paymentRecords) {
+            aresKafkaEmitter.emitPaymentMigration(paymentRecord)
+        }
+        return paymentRecords.size
+    }
 }

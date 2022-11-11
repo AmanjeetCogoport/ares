@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
@@ -58,6 +59,9 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
+            if (paymentMigrationRepository.checkPaymentExists(paymentRecord.paymentNum!!)) {
+                throw AresException(AresError.ERR_1010, "Not migrating as payment already exists")
+            }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(

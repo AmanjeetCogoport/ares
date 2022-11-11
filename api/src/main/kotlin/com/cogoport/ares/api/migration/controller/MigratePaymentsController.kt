@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
@@ -41,6 +42,12 @@ class MigratePaymentsController {
     @Post("/migrate-payments-bpr")
     suspend fun migratePaymentsBpr(@QueryValue bpr: String, @QueryValue mode: String): Response<String> {
         val size = paymentMigration.migratePaymentsByBpr(bpr, mode)
+        return Response<String>().ok(HttpStatus.OK.name, "Request for payment migration received, total number of payment to migrate is $size")
+    }
+
+    @Post("/paymentNum-migrate")
+    suspend fun migratePaymentNum(@Body paymentNums: List<String>): Response<String> {
+        val size = paymentMigration.migratePaymentsByPaymentNum(paymentNums)
         return Response<String>().ok(HttpStatus.OK.name, "Request for payment migration received, total number of payment to migrate is $size")
     }
 }
