@@ -17,7 +17,7 @@ import jakarta.inject.Inject
 import javax.validation.Valid
 
 @Validated
-@Controller("/defaulters-list")
+@Controller("/defaulters")
 class DefaultedBusinessPartnersController {
 
     @Inject
