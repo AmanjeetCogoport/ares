@@ -18,7 +18,7 @@ import java.util.*
 import javax.validation.Valid
 
 @Validated
-@Controller("/bpr")
+@Controller("/defaulters")
 class DefaultedBusinessPartnersController {
 
     @Inject
