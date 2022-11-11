@@ -381,7 +381,7 @@ open class KnockoffServiceImpl : KnockoffService {
         val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payments[0]?.paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
         var leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
-        var leftAmountLedgerCurr = accountUtilization?.amountLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
+        var leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
         } else {
@@ -395,16 +395,12 @@ open class KnockoffServiceImpl : KnockoffService {
 
         var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
         if (leftAmountPayCurr != null) {
-            paymentStatus = when (leftAmountPayCurr) {
-                0.toBigDecimal() -> {
-                    KnockOffStatus.UNPAID
-                }
-                accountUtilization?.payCurr -> {
-                    KnockOffStatus.FULL
-                }
-                else -> {
-                    KnockOffStatus.PARTIAL
-                }
+            if(leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0){
+                paymentStatus = KnockOffStatus.UNPAID
+            }else if(leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0){
+                paymentStatus = KnockOffStatus.FULL
+            }else{
+                KnockOffStatus.PARTIAL
             }
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
