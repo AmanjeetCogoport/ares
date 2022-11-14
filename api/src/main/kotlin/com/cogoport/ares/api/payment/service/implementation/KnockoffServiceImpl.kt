@@ -23,9 +23,12 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.KnockOffStatus
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountPayablesFile
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
+import com.cogoport.ares.model.payment.RestoreUtrResponse
+import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
@@ -342,6 +345,100 @@ open class KnockoffServiceImpl : KnockoffService {
             createdBy = knockOffRecord.createdBy,
             updatedBy = knockOffRecord.updatedBy,
             settlementDate = Date(Timestamp.from(Instant.now()).time)
+        )
+    }
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
+        val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
+        val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
+        var tdsPaid = 0.toBigDecimal()
+        var ledTdsPaid = 0.toBigDecimal()
+        var amountPaid: BigDecimal = 0.toBigDecimal()
+        var ledTotalAmtPaid: BigDecimal = 0.toBigDecimal()
+
+        for (payment in payments) {
+            val paymentInvoiceMappingData = invoicePayMappingRepo.findByPaymentId(reverseUtrRequest.documentNo, payment.id)
+            paymentRepository.deletePayment(payment.id)
+
+            if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.BILL) {
+                amountPaid = paymentInvoiceMappingData.amount
+                ledTotalAmtPaid = paymentInvoiceMappingData.ledAmount
+            } else if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.TDS) {
+                tdsPaid = paymentInvoiceMappingData.amount
+                ledTdsPaid = paymentInvoiceMappingData.ledAmount
+            }
+            invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingData.id)
+            createAudit(AresConstants.PAYMENTS, payment.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+            createAudit("payment_invoice_map", paymentInvoiceMappingData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        }
+
+        val settlementIds = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, payments[0]?.paymentNum!!)
+        settlementRepository.deleleSettlement(settlementIds)
+
+        createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payments[0]?.paymentNum)
+        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
+        var leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
+        var leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
+        leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
+            0.toBigDecimal()
+        } else {
+            leftAmountPayCurr
+        }
+        leftAmountLedgerCurr = if (leftAmountLedgerCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
+            0.toBigDecimal()
+        } else {
+            leftAmountLedgerCurr
+        }
+
+        var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
+        if (leftAmountPayCurr != null) {
+            if (leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0) {
+                paymentStatus = KnockOffStatus.UNPAID
+            } else if (leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0) {
+                paymentStatus = KnockOffStatus.FULL
+            } else {
+                KnockOffStatus.PARTIAL
+            }
+        }
+        accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
+
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+
+        aresKafkaEmitter.emitPostRestoreUtr(
+            restoreUtrResponse = RestoreUtrResponse(
+                documentNo = reverseUtrRequest.documentNo,
+                paidAmount = amountPaid,
+                paidTds = tdsPaid,
+                paymentStatus = paymentStatus,
+                paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
+                updatedBy = reverseUtrRequest.updatedBy,
+                performedByType = reverseUtrRequest.performedByType
+
+            )
+        )
+    }
+
+    private suspend fun createAudit(
+        objectType: String,
+        objectId: Long?,
+        actionName: String,
+        data: Any?,
+        performedBy: String,
+        performedByUserType: String?
+
+    ) {
+        auditService.createAudit(
+            AuditRequest(
+                objectType = objectType,
+                objectId = objectId,
+                actionName = actionName,
+                data = data,
+                performedBy = performedBy,
+                performedByUserType = performedByUserType
+            )
         )
     }
 }

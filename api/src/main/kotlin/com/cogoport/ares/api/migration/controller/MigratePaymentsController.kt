@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
@@ -30,7 +31,7 @@ class MigratePaymentsController {
                 "Request for payment migration received, total number of payments to migrate is $size"
             )
         } else {
-            val size = paymentMigration.migrateJournalVoucher(startDate, endDate)
+            val size = paymentMigration.migrateJournalVoucher(startDate, endDate, null)
             return Response<String>().ok(
                 HttpStatus.OK.name,
                 "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -42,5 +43,20 @@ class MigratePaymentsController {
     suspend fun migratePaymentsBpr(@QueryValue bpr: String, @QueryValue mode: String): Response<String> {
         val size = paymentMigration.migratePaymentsByBpr(bpr, mode)
         return Response<String>().ok(HttpStatus.OK.name, "Request for payment migration received, total number of payment to migrate is $size")
+    }
+
+    @Post("/paymentNum-migrate")
+    suspend fun migratePaymentNum(@Body paymentNums: List<String>): Response<String> {
+        val size = paymentMigration.migratePaymentsByPaymentNum(paymentNums)
+        return Response<String>().ok(HttpStatus.OK.name, "Request for payment migration received, total number of payment to migrate is $size")
+    }
+
+    @Post("/JVNum-migrate")
+    suspend fun migrateJVNum(@Body jvNums: List<String>): Response<String> {
+        val size = paymentMigration.migrateJournalVoucher(null, null, jvNums)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for journal voucher migration received, total number of jv to migrate is $size"
+        )
     }
 }

@@ -16,6 +16,8 @@ import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.GetUserResponse
+import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
@@ -24,6 +26,7 @@ import io.micronaut.http.annotation.Headers
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
+import javax.validation.Valid
 
 @Client(value = "\${cogoport.api_url}")
 @Headers(
@@ -76,4 +79,7 @@ interface AuthClient {
 
     @Post("/get_users")
     suspend fun getUsers(@Body request: GetUserRequest): List<GetUserResponse>?
+
+    @Get("/get_sage_organization_details{?request*}")
+    suspend fun getSageOrganization(@Valid request: SageOrganizationRequest): SageOrganizationResponse
 }
