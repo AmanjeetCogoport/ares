@@ -5,7 +5,7 @@ import java.math.BigDecimal
 
 @MappedEntity
 data class PaymentUtilizationResponse(
-    var id:Long,
+    var id: Long,
     var payCurr: BigDecimal,
     var payLoc: BigDecimal
 )

@@ -957,6 +957,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
-
-
 }

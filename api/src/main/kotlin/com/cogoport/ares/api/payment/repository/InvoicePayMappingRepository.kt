@@ -24,5 +24,4 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun deletePaymentMappings(id: Long?)
-
 }

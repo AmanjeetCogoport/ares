@@ -379,7 +379,7 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0]?.paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationPaymentData.id)
-        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus( accountUtilizationPaymentData.payCurr)
+        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)
         var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)
 
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
