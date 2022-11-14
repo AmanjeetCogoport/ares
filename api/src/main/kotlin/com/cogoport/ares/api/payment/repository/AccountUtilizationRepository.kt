@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
@@ -952,8 +953,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            SELECT id FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
         """
     )
-    suspend fun getIdByPaymentNum(paymentNum: Long?): Long
+    suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
+
+
 }

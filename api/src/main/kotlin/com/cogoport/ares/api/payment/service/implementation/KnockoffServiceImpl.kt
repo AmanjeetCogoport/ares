@@ -377,27 +377,11 @@ open class KnockoffServiceImpl : KnockoffService {
 
         createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payments[0]?.paymentNum)
-        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
-        var leftAmountPayCurr: BigDecimal?
-        var leftAmountLedgerCurr: BigDecimal?
-        if (reverseUtrRequest.isOverPaid) {
-            val validPaymentsSum = invoicePayMappingRepo.findByDocumentNo(reverseUtrRequest.documentNo)
-            if (validPaymentsSum.amountSum == 0.toBigDecimal() && validPaymentsSum.ledgerAmountSum == 0.toBigDecimal()) {
-                leftAmountPayCurr = 0.toBigDecimal()
-                leftAmountLedgerCurr = 0.toBigDecimal()
-            } else if (validPaymentsSum.amountSum!! >= accountUtilization?.payCurr && validPaymentsSum.ledgerAmountSum >= accountUtilization?.payLoc) {
-                leftAmountPayCurr = accountUtilization?.payCurr
-                leftAmountLedgerCurr = accountUtilization?.payLoc
-            } else {
-                leftAmountPayCurr = validPaymentsSum.amountSum
-                leftAmountLedgerCurr = validPaymentsSum.ledgerAmountSum
-            }
-        } else {
+        val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0]?.paymentNum)
+        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationPaymentData.id)
+        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus( accountUtilizationPaymentData.payCurr)
+        var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)
 
-            leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
-            leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
-        }
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
         } else {
@@ -425,7 +409,7 @@ open class KnockoffServiceImpl : KnockoffService {
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
 
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
         aresKafkaEmitter.emitPostRestoreUtr(

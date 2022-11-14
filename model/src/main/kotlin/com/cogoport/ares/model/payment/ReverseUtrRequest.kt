@@ -11,6 +11,5 @@ data class ReverseUtrRequest(
     var transactionRef: String,
     var updatedBy: UUID?,
     var performedByType: String?,
-    var paymentUploadAuditId: Long,
-    var isOverPaid: Boolean
+    var paymentUploadAuditId: Long
 )
