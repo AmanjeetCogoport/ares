@@ -379,8 +379,25 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payments[0]?.paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
-        var leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
-        var leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
+        var leftAmountPayCurr: BigDecimal?
+        var leftAmountLedgerCurr: BigDecimal?
+        if (reverseUtrRequest.isOverPaid) {
+            val validPaymentsSum = invoicePayMappingRepo.findByDocumentNo(reverseUtrRequest.documentNo)
+            if (validPaymentsSum.amountSum == 0.toBigDecimal() && validPaymentsSum.ledgerAmountSum == 0.toBigDecimal()) {
+                leftAmountPayCurr = 0.toBigDecimal()
+                leftAmountLedgerCurr = 0.toBigDecimal()
+            } else if (validPaymentsSum.amountSum!! >= accountUtilization?.payCurr && validPaymentsSum.ledgerAmountSum >= accountUtilization?.payLoc) {
+                leftAmountPayCurr = accountUtilization?.payCurr
+                leftAmountLedgerCurr = accountUtilization?.payLoc
+            } else {
+                leftAmountPayCurr = validPaymentsSum.amountSum
+                leftAmountLedgerCurr = validPaymentsSum.ledgerAmountSum
+            }
+        } else {
+
+            leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
+            leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
+        }
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
         } else {
@@ -394,12 +411,16 @@ open class KnockoffServiceImpl : KnockoffService {
 
         var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
         if (leftAmountPayCurr != null) {
-            if (leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0) {
-                paymentStatus = KnockOffStatus.UNPAID
-            } else if (leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0) {
-                paymentStatus = KnockOffStatus.FULL
-            } else {
-                KnockOffStatus.PARTIAL
+            paymentStatus = when {
+                leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0 -> {
+                    KnockOffStatus.UNPAID
+                }
+                leftAmountPayCurr.compareTo(accountUtilization?.amountCurr) == 0 -> {
+                    KnockOffStatus.FULL
+                }
+                else -> {
+                    KnockOffStatus.PARTIAL
+                }
             }
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
