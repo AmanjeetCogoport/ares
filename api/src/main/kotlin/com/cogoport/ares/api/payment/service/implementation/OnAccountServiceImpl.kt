@@ -29,6 +29,8 @@ import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
@@ -54,6 +56,7 @@ import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
+import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
@@ -65,11 +68,13 @@ import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.PaymentResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.excel.ExcelSheetBuilder
 import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
 import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
 import com.cogoport.plutus.model.invoice.GetUserRequest
@@ -136,6 +141,11 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var aresDocumentRepository: AresDocumentRepository
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
+
+    @Inject
+    lateinit var settlementService: SettlementService
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     /**
      * Fetch Account Collection payments from DB.
@@ -433,14 +443,24 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel, true)
 
+        if(payment.isPosted) {
+            val request = DeleteSettlementRequest(
+                documentNo = Hashids.encode(payment.paymentNum!!),
+                deletedBy = UUID.fromString(deletePaymentRequest.performedById),
+                deletedByUserType = deletePaymentRequest.performedByUserType,
+                settlementType = SettlementType.PAY
+            )
+            settlementService.delete(request)
+        }
         try {
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
-            // Emitting Kafka message to Update Outstanding and Dashboard
+//             Emitting Kafka message to Update Outstanding and Dashboard
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
+
         return OnAccountApiCommonResponse(id = deletePaymentRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 

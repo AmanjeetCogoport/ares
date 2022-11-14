@@ -18,5 +18,7 @@ data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
-    val docType: String? = null
+    val docType: String? = null,
+    val isTransactionDateSortTypeDesc: Boolean = true,
+    val isAmountSortTypeDesc: Boolean = true
 )
