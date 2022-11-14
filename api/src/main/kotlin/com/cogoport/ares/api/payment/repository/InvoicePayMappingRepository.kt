@@ -28,7 +28,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
 
     @Query(
         """
-        SELECT COALESCE(SUM(amount),0) as amount_sum ,COALESCE(SUM(led_amount),0) as ledger_amount_sum FROM payment_invoice_mapping where document_no = :documentNo AND deleted_at is null
+        SELECT COALESCE(SUM(amount),0) as amount_sum ,COALESCE(SUM(led_amount),0) as ledger_amount_sum FROM payment_invoice_mapping where account_mode = 'AP' AND document_no = :documentNo AND deleted_at is null
         """
     )
     suspend fun findByDocumentNo(documentNo: Long): BillPaymentSumResponse
