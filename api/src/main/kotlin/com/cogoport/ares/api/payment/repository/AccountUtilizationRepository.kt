@@ -480,11 +480,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
             ORDER By :isTransactionDateSortTypeDesc::BOOL
             ,CASE WHEN :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END DESC
-            ,CASE WHEN not :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END ASC,
-            :isAmountSortTypeDesc::BOOL
-            ,CASE WHEN :isAmountSortTypeDesc THEN amount_curr END DESC
-            ,CASE WHEN not :isAmountSortTypeDesc THEN amount_curr END ASC
-            
+            ,CASE WHEN not :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END ASC
         """
     )
     suspend fun getDocumentList(
@@ -497,8 +493,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         endDate: Timestamp?,
         query: String?,
         accMode: AccMode?,
-        isTransactionDateSortTypeDesc: Boolean?,
-        isAmountSortTypeDesc: Boolean
+        isTransactionDateSortTypeDesc: Boolean?
     ): List<Document?>
 
     @Query(

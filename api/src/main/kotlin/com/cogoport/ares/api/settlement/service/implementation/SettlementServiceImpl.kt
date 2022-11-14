@@ -518,7 +518,6 @@ open class SettlementServiceImpl : SettlementService {
         val accType = accTypeMode.accType
         val accMode = accTypeMode.accMode
         val isTransactionDateSortTypeDesc = request.isTransactionDateSortTypeDesc
-        val isAmountSortTypeDesc = request.isAmountSortTypeDesc
         val documentEntity =
             accountUtilizationRepository.getDocumentList(
                 request.pageLimit,
@@ -530,8 +529,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "${request.query}%",
                 accMode,
-                isTransactionDateSortTypeDesc,
-                isAmountSortTypeDesc
+                isTransactionDateSortTypeDesc
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
