@@ -443,7 +443,7 @@ open class OnAccountServiceImpl : OnAccountService {
         /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel, true)
 
-        if(payment.isPosted) {
+        if (payment.isPosted) {
             val request = DeleteSettlementRequest(
                 documentNo = Hashids.encode(payment.paymentNum!!),
                 deletedBy = UUID.fromString(deletePaymentRequest.performedById),
