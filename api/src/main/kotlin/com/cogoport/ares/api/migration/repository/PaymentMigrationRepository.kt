@@ -16,4 +16,11 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         """
     )
     suspend fun checkPaymentExists(paymentNumValue: String, accMode: String, paymentCode: String): Boolean
+
+    @Query(
+        """
+            select exists (select id from journal_vouchers where jv_num =:jvNum and acc_mode =:accMode::account_mode)
+        """
+    )
+    suspend fun checkJVExists(jvNum: String, accMode: String): Boolean
 }

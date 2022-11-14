@@ -6,6 +6,8 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.migration.constants.EntityCodeMapping
+import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
@@ -22,7 +24,9 @@ import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.payment.AccMode
@@ -31,6 +35,9 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.settlement.enums.JVCategory
+import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
@@ -45,16 +52,17 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var paymentMigrationRepository: PaymentMigrationRepository
 
-    @Inject lateinit var accountUtilizationRepository: AccountUtilizationRepository
-
     @Inject lateinit var migrationLogService: MigrationLogService
 
     @Inject lateinit var cogoClient: AuthClient
 
-    @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
+    @Inject lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
+
+    @Inject lateinit var journalVoucherRepository: JournalVoucherRepository
+
+    @Inject lateinit var journalVoucherConverter: JournalVoucherMapper
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -98,6 +106,9 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
+            if (paymentMigrationRepository.checkJVExists(journalVoucherRecord.paymentNum!!, journalVoucherRecord.accMode!!)) {
+                throw AresException(AresError.ERR_1010, "JV record is already present")
+            }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
@@ -117,6 +128,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
             val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
+            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord)
+            journalVoucherRepository.save(jv)
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
                 emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -412,5 +425,49 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         )
+    }
+
+    private suspend fun getJournalVoucherRequest(journalVoucherRecord: JournalVoucherRecord, response: GetOrgDetailsResponse): JournalVoucherRequest {
+        val serialIdInputs = response.organizationSerialId?.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it.toLong(), it1.toLong()) } }
+        val serialIdRequest = SerialIdDetailsRequest(
+            organizationTradePartyMappings = arrayListOf(serialIdInputs!!)
+        )
+        val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
+        return JournalVoucherRequest(
+            id = null,
+            entityCode = journalVoucherRecord.entityCode!!,
+            entityId = EntityCodeMapping.getByEntityCode(journalVoucherRecord.entityCode.toString()),
+            jvNum = journalVoucherRecord.paymentNum,
+            type = getTypeForJV(journalVoucherRecord.accMode!!, journalVoucherRecord.signFlag!!),
+            status = JVStatus.APPROVED,
+            category = JVCategory.JVNOS,
+            validityDate = journalVoucherRecord.transactionDate!!,
+            amount = journalVoucherRecord.accountUtilPayLed,
+            currency = journalVoucherRecord.currency!!,
+            ledCurrency = journalVoucherRecord.ledgerCurrency!!,
+            exchangeRate = journalVoucherRecord.exchangeRate!!,
+            tradePartyId = tradePartyResponse?.get(0)?.organizationTradePartyDetailId!!,
+            tradePartyName = tradePartyResponse[0]?.tradePartyBusinessName!!,
+            createdBy = MigrationConstants.createdUpdatedBy,
+            accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
+            description = null
+        )
+    }
+    private fun getTypeForJV(accMode: String, signFlag: Short): String {
+        if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
+            return "credit"
+        } else if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
+            return "debit"
+        } else if (accMode.equals("AP") && signFlag.compareTo(1) == 0) {
+            return "debit"
+        }
+        return "credit"
+    }
+
+    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest, journalVoucherRecord: JournalVoucherRecord): JournalVoucher {
+        val jv = journalVoucherConverter.convertRequestToEntity(request)
+        jv.createdAt = journalVoucherRecord.createdAt
+        jv.updatedAt = journalVoucherRecord.updatedAt
+        return jv
     }
 }

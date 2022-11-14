@@ -70,9 +70,10 @@ class SageServiceImpl : SageService {
 
     override suspend fun getJournalVoucherFromSage(
         startDate: String?,
-        endDate: String?
+        endDate: String?,
+        jvNums: String?
     ): ArrayList<JournalVoucherRecord> {
-        val sqlQuery = """
+        var sqlQuery = """
          SELECT   G.FCY_0 as entity_code 
             ,G.BPR_0 as sage_organization_id 
             ,G.NUM_0 as payment_num
@@ -105,9 +106,12 @@ class SageServiceImpl : SageService {
             from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV') GROUP by TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
-            and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC 
-             """
-
+            """
+        if (startDate == null && endDate == null) {
+            sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
+        } else {
+            sqlQuery += """and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC"""
+        }
         val journalRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(journalRecords, JournalVoucherRecordManager::class.java)
         return payments.recordSets!![0]

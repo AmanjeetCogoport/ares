@@ -28,8 +28,18 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return paymentRecords.size
     }
 
-    override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?): Int {
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate)
+    override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?, jvNums: List<String>?): Int {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
         for (jvRecord in jvRecords) {
             aresKafkaEmitter.emitJournalVoucherMigration(jvRecord)
