@@ -175,7 +175,19 @@ open class SettlementServiceImpl : SettlementService {
                 accType,
                 accMode
             )
-        return SummaryResponse(amount)
+        val onAccountPayment =
+            accountUtilizationRepository.getAccountBalance(
+                orgId,
+                summaryRequest.entityCode!!,
+                null,
+                null,
+                listOf(AccountType.REC, AccountType.PAY),
+                accMode
+            )
+        return SummaryResponse(
+            amount = amount,
+            onAccountAmount = onAccountPayment
+        )
     }
 
     /**
@@ -2159,4 +2171,5 @@ open class SettlementServiceImpl : SettlementService {
         )
         return Hashids.encode(savedObj.id!!)
     }
+
 }

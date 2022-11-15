@@ -7,5 +7,6 @@ import java.math.BigDecimal
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SummaryResponse(
-    val amount: BigDecimal = 0.toBigDecimal()
+    val amount: BigDecimal = 0.toBigDecimal(),
+    val onAccountAmount: BigDecimal = 0.toBigDecimal()
 )
