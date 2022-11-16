@@ -960,14 +960,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-           SELECT DISTINCT(account_utilizations.*) FROM 
-           payments
-           JOIN payment_invoice_mapping ON 
-           payment_invoice_mapping.payment_id = payments.id AND payment_invoice_mapping.document_no = :documentNo
-           JOIN account_utilizations ON 
-           account_utilizations.document_no = payments.payment_num
-           ORDER by created_at desc
- 
+           SELECT DISTINCT (au.document_no),au.id,au.document_value, au.zone_code,au.service_type,
+           au.document_status,au.entity_code, au.category,au.org_serial_id,au.sage_organization_id,
+           au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
+           au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
+           au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
+           au.migrated,au.created_at         
+           FROM 
+           payments p
+           JOIN payment_invoice_mapping pim ON 
+           pim.payment_id = p.id AND pim.document_no = :documentNo
+           JOIN account_utilizations au ON 
+           au.document_no = p.payment_num AND au.deleted_at is null
+           ORDER by au.created_at desc
         """
     )
     suspend fun findPaymentsByDocumentNo(documentNo: Long): List<AccountUtilization?>
