@@ -7,6 +7,7 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
+import com.cogoport.ares.api.settlement.model.SettlementNotificationRequest
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -82,4 +83,7 @@ interface AuthClient {
 
     @Get("/get_sage_organization_details{?request*}")
     suspend fun getSageOrganization(@Valid request: SageOrganizationRequest): SageOrganizationResponse
+
+    @Post("/send_communication_for_finance")
+    suspend fun sendSettlementNotification(@Body request: SettlementNotificationRequest): Boolean
 }
