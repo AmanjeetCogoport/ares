@@ -1046,7 +1046,8 @@ open class SettlementServiceImpl : SettlementService {
                     entityCode = request.entityCode!!,
                     list = docList,
                     settlementDate = java.sql.Date.valueOf(formatedDate),
-                    incidentMappingId = res
+                    incidentMappingId = res,
+                    supportingDocUrl = request.supportingDocUrl
                 ),
                 tdsRequest = null,
                 bankRequest = null,
@@ -1978,7 +1979,7 @@ open class SettlementServiceImpl : SettlementService {
                 Timestamp.from(Instant.now()),
                 supportingDocUrl
             )
-        val settleDoc = settlementRepository.save(settledDoc)
+            val settleDoc = settlementRepository.save(settledDoc)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.SETTLEMENT,
