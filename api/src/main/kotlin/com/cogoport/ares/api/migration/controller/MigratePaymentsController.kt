@@ -39,9 +39,9 @@ class MigratePaymentsController {
         }
     }
 
-    @Post("/migrate-payments-bpr")
-    suspend fun migratePaymentsBpr(@QueryValue bpr: String, @QueryValue mode: String): Response<String> {
-        val size = paymentMigration.migratePaymentsByBpr(bpr, mode)
+    @Post("/migrate-payments-date")
+    suspend fun migratePaymentsBpr(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
+        val size = paymentMigration.migratePaymentsByDate(startDate, endDate)
         return Response<String>().ok(HttpStatus.OK.name, "Request for payment migration received, total number of payment to migrate is $size")
     }
 
