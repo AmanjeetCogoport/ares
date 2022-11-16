@@ -214,7 +214,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
                 var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
                 for (payment in paymentEntry) {
-                    if (payment?.payCurr!! < payment?.amountCurr && extraUtilizationAmountCurr> 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
+                    if (payment?.payCurr!! < payment?.amountCurr && extraUtilizationAmountCurr > 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
                         var toUpdatePayCurr: BigDecimal
                         var toUpdateLedCurr: BigDecimal
 
