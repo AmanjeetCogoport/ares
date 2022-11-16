@@ -7,7 +7,7 @@ interface SageService {
     suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord>
     suspend fun getJournalVoucherFromSage(startDate: String?, endDate: String?, jvNums: String?): ArrayList<JournalVoucherRecord>
 
-    suspend fun getPaymentDataByBpr(bpr: String, mode: String): ArrayList<PaymentRecord>
+    suspend fun migratePaymentsByDate(startDate: String, endDate: String): ArrayList<PaymentRecord>
 
     suspend fun migratePaymentByPaymentNum(paymentNums: String): ArrayList<PaymentRecord>
 }

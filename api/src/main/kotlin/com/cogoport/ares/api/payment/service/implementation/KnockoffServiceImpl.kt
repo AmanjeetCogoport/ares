@@ -377,10 +377,11 @@ open class KnockoffServiceImpl : KnockoffService {
 
         createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        val accountUtilizationId = accountUtilizationRepository.getIdByPaymentNum(payments[0]?.paymentNum)
-        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationId)
-        var leftAmountPayCurr = accountUtilization?.payCurr?.minus(tdsPaid + amountPaid)
-        var leftAmountLedgerCurr = accountUtilization?.payLoc?.minus(ledTotalAmtPaid + ledTdsPaid)
+        val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0]?.paymentNum)
+        accountUtilizationRepository.deleteAccountUtilization(accountUtilizationPaymentData.id)
+        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)
+        var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)
+
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
         } else {
@@ -394,17 +395,21 @@ open class KnockoffServiceImpl : KnockoffService {
 
         var paymentStatus: KnockOffStatus = KnockOffStatus.UNPAID
         if (leftAmountPayCurr != null) {
-            if (leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0) {
-                paymentStatus = KnockOffStatus.UNPAID
-            } else if (leftAmountPayCurr.compareTo(accountUtilization?.payCurr) == 0) {
-                paymentStatus = KnockOffStatus.FULL
-            } else {
-                KnockOffStatus.PARTIAL
+            paymentStatus = when {
+                leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0 -> {
+                    KnockOffStatus.UNPAID
+                }
+                leftAmountPayCurr.compareTo(accountUtilization?.amountCurr) == 0 -> {
+                    KnockOffStatus.FULL
+                }
+                else -> {
+                    KnockOffStatus.PARTIAL
+                }
             }
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
 
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
         aresKafkaEmitter.emitPostRestoreUtr(

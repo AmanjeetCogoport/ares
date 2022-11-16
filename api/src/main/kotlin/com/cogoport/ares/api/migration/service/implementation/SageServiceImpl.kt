@@ -117,10 +117,10 @@ class SageServiceImpl : SageService {
         return payments.recordSets!![0]
     }
 
-    override suspend fun getPaymentDataByBpr(bpr: String, mode: String): ArrayList<PaymentRecord> {
+    override suspend fun migratePaymentsByDate(startDate: String, endDate: String): ArrayList<PaymentRecord> {
         val sqlQuery =
             """
-             SELECT  P.FCY_0 as entity_code 
+            SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
             ,GC.NUM_0 as payment_num
             ,P.BPANAM_0 as organization_name
@@ -161,7 +161,7 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 = '$mode' and P.BPR_0 = '$bpr' order by P.ACCDAT_0 ASC;
+            where P.BPRSAC_0 in ('AR','SC') and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
             """
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
