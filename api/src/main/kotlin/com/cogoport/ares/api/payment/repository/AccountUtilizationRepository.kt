@@ -299,7 +299,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
             COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
-            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
+            COALESCE (MAX(s1.supporting_doc_url), MAX(s.supporting_doc_url)) as supporting_doc_url
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
