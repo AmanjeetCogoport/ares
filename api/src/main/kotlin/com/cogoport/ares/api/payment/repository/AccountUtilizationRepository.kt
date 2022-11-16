@@ -957,4 +957,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
+
+    @Query(
+        """
+           SELECT DISTINCT(account_utilizations.*) FROM 
+           payments
+           JOIN payment_invoice_mapping ON 
+           payment_invoice_mapping.payment_id = payments.id AND payment_invoice_mapping.document_no = :documentNo
+           JOIN account_utilizations ON 
+           account_utilizations.document_no = payments.payment_num
+           ORDER by created_at desc
+ 
+        """
+    )
+    suspend fun findPaymentsByDocumentNo(documentNo: Long): List<AccountUtilization?>
 }
