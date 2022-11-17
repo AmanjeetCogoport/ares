@@ -175,7 +175,19 @@ open class SettlementServiceImpl : SettlementService {
                 accType,
                 accMode
             )
-        return SummaryResponse(amount)
+        val onAccountPayment =
+            accountUtilizationRepository.getAccountBalance(
+                orgId,
+                summaryRequest.entityCode!!,
+                null,
+                null,
+                listOf(AccountType.REC, AccountType.PAY),
+                accMode
+            )
+        return SummaryResponse(
+            amount = amount,
+            onAccountAmount = onAccountPayment
+        )
     }
 
     /**
@@ -187,6 +199,7 @@ open class SettlementServiceImpl : SettlementService {
         request: SettlementHistoryRequest
     ): ResponseList<HistoryDocument?> {
         val accountTypes = stringAccountTypes(request)
+
         var paymentIds: List<Long> = emptyList()
         if (request.query != "") {
             paymentIds = settlementRepository.getPaymentIds(query = request.query)
@@ -202,6 +215,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.query,
                 paymentIds
             )
+
         val totalRecords =
             accountUtilizationRepository.countHistoryDocument(
                 request.orgId!!,
@@ -1034,7 +1048,8 @@ open class SettlementServiceImpl : SettlementService {
                     entityCode = request.entityCode!!,
                     list = docList,
                     settlementDate = java.sql.Date.valueOf(formatedDate),
-                    incidentMappingId = res
+                    incidentMappingId = res,
+                    supportingDocUrl = request.supportingDocUrl
                 ),
                 tdsRequest = null,
                 bankRequest = null,
@@ -1488,7 +1503,8 @@ open class SettlementServiceImpl : SettlementService {
                         settlementDate = request.settlementDate,
                         signFlag = 1,
                         createdBy = request.createdBy,
-                        createdByUserType = request.createdByUserType
+                        createdByUserType = request.createdByUserType,
+                        supportingDocUrl = request.supportingDocUrl
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1641,7 +1657,8 @@ open class SettlementServiceImpl : SettlementService {
                 1,
                 request.settlementDate,
                 request.createdBy,
-                request.createdByUserType
+                request.createdByUserType,
+                request.supportingDocUrl
             )
         }
 
@@ -1658,7 +1675,8 @@ open class SettlementServiceImpl : SettlementService {
                 settlementDate = request.settlementDate,
                 signFlag = -1,
                 createdBy = request.createdBy,
-                createdByUserType = request.createdByUserType
+                createdByUserType = request.createdByUserType,
+                supportingDocUrl = request.supportingDocUrl
             )
             invoice.settledTds += invoiceTds
         }
@@ -1677,7 +1695,8 @@ open class SettlementServiceImpl : SettlementService {
                 signFlag = -1,
                 transactionDate = request.settlementDate,
                 createdBy = request.createdBy,
-                createdByUserType = request.createdByUserType
+                createdByUserType = request.createdByUserType,
+                supportingDocUrl = request.supportingDocUrl
             )
             invoice.settledNostro = invoice.settledNostro!! + invoiceNostro
         }
@@ -1715,7 +1734,8 @@ open class SettlementServiceImpl : SettlementService {
                     exSign.toShort(),
                     request.settlementDate,
                     request.createdBy,
-                    request.createdByUserType
+                    request.createdByUserType,
+                    request.supportingDocUrl
                 )
             }
         }
@@ -1742,7 +1762,8 @@ open class SettlementServiceImpl : SettlementService {
         signFlag: Short,
         settlementDate: Timestamp,
         createdBy: UUID?,
-        createdByUserType: String?
+        createdByUserType: String?,
+        supportingDocUrl: String?
     ) {
         val tdsType =
             if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
@@ -1762,7 +1783,8 @@ open class SettlementServiceImpl : SettlementService {
             signFlag,
             settlementDate,
             createdBy,
-            createdByUserType
+            createdByUserType,
+            supportingDocUrl
         )
     }
 
@@ -1937,7 +1959,8 @@ open class SettlementServiceImpl : SettlementService {
         signFlag: Short,
         transactionDate: Timestamp,
         createdBy: UUID?,
-        createdByUserType: String?
+        createdByUserType: String?,
+        supportingDocUrl: String?
     ) {
         val settledDoc =
             Settlement(
@@ -1955,7 +1978,8 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy,
                 Timestamp.from(Instant.now()),
                 createdBy,
-                Timestamp.from(Instant.now())
+                Timestamp.from(Instant.now()),
+                supportingDocUrl
             )
         val settleDoc = settlementRepository.save(settledDoc)
         auditService.createAudit(
