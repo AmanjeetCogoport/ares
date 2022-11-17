@@ -208,7 +208,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var newPayCurr: BigDecimal = 0.toBigDecimal()
         var newPayLoc: BigDecimal = 0.toBigDecimal()
 
-        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0) {
+        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
             val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
             if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
                 var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
