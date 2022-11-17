@@ -15,5 +15,6 @@ data class CheckRequest(
     val throughIncident: Boolean = false,
     val incidentId: String?,
     val incidentMappingId: String?,
-    val remark: String?
+    val remark: String?,
+    val supportingDocUrl: String? = null
 )

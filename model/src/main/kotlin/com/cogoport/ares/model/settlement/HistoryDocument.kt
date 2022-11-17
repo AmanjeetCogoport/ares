@@ -33,5 +33,6 @@ data class HistoryDocument(
     val settledAmount: BigDecimal,
     val lastEditedDate: Date,
     var status: String?,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var supportingDocUrl: String? = null
 )
