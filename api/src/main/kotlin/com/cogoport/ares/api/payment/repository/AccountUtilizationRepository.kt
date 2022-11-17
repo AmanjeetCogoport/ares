@@ -78,11 +78,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              from account_utilizations
              where (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
              and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+             AND organization_id NOT IN (:defaultersOrgIds)
              group by ageing_duration, zone, dashboard_currency
              order by 1
           """
     )
-    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<AgeingBucketZone>
+    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>): MutableList<AgeingBucketZone>
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'
@@ -95,12 +96,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+            AND organization_id NOT IN (:defaultersOrgIds)
             group by ageing_duration, dashboard_currency
             order by ageing_duration
         """
-
     )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>): List<OverallAgeingStats>
 
     @Query(
         """
@@ -109,15 +110,25 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
-        currency as dashboard_currency,
-        (select count(distinct organization_id) from account_utilizations where acc_type in ('SINV','SDN','SCN') and amount_curr - pay_curr <> 0 and (:zone is null or zone_code = :zone) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and  (:invoiceCurrency is null or currency = :invoiceCurrency)) as organization_count, 
+        currency as dashboard_currency, 
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency)
+        AND organization_id NOT IN (:defaultersOrgIds)
         group by dashboard_currency
     """
     )
-    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallStats>
+    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>): MutableList<OverallStats>
+
+    @Query(
+        """
+        SELECT count(distinct organization_id) 
+        FROM account_utilizations 
+        WHERE acc_type IN ('SINV','SDN','SCN') AND amount_curr - pay_curr <> 0 AND (:zone IS NULL OR zone_code = :zone) AND document_status in ('FINAL', 'PROFORMA') AND acc_mode = 'AR' 
+        AND (:serviceType IS NULL OR service_type::varchar = :serviceType) AND  (:invoiceCurrency IS NULL OR currency = :invoiceCurrency) AND organization_id NOT IN (:defaultersOrgIds)
+        """
+    )
+    suspend fun getOrganizationCountForOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): Int
 
     @Query(
         """
@@ -156,6 +167,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval)
+            AND organization_id NOT IN (:defaultersOrgIds)
             group by date_trunc('month',transaction_date), dashboard_currency
         )
         select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
@@ -163,7 +175,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from x left join y on y.month = x.month
         """
     )
-    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
+    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>): MutableList<Outstanding>?
     @Query(
         """
             with x as (
@@ -202,6 +214,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval
+            AND organization_id NOT IN (:defaultersOrgIds)
             group by dashboard_currency
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
@@ -211,7 +224,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
+    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>): MutableList<DailyOutstanding>
     @Query(
         """
         with X as (

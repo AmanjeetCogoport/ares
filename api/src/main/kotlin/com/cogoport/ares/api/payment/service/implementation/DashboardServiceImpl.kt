@@ -69,6 +69,9 @@ class DashboardServiceImpl : DashboardService {
     @Inject
     lateinit var exchangeRateHelper: ExchangeRateHelper
 
+    @Inject
+    lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
+
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
@@ -103,14 +106,16 @@ class DashboardServiceImpl : DashboardService {
 
         val searchKey = searchKeyOverallStats(request)
 
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
+
         var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = OverallStatsResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
+                searchKey = searchKey,
+                classType = OverallStatsResponse::class.java,
+                index = AresConstants.SALES_DASHBOARD_INDEX
+            )
 
         if (data?.list.isNullOrEmpty()) {
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
+            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -131,8 +136,8 @@ class DashboardServiceImpl : DashboardService {
             formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount.times(avgExchangeRate)).setScale(4, RoundingMode.UP)
             formattedData.dashboardCurrency = request.dashboardCurrency!!
             formattedData.openInvoicesCount = formattedData.openInvoicesCount.plus(it.openInvoicesCount)
-            formattedData.organizationCount = formattedData.organizationCount.plus(it.organizationCount)
         }
+        formattedData.organizationCount = accountUtilizationRepository.getOrganizationCountForOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds)
         return formattedData
     }
 
@@ -150,7 +155,8 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         validateInput(request.zone, request.role)
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency)
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
+        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency, defaultersOrgIds!!)
 
         val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
 
@@ -272,17 +278,18 @@ class DashboardServiceImpl : DashboardService {
 
         val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
 
-        val searchKey =
-            AresConstants.MONTHLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
+        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
         var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = MonthlyOutstanding::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
+                searchKey = searchKey,
+                classType = MonthlyOutstanding::class.java,
+                index = AresConstants.SALES_DASHBOARD_INDEX
+            )
+
 
         if (data == null) {
-            openSearchService.generateMonthlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency)
+            openSearchService.generateMonthlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
             data = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -408,19 +415,21 @@ class DashboardServiceImpl : DashboardService {
         val dsoList = mutableListOf<DsoResponse>()
         val dpoList = mutableListOf<DpoResponse>()
         var dashboardCurrency: String? = null
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
 
         val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
             val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
             var salesResponse = clientResponse(salesResponseKey)
+
             val quarter = q.split("_")[0][1].toString().toInt()
             val year = q.split("_")[1].toInt()
             val monthList = getMonthFromQuarter(quarter)
 
-            if (salesResponse!!.hits().hits().isNullOrEmpty()) {
+            if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
                 monthList.forEach {
                     val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency)
+                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
                 }
                 salesResponse = clientResponse(salesResponseKey)
             }
@@ -491,12 +500,13 @@ class DashboardServiceImpl : DashboardService {
 
         val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
         var currResponse = clientResponse(currentKey)
+
         var averageDso = 0.toFloat()
         var currentDso = 0.toFloat()
 
         if (currResponse == null) {
             val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            openSearchService.generateDailySalesOutstanding(request.zone!!, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, request.serviceType!!, request.invoiceCurrency!!, date, request.dashboardCurrency)
+            openSearchService.generateDailySalesOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
             currResponse = clientResponse(currentKey)
         }
 
@@ -561,7 +571,8 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
         val serviceType: ServiceType? = request.serviceType
         val invoiceCurrency: String? = request.invoiceCurrency
-        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency)
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
+        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency, defaultersOrgIds!!)
         val data = HashMap<String, ArrayList<AgeingBucketZone>>()
         val zoneList = listOf<String>("NORTH", "EAST", "WEST", "SOUTH")
         val ageingDurationList = listOf<String>("1-30", "31-60", "61-90", ">90", "91-180", "181-365", "365+", "Not Due")

@@ -38,6 +38,7 @@ import java.math.BigDecimal
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -62,6 +63,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
+
+    @Inject
+    lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
 
     /**
      * @param: OpenSearchRequest
@@ -88,17 +92,19 @@ class OpenSearchServiceImpl : OpenSearchService {
             true -> "INR"
             false -> request.invoiceCurrency
         }
+        val defaultersOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
+
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
         generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
-        generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency)
+        generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
         /** Monthly Outstanding */
         logger().info("Updating Monthly Outstanding document")
-        generateMonthlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency)
+        generateMonthlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
         /** Quarterly Outstanding */
         logger().info("Updating Quarterly Outstanding document")
@@ -106,7 +112,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Outstanding Outstanding document")
-        generateDailySalesOutstanding(zone, quarter, year, serviceType, invoiceCurrency, date, dashboardCurrency)
+        generateDailySalesOutstanding(zone, quarter, year, serviceType, invoiceCurrency, date, dashboardCurrency, defaultersOrgIds)
     }
 
     override suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
@@ -116,15 +122,15 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
     }
 
-    override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency)
+    override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
+        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds!!)
         updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
-        val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null)
+        val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null, defaultersOrgIds)
         updateOverallStats(null, statsAllData, null, null)
     }
 
-    override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
-        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency)
+    override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
+        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds!!)
 
         monthlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
@@ -133,7 +139,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
 
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
-        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null)
+        val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null, defaultersOrgIds)
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)
     }
 
@@ -149,9 +155,9 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
     }
 
-    override suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String) {
+    override suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String, defaultersOrgIds: List<UUID>?) {
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency)
+        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency,defaultersOrgIds!!)
         dailySalesZoneServiceTypeData.map {
             if (it.dashboardCurrency == null) {
                 it.dashboardCurrency = invoiceCurrency
@@ -159,7 +165,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
 
         updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency, date, dashboardCurrency)
-        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null)
+        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null, defaultersOrgIds!!)
         updateDailySalesOutstanding(null, year, dailySalesAllData, null, null, date, dashboardCurrency)
     }
     /**

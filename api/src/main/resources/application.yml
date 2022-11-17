@@ -50,7 +50,7 @@ cogoport:
   exchange_api:
     url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
     version: v1
-    auth_token: ${EXCHANGE_API_AUTH_TOKEN}
+    auth_token: a4f2243a-402e-4f24-825a-2747f66421c7
 
 sage:
   soapUrl: http://13.232.139.45:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
