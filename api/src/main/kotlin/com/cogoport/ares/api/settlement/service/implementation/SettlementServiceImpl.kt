@@ -1979,7 +1979,7 @@ open class SettlementServiceImpl : SettlementService {
                 Timestamp.from(Instant.now()),
                 supportingDocUrl
             )
-            val settleDoc = settlementRepository.save(settledDoc)
+        val settleDoc = settlementRepository.save(settledDoc)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.SETTLEMENT,
