@@ -6,6 +6,7 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -211,73 +212,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
             val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
             if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
-                var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
-                var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
-                for (payment in paymentEntry) {
-                    if (payment?.payCurr!! < payment?.amountCurr && extraUtilizationAmountCurr > 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
-                        var toUpdatePayCurr: BigDecimal
-                        var toUpdateLedCurr: BigDecimal
-
-                        if (extraUtilizationAmountCurr > (payment.amountCurr - payment.payCurr)) {
-                            extraUtilizationAmountCurr -= (payment.amountCurr - payment.payCurr)
-                            toUpdatePayCurr = payment.amountCurr
-                        } else {
-                            toUpdatePayCurr = payment.payCurr.plus(extraUtilizationAmountCurr)
-                            extraUtilizationAmountCurr = 0.toBigDecimal()
-                        }
-
-                        if (extraUtilizationAmountLoc > (payment.amountLoc - payment.payLoc)) {
-                            extraUtilizationAmountLoc -= (payment.amountLoc - payment.payLoc)
-                            toUpdateLedCurr = payment.amountLoc
-                        } else {
-                            toUpdateLedCurr = payment.payLoc.plus(extraUtilizationAmountLoc)
-                            extraUtilizationAmountLoc = 0.toBigDecimal()
-                        }
-                        newPayCurr += toUpdatePayCurr
-                        newPayLoc += toUpdateLedCurr
-                        accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
-                    } else {
-                        newPayCurr += payment.payCurr
-                        newPayLoc += payment.amountLoc
-                    }
-                }
+                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
             } else {
-                var totalUtilisedTillNowPay = 0.toBigDecimal()
-                var totalUtilisedTillNowLed = 0.toBigDecimal()
-                for (payment in paymentEntry) {
-                    totalUtilisedTillNowPay += payment?.payCurr!!
-                    totalUtilisedTillNowLed += payment?.payLoc
-                }
-                if (updateInvoiceRequest.currAmount < totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount < totalUtilisedTillNowLed) {
-                    var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.currAmount
-                    var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.ledAmount
-                    for (payment in paymentEntry) {
-                        var toUpdatePayCurr: BigDecimal
-                        var toUpdateLedCurr: BigDecimal
-                        if (extraUtilizationAmountCurr > 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
-                            if (extraUtilizationAmountCurr > payment?.payCurr && extraUtilizationAmountLoc > payment?.payLoc) {
-                                toUpdatePayCurr = 0.toBigDecimal()
-                                toUpdateLedCurr = 0.toBigDecimal()
-                                extraUtilizationAmountCurr -= payment?.payCurr!!
-                                extraUtilizationAmountLoc -= payment.payLoc
-                            } else {
-                                toUpdatePayCurr = payment?.payCurr?.minus(extraUtilizationAmountCurr)!!
-                                toUpdateLedCurr = payment?.payLoc?.minus(extraUtilizationAmountLoc)
-                                extraUtilizationAmountCurr = 0.toBigDecimal()
-                                extraUtilizationAmountLoc = 0.toBigDecimal()
-                            }
-                            newPayCurr += toUpdatePayCurr
-                            newPayLoc += toUpdateLedCurr
-                            accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
-                        } else {
-                            newPayCurr += payment?.payCurr!!
-                            newPayLoc += payment?.payLoc
-                        }
-                    }
-                } else {
-                    newPayCurr += totalUtilisedTillNowPay
-                    newPayLoc += totalUtilisedTillNowLed
-                }
+
             }
         }
 
@@ -479,6 +416,80 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
+        }
+    }
+    private suspend fun amountGreaterThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, accountUtilization: AccountUtilization, paymentEntry: List<AccountUtilization>) {
+        var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
+        var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
+        for (payment in paymentEntry) {
+
+            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountCurr <= 0.toBigDecimal())
+                continue
+
+            if (payment?.payCurr!! < payment?.amountCurr ) {
+                var toUpdatePayCurr: BigDecimal
+                var toUpdateLedCurr: BigDecimal
+
+                val pendingUtilizationAmount =  payment.amountCurr - payment.payCurr
+                if (extraUtilizationAmountCurr > pendingUtilizationAmount) {
+                    extraUtilizationAmountCurr -= pendingUtilizationAmount
+                    toUpdatePayCurr = payment.amountCurr
+                } else {
+                    toUpdatePayCurr = payment.payCurr.plus(extraUtilizationAmountCurr)
+                    extraUtilizationAmountCurr = 0.toBigDecimal()
+                }
+
+                val pendingUtilizationAmountLoc =  payment.amountLoc - payment.payLoc
+                if (extraUtilizationAmountLoc > pendingUtilizationAmountLoc) {
+                    extraUtilizationAmountLoc -= pendingUtilizationAmountLoc
+                    toUpdateLedCurr = payment.amountLoc
+                } else {
+                    toUpdateLedCurr = payment.payLoc.plus(extraUtilizationAmountLoc)
+                    extraUtilizationAmountLoc = 0.toBigDecimal()
+                }
+                newPayCurr += toUpdatePayCurr
+                newPayLoc += toUpdateLedCurr
+                accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+            }
+        }
+    }
+
+    private suspend fun amountLessThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, accountUtilization: AccountUtilization, paymentEntry: List<AccountUtilization>) {
+        var totalUtilisedTillNowPay = 0.toBigDecimal()
+        var totalUtilisedTillNowLed = 0.toBigDecimal()
+        for (payment in paymentEntry) {
+            totalUtilisedTillNowPay += payment?.payCurr!!
+            totalUtilisedTillNowLed += payment?.payLoc
+        }
+        if (updateInvoiceRequest.currAmount < totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount < totalUtilisedTillNowLed) {
+            var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.currAmount
+            var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.ledAmount
+            for (payment in paymentEntry) {
+                var toUpdatePayCurr: BigDecimal
+                var toUpdateLedCurr: BigDecimal
+                if (extraUtilizationAmountCurr > 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
+                    if (extraUtilizationAmountCurr > payment?.payCurr && extraUtilizationAmountLoc > payment?.payLoc) {
+                        toUpdatePayCurr = 0.toBigDecimal()
+                        toUpdateLedCurr = 0.toBigDecimal()
+                        extraUtilizationAmountCurr -= payment?.payCurr!!
+                        extraUtilizationAmountLoc -= payment.payLoc
+                    } else {
+                        toUpdatePayCurr = payment?.payCurr?.minus(extraUtilizationAmountCurr)!!
+                        toUpdateLedCurr = payment?.payLoc?.minus(extraUtilizationAmountLoc)
+                        extraUtilizationAmountCurr = 0.toBigDecimal()
+                        extraUtilizationAmountLoc = 0.toBigDecimal()
+                    }
+                    newPayCurr += toUpdatePayCurr
+                    newPayLoc += toUpdateLedCurr
+                    accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+                } else {
+                    newPayCurr += payment?.payCurr!!
+                    newPayLoc += payment?.payLoc
+                }
+            }
+        } else {
+            newPayCurr += totalUtilisedTillNowPay
+            newPayLoc += totalUtilisedTillNowLed
         }
     }
 }
