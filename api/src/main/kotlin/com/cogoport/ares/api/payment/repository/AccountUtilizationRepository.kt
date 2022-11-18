@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
@@ -318,7 +319,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
             COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
-            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
+            COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url 
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -498,6 +500,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WHERE au.id in (
                 SELECT id from FILTERS
             )
+            ORDER By :isTransactionDateSortTypeDesc::BOOL
+            ,CASE WHEN :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END DESC
+            ,CASE WHEN not :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END ASC
         """
     )
     suspend fun getDocumentList(
@@ -509,7 +514,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         startDate: Timestamp?,
         endDate: Timestamp?,
         query: String?,
-        accMode: AccMode?
+        accMode: AccMode?,
+        isTransactionDateSortTypeDesc: Boolean?
     ): List<Document?>
 
     @Query(
@@ -972,8 +978,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @Query(
         """
-            SELECT id FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
         """
     )
-    suspend fun getIdByPaymentNum(paymentNum: Long?): Long
+    suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
 }

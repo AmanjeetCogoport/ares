@@ -28,8 +28,18 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return paymentRecords.size
     }
 
-    override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?): Int {
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate)
+    override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?, jvNums: List<String>?): Int {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
         for (jvRecord in jvRecords) {
             aresKafkaEmitter.emitJournalVoucherMigration(jvRecord)
@@ -37,12 +47,52 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return jvRecords.size
     }
 
-    override suspend fun migratePaymentsByBpr(bpr: String, mode: String): Int {
-        val paymentRecords = sageService.getPaymentDataByBpr(bpr, mode)
+    override suspend fun migratePaymentsByDate(bpr: String, mode: String): Int {
+        val paymentRecords = sageService.migratePaymentsByDate(bpr, mode)
         logger().info("Total number of payment record to process : ${paymentRecords.size}")
         for (paymentRecord in paymentRecords) {
             aresKafkaEmitter.emitPaymentMigration(paymentRecord)
         }
         return paymentRecords.size
+    }
+
+    override suspend fun migratePaymentsByPaymentNum(paymentNums: List<String>): Int {
+        val payments = StringBuilder()
+        for (paymentNum in paymentNums) {
+            payments.append("'")
+            payments.append(paymentNum)
+            payments.append("',")
+        }
+        val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
+        logger().info("Total number of payment record to process : ${paymentRecords.size}")
+        for (paymentRecord in paymentRecords) {
+            aresKafkaEmitter.emitPaymentMigration(paymentRecord)
+        }
+        return paymentRecords.size
+    }
+
+    override suspend fun migrateSettlementsWrapper(startDate: String, endDate: String, entries: Map<String, String>?): Int {
+        var size = if (entries != null) {
+            migrateSettlementEntries(startDate, endDate, entries)
+        } else {
+            val settlementRecords = sageService.getSettlementDataFromSage(startDate, endDate, null, null)
+            logger().info("settlements Records to migrate:${settlementRecords.size}")
+            for (settlementRecord in settlementRecords) {
+                aresKafkaEmitter.emitSettlementRecord(settlementRecord)
+            }
+            settlementRecords.size
+        }
+        return size
+    }
+
+    private suspend fun migrateSettlementEntries(startDate: String, endDate: String, entries: Map<String, String>): Int {
+        for (entry in entries.keys) {
+            val destination = entries[entry]
+            val settlementRecords = sageService.getSettlementDataFromSage(startDate, endDate, entry, destination)
+            for (settlementRecord in settlementRecords) {
+                aresKafkaEmitter.emitSettlementRecord(settlementRecord)
+            }
+        }
+        return entries.size
     }
 }
