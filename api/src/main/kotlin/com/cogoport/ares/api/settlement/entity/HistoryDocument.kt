@@ -25,5 +25,6 @@ data class HistoryDocument(
     var status: String?,
     val tds: BigDecimal,
     val settledTds: BigDecimal,
-    val accMode: AccMode
+    val accMode: AccMode,
+    val supportingDocUrl: String? = null
 )
