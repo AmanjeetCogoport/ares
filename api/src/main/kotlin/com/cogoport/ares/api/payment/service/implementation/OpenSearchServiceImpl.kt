@@ -38,7 +38,7 @@ import java.math.BigDecimal
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -96,7 +96,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Collection Trend */
         logger().info("Updating Collection Trend document")
-        generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
+        generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
         /** Overall Stats */
         logger().info("Updating Overall Stats document")
@@ -108,56 +108,55 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Quarterly Outstanding */
         logger().info("Updating Quarterly Outstanding document")
-        generateQuarterlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency)
+        generateQuarterlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Outstanding Outstanding document")
         generateDailySalesOutstanding(zone, quarter, year, serviceType, invoiceCurrency, date, dashboardCurrency, defaultersOrgIds)
     }
 
-    override suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency)
+    override suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
+        val collectionZoneResponse = accountUtilizationRepository.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
         updateCollectionTrend(zone, quarter, year, collectionZoneResponse, serviceType, invoiceCurrency)
-        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null)
+        val collectionResponseAll = accountUtilizationRepository.generateCollectionTrend(null, quarter, year, null, null, defaultersOrgIds)
         updateCollectionTrend(null, quarter, year, collectionResponseAll, null, null)
     }
 
     override suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
-        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds!!)
+        val statsZoneData = accountUtilizationRepository.generateOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds)
         updateOverallStats(zone, statsZoneData, serviceType, invoiceCurrency)
         val statsAllData = accountUtilizationRepository.generateOverallStats(null, null, null, defaultersOrgIds)
         updateOverallStats(null, statsAllData, null, null)
     }
 
     override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
-        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds!!)
+        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds)
 
         monthlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = invoiceCurrency
             }
         }
-
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
         val monthlyTrendAllData = accountUtilizationRepository.generateMonthlyOutstanding(null, null, null, defaultersOrgIds)
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)
     }
 
-    override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?) {
-        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency)
+    override suspend fun generateQuarterlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
+        val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds)
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = invoiceCurrency
             }
         }
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)
-        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null)
+        val quarterlyTrendAllData = accountUtilizationRepository.generateQuarterlyOutstanding(null, null, null, defaultersOrgIds)
         updateQuarterlyTrend(null, quarterlyTrendAllData, null, null)
     }
 
     override suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String, defaultersOrgIds: List<UUID>?) {
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency,defaultersOrgIds!!)
+        val dailySalesZoneServiceTypeData = accountUtilizationRepository.generateDailySalesOutstanding(zone, date, serviceType, invoiceCurrency, defaultersOrgIds)
         dailySalesZoneServiceTypeData.map {
             if (it.dashboardCurrency == null) {
                 it.dashboardCurrency = invoiceCurrency
@@ -165,7 +164,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         }
 
         updateDailySalesOutstanding(zone, year, dailySalesZoneServiceTypeData, serviceType, invoiceCurrency, date, dashboardCurrency)
-        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null, defaultersOrgIds!!)
+        val dailySalesAllData = accountUtilizationRepository.generateDailySalesOutstanding(null, date, null, null, defaultersOrgIds)
         updateDailySalesOutstanding(null, year, dailySalesAllData, null, null, date, dashboardCurrency)
     }
     /**

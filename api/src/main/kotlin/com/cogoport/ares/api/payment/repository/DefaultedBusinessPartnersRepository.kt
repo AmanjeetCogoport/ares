@@ -41,5 +41,5 @@ interface DefaultedBusinessPartnersRepository : CoroutineCrudRepository<Defaulte
     suspend fun checkIfTradePartyDetailSerialIdExists(tradePartyDetailSerialId: Long): Boolean
 
     @Query("SELECT trade_party_detail_id FROM defaulted_business_partners")
-    suspend fun listTradePartyDetailIds(): List<UUID>
+    suspend fun listTradePartyDetailIds(): List<UUID>?
 }
