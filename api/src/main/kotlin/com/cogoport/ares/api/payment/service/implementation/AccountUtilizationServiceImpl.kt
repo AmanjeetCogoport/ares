@@ -216,6 +216,22 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
+        accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
+        accountUtilization.organizationId = updateInvoiceRequest.organizationId ?: accountUtilization.organizationId
+        accountUtilization.taggedOrganizationId = updateInvoiceRequest.taggedOrganizationId ?: accountUtilization.taggedOrganizationId
+        accountUtilization.tradePartyMappingId = updateInvoiceRequest.tradePartyMappingId ?: accountUtilization.tradePartyMappingId
+        accountUtilization.organizationName = updateInvoiceRequest.organizationName ?: accountUtilization.organizationName
+        accountUtilization.signFlag = updateInvoiceRequest.signFlag ?: accountUtilization.signFlag
+        accountUtilization.payCurr = updateInvoiceRequest.currencyPayment ?: accountUtilization.payCurr
+        accountUtilization.payLoc = updateInvoiceRequest.ledgerPayment ?: accountUtilization.payLoc
+        accountUtilization.taxableAmount = updateInvoiceRequest.taxableAmount ?: accountUtilization.taxableAmount
+        accountUtilization.zoneCode = updateInvoiceRequest.zoneCode ?: accountUtilization.zoneCode
+        accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
+        accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
+        accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
+
         accUtilRepository.update(accountUtilization)
         auditService.createAudit(
             AuditRequest(
