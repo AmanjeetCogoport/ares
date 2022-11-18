@@ -70,4 +70,29 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         return paymentRecords.size
     }
+
+    override suspend fun migrateSettlementsWrapper(startDate: String, endDate: String, entries: Map<String, String>?): Int {
+        var size = if (entries != null) {
+            migrateSettlementEntries(startDate, endDate, entries)
+        } else {
+            val settlementRecords = sageService.getSettlementDataFromSage(startDate, endDate, null, null)
+            logger().info("settlements Records to migrate:${settlementRecords.size}")
+            for (settlementRecord in settlementRecords) {
+                aresKafkaEmitter.emitSettlementRecord(settlementRecord)
+            }
+            settlementRecords.size
+        }
+        return size
+    }
+
+    private suspend fun migrateSettlementEntries(startDate: String, endDate: String, entries: Map<String, String>): Int {
+        for (entry in entries.keys) {
+            val destination = entries[entry]
+            val settlementRecords = sageService.getSettlementDataFromSage(startDate, endDate, entry, destination)
+            for (settlementRecord in settlementRecords) {
+                aresKafkaEmitter.emitSettlementRecord(settlementRecord)
+            }
+        }
+        return entries.size
+    }
 }

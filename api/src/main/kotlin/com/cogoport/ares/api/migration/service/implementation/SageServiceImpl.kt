@@ -4,6 +4,8 @@ import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.PaymentRecordManager
+import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -216,6 +218,37 @@ class SageServiceImpl : SageService {
 
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
+        return payments.recordSets!![0]
+    }
+
+    override suspend fun getSettlementDataFromSage(
+        startDate: String,
+        endDate: String,
+        source: String?,
+        destination: String?
+    ): ArrayList<SettlementRecord> {
+        var sqlQuery = """
+            SELECT  P.FCYLIN_0 as entity_code
+            ,P.BPRINV_0 as sage_organization_id
+            ,GC.NUM_0 as payment_num
+            ,P.VCRTYP_0 as destination_type
+            ,P.VCRNUM_0 as invoice_id
+            ,GC.CUR_0 as currency
+            ,GC.CURLED_0 as ledger_currency
+            ,P.DENCOD_0 as source_type
+            ,case when P.BPRSACINV_0='SC' then 'AP' else 'AR' end as acc_mode
+            ,P.PAYCURLIN_0 as currency_amount
+            ,P.PAYLOCLIN_0 as ledger_amount
+            ,P.CREDATTIM_0 as created_at
+            ,P.UPDDATTIM_0 as updated_at
+            from COGO2.PAYMENTD P INNER JOIN COGO2.GACCENTRY GC on (P.NUM_0 = GC.REF_0 and GC.FCY_0=P.FCYLIN_0)
+            where P.BPRINV_0 != ' ' and P.VCRTYP_0 != ' ' and P.VCRNUM_0 != ' ' and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate'
+        """.trimIndent()
+        if (source != null && destination != null) {
+            sqlQuery += """and GC.NUM_0 = '$source' and P.VCRNUM_0 = '$destination'"""
+        }
+        val paymentRecords = Client.sqlQuery(sqlQuery)
+        val payments = ObjectMapper().readValue(paymentRecords, SettlementRecordManager::class.java)
         return payments.recordSets!![0]
     }
 }
