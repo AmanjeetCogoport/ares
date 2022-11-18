@@ -26,5 +26,6 @@ data class Settlement(
     var createdBy: UUID?,
     var createdAt: Timestamp?,
     var updatedBy: UUID?,
-    var updatedAt: Timestamp?
+    var updatedAt: Timestamp?,
+    var supportingDocUrl: String? = null
 )
