@@ -232,13 +232,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
 
-        accUtilRepository.update(accountUtilization)
+        val data = accUtilRepository.update(accountUtilization)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
                 objectId = accountUtilization.id,
                 actionName = AresConstants.UPDATE,
-                data = accountUtilization,
+                data = data,
                 performedBy = updateInvoiceRequest.performedBy.toString(),
                 performedByUserType = updateInvoiceRequest.performedByType
             )
