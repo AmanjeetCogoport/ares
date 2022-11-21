@@ -331,7 +331,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                          WHEN :sortBy = 'updatedAt' THEN au.updated_at
                     END        
             END 
-            Asc,
+            Asc
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -597,6 +597,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WHERE au.id in (
                 SELECT id from FILTERS
             )
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END        
+            END 
+            Asc
         """
     )
     suspend fun getTDSDocumentList(
@@ -607,7 +620,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accMode: AccMode?,
         startDate: Timestamp?,
         endDate: Timestamp?,
-        query: String?
+        query: String?,
+        sortBy:String?,
+        sortType: String?
     ): List<Document?>
 
     @Query(

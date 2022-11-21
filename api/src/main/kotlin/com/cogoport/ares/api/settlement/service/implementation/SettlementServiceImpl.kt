@@ -897,7 +897,9 @@ open class SettlementServiceImpl : SettlementService {
                 request.accMode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%"
+                "%${request.query}%",
+                request.sortBy,
+                request.sortType
             )
         if (documentEntity.isEmpty())
             return ResponseList()
