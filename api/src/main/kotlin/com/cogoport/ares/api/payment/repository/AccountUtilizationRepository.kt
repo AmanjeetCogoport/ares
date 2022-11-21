@@ -322,13 +322,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
-                         WHEN :sortBy = 'updatedAt' THEN au.updated_at
+                         WHEN :sortBy = 'lastEditedDate' THEN au.updated_at
                     END
             END 
             Desc,
             CASE WHEN :sortType = 'Asc' THEN
                     CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
-                         WHEN :sortBy = 'updatedAt' THEN au.updated_at
+                         WHEN :sortBy = 'lastEditedDate' THEN au.updated_at
                     END        
             END 
             Asc
