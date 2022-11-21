@@ -318,7 +318,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     document_value ilike :query || '%' 
                     OR au.document_no in (:paymentIds)
                 )
-            GROUP BY au.id
+            GROUP BY au.id  
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'updatedAt' THEN au.updated_at
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'updatedAt' THEN au.updated_at
+                    END        
+            END 
+            Asc,
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -330,7 +343,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         startDate: String?,
         endDate: String?,
         query: String,
-        paymentIds: List<Long>
+        paymentIds: List<Long>,
+        sortBy: String?,
+        sortType: String?
     ): List<HistoryDocument?>
 
     @Query(

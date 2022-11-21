@@ -213,7 +213,9 @@ open class SettlementServiceImpl : SettlementService {
                 request.startDate,
                 request.endDate,
                 request.query,
-                paymentIds
+                paymentIds,
+                request.sortBy,
+                request.sortType
             )
 
         val totalRecords =
