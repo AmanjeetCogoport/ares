@@ -79,7 +79,10 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkPaymentExists(paymentRecord.paymentNum!!, AccMode.valueOf(paymentRecord.accMode!!).name, PaymentCode.valueOf(paymentRecord.paymentCode!!).name)) {
+            if (paymentMigrationRepository.checkPaymentExists(paymentRecord.paymentNum!!,
+                    AccMode.valueOf(paymentRecord.accMode!!).name,
+                    PaymentCode.valueOf(paymentRecord.paymentCode!!).name,
+                    AccountType.valueOf(paymentRecord.accountType!!).name)) {
                 throw AresException(AresError.ERR_1010, "Not migrating as payment already exists")
             }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
@@ -118,7 +121,9 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkJVExists(journalVoucherRecord.paymentNum!!, journalVoucherRecord.accMode!!)) {
+            if (paymentMigrationRepository.checkJVExists(journalVoucherRecord.paymentNum!!,
+                    journalVoucherRecord.accMode!!,
+                    AccountType.valueOf(journalVoucherRecord.accountType!!).name)) {
                 throw AresException(AresError.ERR_1010, "JV record is already present")
             }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
