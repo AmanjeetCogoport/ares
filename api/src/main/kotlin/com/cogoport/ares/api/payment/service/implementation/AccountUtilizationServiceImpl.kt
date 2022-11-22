@@ -224,8 +224,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.tradePartyMappingId = updateInvoiceRequest.tradePartyMappingId ?: accountUtilization.tradePartyMappingId
         accountUtilization.organizationName = updateInvoiceRequest.organizationName ?: accountUtilization.organizationName
         accountUtilization.signFlag = updateInvoiceRequest.signFlag ?: accountUtilization.signFlag
-        accountUtilization.payCurr = updateInvoiceRequest.currencyPayment ?: accountUtilization.payCurr
-        accountUtilization.payLoc = updateInvoiceRequest.ledgerPayment ?: accountUtilization.payLoc
         accountUtilization.taxableAmount = updateInvoiceRequest.taxableAmount ?: accountUtilization.taxableAmount
         accountUtilization.zoneCode = updateInvoiceRequest.zoneCode ?: accountUtilization.zoneCode
         accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
