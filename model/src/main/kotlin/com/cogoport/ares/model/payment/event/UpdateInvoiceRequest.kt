@@ -3,6 +3,7 @@ package com.cogoport.ares.model.payment.event
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -29,5 +30,17 @@ data class UpdateInvoiceRequest(
     var transactionDate: Timestamp,
     var updatedAt: Timestamp = Timestamp.from(Instant.now()),
     var performedBy: UUID? = null,
-    var performedByType: String? = null
+    var performedByType: String? = null,
+    var orgSerialId: Long?,
+    var sageOrganizationId: String?,
+    var organizationId: UUID?,
+    var taggedOrganizationId: UUID?,
+    var tradePartyMappingId: UUID?,
+    var organizationName: String?,
+    var signFlag: Short?,
+    var taxableAmount: BigDecimal?,
+    var zoneCode: String?,
+    var serviceType: ServiceType?,
+    var category: String?,
+    var migrated: Boolean?
 )

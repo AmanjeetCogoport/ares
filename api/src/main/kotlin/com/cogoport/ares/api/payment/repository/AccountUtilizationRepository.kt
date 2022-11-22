@@ -320,7 +320,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 )
                 AND s.deleted_at is null
                 AND au.deleted_at is null
-            GROUP BY au.id
+            GROUP BY au.id  
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'lastEditedDate' THEN au.updated_at
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'lastEditedDate' THEN au.updated_at
+                    END        
+            END 
+            Asc
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
@@ -332,7 +345,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         startDate: String?,
         endDate: String?,
         query: String,
-        paymentIds: List<Long>
+        paymentIds: List<Long>,
+        sortBy: String?,
+        sortType: String?
     ): List<HistoryDocument?>
 
     @Query(
@@ -491,9 +506,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND au.deleted_at is null
             AND s.deleted_at is null
             AND p.deleted_at is null
-            ORDER By :isTransactionDateSortTypeDesc::BOOL
-            ,CASE WHEN :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END DESC
-            ,CASE WHEN not :isTransactionDateSortTypeDesc THEN Date(au.transaction_date) END ASC
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END        
+            END 
+            Asc
         """
     )
     suspend fun getDocumentList(
@@ -506,7 +531,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         endDate: Timestamp?,
         query: String?,
         accMode: AccMode?,
-        isTransactionDateSortTypeDesc: Boolean?
+        sortBy: String?,
+        sortType: String?
     ): List<Document?>
 
     @Query(
@@ -583,9 +609,22 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WHERE au.id in (
                 SELECT id from FILTERS
             )
-            AND au.deleted_at is null
+             AND au.deleted_at is null
             AND p.deleted_at is null
             AND s.deleted_at is null
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
+                         WHEN :sortBy = 'dueDate' THEN au.due_date
+                    END        
+            END 
+            Asc
         """
     )
     suspend fun getTDSDocumentList(
@@ -596,7 +635,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accMode: AccMode?,
         startDate: Timestamp?,
         endDate: Timestamp?,
-        query: String?
+        query: String?,
+        sortBy: String?,
+        sortType: String?
     ): List<Document?>
 
     @Query(
