@@ -41,6 +41,19 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%')
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'createdAt' THEN j.created_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'createdAt' THEN j.created_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
+                    END        
+            END 
+            Asc
                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
@@ -50,7 +63,9 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         type: String?,
         query: String?,
         page: Int,
-        pageLimit: Int
+        pageLimit: Int,
+        sortType: String?,
+        sortBy: String?
     ): List<JournalVoucher>
 
     @Query(
