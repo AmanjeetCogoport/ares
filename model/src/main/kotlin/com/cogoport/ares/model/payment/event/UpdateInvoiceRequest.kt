@@ -31,8 +31,6 @@ data class UpdateInvoiceRequest(
     var updatedAt: Timestamp = Timestamp.from(Instant.now()),
     var performedBy: UUID? = null,
     var performedByType: String? = null,
-
-//    remaining update.
     var orgSerialId: Long?,
     var sageOrganizationId: String?,
     var organizationId: UUID?,
