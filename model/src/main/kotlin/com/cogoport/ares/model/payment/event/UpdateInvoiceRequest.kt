@@ -38,8 +38,6 @@ data class UpdateInvoiceRequest(
     var tradePartyMappingId: UUID?,
     var organizationName: String?,
     var signFlag: Short?,
-    var currencyPayment: BigDecimal?,
-    var ledgerPayment: BigDecimal?,
     var taxableAmount: BigDecimal?,
     var zoneCode: String?,
     var serviceType: ServiceType?,
