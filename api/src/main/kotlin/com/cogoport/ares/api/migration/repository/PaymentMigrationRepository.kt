@@ -20,7 +20,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
             )
         """
     )
-    suspend fun checkPaymentExists(paymentNumValue: String, accMode: String, paymentCode: String, accType:String): Boolean
+    suspend fun checkPaymentExists(paymentNumValue: String, accMode: String, paymentCode: String, accType: String): Boolean
 
     @Query(
         """
