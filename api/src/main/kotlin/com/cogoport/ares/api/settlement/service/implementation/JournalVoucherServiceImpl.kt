@@ -292,6 +292,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = Timestamp.from(Instant.now())
         jv.updatedAt = Timestamp.from(Instant.now())
+        jv.type = request.type.lowercase()
         return jv
     }
 

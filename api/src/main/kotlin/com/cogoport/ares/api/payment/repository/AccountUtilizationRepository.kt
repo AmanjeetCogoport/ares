@@ -621,7 +621,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         startDate: Timestamp?,
         endDate: Timestamp?,
         query: String?,
-        sortBy:String?,
+        sortBy: String?,
         sortType: String?
     ): List<Document?>
 
