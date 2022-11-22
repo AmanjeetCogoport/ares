@@ -79,7 +79,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             jvListRequest.type,
             jvListRequest.query,
             jvListRequest.page,
-            jvListRequest.pageLimit
+            jvListRequest.pageLimit,
+            jvListRequest.sortType,
+            jvListRequest.sortBy
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
