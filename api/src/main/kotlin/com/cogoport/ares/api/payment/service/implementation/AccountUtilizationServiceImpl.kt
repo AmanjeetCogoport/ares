@@ -211,7 +211,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
                 amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
             } else {
-                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry)
+                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry,accountUtilization)
             }
         }
         val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
@@ -472,13 +472,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
     }
 
-    private suspend fun amountLessThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, paymentEntry: List<AccountUtilization?>) {
-        var totalUtilisedTillNowPay = 0.toBigDecimal()
-        var totalUtilisedTillNowLed = 0.toBigDecimal()
-        for (payment in paymentEntry) {
-            totalUtilisedTillNowPay += payment?.payCurr!!
-            totalUtilisedTillNowLed += payment?.payLoc
-        }
+    private suspend fun amountLessThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, paymentEntry: List<AccountUtilization?>,accountUtilization:AccountUtilization) {
+        var totalUtilisedTillNowPay = accountUtilization.payCurr
+        var totalUtilisedTillNowLed = accountUtilization.payLoc
+
         if (updateInvoiceRequest.currAmount >= totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount >= totalUtilisedTillNowLed)
             return
 
