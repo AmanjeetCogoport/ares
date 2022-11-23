@@ -58,8 +58,10 @@ dependencies {
     implementation("com.cogoport.hades:hades-model:0.1.4-beta-2")
 
     //Kuber Client
-    implementation("com.cogoport.kuber:kuber-model:0.1.25")
-    implementation("com.cogoport.kuber:kuber-client:0.1.13.3")
+//    implementation("com.cogoport.kuber:kuber-model:0.1.25")
+    implementation files("libs/kuber-model-0.1.25.jar")
+    implementation("com.cogoport.kuber:kuber-client:0.1.13.3"
+    )
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")

@@ -1901,10 +1901,20 @@ open class SettlementServiceImpl : SettlementService {
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
                 paymentStatus = status,
+                organizationName = accountUtilization.organizationName,
                 paidAmount = accountUtilization.payCurr,
                 paidTds = paidTds,
                 performedBy = performedBy,
-                performedByUserType = performedByUserType
+                performedByUserType = performedByUserType,
+                tranferMode = null,
+                transactionRef = null ,
+                cogoBankId = null,
+                cogoBankName = null,
+                cogoEntity= null,
+                paymentDate = null,
+                updatedBy= null,
+                createdAt = null,
+                updatedAt = null,
             )
         )
     }
