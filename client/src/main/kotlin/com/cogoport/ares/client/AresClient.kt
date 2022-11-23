@@ -18,6 +18,7 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
+import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
@@ -56,6 +57,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
+import java.math.BigDecimal
 import java.util.UUID
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -152,4 +154,7 @@ interface AresClient {
 
     @Get("/payments/defaulters/list/trade-party-detail-ids")
     suspend fun listTradePartyDetailIds(): List<UUID>?
+
+    @Get("/payments/dashboard/exchange-rate/for/period{?request*}")
+    suspend fun getExchangeRateForPeriod(@Valid request: ExchangeRateForPeriodRequest): HashMap<String, BigDecimal>
 }

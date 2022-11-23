@@ -84,7 +84,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              order by 1
           """
     )
-    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<AgeingBucketZone>
+    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<AgeingBucketZone>
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'
@@ -103,7 +103,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
 
     )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
+    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): List<OverallAgeingStats>
 
     @Query(
         """
