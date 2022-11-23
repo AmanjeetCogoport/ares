@@ -1017,7 +1017,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            JOIN payment_invoice_mapping pim ON 
            pim.payment_id = p.id AND pim.document_no = :documentNo
            JOIN account_utilizations au ON 
-           au.document_no = p.payment_num AND au.deleted_at is null
+           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP'
            ORDER by au.created_at desc
         """
     )

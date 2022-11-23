@@ -442,7 +442,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
         for (payment in paymentEntry) {
 
-            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountCurr <= 0.toBigDecimal())
+            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal())
                 continue
 
             if (payment?.payCurr!! < payment?.amountCurr) {
