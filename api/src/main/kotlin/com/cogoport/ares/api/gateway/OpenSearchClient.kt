@@ -190,7 +190,7 @@ class OpenSearchClient {
                         .from((request.page - 1) * request.pageLimit)
                         .size(request.pageLimit)
                         .sort { t ->
-                            t.field { f -> f.field("transactionDate").order(SortOrder.Desc) }
+                            t.field { f -> f.field("createdAt").order(SortOrder.Desc) }
                         }
                 },
                 classType
