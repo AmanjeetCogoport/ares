@@ -97,6 +97,17 @@ dependencies {
 
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1")
+
+    // Opentelemetry
+    annotationProcessor("io.micronaut.tracing:micronaut-tracing-opentelemetry-annotation:4.5.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.20.1")
+    implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry-http:4.5.0")
+
+    // Prometheus
+    implementation "io.micronaut.micrometer:micronaut-micrometer-core"
+    implementation "io.micronaut:micronaut-management"
+    implementation("io.micronaut.micrometer:micronaut-micrometer-registry-prometheus")
+
 }
 
 tasks.named("optimizedDockerBuildNative") {
