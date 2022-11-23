@@ -198,6 +198,9 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.paymentNumValue = payment.paymentNumValue
         receivableRequest.accCode = payment.accCode
         receivableRequest.paymentCode = payment.paymentCode
+        receivableRequest.createdAt = payment.createdAt
+        receivableRequest.updatedAt = payment.updatedAt
+
 
         val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
