@@ -6,6 +6,7 @@ import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -205,6 +206,22 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
                 ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
 
+        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
+            val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
+            if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
+                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
+            } else {
+                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
+            }
+        }
+        val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
+        var newPayCurr: BigDecimal = 0.toBigDecimal()
+        var newPayLoc: BigDecimal = 0.toBigDecimal()
+        for (payments in paymentEntry) {
+            newPayCurr += payments?.payCurr!!
+            newPayLoc += payments.payLoc
+        }
+
         accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
         accountUtilization.documentValue = updateInvoiceRequest.documentValue
         accountUtilization.dueDate = updateInvoiceRequest.dueDate
@@ -216,13 +233,31 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+        accountUtilization.payCurr = newPayCurr
+        accountUtilization.payLoc = newPayLoc
+
         accUtilRepository.update(accountUtilization)
+
+        accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
+        accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
+        accountUtilization.organizationId = updateInvoiceRequest.organizationId ?: accountUtilization.organizationId
+        accountUtilization.taggedOrganizationId = updateInvoiceRequest.taggedOrganizationId ?: accountUtilization.taggedOrganizationId
+        accountUtilization.tradePartyMappingId = updateInvoiceRequest.tradePartyMappingId ?: accountUtilization.tradePartyMappingId
+        accountUtilization.organizationName = updateInvoiceRequest.organizationName ?: accountUtilization.organizationName
+        accountUtilization.signFlag = updateInvoiceRequest.signFlag ?: accountUtilization.signFlag
+        accountUtilization.taxableAmount = updateInvoiceRequest.taxableAmount ?: accountUtilization.taxableAmount
+        accountUtilization.zoneCode = updateInvoiceRequest.zoneCode ?: accountUtilization.zoneCode
+        accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
+        accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
+        accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
+
+        val data = accUtilRepository.update(accountUtilization)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
                 objectId = accountUtilization.id,
                 actionName = AresConstants.UPDATE,
-                data = accountUtilization,
+                data = data,
                 performedBy = updateInvoiceRequest.performedBy.toString(),
                 performedByUserType = updateInvoiceRequest.performedByType
             )
@@ -400,6 +435,70 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
+        }
+    }
+    private suspend fun amountGreaterThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, accountUtilization: AccountUtilization, paymentEntry: List<AccountUtilization?>) {
+        var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
+        var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
+        for (payment in paymentEntry) {
+
+            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal())
+                continue
+
+            if (payment?.payCurr!! < payment?.amountCurr) {
+                var toUpdatePayCurr: BigDecimal
+                var toUpdateLedCurr: BigDecimal
+
+                val pendingUtilizationAmount = payment.amountCurr - payment.payCurr
+                if (extraUtilizationAmountCurr > pendingUtilizationAmount) {
+                    extraUtilizationAmountCurr -= pendingUtilizationAmount
+                    toUpdatePayCurr = payment.amountCurr
+                } else {
+                    toUpdatePayCurr = payment.payCurr.plus(extraUtilizationAmountCurr)
+                    extraUtilizationAmountCurr = 0.toBigDecimal()
+                }
+
+                val pendingUtilizationAmountLoc = payment.amountLoc - payment.payLoc
+                if (extraUtilizationAmountLoc > pendingUtilizationAmountLoc) {
+                    extraUtilizationAmountLoc -= pendingUtilizationAmountLoc
+                    toUpdateLedCurr = payment.amountLoc
+                } else {
+                    toUpdateLedCurr = payment.payLoc.plus(extraUtilizationAmountLoc)
+                    extraUtilizationAmountLoc = 0.toBigDecimal()
+                }
+
+                accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+            }
+        }
+    }
+
+    private suspend fun amountLessThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, paymentEntry: List<AccountUtilization?>, accountUtilization: AccountUtilization) {
+        var totalUtilisedTillNowPay = accountUtilization.payCurr
+        var totalUtilisedTillNowLed = accountUtilization.payLoc
+
+        if (updateInvoiceRequest.currAmount >= totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount >= totalUtilisedTillNowLed)
+            return
+
+        var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.currAmount
+        var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.ledAmount
+        for (payment in paymentEntry) {
+            var toUpdatePayCurr: BigDecimal
+            var toUpdateLedCurr: BigDecimal
+            if (extraUtilizationAmountCurr > 0.toBigDecimal() && extraUtilizationAmountLoc > 0.toBigDecimal()) {
+                if (extraUtilizationAmountCurr > payment?.payCurr && extraUtilizationAmountLoc > payment?.payLoc) {
+                    toUpdatePayCurr = 0.toBigDecimal()
+                    toUpdateLedCurr = 0.toBigDecimal()
+                    extraUtilizationAmountCurr -= payment?.payCurr!!
+                    extraUtilizationAmountLoc -= payment.payLoc
+                } else {
+                    toUpdatePayCurr = payment?.payCurr?.minus(extraUtilizationAmountCurr)!!
+                    toUpdateLedCurr = payment?.payLoc?.minus(extraUtilizationAmountLoc)
+                    extraUtilizationAmountCurr = 0.toBigDecimal()
+                    extraUtilizationAmountLoc = 0.toBigDecimal()
+                }
+
+                accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+            }
         }
     }
 }

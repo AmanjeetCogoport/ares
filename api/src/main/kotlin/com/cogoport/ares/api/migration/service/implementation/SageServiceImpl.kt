@@ -44,7 +44,7 @@ class SageServiceImpl : SageService {
             ,P.AMTCUR_0 as amount 
             ,P.AMTCUR_0 * GC.RATMLT_0 as led_amount
             ,P.BANPAYTPY_0 as bank_pay_amount
-            ,G.SNS_0 as sign_flag
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
             ,GC.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
@@ -56,9 +56,9 @@ class SageServiceImpl : SageService {
             from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on (P.NUM_0 = GC.REF_0 and GC.FCY_0=P.FCY_0)
             INNER JOIN       
             (
-             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,
-             SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC') 
-             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
+             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SIGN(SUM(SNS_0*(AMTLOC_0-PAYLOC_0))) as sign_flag
+             ,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC')
+             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 = '$mode'  and P.BPR_0 = '$bpr'
@@ -98,14 +98,17 @@ class SageServiceImpl : SageService {
             ,G.AMTLOC_0 as account_util_amt_led
             ,G.PAYCUR_0 as account_util_pay_curr
             ,G.PAYLOC_0 as account_util_pay_led
-            ,G.SNS_0 as sign_flag
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
             ,G.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,G.TYP_0 as account_type
             from  COGO2.GACCENTRY GC 
             INNER JOIN           
-            (select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV') GROUP by TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0) G 
+            (
+            select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
+            ,SIGN(SUM(SNS_0*(AMTLOC_0-PAYLOC_0))) as sign_flag
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV') GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
+            ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
             """
@@ -146,7 +149,7 @@ class SageServiceImpl : SageService {
             ,P.AMTCUR_0 as amount 
             ,P.AMTCUR_0 * GC.RATMLT_0 as led_amount
             ,P.BANPAYTPY_0 as bank_pay_amount
-            ,G.SNS_0 as sign_flag
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
             ,GC.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
@@ -158,9 +161,9 @@ class SageServiceImpl : SageService {
             from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on (P.NUM_0 = GC.REF_0 and GC.FCY_0=P.FCY_0)
             INNER JOIN       
             (
-             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,
-             SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC') 
-             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
+             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SIGN(SUM(SNS_0*(AMTLOC_0-PAYLOC_0))) as sign_flag
+             ,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC')
+             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 in ('AR','SC') and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
@@ -196,7 +199,7 @@ class SageServiceImpl : SageService {
             ,P.AMTCUR_0 as amount 
             ,P.AMTCUR_0 * GC.RATMLT_0 as led_amount
             ,P.BANPAYTPY_0 as bank_pay_amount
-            ,G.SNS_0 as sign_flag
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
             ,GC.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
@@ -208,9 +211,9 @@ class SageServiceImpl : SageService {
             from COGO2.PAYMENTH P INNER JOIN COGO2.GACCENTRY GC on (P.NUM_0 = GC.REF_0 and GC.FCY_0=P.FCY_0)
             INNER JOIN       
             (
-             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0,SUM(AMTCUR_0) as AMTCUR_0,
-             SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC') 
-             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SNS_0
+             select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SIGN(SUM(SNS_0*(AMTLOC_0-PAYLOC_0))) as sign_flag
+             ,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC')
+             group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 in ('AR','SC') and GC.NUM_0 in ($paymentNums) order by P.ACCDAT_0 ASC;
