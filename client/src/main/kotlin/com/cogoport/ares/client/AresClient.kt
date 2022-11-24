@@ -56,6 +56,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
+import java.math.BigDecimal
 
 @Client(id = "ares")
 interface AresClient {
@@ -146,4 +147,7 @@ interface AresClient {
 
     @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
     suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
+
+    @Post("/payments/outstanding/customer-outstanding")
+    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): BigDecimal
 }

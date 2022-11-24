@@ -134,4 +134,22 @@ class OutStandingServiceImpl : OutStandingService {
         }
         return outstandingDays
     }
+
+    override suspend fun getCustomersOutstandingInINR(orgIds: List<String>): BigDecimal {
+        var totalOutStanding = BigDecimal.ZERO
+        val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
+        orgIds.forEach {
+            val customerOutstanding = OpenSearchClient().listCustomerOutstandingOfAllZone(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = "${it}_ALL")
+            customerOutstanding?.hits()?.hits()?.map {
+                it.source()?.let {
+                        it1 ->
+                    listOrganization.add(it1)
+                }
+            }
+        }
+        listOrganization.forEach {
+            totalOutStanding += it?.totalOutstanding?.amountDue?.first()?.amount!!
+        }
+        return totalOutStanding
+    }
 }
