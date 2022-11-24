@@ -201,7 +201,6 @@ open class OnAccountServiceImpl : OnAccountService {
         receivableRequest.createdAt = savedPayment.createdAt
         receivableRequest.updatedAt = savedPayment.updatedAt
 
-
         val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
         setAccountUtilizationModel(accUtilizationModel, receivableRequest)
