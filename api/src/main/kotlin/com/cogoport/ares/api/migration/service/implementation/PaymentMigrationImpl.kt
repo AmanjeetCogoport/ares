@@ -524,7 +524,7 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         } catch (ex: AresException) {
             logger().info("Error while migrating settlements ${settlementRecord.paymentNumValue}")
-                settlementMigrationRepository.save(
+            settlementMigrationRepository.save(
                 MigrationLogsSettlements(
                     id = null,
                     sourceId = null,
