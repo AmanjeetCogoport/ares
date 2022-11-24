@@ -16,8 +16,8 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import javax.validation.Valid
 import java.math.BigDecimal
+import javax.validation.Valid
 
 @Validated
 @Controller("/outstanding")
@@ -56,5 +56,4 @@ class OutstandingController {
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): BigDecimal {
         return Response<BigDecimal>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
     }
-
 }
