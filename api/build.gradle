@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id("application-conventions")
 }
@@ -121,6 +123,11 @@ tasks.named("jar") {
 application {
     mainClass.set("com.cogoport.ares.api.ApplicationKt")
 }
+
+tasks.withType(ShadowJar) {
+    setZip64(true)
+}
+
 
 graalvmNative.toolchainDetection = false
 
