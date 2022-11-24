@@ -523,7 +523,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         } catch (ex: Exception) {
-            val errorMessage = ex.stackTraceToString();
+            val errorMessage = ex.stackTraceToString()
             logger().info("Error while migrating settlements ${settlementRecord.paymentNumValue}")
             settlementMigrationRepository.save(
                 MigrationLogsSettlements(
