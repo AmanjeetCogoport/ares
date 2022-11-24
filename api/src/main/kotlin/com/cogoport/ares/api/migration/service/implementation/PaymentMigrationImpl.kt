@@ -496,6 +496,9 @@ class PaymentMigrationImpl : PaymentMigration {
 
     override suspend fun migrateSettlements(settlementRecord: SettlementRecord) {
         try {
+            if (settlementRecord.sourceType!! == "NOSTR") {
+                return
+            }
             val settlement = getSettlementEntity(settlementRecord)
             if (paymentMigrationRepository.checkDuplicateForSettlements(
                     settlement.sourceId!!,
@@ -546,12 +549,14 @@ class PaymentMigrationImpl : PaymentMigration {
         val sourceId: Long? = paymentMigrationRepository.getPaymentId(
             settlementRecord.paymentNumValue!!,
             settlementRecord.acc_mode!!,
-            settlementRecord.sourceType!!
+            settlementRecord.sourceType!!,
+            settlementRecord.sageOrganizationId!!
         )
 
         val destinationId: Long? = paymentMigrationRepository.getDestinationId(
             settlementRecord.invoiceId!!,
-            settlementRecord.acc_mode!!
+            settlementRecord.acc_mode!!,
+            settlementRecord.sageOrganizationId!!
         )
 
         if (sourceId == null || destinationId == null) {

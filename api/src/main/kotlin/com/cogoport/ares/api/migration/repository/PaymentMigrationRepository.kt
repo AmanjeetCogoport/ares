@@ -40,18 +40,33 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @WithSpan
     @Query(
         """
-        select id from payments where payment_num_value=:paymentNumValue  and acc_mode  =:accMode::account_mode and "payment_code"=:paymentCode::payment_code   
+        select id from payments where payment_num_value=:paymentNumValue  
+        and acc_mode  =:accMode::account_mode 
+        and "payment_code"=:paymentCode::payment_code
+        and sage_organization_id = :sageOrganizationId limit 1     
      """
     )
-    suspend fun getPaymentId(paymentNumValue: String, accMode: String, paymentCode: String): Long
+    suspend fun getPaymentId(
+        paymentNumValue: String,
+        accMode: String,
+        paymentCode: String,
+        sageOrganizationId: String
+    ): Long
 
     @WithSpan
     @Query(
         """
-            select document_no from account_utilizations where document_value=:documentNumber and acc_mode =:accMode::account_mode
+            select * from account_utilizations 
+            where document_value= :documentNumber 
+            and acc_mode =:accMode::account_mode 
+            and sage_organization_id =:sageOrganizationId limit 1 
         """
     )
-    suspend fun getDestinationId(documentNumber: String, accMode: String): Long
+    suspend fun getDestinationId(
+        documentNumber: String,
+        accMode: String,
+        sageOrganizationId: String
+    ): Long
 
     @WithSpan
     @Query(
