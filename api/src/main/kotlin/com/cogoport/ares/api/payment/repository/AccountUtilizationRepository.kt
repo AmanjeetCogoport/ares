@@ -27,15 +27,18 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilization, Long> {
+    @WithSpan
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type and deleted_at is null)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
+    @WithSpan
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
@@ -45,6 +48,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
+    @WithSpan
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
@@ -54,15 +58,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): AccountUtilization?
 
+    @WithSpan
     @Query("delete from account_utilizations where id=:id")
     suspend fun deleteInvoiceUtils(id: Long): Int
 
+    @WithSpan
     @Query(
         """update account_utilizations set 
               pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id and deleted_at is null"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
 
+    @WithSpan
     @Query(
         """
             select coalesce(case when due_date  >= now()::date then 'Not Due'
@@ -84,6 +91,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
           """
     )
     suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<AgeingBucketZone>
+
+    @WithSpan
     @Query(
         """
             select coalesce(case when due_date >= now()::date then 'Not Due'
@@ -103,6 +112,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): List<OverallAgeingStats>
 
+    @WithSpan
     @Query(
         """
         select
@@ -120,6 +130,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<OverallStats>
 
+    @WithSpan
     @Query(
         """
         (
@@ -146,6 +157,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<CollectionTrend>
 
+    @WithSpan
     @Query(
         """
         with x as (
@@ -165,6 +177,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
+
+    @WithSpan
     @Query(
         """
             with x as (
@@ -189,6 +203,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<Outstanding>?
+
+    @WithSpan
     @Query(
         """
         with X as (
@@ -213,6 +229,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
+
+    @WithSpan
     @Query(
         """
         with X as (
@@ -235,6 +253,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateDailyPayableOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
+
+    @WithSpan
     @Query(
         """
         select organization_id,
@@ -260,6 +280,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<OutstandingAgeing>
+
+    @WithSpan
     @Query(
         """
         select organization_id::varchar, currency,
@@ -278,6 +300,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+
+    @WithSpan
     @Query(
         value = """
         Select
@@ -350,6 +374,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sortType: String?
     ): List<HistoryDocument?>
 
+    @WithSpan
     @Query(
         """
         SELECT count(distinct account_utilizations.id)
@@ -382,6 +407,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         paymentIds: List<Long>
     ): Long
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -428,6 +454,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getInvoiceDocumentList(limit: Int? = null, offset: Int? = null, accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): List<InvoiceDocument?>
 
+    @WithSpan
     @Query(
         """
         WITH FILTERS AS (
@@ -535,6 +562,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sortType: String?
     ): List<Document?>
 
+    @WithSpan
     @Query(
         """
         WITH FILTERS AS (
@@ -640,6 +668,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sortType: String?
     ): List<Document?>
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -660,6 +689,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -686,6 +716,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getInvoiceDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): Long?
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -705,6 +736,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
+    @WithSpan
     @Query(
         """
             SELECT coalesce(sum(sign_flag*(amount_loc-pay_loc)),0) as amount
@@ -721,6 +753,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -752,6 +785,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getOrgSummary(orgId: UUID, accMode: AccMode, startDate: Timestamp?, endDate: Timestamp?): OrgSummary?
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -777,6 +811,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
 
+    @WithSpan
     @Query(
         """             
             SELECT organization_id, acc_type, acc_mode, SUM(amount_curr - pay_curr) as payment_value 
@@ -787,6 +822,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun onAccountPaymentAmount(accType: AccountType, accMode: AccMode, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
 
+    @WithSpan
     @Query(
         """
         SELECT 
@@ -801,6 +837,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getPaymentDetails(documentNo: List<Long>, documentType: List<SettlementType>): List<PaymentData>
 
+    @WithSpan
     @Query(
         """
                 SELECT
@@ -842,6 +879,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
 
+    @WithSpan
     @Query(
         """
                 SELECT
@@ -883,6 +921,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
 
+    @WithSpan
     @Query(
         """ 
         SELECT
@@ -912,6 +951,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getOverallStats(documentValues: List<String>): StatsForKamResponse
 
+    @WithSpan
     @Query(
         """ 
         SELECT * from
@@ -965,6 +1005,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sortBy: String?
     ): List<StatsForCustomerResponse?>
 
+    @WithSpan
     @Query(
         """ 
         SELECT count(*) from
@@ -997,6 +1038,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         bookingPartyId: String?
     ): Long?
 
+    @WithSpan
     @Query(
         """
             DELETE FROM account_utilizations WHERE document_value IN (:docValues) and acc_type IN ('SINV', 'SDN') and acc_mode='AR' and document_status='PROFORMA'
@@ -1004,9 +1046,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun deleteConsolidatedInvoices(docValues: List<String>)
 
+    @WithSpan
     @Query("select current_date - min(due_date) from account_utilizations au where amount_loc - pay_loc != 0 and acc_type = 'SINV' and document_no in (:invoiceIds) AND deleted_at is null")
     suspend fun getCurrentOutstandingDays(invoiceIds: List<Long>): Long
 
+    @WithSpan
     @Query(
         """
             UPDATE account_utilizations SET deleted_at = NOW() WHERE id = :id
@@ -1014,12 +1058,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun deleteAccountUtilization(id: Long)
 
+    @WithSpan
     @Query(
         """UPDATE account_utilizations SET 
               pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id =:id AND deleted_at is null"""
     )
     suspend fun updateAccountUtilization(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
+    @WithSpan
     @Query(
         """
             SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
@@ -1027,6 +1073,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
 
+    @WithSpan
     @Query(
         """
            SELECT DISTINCT (au.document_no),au.id,au.document_value, au.zone_code,au.service_type,

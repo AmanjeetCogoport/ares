@@ -7,11 +7,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Long> {
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -68,6 +70,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         sortBy: String?
     ): List<JournalVoucher>
 
+    @WithSpan
     @Query(
         """
         SELECT count(1)
@@ -81,6 +84,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long
 
+    @WithSpan
     @Query(
         """
         UPDATE journal_vouchers 
@@ -90,6 +94,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     suspend fun reject(id: Long, performedBy: UUID, remark: String?)
 
+    @WithSpan
     @Query(
         """
             UPDATE journal_vouchers 
