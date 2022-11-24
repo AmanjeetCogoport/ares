@@ -38,6 +38,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -85,6 +86,7 @@ import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
+import java.time.LocalDateTime
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -1884,7 +1886,7 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update status in Kuber(Purchase MS).
      * @param: accountUtilization
      */
-    private fun emitPayableBillStatus(
+    suspend fun emitPayableBillStatus(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID?,
@@ -1897,6 +1899,7 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
+        val paymentInfo = settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
@@ -1906,15 +1909,15 @@ open class SettlementServiceImpl : SettlementService {
                 paidTds = paidTds,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType,
-                tranferMode = null,
-                transactionRef = null ,
-                cogoBankId = null,
-                cogoBankName = null,
-                cogoEntity= null,
-                paymentDate = null,
+                tranferMode = paymentInfo?.pay_mode,
+                transactionRef = paymentInfo?.transRefNumber,
+                cogoBankId = paymentInfo?.bankId.toString(),
+                cogoBankName = paymentInfo?.bankName,
+                cogoEntity= paymentInfo?.entityCode,
+                paymentDate = paymentInfo?.settlementDate,
                 updatedBy= null,
-                createdAt = null,
-                updatedAt = null,
+                createdAt = Timestamp.valueOf(LocalDateTime.now()),
+                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
             )
         )
     }
