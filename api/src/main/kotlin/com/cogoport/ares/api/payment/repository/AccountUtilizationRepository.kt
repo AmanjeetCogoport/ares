@@ -781,9 +781,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """             
             SELECT organization_id, acc_type, acc_mode, SUM(amount_curr - pay_curr) as payment_value 
             FROM account_utilizations 
-            GROUP BY organization_id, acc_type, acc_mode 
-            having organization_id in (:organizationIdList) 
-            and acc_type::varchar = :accType and acc_mode::varchar =:accMode and deleted_at is null
+            WHERE acc_type::varchar = :accType and acc_mode::varchar =:accMode and document_status != 'DELETED' and organization_id in (:organizationIdList) 
+            GROUP BY organization_id, acc_type, acc_mode
         """
     )
     suspend fun onAccountPaymentAmount(accType: AccountType, accMode: AccMode, organizationIdList: List<UUID>): MutableList<OnAccountTotalAmountResponse>
