@@ -523,6 +523,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         } catch (ex: Exception) {
+            val errorMessage = ex.stackTraceToString();
             logger().info("Error while migrating settlements ${settlementRecord.paymentNumValue}")
             settlementMigrationRepository.save(
                 MigrationLogsSettlements(
@@ -535,7 +536,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     ledgerAmount = settlementRecord.ledgerAmount,
                     accMode = settlementRecord.acc_mode,
                     status = MigrationStatus.FAILED.name,
-                    errorMessage = (ex as AresException).context,
+                    errorMessage = errorMessage.substring(0, 4999),
                     migrationDate = Timestamp(Date().time)
                 )
             )
