@@ -12,6 +12,11 @@ micronaut:
       swagger:
         paths: classpath:META-INF/swagger
         mapping: /swagger/**
+
+http:
+  client:
+    read-timeout: 30s
+
 netty:
   default:
     allocator:
