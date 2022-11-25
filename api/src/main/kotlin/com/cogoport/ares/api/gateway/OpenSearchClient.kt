@@ -409,4 +409,28 @@ class OpenSearchClient {
             )
         return response
     }
+
+    fun listCustomerOutstandingOfAllZone(
+        index: String,
+        classType: Class<CustomerOutstanding>,
+        values: String
+    ): SearchResponse<CustomerOutstanding>? {
+        val response =
+            Client.search(
+                { s ->
+                    s.index(index).query { q ->
+                        q.bool { b ->
+                            b.must { n ->
+                                n.match { v ->
+                                    v.field("_id").query(FieldValue.of(values))
+                                }
+                            }
+                            b
+                        }
+                    }
+                },
+                classType
+            )
+        return response
+    }
 }
