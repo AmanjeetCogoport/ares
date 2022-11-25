@@ -135,7 +135,8 @@ class OutStandingServiceImpl : OutStandingService {
         return outstandingDays
     }
 
-    override suspend fun getCustomersOutstandingInINR(orgIds: List<String>): BigDecimal {
+    override suspend fun getCustomersOutstandingInINR(orgIds: List<String>): MutableMap<String, BigDecimal?> {
+        val organizationOutStanding: HashMap<String, BigDecimal?> = hashMapOf()
         var totalOutStanding = BigDecimal.ZERO
         val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
         orgIds.forEach {
@@ -148,8 +149,8 @@ class OutStandingServiceImpl : OutStandingService {
             }
         }
         listOrganization.forEach {
-            totalOutStanding += it?.totalOutstanding?.amountDue?.first()?.amount!!
+            organizationOutStanding[it?.organizationId!!] = it.totalOutstanding?.amountDue?.first()?.amount!!
         }
-        return totalOutStanding
+        return organizationOutStanding
     }
 }

@@ -53,7 +53,7 @@ class OutstandingController {
     }
 
     @Post("/customer-outstanding")
-    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): BigDecimal {
-        return Response<BigDecimal>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
+    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?> {
+        return Response<MutableMap<String, BigDecimal?>>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
     }
 }

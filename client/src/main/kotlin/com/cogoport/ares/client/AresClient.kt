@@ -149,5 +149,5 @@ interface AresClient {
     suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 
     @Post("/payments/outstanding/customer-outstanding")
-    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): BigDecimal
+    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?>
 }
