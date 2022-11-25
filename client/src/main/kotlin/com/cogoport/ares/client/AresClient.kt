@@ -157,4 +157,7 @@ interface AresClient {
 
     @Get("/payments/dashboard/exchange-rate/for/period{?request*}")
     suspend fun getExchangeRateForPeriod(@Valid request: ExchangeRateForPeriodRequest): HashMap<String, BigDecimal>
+
+    @Post("/payments/outstanding/customer-outstanding")
+    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?>
 }
