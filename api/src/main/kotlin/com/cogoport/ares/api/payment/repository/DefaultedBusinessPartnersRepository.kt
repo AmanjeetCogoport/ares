@@ -6,14 +6,17 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface DefaultedBusinessPartnersRepository : CoroutineCrudRepository<DefaultedBusinessPartners, Long> {
 
+    @WithSpan
     @Query("DELETE FROM defaulted_business_partners WHERE id = :id")
     suspend fun delete(id: Long): Long
 
+    @WithSpan
     @Query(
         """
             SELECT
@@ -27,6 +30,7 @@ interface DefaultedBusinessPartnersRepository : CoroutineCrudRepository<Defaulte
     )
     suspend fun getDefaultedBusinessPartners(q: String?, page: Int?, pageLimit: Int?): List<DefaultedBusinessPartnersResponse?>
 
+    @WithSpan
     @Query(
         """
         SELECT count(*) FROM
@@ -37,9 +41,11 @@ interface DefaultedBusinessPartnersRepository : CoroutineCrudRepository<Defaulte
     )
     suspend fun getCount(q: String?): Long?
 
+    @WithSpan
     @Query("SELECT EXISTS(SELECT trade_party_detail_serial_id FROM defaulted_business_partners WHERE trade_party_detail_serial_id = :tradePartyDetailSerialId)")
     suspend fun checkIfTradePartyDetailSerialIdExists(tradePartyDetailSerialId: Long): Boolean
 
+    @WithSpan
     @Query("SELECT trade_party_detail_id FROM defaulted_business_partners")
     suspend fun listTradePartyDetailIds(): List<UUID>?
 }
