@@ -16,6 +16,7 @@ import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.math.BigDecimal
 import javax.validation.Valid
 
 @Validated
@@ -49,5 +50,10 @@ class OutstandingController {
     @Post("/outstanding-days")
     suspend fun getCurrOutstanding(@Body invoiceIds: List<Long>): Long {
         return Response<Long>().ok(outStandingService.getCurrOutstanding(invoiceIds))
+    }
+
+    @Post("/customer-outstanding")
+    suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?> {
+        return Response<MutableMap<String, BigDecimal?>>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
     }
 }
