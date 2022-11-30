@@ -86,5 +86,5 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
             and acc_mode =:accMode::account_mode limit 1 
         """
     )
-    suspend fun getDestinationIdForAr(documentNumber: String?, acc_mode: String?) :Long?
+    suspend fun getDestinationIdForAr(documentNumber: String?, acc_mode: String?): Long?
 }
