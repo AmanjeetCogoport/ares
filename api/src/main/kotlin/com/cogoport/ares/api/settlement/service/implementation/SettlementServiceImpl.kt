@@ -38,7 +38,6 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -81,13 +80,13 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.IsoFields
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
-import java.time.LocalDateTime
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -1917,9 +1916,9 @@ open class SettlementServiceImpl : SettlementService {
                 transactionRef = paymentInfo?.transRefNumber,
                 cogoBankId = paymentInfo?.bankId.toString(),
                 cogoBankName = paymentInfo?.bankName,
-                cogoEntity= paymentInfo?.entityCode,
+                cogoEntity = paymentInfo?.entityCode,
                 paymentDate = paymentInfo?.settlementDate,
-                updatedBy= null,
+                updatedBy = null,
                 createdAt = Timestamp.valueOf(LocalDateTime.now()),
                 updatedAt = Timestamp.valueOf(LocalDateTime.now()),
             )
