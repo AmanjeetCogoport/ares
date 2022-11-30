@@ -561,8 +561,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
         if (destinationId == null) {
             destinationId = paymentMigrationRepository.getDestinationIdForAr(
-                settlementRecord.invoiceId,
-                settlementRecord.acc_mode
+                settlementRecord.invoiceId!!,
+                settlementRecord.acc_mode!!
             )
         }
 
