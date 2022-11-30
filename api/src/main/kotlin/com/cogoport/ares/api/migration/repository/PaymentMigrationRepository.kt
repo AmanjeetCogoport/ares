@@ -56,7 +56,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @WithSpan
     @Query(
         """
-            select * from account_utilizations 
+            select document_no from account_utilizations 
             where document_value= :documentNumber 
             and acc_mode =:accMode::account_mode 
             and sage_organization_id =:sageOrganizationId limit 1 
@@ -82,7 +82,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @WithSpan
     @Query(
         """
-            select * from account_utilizations 
+            select document_no from account_utilizations 
             where document_value= :documentNumber 
             and acc_mode =:accMode::account_mode limit 1 
         """
