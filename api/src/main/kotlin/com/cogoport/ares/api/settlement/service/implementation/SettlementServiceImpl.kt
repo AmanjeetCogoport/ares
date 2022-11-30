@@ -68,6 +68,7 @@ import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.BillDocResponse
 import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
@@ -591,31 +592,34 @@ open class SettlementServiceImpl : SettlementService {
             doc.balanceAfterAllocation = BigDecimal.ZERO
         }
 
-        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "SREIMB") }.map { it.documentNo }
+        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "PREIMB") }.map { it.documentNo }
 
-        val listBillRequest = ListBillRequest(
-            jobNumbers = null,
-            jobType = null,
-            status = null,
-            excludeStatus = null,
-            organizationId = null,
-            serviceProviderOrgId = null,
-            paymentStatus = null,
-            serviceType = null,
-            billNumber = null,
-            urgencyTag = null,
-            from = null,
-            to = null,
-            q = null,
-            billType = null,
-            proforma = null,
-            serviceOpIds = null,
-            billIds = billListIds
-        )
+        val listBillRequest: ListBillRequest
+        var responseList: com.cogoport.kuber.model.common.ResponseList<BillDocResponse>? = null
+        if (billListIds.isNotEmpty()) {
+            listBillRequest = ListBillRequest(
+                jobNumbers = null,
+                jobType = null,
+                status = "FINANCE_ACCEPTED",
+                excludeStatus = null,
+                organizationId = null,
+                serviceProviderOrgId = null,
+                paymentStatus = null,
+                serviceType = null,
+                billNumber = null,
+                urgencyTag = null,
+                from = null,
+                to = null,
+                q = null,
+                billType = null,
+                proforma = null,
+                serviceOpIds = null,
+                billIds = billListIds
+            )
+            responseList = kuberClient.billListByIds(listBillRequest)
+        }
 
-        val responseList = kuberClient.billListByIds(listBillRequest)
-
-        responseList.list?.map { it ->
+        responseList?.list?.map { it ->
             val documentId = it.billId
             if (documentModel.any { k -> k.documentNo == documentId }) {
                 documentModel.first { k -> k.documentNo == documentId }.hasPayrun = it.hasPayrun!!
