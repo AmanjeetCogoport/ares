@@ -553,11 +553,18 @@ class PaymentMigrationImpl : PaymentMigration {
             settlementRecord.sageOrganizationId!!
         )
 
-        val destinationId: Long? = paymentMigrationRepository.getDestinationId(
+        var destinationId: Long? = paymentMigrationRepository.getDestinationId(
             settlementRecord.invoiceId!!,
             settlementRecord.acc_mode!!,
             settlementRecord.sageOrganizationId!!
         )
+
+        if (destinationId == null) {
+            destinationId = paymentMigrationRepository.getDestinationIdForAr(
+                settlementRecord.invoiceId!!,
+                settlementRecord.acc_mode!!
+            )
+        }
 
         if (sourceId == null || destinationId == null) {
             throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId or DestinationId is null")

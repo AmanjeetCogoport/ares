@@ -78,4 +78,17 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         """
     )
     suspend fun checkDuplicateForSettlements(sourceId: Long, destinationId: Long, ledgerAmount: BigDecimal): Boolean
+
+    @WithSpan
+    @Query(
+        """
+            select * from account_utilizations 
+            where document_value= :documentNumber 
+            and acc_mode =:accMode::account_mode limit 1 
+        """
+    )
+    suspend fun getDestinationIdForAr(
+        documentNumber: String,
+        accMode: String
+    ): Long
 }
