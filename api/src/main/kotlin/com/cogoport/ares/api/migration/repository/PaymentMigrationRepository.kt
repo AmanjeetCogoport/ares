@@ -91,4 +91,19 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         documentNumber: String,
         accMode: String
     ): Long
+
+    @Query(
+        """
+            select id from payments where payment_num_value=:paymentNumValue  
+            and acc_mode  =:accMode::account_mode 
+            and acc_code=:accCode
+            and sage_organization_id = :sageOrganizationId limit 1 
+        """
+    )
+    suspend fun getPaymentIdWithoutPayCode(
+        paymentNumValue: String,
+        accMode: String,
+        accCode: String,
+        sageOrganizationId: String
+    ): Long
 }
