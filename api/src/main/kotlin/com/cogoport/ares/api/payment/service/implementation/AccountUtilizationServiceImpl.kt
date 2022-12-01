@@ -164,34 +164,36 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         for (obj in request.data) {
 
             val accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
-                ?: throw AresException(AresError.ERR_1005, obj.first.toString())
+//                ?: throw AresException(AresError.ERR_1005, obj.first.toString())
 
-            if (Utilities.isPayAccountType(accountUtilization.accType)) {
-                throw AresException(AresError.ERR_1202, obj.first.toString())
-            }
-//            if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
-//                throw AresException(AresError.ERR_1204, obj.first.toString())
-//            }
-            accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                    objectId = accountUtilization.id,
-                    actionName = AresConstants.DELETE,
-                    data = accountUtilization,
-                    performedBy = request.performedBy.toString(),
-                    performedByUserType = request.performedByUserType
+            if (accountUtilization != null) {
+                if (Utilities.isPayAccountType(accountUtilization.accType)) {
+                    throw AresException(AresError.ERR_1202, obj.first.toString())
+                }
+                //            if (accountUtilization.documentStatus == DocumentStatus.FINAL) {
+                //                throw AresException(AresError.ERR_1204, obj.first.toString())
+                //            }
+                accUtilRepository.deleteInvoiceUtils(accountUtilization.id!!)
+                auditService.createAudit(
+                    AuditRequest(
+                        objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                        objectId = accountUtilization.id,
+                        actionName = AresConstants.DELETE,
+                        data = accountUtilization,
+                        performedBy = request.performedBy.toString(),
+                        performedByUserType = request.performedByUserType
+                    )
                 )
-            )
-            Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
-            val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
-            try {
-                emitDashboardAndOutstandingEvent(accUtilizationRequest)
-            } catch (e: Exception) {
-                logger().error(e.stackTraceToString())
+                Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accountUtilization.id.toString())
+                val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
+                try {
+                    emitDashboardAndOutstandingEvent(accUtilizationRequest)
+                } catch (e: Exception) {
+                    logger().error(e.stackTraceToString())
+                }
+                // emitAccUtilizationToDemeter(accUtilizationRequest)
+                result = true
             }
-            // emitAccUtilizationToDemeter(accUtilizationRequest)
-            result = true
         }
         return result
     }

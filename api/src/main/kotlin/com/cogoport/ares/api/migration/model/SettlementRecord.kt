@@ -24,7 +24,9 @@ data class SettlementRecord(
     @JsonProperty("ledger_currency")
     var ledger_currency: String?,
     @JsonProperty("acc_mode")
-    var acc_mode: String?,
+    var accMode: String?,
+    @JsonProperty("acc_code")
+    var accCode: String?,
     @JsonProperty("currency_amount")
     var currencyAmount: BigDecimal?,
     @JsonProperty("ledger_amount")
