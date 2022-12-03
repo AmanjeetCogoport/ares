@@ -111,6 +111,7 @@ class SageServiceImpl : SageService {
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
+            and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC
             """
         if (startDate == null && endDate == null) {
             sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
