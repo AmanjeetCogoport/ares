@@ -40,7 +40,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @WithSpan
     @Query(
         """
-        select id from payments where payment_num_value=:paymentNumValue  
+        select payment_num from payments where payment_num_value=:paymentNumValue  
         and acc_mode  =:accMode::account_mode 
         and "payment_code"=:paymentCode::payment_code
         and sage_organization_id = :sageOrganizationId limit 1     
@@ -94,7 +94,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
 
     @Query(
         """
-            select id from payments where payment_num_value=:paymentNumValue  
+            select payment_num from payments where payment_num_value=:paymentNumValue  
             and acc_mode  =:accMode::account_mode 
             and acc_code=:accCode
             and sage_organization_id = :sageOrganizationId limit 1 
