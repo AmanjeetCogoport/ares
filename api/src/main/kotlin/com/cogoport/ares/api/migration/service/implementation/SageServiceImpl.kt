@@ -232,7 +232,7 @@ class SageServiceImpl : SageService {
     ): ArrayList<SettlementRecord> {
         var sqlQuery = """
             SELECT  P.FCYLIN_0 as entity_code
-            ,P.BPRINV_0 as sage_organization_id
+            ,P.BPRLIN_0 as sage_organization_id
             ,GC.NUM_0 as payment_num
             ,P.VCRTYP_0 as destination_type
             ,P.VCRNUM_0 as invoice_id
