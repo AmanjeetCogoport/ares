@@ -19,5 +19,7 @@ data class TdsSettlementDocumentRequest(
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int? = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
     @QueryValue(AresModelConstants.ACC_MODE) val accMode: AccMode? = null,
-    @QueryValue(AresModelConstants.ACCOUNT_TYPE) var accType: AccountType? = null
+    @QueryValue(AresModelConstants.ACCOUNT_TYPE) var accType: AccountType? = null,
+    val sortBy: String = "transactionDate",
+    val sortType: String = "Desc"
 )

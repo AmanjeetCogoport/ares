@@ -79,7 +79,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             jvListRequest.type,
             jvListRequest.query,
             jvListRequest.page,
-            jvListRequest.pageLimit
+            jvListRequest.pageLimit,
+            jvListRequest.sortType,
+            jvListRequest.sortBy
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
@@ -290,6 +292,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = Timestamp.from(Instant.now())
         jv.updatedAt = Timestamp.from(Instant.now())
+        jv.type = request.type.lowercase()
         return jv
     }
 

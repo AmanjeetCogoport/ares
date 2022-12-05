@@ -190,7 +190,7 @@ class OpenSearchClient {
                         .from((request.page - 1) * request.pageLimit)
                         .size(request.pageLimit)
                         .sort { t ->
-                            t.field { f -> f.field("transactionDate").order(SortOrder.Desc) }
+                            t.field { f -> f.field("createdAt").order(SortOrder.Desc) }
                         }
                 },
                 classType
@@ -404,6 +404,30 @@ class OpenSearchClient {
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
+                },
+                classType
+            )
+        return response
+    }
+
+    fun listCustomerOutstandingOfAllZone(
+        index: String,
+        classType: Class<CustomerOutstanding>,
+        values: String
+    ): SearchResponse<CustomerOutstanding>? {
+        val response =
+            Client.search(
+                { s ->
+                    s.index(index).query { q ->
+                        q.bool { b ->
+                            b.must { n ->
+                                n.match { v ->
+                                    v.field("_id").query(FieldValue.of(values))
+                                }
+                            }
+                            b
+                        }
+                    }
                 },
                 classType
             )

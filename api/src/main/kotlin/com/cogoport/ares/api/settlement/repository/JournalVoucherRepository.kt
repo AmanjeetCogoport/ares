@@ -7,11 +7,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Long> {
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -41,6 +43,19 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%')
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'createdAt' THEN j.created_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'createdAt' THEN j.created_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
+                    END        
+            END 
+            Asc
                 OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
@@ -50,9 +65,12 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         type: String?,
         query: String?,
         page: Int,
-        pageLimit: Int
+        pageLimit: Int,
+        sortType: String?,
+        sortBy: String?
     ): List<JournalVoucher>
 
+    @WithSpan
     @Query(
         """
         SELECT count(1)
@@ -66,6 +84,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long
 
+    @WithSpan
     @Query(
         """
         UPDATE journal_vouchers 
@@ -75,6 +94,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     suspend fun reject(id: Long, performedBy: UUID, remark: String?)
 
+    @WithSpan
     @Query(
         """
             UPDATE journal_vouchers 

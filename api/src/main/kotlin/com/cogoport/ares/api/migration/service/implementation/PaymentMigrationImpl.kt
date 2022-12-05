@@ -8,8 +8,11 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
+import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
+import com.cogoport.ares.api.migration.entity.MigrationLogsSettlements
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
@@ -19,14 +22,18 @@ import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
+import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
 import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
+import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.payment.AccMode
@@ -35,12 +42,14 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.ZoneId
 import java.time.temporal.IsoFields
@@ -64,10 +73,19 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var journalVoucherConverter: JournalVoucherMapper
 
+    @Inject lateinit var settlementRepository: SettlementRepository
+
+    @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkPaymentExists(paymentRecord.paymentNum!!, AccMode.valueOf(paymentRecord.accMode!!).name, PaymentCode.valueOf(paymentRecord.paymentCode!!).name)) {
+            if (paymentMigrationRepository.checkPaymentExists(
+                    paymentRecord.paymentNum!!,
+                    AccMode.valueOf(paymentRecord.accMode!!).name,
+                    PaymentCode.valueOf(paymentRecord.paymentCode!!).name,
+                    AccountType.valueOf(paymentRecord.accountType!!).name
+                )
+            ) {
                 throw AresException(AresError.ERR_1010, "Not migrating as payment already exists")
             }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
@@ -106,7 +124,12 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkJVExists(journalVoucherRecord.paymentNum!!, journalVoucherRecord.accMode!!)) {
+            if (paymentMigrationRepository.checkJVExists(
+                    journalVoucherRecord.paymentNum!!,
+                    journalVoucherRecord.accMode!!,
+                    AccountType.valueOf(journalVoucherRecord.accountType!!).name
+                )
+            ) {
                 throw AresException(AresError.ERR_1010, "JV record is already present")
             }
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
@@ -469,5 +492,117 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
         return jv
+    }
+
+    override suspend fun migrateSettlements(settlementRecord: SettlementRecord) {
+        try {
+            if (settlementRecord.sourceType!! == "NOSTR") {
+                return
+            }
+            val settlement = getSettlementEntity(settlementRecord)
+            if (paymentMigrationRepository.checkDuplicateForSettlements(
+                    settlement.sourceId!!,
+                    settlement.destinationId,
+                    settlement.ledAmount
+                )
+            ) {
+                throw AresException(AresError.ERR_1010, "Settlement entry is already present")
+            }
+
+            settlementRepository.save(settlement)
+            settlementMigrationRepository.save(
+                MigrationLogsSettlements(
+                    id = null,
+                    sourceId = settlement.sourceId.toString(),
+                    sourceValue = settlementRecord.paymentNumValue,
+                    destinationId = settlement.destinationId.toString(),
+                    destinationValue = settlementRecord.invoiceId,
+                    ledgerCurrency = settlementRecord.ledger_currency,
+                    ledgerAmount = settlementRecord.ledgerAmount,
+                    accMode = settlementRecord.accMode,
+                    status = MigrationStatus.MIGRATED.name,
+                    errorMessage = null,
+                    migrationDate = Timestamp(Date().time)
+                )
+            )
+        } catch (ex: AresException) {
+            logger().info("Error while migrating settlements ${settlementRecord.paymentNumValue}")
+            settlementMigrationRepository.save(
+                MigrationLogsSettlements(
+                    id = null,
+                    sourceId = null,
+                    sourceValue = settlementRecord.paymentNumValue,
+                    destinationId = null,
+                    destinationValue = settlementRecord.invoiceId,
+                    ledgerCurrency = settlementRecord.ledger_currency,
+                    ledgerAmount = settlementRecord.ledgerAmount,
+                    accMode = settlementRecord.accMode,
+                    status = MigrationStatus.FAILED.name,
+                    errorMessage = ex.context,
+                    migrationDate = Timestamp(Date().time)
+                )
+            )
+        }
+    }
+
+    private suspend fun getSettlementEntity(settlementRecord: SettlementRecord): Settlement {
+        var sourceId: Long? = paymentMigrationRepository.getPaymentId(
+            settlementRecord.paymentNumValue!!,
+            settlementRecord.accMode!!,
+            settlementRecord.sourceType!!,
+            settlementRecord.sageOrganizationId!!
+        )
+
+        if (sourceId == null) {
+            sourceId = paymentMigrationRepository.getPaymentIdWithoutPayCode(
+                settlementRecord.paymentNumValue!!,
+                settlementRecord.accMode!!,
+                settlementRecord.accCode!!,
+                settlementRecord.sageOrganizationId!!
+            )
+        }
+
+        var destinationId: Long? = paymentMigrationRepository.getDestinationId(
+            settlementRecord.invoiceId!!,
+            settlementRecord.accMode!!,
+            settlementRecord.sageOrganizationId!!
+        )
+
+        if (destinationId == null) {
+            destinationId = paymentMigrationRepository.getDestinationIdForAr(
+                settlementRecord.invoiceId!!,
+                settlementRecord.accMode!!
+            )
+        }
+
+        if (sourceId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId is null")
+        }
+        if (destinationId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as destinationId is null")
+        }
+        return Settlement(
+            id = null,
+            sourceId = sourceId,
+            sourceType = SettlementTypeMigration.getSettlementType(settlementRecord.sourceType!!),
+            destinationId = destinationId,
+            destinationType = SettlementTypeMigration.getSettlementType(settlementRecord.destinationType!!),
+            currency = settlementRecord.currency,
+            amount = settlementRecord.currencyAmount,
+            ledCurrency = settlementRecord.ledger_currency!!,
+            ledAmount = settlementRecord.ledgerAmount!!,
+            signFlag = getSignFlag(settlementRecord.sourceType!!),
+            settlementDate = settlementRecord.createdAt!!,
+            createdBy = MigrationConstants.createdUpdatedBy,
+            createdAt = settlementRecord.createdAt,
+            updatedBy = MigrationConstants.createdUpdatedBy,
+            updatedAt = settlementRecord.updatedAt
+        )
+    }
+    private fun getSignFlag(sourceType: String): Short {
+        if (sourceType.equals(SettlementType.NOSTRO.name)) {
+            return -1
+        }
+        return 1
     }
 }

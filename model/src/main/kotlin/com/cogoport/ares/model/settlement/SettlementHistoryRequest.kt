@@ -10,11 +10,13 @@ import javax.validation.constraints.NotNull
 data class SettlementHistoryRequest(
     @field:NotNull(message = "orgId is mandate")
     val orgId: List<UUID>? = null,
-    @field:NotNull(message = "accountType is mandate")
+    @field:NotNull(message = "accountType is mandatory")
     val accountType: String? = null,
     val startDate: String? = null,
     val endDate: String? = null,
     val page: Int = 1,
     val pageLimit: Int = 10,
     val query: String = "",
+    val sortType: String = "Desc",
+    val sortBy: String = "transactionDate"
 )

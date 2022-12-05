@@ -12,6 +12,17 @@ micronaut:
       swagger:
         paths: classpath:META-INF/swagger
         mapping: /swagger/**
+  metrics:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
+        descriptions: true
+        step: PT1M
+    binders:
+      r2dbc:
+        enabled: false
+
 netty:
   default:
     allocator:
@@ -67,3 +78,19 @@ ares:
 aws:
   s3:
     bucket: business-finance-test
+
+endpoints:
+  prometheus:
+    sensitive: false
+
+otel:
+  exporter:
+    otlp:
+      traces:
+        endpoint: http://${GRAFANA_AGENT_DOMAIN:localhost}:${GRAFANA_AGENT_PORT:4317}
+  service:
+    name: ares
+  traces:
+    exporter: otlp
+  exclusions:
+    - /payments/prometheus
