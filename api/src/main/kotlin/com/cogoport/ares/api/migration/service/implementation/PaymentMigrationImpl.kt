@@ -519,7 +519,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     destinationValue = settlementRecord.invoiceId,
                     ledgerCurrency = settlementRecord.ledger_currency,
                     ledgerAmount = settlementRecord.ledgerAmount,
-                    accMode = settlementRecord.acc_mode,
+                    accMode = settlementRecord.accMode,
                     status = MigrationStatus.MIGRATED.name,
                     errorMessage = null,
                     migrationDate = Timestamp(Date().time)
@@ -536,7 +536,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     destinationValue = settlementRecord.invoiceId,
                     ledgerCurrency = settlementRecord.ledger_currency,
                     ledgerAmount = settlementRecord.ledgerAmount,
-                    accMode = settlementRecord.acc_mode,
+                    accMode = settlementRecord.accMode,
                     status = MigrationStatus.FAILED.name,
                     errorMessage = ex.context,
                     migrationDate = Timestamp(Date().time)
@@ -546,21 +546,40 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     private suspend fun getSettlementEntity(settlementRecord: SettlementRecord): Settlement {
-        val sourceId: Long? = paymentMigrationRepository.getPaymentId(
+        var sourceId: Long? = paymentMigrationRepository.getPaymentId(
             settlementRecord.paymentNumValue!!,
-            settlementRecord.acc_mode!!,
+            settlementRecord.accMode!!,
             settlementRecord.sourceType!!,
             settlementRecord.sageOrganizationId!!
         )
 
-        val destinationId: Long? = paymentMigrationRepository.getDestinationId(
+        if (sourceId == null) {
+            sourceId = paymentMigrationRepository.getPaymentIdWithoutPayCode(
+                settlementRecord.paymentNumValue!!,
+                settlementRecord.accMode!!,
+                settlementRecord.accCode!!,
+                settlementRecord.sageOrganizationId!!
+            )
+        }
+
+        var destinationId: Long? = paymentMigrationRepository.getDestinationId(
             settlementRecord.invoiceId!!,
-            settlementRecord.acc_mode!!,
+            settlementRecord.accMode!!,
             settlementRecord.sageOrganizationId!!
         )
 
-        if (sourceId == null || destinationId == null) {
-            throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId or DestinationId is null")
+        if (destinationId == null) {
+            destinationId = paymentMigrationRepository.getDestinationIdForAr(
+                settlementRecord.invoiceId!!,
+                settlementRecord.accMode!!
+            )
+        }
+
+        if (sourceId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId is null")
+        }
+        if (destinationId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as destinationId is null")
         }
         return Settlement(
             id = null,

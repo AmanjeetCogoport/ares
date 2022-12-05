@@ -82,13 +82,13 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     private suspend fun updateReceivables(request: OpenSearchRequest) {
-        val zone = request.zone!!
+        val zone = request.zone
         val quarter = request.quarter
         val date = request.date
         val year = request.year
-        val serviceType = request.serviceType!!
-        val invoiceCurrency = request.invoiceCurrency!!
-        val dashboardCurrency = when (invoiceCurrency.isEmpty()) {
+        val serviceType = request.serviceType
+        val invoiceCurrency = request.invoiceCurrency
+        val dashboardCurrency = when (invoiceCurrency.isNullOrEmpty()) {
             true -> "INR"
             false -> request.invoiceCurrency
         }
@@ -130,7 +130,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     override suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
-        var monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds)
+        val monthlyTrendZoneData = accountUtilizationRepository.generateMonthlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds)
 
         monthlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
