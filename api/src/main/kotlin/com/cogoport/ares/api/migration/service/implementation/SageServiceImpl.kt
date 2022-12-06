@@ -232,7 +232,7 @@ class SageServiceImpl : SageService {
     ): ArrayList<SettlementRecord> {
         var sqlQuery = """
             SELECT  P.FCYLIN_0 as entity_code
-            ,P.BPRINV_0 as sage_organization_id
+            ,P.BPRLIN_0 as sage_organization_id
             ,GC.NUM_0 as payment_num
             ,P.VCRTYP_0 as destination_type
             ,P.VCRNUM_0 as invoice_id
@@ -240,6 +240,7 @@ class SageServiceImpl : SageService {
             ,GC.CURLED_0 as ledger_currency
             ,P.DENCOD_0 as source_type
             ,case when P.BPRSACINV_0='SC' then 'AP' else 'AR' end as acc_mode
+            ,P.ACC_0 as acc_code
             ,P.PAYCURLIN_0 as currency_amount
             ,P.PAYLOCLIN_0 as ledger_amount
             ,P.CREDATTIM_0 as created_at
