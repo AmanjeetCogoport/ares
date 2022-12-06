@@ -202,7 +202,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE
                 p.payment_num = :documentNo
                 AND acc_mode = 'AP'
-                AND destination_type = 'PINV'
+                AND destination_type in ('PINV','PREIMB','PCN')
             LIMIT 1
         """
     )
