@@ -1011,6 +1011,7 @@ open class SettlementServiceImpl : SettlementService {
                 ),
                 id = request.incidentId!!
             )
+
             // return response
             response
         } else {
