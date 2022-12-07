@@ -25,7 +25,6 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
-import com.cogoport.ares.api.settlement.model.SettlementNotificationRequest
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -1012,34 +1011,11 @@ open class SettlementServiceImpl : SettlementService {
                 ),
                 id = request.incidentId!!
             )
-            sendSettlementNotification(request.remark)
-
             // return response
             response
         } else {
             runSettlement(request, true)
         }
-    }
-
-    private suspend fun sendSettlementNotification(remark: String?) {
-        val notificationVariables = HashMap<String?, String?>()
-        notificationVariables["message"] = remark
-        notificationVariables["created_at"] = null
-        notificationVariables["sid"] = null
-
-        val request = SettlementNotificationRequest(
-            templateName = "",
-            notificationTemplateName = "settlement_notification",
-            performedByUserId = null,
-            performedByUserName = "",
-            performedByUserType = "",
-            recipientEmail = "",
-            senderEmail = "",
-            ccEmails = mutableListOf<String>(),
-            emailVariables = hashMapOf(),
-            notificationVariables = notificationVariables
-        )
-        cogoClient.sendSettlementNotification(request)
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
