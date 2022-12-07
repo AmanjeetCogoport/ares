@@ -126,6 +126,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
+        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
         group by dashboard_currency
     """
     )
