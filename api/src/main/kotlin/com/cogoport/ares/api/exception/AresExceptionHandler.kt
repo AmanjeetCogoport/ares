@@ -26,10 +26,8 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
         exception: Exception?
     ): HttpResponse<ErrorResponse> {
 
-        sendToSentry(exception, request)
         logger.error(request.toString(), exception)
         var errorMessage: ErrorResponse
-
         when (exception) {
             is AresException -> {
                 errorMessage =
@@ -38,6 +36,7 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
                     }
             }
             is HttpStatusException -> {
+                sendToSentry(exception, request)
                 errorMessage =
                     ErrorResponse(
                         AresError.ERR_1000.code,
@@ -54,6 +53,7 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
                     )
             }
             else -> {
+                sendToSentry(exception, request)
                 errorMessage =
                     ErrorResponse(
                         AresError.ERR_1001.code,
