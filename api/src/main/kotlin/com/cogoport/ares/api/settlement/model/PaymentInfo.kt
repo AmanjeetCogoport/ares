@@ -12,6 +12,6 @@ data class PaymentInfo(
     val bankId: UUID? = null,
     val bankName: String? = null,
     val transRefNumber: String? = null,
-    val pay_mode: String? = null,
-    val settlementDate: Timestamp? = null
+    val payMode: String? = null,
+    val settlementDate: Timestamp
 )

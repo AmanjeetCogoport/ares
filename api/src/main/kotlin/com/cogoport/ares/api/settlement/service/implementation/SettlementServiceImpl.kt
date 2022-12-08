@@ -1912,15 +1912,12 @@ open class SettlementServiceImpl : SettlementService {
                 paidTds = paidTds,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType,
-                tranferMode = paymentInfo?.pay_mode,
+                tranferMode = paymentInfo?.payMode,
                 transactionRef = paymentInfo?.transRefNumber,
                 cogoBankId = paymentInfo?.bankId.toString(),
                 cogoBankName = paymentInfo?.bankName,
                 cogoEntity = paymentInfo?.entityCode,
-                paymentDate = paymentInfo?.settlementDate,
-                updatedBy = null,
-                createdAt = Timestamp.valueOf(LocalDateTime.now()),
-                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                paymentDate = paymentInfo?.settlementDate
             )
         )
     }
