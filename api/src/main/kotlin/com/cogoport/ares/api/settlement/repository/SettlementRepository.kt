@@ -7,14 +7,18 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
+    @WithSpan
     suspend fun deleteByIdIn(ids: List<Long>)
 
+    @WithSpan
     suspend fun findByIdIn(ids: List<Long>): List<Settlement>
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -40,6 +44,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findByDestIdAndDestType(destId: Long, destType: SettlementType): List<Settlement?>
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -65,6 +70,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findBySourceIdAndSourceType(sourceId: Long, sourceType: List<SettlementType>): List<Settlement?>
 
+    @WithSpan
     @Query(
         """
          WITH INVOICES AS (
@@ -124,6 +130,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findSettlement(sourceId: Long, sourceType: SettlementType, pageIndex: Int, pageSize: Int): List<SettledInvoice?>
 
+    @WithSpan
     @Query(
         """SELECT count(1) 
             FROM settlements 
@@ -134,6 +141,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long
 
+    @WithSpan
     @Query(
         """SELECT count(1) 
             FROM settlements 
@@ -145,6 +153,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
 
+    @WithSpan
     @Query(
         """
             SELECT 
@@ -164,6 +173,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun getPaymentIds(query: String): List<Long>
 
+    @WithSpan
     @Query(
         """
             UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
@@ -171,6 +181,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun deleleSettlement(id: List<Long>)
 
+    @WithSpan
     @Query(
         """
           SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null

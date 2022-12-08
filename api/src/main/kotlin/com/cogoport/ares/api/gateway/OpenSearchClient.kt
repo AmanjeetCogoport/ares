@@ -178,8 +178,10 @@ class OpenSearchClient {
                                 if (request.query != null) {
                                     b.must { m ->
                                         m.queryString { q ->
-                                            q.query(request.query + "*")
-                                                .fields("organizationName", "utr")
+                                            q.query("*${request.query!!.replace("/", "\\/")}*")
+                                                .fields("organizationName", "utr.keyword")
+                                                .lenient(true)
+                                                .allowLeadingWildcard(true)
                                                 .defaultOperator(Operator.And)
                                         }
                                     }
@@ -404,6 +406,30 @@ class OpenSearchClient {
                         .sort { t ->
                             t.field { f -> f.field("id").order(SortOrder.Asc) }
                         }
+                },
+                classType
+            )
+        return response
+    }
+
+    fun listCustomerOutstandingOfAllZone(
+        index: String,
+        classType: Class<CustomerOutstanding>,
+        values: String
+    ): SearchResponse<CustomerOutstanding>? {
+        val response =
+            Client.search(
+                { s ->
+                    s.index(index).query { q ->
+                        q.bool { b ->
+                            b.must { n ->
+                                n.match { v ->
+                                    v.field("_id").query(FieldValue.of(values))
+                                }
+                            }
+                            b
+                        }
+                    }
                 },
                 classType
             )

@@ -496,6 +496,9 @@ class PaymentMigrationImpl : PaymentMigration {
 
     override suspend fun migrateSettlements(settlementRecord: SettlementRecord) {
         try {
+            if (settlementRecord.sourceType!! == "NOSTR") {
+                return
+            }
             val settlement = getSettlementEntity(settlementRecord)
             if (paymentMigrationRepository.checkDuplicateForSettlements(
                     settlement.sourceId!!,
@@ -516,14 +519,13 @@ class PaymentMigrationImpl : PaymentMigration {
                     destinationValue = settlementRecord.invoiceId,
                     ledgerCurrency = settlementRecord.ledger_currency,
                     ledgerAmount = settlementRecord.ledgerAmount,
-                    accMode = settlementRecord.acc_mode,
+                    accMode = settlementRecord.accMode,
                     status = MigrationStatus.MIGRATED.name,
                     errorMessage = null,
                     migrationDate = Timestamp(Date().time)
                 )
             )
-        } catch (ex: Exception) {
-            val errorMessage = ex.stackTraceToString()
+        } catch (ex: AresException) {
             logger().info("Error while migrating settlements ${settlementRecord.paymentNumValue}")
             settlementMigrationRepository.save(
                 MigrationLogsSettlements(
@@ -534,9 +536,9 @@ class PaymentMigrationImpl : PaymentMigration {
                     destinationValue = settlementRecord.invoiceId,
                     ledgerCurrency = settlementRecord.ledger_currency,
                     ledgerAmount = settlementRecord.ledgerAmount,
-                    accMode = settlementRecord.acc_mode,
+                    accMode = settlementRecord.accMode,
                     status = MigrationStatus.FAILED.name,
-                    errorMessage = errorMessage.substring(0, 4999),
+                    errorMessage = ex.context,
                     migrationDate = Timestamp(Date().time)
                 )
             )
@@ -544,19 +546,40 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     private suspend fun getSettlementEntity(settlementRecord: SettlementRecord): Settlement {
-        val sourceId = paymentMigrationRepository.getPaymentId(
+        var sourceId: Long? = paymentMigrationRepository.getPaymentId(
             settlementRecord.paymentNumValue!!,
-            settlementRecord.acc_mode!!,
-            settlementRecord.sourceType!!
+            settlementRecord.accMode!!,
+            settlementRecord.sourceType!!,
+            settlementRecord.sageOrganizationId!!
         )
 
-        val destinationId = paymentMigrationRepository.getDestinationId(
+        if (sourceId == null) {
+            sourceId = paymentMigrationRepository.getPaymentIdWithoutPayCode(
+                settlementRecord.paymentNumValue!!,
+                settlementRecord.accMode!!,
+                settlementRecord.accCode!!,
+                settlementRecord.sageOrganizationId!!
+            )
+        }
+
+        var destinationId: Long? = paymentMigrationRepository.getDestinationId(
             settlementRecord.invoiceId!!,
-            settlementRecord.acc_mode!!
+            settlementRecord.accMode!!,
+            settlementRecord.sageOrganizationId!!
         )
 
-        if (sourceId == null || destinationId == null) {
-            throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId or DestinationId is null")
+        if (destinationId == null) {
+            destinationId = paymentMigrationRepository.getDestinationIdForAr(
+                settlementRecord.invoiceId!!,
+                settlementRecord.accMode!!
+            )
+        }
+
+        if (sourceId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as sourceId is null")
+        }
+        if (destinationId == null) {
+            throw AresException(AresError.ERR_1002, "Cannot migrate as destinationId is null")
         }
         return Settlement(
             id = null,
