@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment.request
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.enum.OrganizationType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -16,5 +17,5 @@ data class OutstandingListRequest(
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.ORG_ID) val orgId: String? = null,
-    @QueryValue(AresModelConstants.FLAG) val flag: String? = "non-defaulters"
+    @QueryValue(AresModelConstants.FLAG) val flag: String? = OrganizationType.NON_DEFAULTERS.value
 )
