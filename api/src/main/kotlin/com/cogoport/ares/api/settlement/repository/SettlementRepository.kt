@@ -197,14 +197,14 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 p.entity_code, p.bank_id, p.bank_name, p.trans_ref_number,
                 p.pay_mode, s.settlement_date
             FROM
-                payments p
-                INNER JOIN settlements s ON p.payment_num = s.source_id
+                settlements s
+                left JOIN payments p ON p.payment_num = s.source_id
             WHERE
                 p.payment_num = :documentNo
-                AND acc_mode = 'AP'
-                AND destination_type in ('PINV','PREIMB','PCN')
+                AND (acc_mode = 'AP' OR acc_mode is NULL)
+                AND destination_type in :allowedSettlementType
             LIMIT 1
         """
     )
-    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?): PaymentInfo?
+    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?, allowedSettlementType: List<SettlementType>): PaymentInfo?
 }

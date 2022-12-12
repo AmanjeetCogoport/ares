@@ -1901,7 +1901,8 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
-        val paymentInfo = settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
+        var allowedSettlementType= listOf<SettlementType>(SettlementType.PREIMB, SettlementType.PINV, SettlementType.PCN)
+        val paymentInfo = settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo, allowedSettlementType)
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
