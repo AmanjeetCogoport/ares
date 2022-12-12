@@ -1888,7 +1888,7 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update status in Kuber(Purchase MS).
      * @param: accountUtilization
      */
-    private fun emitPayableBillStatus(
+    suspend fun emitPayableBillStatus(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID?,
@@ -1901,14 +1901,22 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
+        val paymentInfo = settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
                 paymentStatus = status,
+                organizationName = accountUtilization.organizationName,
                 paidAmount = accountUtilization.payCurr,
                 paidTds = paidTds,
                 performedBy = performedBy,
-                performedByUserType = performedByUserType
+                performedByUserType = performedByUserType,
+                tranferMode = paymentInfo?.payMode,
+                transactionRef = paymentInfo?.transRefNumber,
+                cogoBankId = paymentInfo?.bankId.toString(),
+                cogoBankName = paymentInfo?.bankName,
+                cogoEntity = paymentInfo?.entityCode,
+                paymentDate = paymentInfo?.settlementDate
             )
         )
     }
