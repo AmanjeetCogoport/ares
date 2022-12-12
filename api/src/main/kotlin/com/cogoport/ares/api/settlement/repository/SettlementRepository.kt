@@ -191,20 +191,21 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
 
+    @WithSpan
     @Query(
         """
-            SELECT
+           SELECT
                 p.entity_code, p.bank_id, p.bank_name, p.trans_ref_number,
-                p.pay_mode, s.settlement_date
+                p.pay_mode, s.settlement_date, p.payment_num
             FROM
                 settlements s
-                left JOIN payments p ON p.payment_num = s.source_id
+                LEFT JOIN payments p ON p.payment_num = s.source_id
             WHERE
-                p.payment_num = :documentNo
-                AND (acc_mode = 'AP' OR acc_mode is NULL)
-                AND destination_type in :allowedSettlementType
+                s.source_id = :documentNo
+                AND (acc_mode IN ('AP') OR acc_mode IS NULL)
+                AND destination_type in ('PCN', 'PINV')
             LIMIT 1
         """
     )
-    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?, allowedSettlementType: List<SettlementType>): PaymentInfo?
+    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?): PaymentInfo?
 }
