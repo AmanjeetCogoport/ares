@@ -203,7 +203,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE
                 s.source_id = :documentNo
                 AND (acc_mode IN ('AP') OR acc_mode IS NULL)
-                AND destination_type in ('PCN', 'PINV')
+                AND destination_type in ('PCN', 'PINV', 'PREIMB')
             LIMIT 1
         """
     )
