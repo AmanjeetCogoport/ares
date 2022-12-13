@@ -25,6 +25,7 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
+import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -1888,7 +1889,7 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update status in Kuber(Purchase MS).
      * @param: accountUtilization
      */
-    private fun emitPayableBillStatus(
+    suspend fun emitPayableBillStatus(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID?,
@@ -1901,14 +1902,35 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
+        var allowedSettlementType = listOf<String>(SettlementType.PINV.name, SettlementType.PREIMB.name)
+        var paymentInfo: PaymentInfo? = null
+        paymentInfo = if (accountUtilization.accType == AccountType.PCN) {
+            PaymentInfo(
+                entityCode = null,
+                bankId = null,
+                bankName = null,
+                transRefNumber = null,
+                payMode = null,
+                settlementDate = settlementRepository.getSettlementDateBySourceId(accountUtilization.documentNo)
+            )
+        } else {
+            settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
+        }
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
                 paymentStatus = status,
+                organizationName = accountUtilization.organizationName,
                 paidAmount = accountUtilization.payCurr,
                 paidTds = paidTds,
                 performedBy = performedBy,
-                performedByUserType = performedByUserType
+                performedByUserType = performedByUserType,
+                tranferMode = if (paymentInfo?.payMode == "CHQ") "CHEQUE" else paymentInfo?.payMode,
+                transactionRef = paymentInfo?.transRefNumber,
+                cogoBankId = paymentInfo?.bankId.toString(),
+                cogoBankName = paymentInfo?.bankName,
+                cogoEntity = paymentInfo?.entityCode,
+                paymentDate = paymentInfo?.settlementDate
             )
         )
     }
