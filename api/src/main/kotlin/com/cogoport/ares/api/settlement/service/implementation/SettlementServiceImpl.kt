@@ -1905,9 +1905,16 @@ open class SettlementServiceImpl : SettlementService {
         var allowedSettlementType = listOf<String>(SettlementType.PINV.name, SettlementType.PREIMB.name)
         var paymentInfo: PaymentInfo? = null
         paymentInfo = if (accountUtilization.accType == AccountType.PCN) {
-            settlementRepository.getPaymentDetailsWhereSourceTypeIsPCN(accountUtilization.documentNo, allowedSettlementType)
+            PaymentInfo(
+                entityCode = null,
+                bankId = null,
+                bankName = null,
+                transRefNumber = null,
+                payMode = null,
+                settlementDate = settlementRepository.getSettlementDateBySourceId(accountUtilization.documentNo)
+            )
         } else {
-            settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo, allowedSettlementType)
+            settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         }
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
