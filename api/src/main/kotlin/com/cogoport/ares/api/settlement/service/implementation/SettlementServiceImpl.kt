@@ -25,6 +25,7 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
+import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -1901,8 +1902,13 @@ open class SettlementServiceImpl : SettlementService {
         else
             "FULL"
 
-        var allowedSettlementType = listOf<SettlementType>(SettlementType.PINV, SettlementType.PCN)
-        val paymentInfo = settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
+        var allowedSettlementType = listOf<String>(SettlementType.PINV.name, SettlementType.PREIMB.name)
+        var paymentInfo: PaymentInfo? = null
+        paymentInfo = if (accountUtilization.accType == AccountType.PCN) {
+            settlementRepository.getPaymentDetailsWhereSourceTypeIsPCN(accountUtilization.documentNo, allowedSettlementType)
+        } else {
+            settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo, allowedSettlementType)
+        }
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
@@ -1912,7 +1918,7 @@ open class SettlementServiceImpl : SettlementService {
                 paidTds = paidTds,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType,
-                tranferMode = paymentInfo?.payMode,
+                tranferMode = if (paymentInfo?.payMode == "CHQ") "CHEQUE" else paymentInfo?.payMode,
                 transactionRef = paymentInfo?.transRefNumber,
                 cogoBankId = paymentInfo?.bankId.toString(),
                 cogoBankName = paymentInfo?.bankName,

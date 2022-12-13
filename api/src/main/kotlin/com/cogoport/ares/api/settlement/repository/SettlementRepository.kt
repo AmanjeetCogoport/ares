@@ -196,16 +196,36 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
            SELECT
                 p.entity_code, p.bank_id, p.bank_name, p.trans_ref_number,
-                p.pay_mode, s.settlement_date, p.payment_num
-            FROM
+                p.pay_mode, s.settlement_date::TIMESTAMP
+           FROM
                 settlements s
-                LEFT JOIN payments p ON p.payment_num = s.source_id
-            WHERE
-                s.source_id = :documentNo
-                AND (acc_mode IN ('AP') OR acc_mode IS NULL)
-                AND destination_type in ('PCN', 'PINV', 'PREIMB')
-            LIMIT 1
+                LEFT JOIN payments p  on p.payment_num = s.source_id WHERE
+                S.destination_id = :documentNo
+                And (p.acc_mode = 'AP' OR p.acc_mode IS NULL)
+                AND s.destination_type in ('PINV','PREIMB')
+                AND s.source_type not in ('VTDS')
+                order by s.created_at desc
+           LIMIT 1
         """
     )
-    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?): PaymentInfo?
+    suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?, allowedSettlementType: List<String>): PaymentInfo?
+
+    @WithSpan
+    @Query(
+        """
+           SELECT
+                p.entity_code, p.bank_id, p.bank_name, p.trans_ref_number,
+                p.pay_mode, s.settlement_date::TIMESTAMP
+           FROM
+                settlements s
+                LEFT JOIN payments p  on p.payment_num = s.source_id WHERE
+                S.source_id = :documentNo
+                And (p.acc_mode = 'AP' OR p.acc_mode IS NULL)
+                AND s.destination_type in ('PINV','PREIMB')
+                AND s.source_type not in ('VTDS')
+                order by s.created_at desc
+           LIMIT 1
+        """
+    )
+    suspend fun getPaymentDetailsWhereSourceTypeIsPCN(documentNo: Long?, allowedSettlementType: List<String>): PaymentInfo?
 }
