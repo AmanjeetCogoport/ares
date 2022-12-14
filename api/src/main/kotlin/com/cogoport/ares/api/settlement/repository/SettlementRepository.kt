@@ -217,8 +217,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
            SELECT
                  settlement_date::TIMESTAMP
            FROM
-                settlements
-                S.source_id = :documentNo
+                settlements s where 
+                s.source_id = :documentNo
                 AND s.destination_type in ('PINV','PREIMB')
                 AND s.source_type not in ('VTDS')
                 order by s.created_at desc
