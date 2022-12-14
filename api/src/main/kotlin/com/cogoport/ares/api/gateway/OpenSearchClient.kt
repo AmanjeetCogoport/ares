@@ -105,7 +105,7 @@ class OpenSearchClient {
             Client.search(
                 { s ->
                     s.index(index).query { q ->
-                        q.matchPhrase { a -> a.field("organizationId").query(values) }
+                        q.matchPhrase { a -> a.field("_id").query(values) }
                     }
                 },
                 classType

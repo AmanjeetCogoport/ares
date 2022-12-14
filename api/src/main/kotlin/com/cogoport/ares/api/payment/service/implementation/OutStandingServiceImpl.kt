@@ -31,6 +31,9 @@ class OutStandingServiceImpl : OutStandingService {
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
+    @Inject
+    lateinit var businessPartnersImpl: DefaultedBusinessPartnersServiceImpl
+
     private fun validateInput(request: OutstandingListRequest) {
         try {
             if (request.orgId != null)
@@ -45,7 +48,8 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
+        val defaultersOrgIds = businessPartnersImpl.listTradePartyDetailIds()
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->

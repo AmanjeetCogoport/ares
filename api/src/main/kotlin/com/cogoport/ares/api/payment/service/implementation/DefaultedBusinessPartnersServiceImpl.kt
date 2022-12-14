@@ -16,18 +16,19 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Singleton
 open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersService {
     @Inject
-    lateinit var bprRepo: DefaultedBusinessPartnersRepository
+    lateinit var defaultBusinessPartnersRepo: DefaultedBusinessPartnersRepository
 
     @Inject
     lateinit var cogoClient: AuthClient
 
     override suspend fun add(request: DefaultedBusinessPartnerRequest): Long {
 
-        if (bprRepo.checkIfTradePartyDetailSerialIdExists(request.tradePartyDetailSerialId)) {
+        if (defaultBusinessPartnersRepo.checkIfTradePartyDetailSerialIdExists(request.tradePartyDetailSerialId)) {
             throw AresException(AresError.ERR_1513, "")
         }
 
@@ -43,7 +44,7 @@ open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersServi
             throw AresException(AresError.ERR_1514, "")
         }
 
-        val response = bprRepo.save(
+        val response = defaultBusinessPartnersRepo.save(
             DefaultedBusinessPartners(
                 id = null,
                 businessName = request.businessName,
@@ -59,19 +60,23 @@ open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersServi
     }
 
     override suspend fun delete(id: Long): Long {
-        return bprRepo.delete(id)
+        return defaultBusinessPartnersRepo.delete(id)
     }
 
     override suspend fun list(request: ListDefaultedBusinessPartnersRequest): ResponseList<DefaultedBusinessPartnersResponse?> {
         if (request.q != null) {
             request.q = "%${request.q}%"
         }
-        var list = bprRepo.getDefaultedBusinessPartners(request.q, request.page, request.pageLimit)
+        var list = defaultBusinessPartnersRepo.getDefaultedBusinessPartners(request.q, request.page, request.pageLimit)
         val responseList = ResponseList<DefaultedBusinessPartnersResponse?>()
         responseList.list = list
-        responseList.totalRecords = bprRepo.getCount(request.q)
+        responseList.totalRecords = defaultBusinessPartnersRepo.getCount(request.q)
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageLimit!!) + 1 else 1
         responseList.pageNo = request.page
         return responseList
+    }
+
+    override suspend fun listTradePartyDetailIds(): List<UUID>? {
+        return defaultBusinessPartnersRepo.listTradePartyDetailIds()
     }
 }
