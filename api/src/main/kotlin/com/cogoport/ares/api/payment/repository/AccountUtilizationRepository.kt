@@ -294,7 +294,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
         and (:orgId is null or organization_id = :orgId::uuid) and  acc_type = 'SINV' and deleted_at is null
         AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
-                 WHEN :flag = 'non-defaulters' THEN (organization_id NOT IN (:defaultersOrgIds) OR (:defaultersOrgIds) is NULL)
+                 WHEN :flag = 'non_defaulters' THEN (organization_id NOT IN (:defaultersOrgIds) OR (:defaultersOrgIds) is NULL)
             END)
         and  acc_type = 'SINV'
         group by organization_id
