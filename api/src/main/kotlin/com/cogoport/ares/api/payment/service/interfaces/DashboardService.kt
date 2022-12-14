@@ -16,6 +16,7 @@ import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
@@ -23,6 +24,7 @@ import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.payment.response.StatsForTradePartyResponse
 
 interface DashboardService {
 
@@ -39,4 +41,6 @@ interface DashboardService {
     suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
     suspend fun getOverallStats(request: KamPaymentRequest): StatsForKamResponse
     suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): ResponseList<StatsForCustomerResponse?>
+
+    suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<StatsForTradePartyResponse?>
 }

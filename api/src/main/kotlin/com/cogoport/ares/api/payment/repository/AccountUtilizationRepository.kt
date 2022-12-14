@@ -19,7 +19,9 @@ import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.ares.model.settlement.SettlementType
@@ -1113,4 +1115,77 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun findPaymentsByDocumentNo(documentNo: Long): List<AccountUtilization?>
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT organization_id,
+        COALESCE(SUM(CASE WHEN acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(SUM(CASE WHEN acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
+        AND (:orgId is NULL OR organization_id = :orgId::uuid) AND deleted_at IS NULL
+        GROUP BY organization_id
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+        """
+    )
+    suspend fun getOverallStatsForTradeParty(
+        documentValues: List<String>,
+        orgId: String?,
+        pageIndex: Int,
+        pageSize: Int
+    ): List<OverallStatsForTradeParty?>
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT COUNT(*) FROM
+        (SELECT organization_id,
+        COALESCE(SUM(CASE WHEN acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(SUM(CASE WHEN acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as total_outstanding_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
+        AND (:orgId is NULL OR organization_id = :orgId::uuid) AND deleted_at IS NULL
+        GROUP BY organization_id) as output
+        """
+    )
+    suspend fun getTradePartyCount(
+        documentValues: List<String>,
+        orgId: String?
+    ): Long?
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT organization_id::VARCHAR,
+        document_value,
+        document_status AS document_type,
+        service_type,
+        amount_loc AS invoice_amount,
+        sign_flag*(amount_loc - pay_loc) as balance
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
+        AND organization_id::VARCHAR IN (:orgIdList) AND deleted_at IS NULL
+        """
+    )
+    suspend fun getInvoiceListForTradeParty(
+        documentValues: List<String>,
+        orgIdList: List<String>
+    ): List<InvoiceListResponse>
 }
