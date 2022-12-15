@@ -21,10 +21,9 @@ r2dbc:
     default:
       datasources:
         default:
-          url: r2dbc:postgresql://${DB_HOST:`rds-cluster.stage.cogoport.io`}:${DB_PORT:6432}/${DB_NAME:plutus}?preparedStatementCacheQueries=0
-          username: ${DB_USER:postgres}
-          password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
-          dialect: POSTGRES
+          url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?preparedStatementCacheQueries=0
+          username: ${DB_USER}
+          password: ${DB_PASSWORD}
 
 kafka:
   bootstrap:
