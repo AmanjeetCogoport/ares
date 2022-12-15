@@ -48,6 +48,6 @@ opensearch:
 cogoport:
   api_url: https://api-mustangs4.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
-  bearer_token_new: ca2b29fd-81b9-4050-9060-a9645d9204e7
-  auth_scope_id: 814f2672-c792-47b3-ade9-eb5e12f4b44c
+  bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
+  auth_scope_id: fd4dae4d-9823-458a-9a25-710a8b1aae2e
 
