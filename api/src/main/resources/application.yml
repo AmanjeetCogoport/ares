@@ -33,9 +33,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://ares.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares?preparedStatementCacheQueries=0
-      username: ares
-      password: kce,A,yW9Bp0qNrQTysEjv^l5kQI-N
+      url: r2dbc:postgresql://rds-cluster.stage.cogoport.io:6432/ares?preparedStatementCacheQueries=0
+      username: postgres
+      password: A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5
       dialect: POSTGRES
 
 services:
