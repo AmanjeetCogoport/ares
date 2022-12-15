@@ -19,10 +19,12 @@ jackson:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?preparedStatementCacheQueries=0
-      username: ${DB_USER}
-      password: ${DB_PASSWORD}
-      dialect: POSTGRES
+      datasources:
+        default:
+          url: r2dbc:postgresql://${DB_HOST:`rds-cluster.stage.cogoport.io`}:${DB_PORT:6432}/${DB_NAME:plutus}?preparedStatementCacheQueries=0
+          username: ${DB_USER:postgres}
+          password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
+          dialect: POSTGRES
 
 kafka:
   bootstrap:
@@ -44,6 +46,8 @@ opensearch:
   pass: ${OPENSEARCH_PASS}
 
 cogoport:
-  api_url: https://api-mustangs5.dev.cogoport.io
+  api_url: https://api-mustangs4.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
+  bearer_token_new: ca2b29fd-81b9-4050-9060-a9645d9204e7
+  auth_scope_id: 814f2672-c792-47b3-ade9-eb5e12f4b44c
 
