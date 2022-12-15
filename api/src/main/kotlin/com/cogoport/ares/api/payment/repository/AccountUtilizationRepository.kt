@@ -292,7 +292,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         from account_utilizations
         where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
-        and (:orgId is null or organization_id = :orgId::uuid) and  acc_type = 'SINV' and deleted_at is null
+        AND ((:orgId) is NULL OR organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
         AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
                  WHEN :flag = 'non_defaulters' THEN (organization_id NOT IN (:defaultersOrgIds) OR (:defaultersOrgIds) is NULL)
             END)
@@ -300,7 +300,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         group by organization_id
         """
     )
-    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>?, flag: String): List<OutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: List<UUID>?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>?, flag: String): List<OutstandingAgeing>
 
     @WithSpan
     @Query(

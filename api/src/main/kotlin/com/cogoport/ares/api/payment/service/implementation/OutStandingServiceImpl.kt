@@ -36,8 +36,11 @@ class OutStandingServiceImpl : OutStandingService {
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
-            if (request.orgId != null)
-                UUID.fromString(request.orgId)
+            if (request.orgId != null) {
+                request.orgId!!.map {
+                    UUID.fromString(it)
+                }
+            }
         } catch (exception: IllegalArgumentException) {
             throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
         }
@@ -49,7 +52,11 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
         validateInput(request)
         val defaultersOrgIds = businessPartnersImpl.listTradePartyDetailIds()
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
+        val orgIds: MutableList<UUID> = mutableListOf()
+        request.orgId?.map {
+            orgIds?.add(UUID.fromString(it))
+        }
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
