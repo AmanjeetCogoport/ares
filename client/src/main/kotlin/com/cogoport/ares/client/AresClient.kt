@@ -29,6 +29,7 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
@@ -44,6 +45,7 @@ import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.payment.response.StatsForTradePartyResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
@@ -160,4 +162,7 @@ interface AresClient {
 
     @Post("/payments/outstanding/customer-outstanding")
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?>
+
+    @Post("/payments/dashboard/trade-party/stats")
+    suspend fun getOverallStatsForTradeParties(@Valid @Body request: TradePartyStatsRequest): ResponseList<StatsForTradePartyResponse?>
 }

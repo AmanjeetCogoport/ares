@@ -1132,14 +1132,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
-        AND (:orgId is NULL OR organization_id = :orgId::uuid) AND deleted_at IS NULL
+        AND deleted_at IS NULL
         GROUP BY organization_id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
     suspend fun getOverallStatsForTradeParty(
         documentValues: List<String>,
-        orgId: String?,
         pageIndex: Int,
         pageSize: Int
     ): List<OverallStatsForTradeParty?>
@@ -1161,13 +1160,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
-        AND (:orgId is NULL OR organization_id = :orgId::uuid) AND deleted_at IS NULL
+        AND deleted_at IS NULL
         GROUP BY organization_id) as output
         """
     )
     suspend fun getTradePartyCount(
-        documentValues: List<String>,
-        orgId: String?
+        documentValues: List<String>
     ): Long?
 
     @WithSpan

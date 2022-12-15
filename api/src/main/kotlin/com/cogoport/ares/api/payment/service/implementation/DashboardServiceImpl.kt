@@ -737,8 +737,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<StatsForTradePartyResponse?> {
         val response = mutableListOf<StatsForTradePartyResponse?>()
         val list = accountUtilizationRepository.getOverallStatsForTradeParty(
-            request.docValues, request.orgId,
-            request.pageIndex, request.pageSize
+            request.docValues, request.pageIndex, request.pageSize
         )
         val orgIdList = mutableListOf<String>()
 
@@ -774,7 +773,7 @@ class DashboardServiceImpl : DashboardService {
 
         val responseList = ResponseList<StatsForTradePartyResponse?>()
         responseList.list = response
-        responseList.totalRecords = accountUtilizationRepository.getTradePartyCount(request.docValues, request.orgId)
+        responseList.totalRecords = accountUtilizationRepository.getTradePartyCount(request.docValues)
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
         responseList.pageNo = request.pageIndex
         return responseList
