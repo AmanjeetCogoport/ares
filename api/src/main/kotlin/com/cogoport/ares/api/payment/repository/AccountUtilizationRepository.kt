@@ -1171,19 +1171,57 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @WithSpan
     @Query(
         """ 
-        SELECT organization_id::VARCHAR,
-        document_value,
+         SELECT * FROM
+        (SELECT organization_id::VARCHAR,
+        document_value as document_number ,
         document_status AS document_type,
         service_type,
         amount_loc AS invoice_amount,
-        sign_flag*(amount_loc - pay_loc) as balance
+        sign_flag*(amount_loc - pay_loc) as outstanding_amount
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
-        AND organization_id::VARCHAR IN (:orgIdList) AND deleted_at IS NULL
+        AND deleted_at IS NULL) output
+        ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'invoice_amount' THEN output.invoice_amount
+                         WHEN :sortBy = 'outstanding_amount' THEN output.outstanding_amount
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'invoice_amount' THEN output.invoice_amount
+                         WHEN :sortBy = 'outstanding_amount' THEN output.outstanding_amount 
+                    END        
+            END 
+            Asc,
+            CASE WHEN :sortType is NULL and :sortBy is NULL THEN output.invoice_amount END Desc
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
     )
     suspend fun getInvoiceListForTradeParty(
         documentValues: List<String>,
-        orgIdList: List<String>
+        sortBy: String?,
+        sortType: String?,
+        pageIndex: Int,
+        pageSize: Int
     ): List<InvoiceListResponse>
+
+    @WithSpan
+    @Query(
+        """ 
+         SELECT COUNT(*) FROM
+        (SELECT organization_id::VARCHAR,
+        document_value as document_number ,
+        document_status AS document_type,
+        service_type,
+        amount_loc AS invoice_amount,
+        sign_flag*(amount_loc - pay_loc) as outstanding_amount
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL) as output
+        """
+    )
+    suspend fun getInvoicesCountForTradeParty(
+        documentValues: List<String>
+    ): Long?
 }

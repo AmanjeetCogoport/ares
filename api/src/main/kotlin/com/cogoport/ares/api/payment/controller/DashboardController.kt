@@ -16,6 +16,7 @@ import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
@@ -24,13 +25,14 @@ import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import com.cogoport.ares.model.payment.response.StatsForTradePartyResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -111,8 +113,15 @@ class DashboardController {
     @Post("/trade-party/stats")
     suspend fun getOverallStatsForTradeParties(
         @Valid @Body request: TradePartyStatsRequest
-    ): ResponseList<StatsForTradePartyResponse?> {
+    ): ResponseList<OverallStatsForTradeParty?> {
         return dashboardService.getStatsForTradeParties(request)
+    }
+
+    @Post("/trade-party/invoice/list")
+    suspend fun getInvoiceListForTradeParties(
+        @Valid @Body request: InvoiceListRequestForTradeParty
+    ): ResponseList<InvoiceListResponse?> {
+        return dashboardService.getInvoiceListForTradeParties(request)
     }
 
     @Get("/exchange-rate/for/period{?request*}")

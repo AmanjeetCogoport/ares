@@ -8,9 +8,9 @@ import java.math.BigDecimal
 @MappedEntity
 data class InvoiceListResponse(
     val organizationId: String?,
-    val documentValue: String?,
+    val documentNumber: String?,
     val documentType: String?,
     val serviceType: String?,
     val invoiceAmount: BigDecimal?,
-    val balance: BigDecimal?
+    val outstandingAmount: BigDecimal?
 )

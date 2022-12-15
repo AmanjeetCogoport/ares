@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
@@ -36,16 +37,17 @@ import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import com.cogoport.ares.model.payment.response.StatsForTradePartyResponse
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
@@ -164,5 +166,12 @@ interface AresClient {
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?>
 
     @Post("/payments/dashboard/trade-party/stats")
-    suspend fun getOverallStatsForTradeParties(@Valid @Body request: TradePartyStatsRequest): ResponseList<StatsForTradePartyResponse?>
+    suspend fun getOverallStatsForTradeParties(
+        @Valid @Body request: TradePartyStatsRequest
+    ): ResponseList<OverallStatsForTradeParty?>
+
+    @Post("/payments/dashboard/trade-party/invoice/list")
+    suspend fun getInvoiceListForTradeParties(
+        @Valid @Body request: InvoiceListRequestForTradeParty
+    ): ResponseList<InvoiceListResponse?>
 }

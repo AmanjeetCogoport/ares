@@ -17,5 +17,5 @@ data class OverallStatsForTradeParty(
     val dueByThirtyDaysCount: Int?,
     val dueBySixtyDaysCount: Int?,
     val dueByNinetyDaysCount: Int?,
-    val dueByNinetyPlusDaysCount: Int?,
+    val dueByNinetyPlusDaysCount: Int?
 )
