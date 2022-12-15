@@ -16,6 +16,7 @@ data class OutstandingListRequest(
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
-    @QueryValue(AresModelConstants.ORG_ID) val orgId: List<String>? = null,
+    @QueryValue(AresModelConstants.ORG_ID) val orgId: String? = null,
     @QueryValue(AresModelConstants.FLAG) val flag: String? = OrganizationType.NON_DEFAULTERS.value,
+    @QueryValue("orgIds") val orgIds: MutableList<String> = mutableListOf()
 )
