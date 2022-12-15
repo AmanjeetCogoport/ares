@@ -118,10 +118,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val jv = convertToJournalVoucherEntity(request)
         val jvEntity = createJV(jv)
 
-
+        request.id = Hashids.encode(jvEntity.id!!)
         if (request.status == JVStatus.PENDING) {
             // Send to Incident Management
-            request.id = Hashids.encode(jvEntity.id!!)
             val formatedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(request.validityDate)
             val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(request)
             incidentRequestModel.validityDate = Date.valueOf(formatedDate)
@@ -295,7 +294,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
-        request.status = if (request.currency == "INR" && request.amount.compareTo(BigDecimal.ZERO) <= 50)
+        request.status = if (request.currency == "INR" && request.amount <= 50.toBigDecimal())
             JVStatus.APPROVED else JVStatus.PENDING
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = Timestamp.from(Instant.now())
