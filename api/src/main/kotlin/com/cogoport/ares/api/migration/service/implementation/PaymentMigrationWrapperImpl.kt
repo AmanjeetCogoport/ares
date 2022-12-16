@@ -95,4 +95,26 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         return entries.size
     }
+
+    override suspend fun updateUtilizationAmount(startDate: String?, endDate: String?): Int {
+        val paymentRecords = sageService.migratePaymentsByDate(startDate!!, endDate!!)
+        for (paymentRecord in paymentRecords) {
+            aresKafkaEmitter.emitUtilizationUpdateRecord(paymentRecord)
+        }
+        return paymentRecords.size
+    }
+
+    override suspend fun updateUtilizationAmountByPaymentNum(paymentNums: List<String>): Int {
+        val payments = StringBuilder()
+        for (paymentNum in paymentNums) {
+            payments.append("'")
+            payments.append(paymentNum)
+            payments.append("',")
+        }
+        val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
+        for (paymentRecord in paymentRecords) {
+            aresKafkaEmitter.emitUtilizationUpdateRecord(paymentRecord)
+        }
+        return paymentRecords.size
+    }
 }

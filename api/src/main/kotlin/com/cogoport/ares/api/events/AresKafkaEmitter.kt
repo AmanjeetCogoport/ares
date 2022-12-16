@@ -44,4 +44,7 @@ interface AresKafkaEmitter {
     fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
     @Topic("settlement-migration")
     fun emitSettlementRecord(settlementRecord: SettlementRecord)
+
+    @Topic("update-utilization-amount")
+    fun emitUtilizationUpdateRecord(paymentRecord: PaymentRecord)
 }

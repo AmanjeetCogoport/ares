@@ -9,4 +9,5 @@ interface PaymentMigration {
     suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int
 
     suspend fun migrateSettlements(settlementRecord: SettlementRecord)
+    suspend fun updatePayment(paymentRecord: PaymentRecord)
 }

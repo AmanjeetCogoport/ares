@@ -76,6 +76,7 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var settlementRepository: SettlementRepository
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
@@ -116,7 +117,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum, MigrationStatus.FAILED)
         }
         return 1
     }
@@ -171,7 +172,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum, MigrationStatus.FAILED)
         }
         return 1
     }
@@ -604,5 +605,35 @@ class PaymentMigrationImpl : PaymentMigration {
             return -1
         }
         return 1
+    }
+
+    override suspend fun updatePayment(paymentRecord: PaymentRecord) {
+        try {
+            var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
+                paymentRecord.paymentNum!!,
+                paymentRecord.sageOrganizationId!!, paymentRecord.accountUtilAmtLed
+            ) ?: return
+            if (platformUtilizedPayment.toBigInteger() == paymentRecord.accountUtilPayLed.toBigInteger()) {
+                return
+            }
+            if (platformUtilizedPayment.toBigInteger().compareTo(paymentRecord.accountUtilPayLed.toBigInteger()) == 1) {
+                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
+            } else {
+                accountUtilizationRepositoryMigration.updateUtilizationAmount(
+                    paymentRecord.paymentNum,
+                    paymentRecord.sageOrganizationId, paymentRecord.accountUtilAmtLed, paymentRecord.accountUtilPayLed,
+                    paymentRecord.accountUtilPayCurr
+                )
+            }
+            migrationLogService.saveMigrationLogs(null, null, null, paymentRecord.paymentNum, migrationStatus)
+        } catch (ex: Exception) {
+            var errorMessage = ex.stackTraceToString()
+            if (errorMessage.length> 5000) {
+                errorMessage = errorMessage.substring(0, 4998)
+            }
+            logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum, MigrationStatus.PAYLOC_NOT_UPDATED)
+        }
     }
 }

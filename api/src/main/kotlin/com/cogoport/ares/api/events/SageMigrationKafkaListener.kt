@@ -28,4 +28,9 @@ class SageMigrationKafkaListener {
     fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
         paymentMigration.migrateSettlements(settlementRecord)
     }
+
+    @Topic("update-utilization-amount")
+    fun updateUtilizationAmount(paymentRecord: PaymentRecord) = runBlocking {
+        paymentMigration.updatePayment(paymentRecord)
+    }
 }
