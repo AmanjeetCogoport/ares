@@ -8,6 +8,16 @@ router:
     swagger:
       paths: classpath:META-INF/swagger
       mapping: /swagger/**
+metrics:
+  enabled: true
+  export:
+    prometheus:
+      enabled: true
+      descriptions: true
+      step: PT1M
+  binders:
+    r2dbc:
+      enabled: false
 netty:
   default:
     allocator:
@@ -49,3 +59,19 @@ cogoport:
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
   bearer_token_new: 0c320283-6f34-42d0-ac1d-e3390049fe65
   auth_scope_id: 0c320283-6f34-42d0-ac1d-e3390049fe65
+
+endpoints:
+  prometheus:
+    sensitive: false
+
+otel:
+  exporter:
+    otlp:
+      traces:
+        endpoint: http://${GRAFANA_AGENT_DOMAIN:localhost}:${GRAFANA_AGENT_PORT:4317}
+  service:
+    name: ares
+  traces:
+    exporter: otlp
+  exclusions:
+    - /payments/prometheus
