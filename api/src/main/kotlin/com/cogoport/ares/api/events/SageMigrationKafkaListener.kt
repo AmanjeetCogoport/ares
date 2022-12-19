@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
@@ -30,7 +31,7 @@ class SageMigrationKafkaListener {
     }
 
     @Topic("update-utilization-amount")
-    fun updateUtilizationAmount(paymentRecord: PaymentRecord) = runBlocking {
-        paymentMigration.updatePayment(paymentRecord)
+    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
+        paymentMigration.updatePayment(payLocUpdateRequest)
     }
 }

@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.migration.model.InvoiceDetails
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
+import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
@@ -99,7 +102,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun updateUtilizationAmount(startDate: String?, endDate: String?): Int {
         val paymentRecords = sageService.migratePaymentsByDate(startDate!!, endDate!!)
         for (paymentRecord in paymentRecords) {
-            aresKafkaEmitter.emitUtilizationUpdateRecord(paymentRecord)
+            val payLocRecord = getPayLocRecord(paymentRecord)
+            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
     }
@@ -113,8 +117,46 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
         for (paymentRecord in paymentRecords) {
-            aresKafkaEmitter.emitUtilizationUpdateRecord(paymentRecord)
+            val payLocRecord = getPayLocRecord(paymentRecord)
+            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
+    }
+
+    override suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?): Int {
+        val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate!!, endDate!!)
+        for (invoiceDetail in invoiceDetails) {
+            val payLocRecord = getPayLocRecordForInvoice(invoiceDetail)
+            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+        }
+        return invoiceDetails.size
+    }
+
+    override suspend fun updateUtilizationForBill(startDate: String?, endDate: String?): Int {
+        val billDetails = sageService.getBillPayLocDetails(startDate!!, endDate!!)
+        for (billDetail in billDetails) {
+            val payLocRecord = getPayLocRecordForInvoice(billDetail)
+            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+        }
+        return billDetails.size
+    }
+
+    private fun getPayLocRecord(paymentRecord: PaymentRecord): PayLocUpdateRequest {
+        return PayLocUpdateRequest(
+            sageOrganizationId = paymentRecord.sageOrganizationId,
+            documentValue = paymentRecord.paymentNum,
+            amtLoc = paymentRecord.accountUtilAmtLed,
+            payCurr = paymentRecord.accountUtilPayCurr,
+            payLoc = paymentRecord.accountUtilPayLed
+        )
+    }
+    private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails): PayLocUpdateRequest {
+        return PayLocUpdateRequest(
+            sageOrganizationId = invoiceDetails.sageOrganizationId,
+            documentValue = invoiceDetails.invoiceNumber,
+            amtLoc = invoiceDetails.ledgerTotal,
+            payCurr = invoiceDetails.currencyAmountPaid,
+            payLoc = invoiceDetails.ledgerAmountPaid
+        )
     }
 }

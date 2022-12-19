@@ -10,4 +10,6 @@ interface PaymentMigrationWrapper {
     suspend fun updateUtilizationAmount(startDate: String?, endDate: String?): Int
 
     suspend fun updateUtilizationAmountByPaymentNum(paymentNums: List<String>): Int
+    suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?): Int
+    suspend fun updateUtilizationForBill(startDate: String?, endDate: String?): Int
 }

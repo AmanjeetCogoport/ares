@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.repository
 
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
+import com.cogoport.ares.api.migration.model.PayLocUpdateResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -49,4 +50,23 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         payLedger: BigDecimal,
         payCurrency: BigDecimal
     )
+
+    @Query(
+        """
+            select acc_type,document_no from account_utilizations 
+            WHERE 
+            document_value = :documentValue
+            AND
+            sage_organization_id = :sageOrganizationId
+            AND
+            amount_loc = :amountLedger
+            AND
+            migrated = true
+        """
+    )
+    fun getAccType(
+        documentValue: String,
+        sageOrganizationId: String,
+        amountLedger: BigDecimal,
+    ): PayLocUpdateResponse
 }

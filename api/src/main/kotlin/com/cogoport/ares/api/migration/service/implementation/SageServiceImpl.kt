@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
+import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -254,5 +256,45 @@ class SageServiceImpl : SageService {
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, SettlementRecordManager::class.java)
         return payments.recordSets!![0]
+    }
+
+    override suspend fun getInvoicesPayLocDetails(startDate: String, endDate: String): ArrayList<InvoiceDetails> {
+        val sqlQuery = """
+                select case when si.GTE_0 in('ZSINV','ZSDN','ZDN') then 'INVOICE' else 'CREDIT_NOTE' end  as invoiceType
+                ,si.AMTATIL_0 as ledger_total
+                ,si.NUM_0 as invoice_number
+                ,si.FCY_0 as entity_code_num
+                ,si.BPR_0 as sage_organization_id
+                ,acc.PAYCUR_0 as currency_amount_paid
+                ,acc.PAYLOC_0 as ledger_amount_paid
+                ,si.CREDATTIM_0 as created_at
+                ,si.UPDDATTIM_0 as updated_at
+                from COGO2.SINVOICE si with (NOLOCK)
+                INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
+                where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0 desc
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val invoiceDetails = ObjectMapper().readValue(result, InvoiceDetailRecordManager::class.java)
+        return invoiceDetails.recordSets!![0]
+    }
+
+    override suspend fun getBillPayLocDetails(startDate: String, endDate: String): ArrayList<InvoiceDetails> {
+        val sqlQuery = """
+            select  case when si.GTE_0 in('SPINV') then 'BILL' else 'CREDIT_NOTE' end  as invoiceType
+                            ,si.AMTATIL_0 as ledgerTotal
+                            ,si.NUM_0 as invoiceNumber
+                            ,si.FCY_0 as entityCodeNum
+                            ,si.BPR_0 as sageOrganizationId
+                            ,acc.PAYCUR_0 as currencyAmountPaid
+                            ,acc.PAYLOC_0 as ledgerAmountPaid
+                            ,si.CREDATTIM_0 as createdAt
+                            ,si.UPDDATTIM_0 as updatedAt
+                            from COGO2.PINVOICE si with (NOLOCK)
+                            INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
+                            where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val invoiceDetails = ObjectMapper().readValue(result, InvoiceDetailRecordManager::class.java)
+        return invoiceDetails.recordSets!![0]
     }
 }
