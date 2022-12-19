@@ -16,15 +16,7 @@ micronaut:
     client:
       read-timeout: 30s
   metrics:
-    enabled: true
-    export:
-      prometheus:
-        enabled: true
-        descriptions: true
-        step: PT1M
-    binders:
-      r2dbc:
-        enabled: false
+    enabled: false
 
 netty:
   default:
@@ -33,9 +25,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://ares.cxmkfxrc30yc.ap-south-1.rds.amazonaws.com:5432/ares?preparedStatementCacheQueries=0
-      username: ares
-      password: kce,A,yW9Bp0qNrQTysEjv^l5kQI-N
+      url: r2dbc:postgresql://${DB_HOST:`rds-cluster.stage.cogoport.io`}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      username: postgres
+      password: A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5
       dialect: POSTGRES
 
 services:
@@ -59,8 +51,10 @@ sentry:
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
 
 cogoport:
-  api_url: https://api-mustangs5.dev.cogoport.io
+  api_url: https://api-mustangs4.dev.cogoport.io
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
+  bearer_token_new: 0c320283-6f34-42d0-ac1d-e3390049fe65
+  auth_scope_id: 0c320283-6f34-42d0-ac1d-e3390049fe65
   exchange_api:
     url: https://bfhdlimn73mhj66rq3ugx3h7ee0cazxm.lambda-url.ap-south-1.on.aws/
     version: v1
@@ -81,19 +75,3 @@ ares:
 aws:
   s3:
     bucket: business-finance-test
-
-endpoints:
-  prometheus:
-    sensitive: false
-
-otel:
-  exporter:
-    otlp:
-      traces:
-        endpoint: http://${GRAFANA_AGENT_DOMAIN:localhost}:${GRAFANA_AGENT_PORT:4317}
-  service:
-    name: ares
-  traces:
-    exporter: otlp
-  exclusions:
-    - /payments/prometheus
