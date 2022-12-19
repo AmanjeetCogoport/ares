@@ -2215,4 +2215,123 @@ open class SettlementServiceImpl : SettlementService {
         )
         return Hashids.encode(savedObj.id!!)
     }
+
+    override suspend fun settleWithSourceIdAndDestinationId(
+        sourceId: String,
+        destinationId: String,
+        sourceType: SettlementType,
+        destinationType: SettlementType
+    ): List<CheckDocument>? {
+        val sourceDocument = accountUtilizationRepository.findRecord(Hashids.decode(sourceId)[0], sourceType.name)
+        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(destinationId)[0], destinationType.name)
+
+        val listOfDocuments = mutableListOf<AccountUtilization>()
+        listOfDocuments.add(sourceDocument!!)
+        listOfDocuments.add(destinationDocument!!)
+
+        if (listOfDocuments.isEmpty()) return null
+
+        val documentEntity = listOfDocuments.map {
+            com.cogoport.ares.api.settlement.entity.Document(
+                id = it.id!!,
+                documentNo = it.documentNo,
+                documentValue = it.documentValue!!,
+                accountType = it.accType.name,
+                documentAmount = it.amountCurr,
+                organizationId = it.organizationId!!,
+                documentType = it.accType.name,
+                mappingId = it.tradePartyMappingId,
+                dueDate = it.dueDate,
+                taxableAmount = it.taxableAmount!!,
+                afterTdsAmount = it.amountCurr,
+                settledAmount = it.payCurr,
+                balanceAmount = (it.amountCurr - it.payCurr),
+                currency = it.currency,
+                ledCurrency = it.ledCurrency,
+                settledTds = 0.toBigDecimal(),
+                exchangeRate = 1.toBigDecimal(),
+                signFlag = it.signFlag,
+                approved = false,
+                accMode = it.accMode,
+                documentDate = it.transactionDate!!,
+                documentLedAmount = it.amountLoc,
+                documentLedBalance = (it.amountLoc - it.payLoc),
+                sourceId = it.documentNo,
+                sourceType = SettlementType.valueOf(it.accType.name),
+                tdsCurrency = it.currency
+            )
+        }
+
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document.mappingId != null }
+            .map { document -> document.mappingId.toString() }
+            .distinct()
+
+        val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
+        documentModel.forEach {
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = Hashids.encode(it.id.toLong())
+        }
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
+        for (doc in documentModel) {
+            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
+            val rate = getTdsRate(tdsElement)
+            doc.tds = calculateTds(
+                rate = rate,
+                settledTds = doc.settledTds!!,
+                taxableAmount = doc.taxableAmount
+            )
+            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
+            doc.balanceAmount -= doc.tds
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
+            doc.status = settlementServiceHelper.getDocumentStatus(
+                docAmount = doc.documentAmount,
+                balanceAmount = doc.currentBalance,
+                docType = SettlementType.valueOf(doc.accountType)
+            )
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.allocationAmount = doc.balanceAmount
+            doc.balanceAfterAllocation = BigDecimal.ZERO
+        }
+
+        val checkDocumentData = documentModel.map {
+            CheckDocument(
+                id = Hashids.encode(it.id.toLong()),
+                documentNo = Hashids.encode(it.documentNo.toLong()),
+                documentValue = it.documentValue,
+                accountType = SettlementType.valueOf(it.accountType),
+                documentAmount = it.documentAmount,
+                tds = 0.toBigDecimal(),
+                afterTdsAmount = 0.toBigDecimal(),
+                balanceAmount = (it.balanceAmount),
+                accMode = it.accMode,
+                allocationAmount = it.allocationAmount!!,
+                currentBalance = it.currentBalance,
+                balanceAfterAllocation = it.balanceAfterAllocation!!,
+                ledgerAmount = it.ledgerAmount,
+                status = it.status.toString(),
+                currency = it.currency,
+                ledCurrency = it.ledCurrency,
+                exchangeRate = it.exchangeRate,
+                transactionDate = it.transactionDate,
+                settledTds = it.settledTds!!,
+                signFlag = it.signFlag,
+                nostroAmount = it.nostroAmount,
+                settledAmount = it.settledAmount,
+                settledAllocation = it.settledAllocation!!,
+                settledNostro = 0.toBigDecimal()
+            )
+        } as MutableList<CheckDocument>
+
+        val checkRequest = CheckRequest(
+            stackDetails = checkDocumentData,
+            createdBy = null,
+            createdByUserType = null,
+            incidentId = null,
+            incidentMappingId = null,
+            remark = null
+        )
+
+        return settle(checkRequest)
+    }
 }

@@ -12,6 +12,7 @@ import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
@@ -49,4 +50,6 @@ interface SettlementService {
     suspend fun reject(request: RejectSettleApproval): String
 
     suspend fun getOrgSummary(request: OrgSummaryRequest): OrgSummaryResponse
+
+    suspend fun settleWithSourceIdAndDestinationId(sourceId: String, destinationId: String, sourceType: SettlementType, destinationType: SettlementType): List<CheckDocument>?
 }
