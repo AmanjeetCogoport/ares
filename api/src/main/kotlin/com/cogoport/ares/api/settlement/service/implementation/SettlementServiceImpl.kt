@@ -551,16 +551,8 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
-        val tradePartyMappingIds = documentEntity
-            .filter { document -> document!!.mappingId != null }
-            .map { document -> document!!.mappingId.toString() }
-            .distinct()
-        val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
-        documentModel.forEach {
-            it.documentNo = Hashids.encode(it.documentNo.toLong())
-            it.id = Hashids.encode(it.id.toLong())
-        }
-        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
+        val documentModel = calculatingTds(documentEntity)
+
         val total =
             accountUtilizationRepository.getDocumentCount(
                 accType,
@@ -570,26 +562,6 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 "${request.query}%"
             )
-        for (doc in documentModel) {
-            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
-            val rate = getTdsRate(tdsElement)
-            doc.tds = calculateTds(
-                rate = rate,
-                settledTds = doc.settledTds!!,
-                taxableAmount = doc.taxableAmount
-            )
-            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
-            doc.balanceAmount -= doc.tds
-            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
-            doc.status = settlementServiceHelper.getDocumentStatus(
-                docAmount = doc.documentAmount,
-                balanceAmount = doc.currentBalance,
-                docType = SettlementType.valueOf(doc.accountType)
-            )
-            doc.settledAllocation = BigDecimal.ZERO
-            doc.allocationAmount = doc.balanceAmount
-            doc.balanceAfterAllocation = BigDecimal.ZERO
-        }
 
         val billListIds = documentModel.filter { it.accountType in listOf("PINV", "PREIMB") }.map { it.documentNo }
 
@@ -2296,8 +2268,8 @@ open class SettlementServiceImpl : SettlementService {
 
         val checkDocumentData = documentModel.map {
             CheckDocument(
-                id = Hashids.encode(it.id.toLong()),
-                documentNo = Hashids.encode(it.documentNo.toLong()),
+                id = it.id,
+                documentNo = it.documentNo,
                 documentValue = it.documentValue,
                 accountType = SettlementType.valueOf(it.accountType),
                 documentAmount = it.documentAmount,
@@ -2333,5 +2305,41 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         return settle(checkRequest)
+    }
+
+    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>):List<com.cogoport.ares.model.settlement.Document>{
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document!!.mappingId != null }
+            .map { document -> document!!.mappingId.toString() }
+            .distinct()
+        val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
+        documentModel.forEach {
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = Hashids.encode(it.id.toLong())
+        }
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
+
+        for (doc in documentModel) {
+            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
+            val rate = getTdsRate(tdsElement)
+            doc.tds = calculateTds(
+                rate = rate,
+                settledTds = doc.settledTds!!,
+                taxableAmount = doc.taxableAmount
+            )
+            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
+            doc.balanceAmount -= doc.tds
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
+            doc.status = settlementServiceHelper.getDocumentStatus(
+                docAmount = doc.documentAmount,
+                balanceAmount = doc.currentBalance,
+                docType = SettlementType.valueOf(doc.accountType)
+            )
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.allocationAmount = doc.balanceAmount
+            doc.balanceAfterAllocation = BigDecimal.ZERO
+        }
+
+        return documentModel
     }
 }

@@ -153,7 +153,7 @@ class SettlementController {
     }
 
     @Post("/settle-with-source-and-destination-id")
-    suspend fun settleWithSourceIdAndDestinationId(@QueryValue("sourceId") sourceId: String, @QueryValue("destinationId") destinationId: String, @QueryValue("sourceType") sourceType: SettlementType, @QueryValue("sourceType") destinationType: SettlementType): List<CheckDocument>? {
+    suspend fun settleWithSourceIdAndDestinationId(@QueryValue("sourceId") sourceId: String, @QueryValue("destinationId") destinationId: String, @QueryValue("sourceType") sourceType: SettlementType, @QueryValue("destinationType") destinationType: SettlementType): List<CheckDocument>? {
         return settlementService.settleWithSourceIdAndDestinationId(sourceId, destinationId, sourceType, destinationType)
     }
 }
