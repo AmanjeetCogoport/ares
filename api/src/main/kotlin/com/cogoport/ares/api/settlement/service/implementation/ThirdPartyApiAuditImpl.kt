@@ -7,7 +7,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
-class ThirdPartyApiAuditImpl: ThirdPartyApiAuditService {
+class ThirdPartyApiAuditImpl : ThirdPartyApiAuditService {
     @Inject
     lateinit var thirdPartyApiAuditRepository: ThirdPartyApiAuditRepository
 

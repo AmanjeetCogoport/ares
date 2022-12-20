@@ -11,7 +11,7 @@ import java.time.LocalDateTime
 
 @Introspected
 @MappedEntity(value = "third_party_api_audits")
-data class ThirdPartyApiAudit (
+data class ThirdPartyApiAudit(
     @field:Id
     @GeneratedValue
     var id: Long?,

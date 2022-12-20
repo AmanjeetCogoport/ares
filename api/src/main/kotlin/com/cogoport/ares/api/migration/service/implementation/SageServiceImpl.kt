@@ -11,8 +11,8 @@ import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
-import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.brahma.sage.Client
 import com.cogoport.brahma.sage.SageException
@@ -27,7 +27,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.JSONObject
 import org.json.XML
-import com.cogoport.ares.api.utils.logger
 
 @Singleton
 class SageServiceImpl : SageService {
@@ -303,7 +302,7 @@ class SageServiceImpl : SageService {
             if (jvDetails.status == JVStatus.APPROVED) {
                 result = Client.postJVToSage(
                     JVRequest
-                        (
+                    (
                         JVEntryType.MISC,
                         jvDetails.jvNum,
                         jvDetails.entityCode.toString(),
