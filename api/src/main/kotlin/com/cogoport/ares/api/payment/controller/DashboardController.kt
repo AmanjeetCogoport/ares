@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -14,16 +15,21 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.CollectionRequest
+import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -35,6 +41,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.math.BigDecimal
 import javax.validation.Valid
 
 @Validated
@@ -44,6 +51,8 @@ class DashboardController {
     lateinit var dashboardService: DashboardService
     @Inject
     lateinit var pushToClientService: OpenSearchService
+    @Inject
+    lateinit var exchangeRateHelper: ExchangeRateHelper
     @Get("/overall-stats{?request*}")
     suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData? {
         return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
@@ -99,6 +108,25 @@ class DashboardController {
         @Valid @Body request: CustomerStatsRequest
     ): ResponseList<StatsForCustomerResponse?> {
         return dashboardService.getOverallStatsForCustomers(request)
+    }
+
+    @Post("/trade-party/stats")
+    suspend fun getOverallStatsForTradeParties(
+        @Valid @Body request: TradePartyStatsRequest
+    ): ResponseList<OverallStatsForTradeParty?> {
+        return dashboardService.getStatsForTradeParties(request)
+    }
+
+    @Post("/trade-party/invoice/list")
+    suspend fun getInvoiceListForTradeParties(
+        @Valid @Body request: InvoiceListRequestForTradeParty
+    ): ResponseList<InvoiceListResponse?> {
+        return dashboardService.getInvoiceListForTradeParties(request)
+    }
+
+    @Get("/exchange-rate/for/period{?request*}")
+    suspend fun getExchangeRateForPeriod(@Valid request: ExchangeRateForPeriodRequest): HashMap<String, BigDecimal> {
+        return exchangeRateHelper.getExchangeRateForPeriod(request.currencyList, request.dashboardCurrency)
     }
 
     /** To be Deleted */

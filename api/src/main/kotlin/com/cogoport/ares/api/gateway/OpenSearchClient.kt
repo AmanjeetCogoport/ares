@@ -105,7 +105,7 @@ class OpenSearchClient {
             Client.search(
                 { s ->
                     s.index(index).query { q ->
-                        q.matchPhrase { a -> a.field("organizationId").query(values) }
+                        q.matchPhrase { a -> a.field("_id").query(values) }
                     }
                 },
                 classType
@@ -178,8 +178,10 @@ class OpenSearchClient {
                                 if (request.query != null) {
                                     b.must { m ->
                                         m.queryString { q ->
-                                            q.query(request.query + "*")
-                                                .fields("organizationName", "utr")
+                                            q.query("*${request.query!!.replace("/", "\\/")}*")
+                                                .fields("organizationName", "utr.keyword")
+                                                .lenient(true)
+                                                .allowLeadingWildcard(true)
                                                 .defaultOperator(Operator.And)
                                         }
                                     }

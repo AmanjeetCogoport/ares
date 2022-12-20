@@ -7,7 +7,6 @@ import java.math.BigDecimal
 data class OverallStats(
     var totalOutstandingAmount: BigDecimal?,
     var openInvoicesCount: Int?,
-    var organizationCount: Int?,
     var openInvoicesAmount: BigDecimal?,
     var openOnAccountPaymentAmount: BigDecimal?,
     var dashboardCurrency: String

@@ -36,6 +36,9 @@ class OutStandingServiceImpl : OutStandingService {
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
 
     @Inject
+    lateinit var businessPartnersImpl: DefaultedBusinessPartnersServiceImpl
+
+    @Inject
     lateinit var orgOutstandingConverter: OrgOutstandingMapper
 
     @Inject
@@ -43,8 +46,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
-            if (request.orgId != null)
-                UUID.fromString(request.orgId)
+            request.orgIds.map {
+                UUID.fromString(it)
+            }
         } catch (exception: IllegalArgumentException) {
             throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
         }
@@ -54,8 +58,16 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getOutstandingList(request: OutstandingListRequest): OutstandingList {
+        if (request.orgId != null) {
+            request.orgIds.add(request.orgId!!)
+        }
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
+        val defaultersOrgIds = businessPartnersImpl.listTradePartyDetailIds()
+        val orgIds: MutableList<UUID> = mutableListOf()
+        request.orgIds.map {
+            orgIds.add(UUID.fromString(it))
+        }
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->

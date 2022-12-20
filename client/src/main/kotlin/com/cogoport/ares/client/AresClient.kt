@@ -18,6 +18,8 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
+import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
@@ -28,18 +30,21 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -57,6 +62,9 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.multipart.StreamingFileUpload
 import jakarta.validation.Valid
 import java.math.BigDecimal
+import java.util.UUID
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 @Client(id = "ares")
 interface AresClient {
@@ -148,6 +156,22 @@ interface AresClient {
     @Get("/payments/invoice/payment-status{?invoicePaymentRequest*}")
     suspend fun getInvoicePaymentStatus(@Valid invoicePaymentRequest: InvoicePaymentRequest): InvoicePaymentResponse?
 
+    @Get("/payments/defaulters/list/trade-party-detail-ids")
+    suspend fun listTradePartyDetailIds(): List<UUID>?
+
+    @Get("/payments/dashboard/exchange-rate/for/period{?request*}")
+    suspend fun getExchangeRateForPeriod(@Valid request: ExchangeRateForPeriodRequest): HashMap<String, BigDecimal>
+
     @Post("/payments/outstanding/customer-outstanding")
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?>
+
+    @Post("/payments/dashboard/trade-party/stats")
+    suspend fun getOverallStatsForTradeParties(
+        @Valid @Body request: TradePartyStatsRequest
+    ): ResponseList<OverallStatsForTradeParty?>
+
+    @Post("/payments/dashboard/trade-party/invoice/list")
+    suspend fun getInvoiceListForTradeParties(
+        @Valid @Body request: InvoiceListRequestForTradeParty
+    ): ResponseList<InvoiceListResponse?>
 }
