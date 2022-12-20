@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -7,16 +9,39 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.brahma.sage.Client
+import com.cogoport.brahma.sage.SageException
+import com.cogoport.brahma.sage.model.request.JVEntryType
+import com.cogoport.brahma.sage.model.request.JVLineItem
+import com.cogoport.brahma.sage.model.request.JVRequest
+import com.cogoport.brahma.sage.model.request.JVType
+import com.cogoport.brahma.sage.model.request.SageResponse
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.json.JSONObject
+import org.json.XML
+import com.cogoport.ares.api.utils.logger
 
 @Singleton
 class SageServiceImpl : SageService {
 
     @Value("\${sage.databaseName}")
     var sageSchema: String? = null
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
+
+    @Inject
+    lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    private val logger = logger()
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """
@@ -254,5 +279,103 @@ class SageServiceImpl : SageService {
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, SettlementRecordManager::class.java)
         return payments.recordSets!![0]
+    }
+
+    override suspend fun postJVToSage(jvId: Long): Boolean {
+        try {
+            val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
+
+            lateinit var result: SageResponse
+
+            val jvLineItem = JVLineItem(
+                "",
+                jvDetails.accMode.name,
+                "",
+                jvDetails.description!!,
+                signFlag = when (jvDetails.type == "debit") {
+                    true -> 1
+                    false -> -1
+                },
+                jvDetails.amount!!,
+                jvDetails.ledCurrency
+            )
+
+            if (jvDetails.status == JVStatus.APPROVED) {
+                result = Client.postJVToSage(
+                    JVRequest
+                        (
+                        JVEntryType.MISC,
+                        jvDetails.jvNum,
+                        jvDetails.entityCode.toString(),
+                        JVType.MISC,
+                        jvDetails.currency!!,
+                        "",
+                        jvDetails.createdAt!!,
+                        jvDetails.description!!,
+                        arrayListOf(jvLineItem)
+                    )
+                )
+
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+
+                if (status == 1) {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            jvId,
+                            "JOURNAL_VOUCHER",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            true
+                        )
+                    )
+                    return true
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            jvId,
+                            "JOURNAL_VOUCHER",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            false
+                        )
+                    )
+                }
+            }
+        } catch (exception: SageException) {
+            logger.error("Sage Exception" + exception.data)
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher", jvId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    exception.data,
+                    exception.context,
+                    false
+                )
+            )
+            throw exception
+        }
+        return false
+    }
+
+    private fun getStatus(processedResponse: JSONObject?): Int? {
+        val status = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("status")
+            ?.get("content")
+        return status as Int?
     }
 }

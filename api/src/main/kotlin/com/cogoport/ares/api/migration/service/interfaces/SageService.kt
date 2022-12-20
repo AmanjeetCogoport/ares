@@ -13,4 +13,6 @@ interface SageService {
     suspend fun migratePaymentByPaymentNum(paymentNums: String): ArrayList<PaymentRecord>
 
     suspend fun getSettlementDataFromSage(startDate: String, endDate: String, source: String?, destination: String?): ArrayList<SettlementRecord>
+
+    suspend fun postJVToSage(jvId: Long): Boolean
 }

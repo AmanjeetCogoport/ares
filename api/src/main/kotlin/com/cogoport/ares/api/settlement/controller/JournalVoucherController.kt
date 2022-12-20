@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.common.models.Response
@@ -8,6 +9,8 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
+import com.cogoport.brahma.hashids.Hashids
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -25,6 +28,9 @@ class JournalVoucherController {
 
     @Inject
     lateinit var journalVoucherService: JournalVoucherService
+
+    @Inject
+    lateinit var sageService: SageService
 
     @Post
     suspend fun createJv(@Body request: JournalVoucherRequest): Response<String> {
@@ -44,5 +50,13 @@ class JournalVoucherController {
     @Post("/reject")
     suspend fun rejectJv(@Valid @Body request: JournalVoucherReject): Response<String> {
         return Response<String>().ok("Rejected", journalVoucherService.rejectJournalVoucher(request))
+    }
+
+    @Post("/post-to-sage")
+    suspend fun postJVToSageUsingJVId(id: String): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            if (sageService.postJVToSage(Hashids.decode(id)[0])) "Success." else "Failed."
+        )
     }
 }
