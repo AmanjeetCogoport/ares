@@ -675,7 +675,7 @@ class PaymentMigrationImpl : PaymentMigration {
             migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue, migrationStatus)
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
-            if (errorMessage.length> 5000) {
+            if (errorMessage.length > 5000) {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while updating utilized amount ${payLocUpdateRequest.documentValue} " + ex.stackTraceToString())
