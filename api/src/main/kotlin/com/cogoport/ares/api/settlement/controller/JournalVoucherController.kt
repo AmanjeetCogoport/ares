@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.settlement.controller
 
-import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.common.models.Response
@@ -29,9 +28,6 @@ class JournalVoucherController {
     @Inject
     lateinit var journalVoucherService: JournalVoucherService
 
-    @Inject
-    lateinit var sageService: SageService
-
     @Post
     suspend fun createJv(@Body request: JournalVoucherRequest): Response<String> {
         return Response<String>().ok("Request Sent", journalVoucherService.createJournalVoucher(request))
@@ -56,7 +52,7 @@ class JournalVoucherController {
     suspend fun postJVToSageUsingJVId(id: String): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (sageService.postJVToSage(Hashids.decode(id)[0])) "Success." else "Failed."
+            if (journalVoucherService.postJVToSage(Hashids.decode(id)[0])) "Success." else "Failed."
         )
     }
 }

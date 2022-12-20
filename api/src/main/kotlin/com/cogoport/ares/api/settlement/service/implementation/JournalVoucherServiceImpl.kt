@@ -10,10 +10,12 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
@@ -22,7 +24,11 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
+import com.cogoport.ares.model.settlement.enums.JVCategory
+import com.cogoport.ares.model.settlement.enums.JVSageAccount
+import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.enums.SageGLCodes
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
@@ -30,6 +36,13 @@ import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
+import com.cogoport.brahma.sage.SageException
+import com.cogoport.brahma.sage.model.request.JVEntryType
+import com.cogoport.brahma.sage.model.request.JVLineItem
+import com.cogoport.brahma.sage.model.request.JVRequest
+import com.cogoport.brahma.sage.model.request.JVType
+import com.cogoport.brahma.sage.Client
+import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
@@ -44,6 +57,8 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
+import org.json.JSONObject
+import org.json.XML
 
 @Singleton
 open class JournalVoucherServiceImpl : JournalVoucherService {
@@ -63,8 +78,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
+
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     /**
      * Get List of JVs based on input filters.
@@ -344,5 +363,122 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 throw AresException(AresError.ERR_1009, "JV type")
             }
         }
+    }
+
+    override suspend fun postJVToSage(jvId: Long): Boolean {
+        try {
+            val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
+
+            if (jvDetails.status != JVStatus.UTILIZED) {
+                throw AresException(AresError.ERR_1515, "")
+            }
+            lateinit var result: SageResponse
+            
+            val jvLineItem = JVRequest(
+                    JVEntryType.MISC,
+                    jvDetails.jvNum,
+                    jvDetails.entityCode.toString(),
+                    JVType.MISC,
+                    jvDetails.currency!!,
+                    "",
+                    jvDetails.createdAt!!,
+                    "",
+                    arrayListOf(getJvLineItem(jvDetails), getJvGLLineItem(jvDetails))
+            )
+            if (jvDetails.status == JVStatus.APPROVED) {
+                result = Client.postJVToSage(
+
+                )
+
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+
+                if (status == 1) {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            jvId,
+                            "JOURNAL_VOUCHER",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            true
+                        )
+                    )
+                    return true
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            jvId,
+                            "JOURNAL_VOUCHER",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            false
+                        )
+                    )
+                }
+            }
+        } catch (exception: SageException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher", jvId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    exception.data,
+                    exception.context,
+                    false
+                )
+            )
+            throw exception
+        }
+        return false
+    }
+
+    private fun getJvLineItem(journalVoucher: JournalVoucher): JVLineItem {
+        return JVLineItem(
+            acc = if (journalVoucher.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
+            accMode = if (journalVoucher.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
+            sageBPRNumber = "", // Fix property name in brahma and call to fetch BPR number
+            description = "",
+            signFlag = getSignFlag(journalVoucher.accMode, journalVoucher.type.toString().uppercase()).toInt(),
+            amount = journalVoucher.amount!!,
+            currency = journalVoucher.currency!!
+        )
+    }
+
+    private fun getJvGLLineItem(journalVoucher: JournalVoucher): JVLineItem {
+        val glCode = when (journalVoucher.category) {
+            JVCategory.JVNOS -> SageGLCodes.JVNOS
+            JVCategory.EXCH -> SageGLCodes.EXCH
+            JVCategory.ROFF -> SageGLCodes.ROFF
+            JVCategory.WOFF -> SageGLCodes.WOFF
+            else -> {throw AresException(AresError.ERR_1516, journalVoucher.category.toString())}
+        }
+        return JVLineItem(
+            glCode.value,
+            "",
+            "",
+            "",
+            getSignFlag(journalVoucher.accMode, journalVoucher.type.toString().uppercase()).toInt() * -1,
+            amount = journalVoucher.amount!!,
+            currency = journalVoucher.currency!!
+        )
+    }
+    private fun getStatus(processedResponse: JSONObject?): Int? {
+        val status = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("status")
+            ?.get("content")
+        return status as Int?
     }
 }
