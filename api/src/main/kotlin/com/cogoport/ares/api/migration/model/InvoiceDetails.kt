@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
+import java.sql.Timestamp
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -25,5 +26,7 @@ class InvoiceDetails(
     @JsonProperty("created_at")
     val createdAt: String?,
     @JsonProperty("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    @JsonProperty("utilization_updated_at")
+    val utilizationUpdatedAt: Timestamp?
 )

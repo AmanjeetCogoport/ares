@@ -50,8 +50,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return jvRecords.size
     }
 
-    override suspend fun migratePaymentsByDate(bpr: String, mode: String): Int {
-        val paymentRecords = sageService.migratePaymentsByDate(bpr, mode)
+    override suspend fun migratePaymentsByDate(startDate: String?, endDate: String?): Int {
+        val paymentRecords = sageService.migratePaymentsByDate(startDate, endDate, null)
         logger().info("Total number of payment record to process : ${paymentRecords.size}")
         for (paymentRecord in paymentRecords) {
             aresKafkaEmitter.emitPaymentMigration(paymentRecord)
@@ -99,8 +99,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return entries.size
     }
 
-    override suspend fun updateUtilizationAmount(startDate: String?, endDate: String?): Int {
-        val paymentRecords = sageService.migratePaymentsByDate(startDate!!, endDate!!)
+    override suspend fun updateUtilizationAmount(startDate: String?, endDate: String?, updatedAt: String?): Int {
+        val paymentRecords = sageService.migratePaymentsByDate(startDate, endDate, updatedAt)
         for (paymentRecord in paymentRecords) {
             val payLocRecord = getPayLocRecord(paymentRecord)
             aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
@@ -123,8 +123,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return paymentRecords.size
     }
 
-    override suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?): Int {
-        val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate!!, endDate!!)
+    override suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?, updatedAt: String?): Int {
+        val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate, endDate, updatedAt)
         for (invoiceDetail in invoiceDetails) {
             val payLocRecord = getPayLocRecordForInvoice(invoiceDetail)
             aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
@@ -132,8 +132,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return invoiceDetails.size
     }
 
-    override suspend fun updateUtilizationForBill(startDate: String?, endDate: String?): Int {
-        val billDetails = sageService.getBillPayLocDetails(startDate!!, endDate!!)
+    override suspend fun updateUtilizationForBill(startDate: String?, endDate: String?, updatedAt: String?): Int {
+        val billDetails = sageService.getBillPayLocDetails(startDate, endDate, updatedAt)
         for (billDetail in billDetails) {
             val payLocRecord = getPayLocRecordForInvoice(billDetail)
             aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)

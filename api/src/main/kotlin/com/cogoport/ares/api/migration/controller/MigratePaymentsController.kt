@@ -85,7 +85,7 @@ class MigratePaymentsController {
         @QueryValue startDate: String,
         @QueryValue endDate: String
     ): Response<String> {
-        val count = paymentMigration.updateUtilizationAmount(startDate, endDate)
+        val count = paymentMigration.updateUtilizationAmount(startDate, endDate, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for payments total record: $count"
@@ -103,7 +103,7 @@ class MigratePaymentsController {
 
     @Get("/update-invoice-utilization")
     suspend fun updateInvoiceUtilization(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
-        val count = paymentMigration.updateUtilizationForInvoice(startDate, endDate)
+        val count = paymentMigration.updateUtilizationForInvoice(startDate, endDate, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for invoice total record: $count"
@@ -112,7 +112,7 @@ class MigratePaymentsController {
 
     @Get("/update-bill-utilization")
     suspend fun updateBillUtilization(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
-        val count = paymentMigration.updateUtilizationForBill(startDate, endDate)
+        val count = paymentMigration.updateUtilizationForBill(startDate, endDate, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
