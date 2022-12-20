@@ -60,6 +60,7 @@ import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
+import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
@@ -2189,13 +2190,10 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun settleWithSourceIdAndDestinationId(
-        sourceId: String,
-        destinationId: String,
-        sourceType: SettlementType,
-        destinationType: SettlementType
+        sassSettlementRequest: SassSettlementRequest
     ): List<CheckDocument>? {
-        val sourceDocument = accountUtilizationRepository.findRecord(Hashids.decode(sourceId)[0], sourceType.name)
-        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(destinationId)[0], destinationType.name)
+        val sourceDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.sourceId)[0], sassSettlementRequest.sourceType)
+        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.destinationId)[0], sassSettlementRequest.destinationType)
 
         val listOfDocuments = mutableListOf<AccountUtilization>()
         listOfDocuments.add(sourceDocument!!)
@@ -2234,37 +2232,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-        val tradePartyMappingIds = documentEntity
-            .filter { document -> document.mappingId != null }
-            .map { document -> document.mappingId.toString() }
-            .distinct()
-
-        val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
-        documentModel.forEach {
-            it.documentNo = Hashids.encode(it.documentNo.toLong())
-            it.id = Hashids.encode(it.id.toLong())
-        }
-        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
-        for (doc in documentModel) {
-            val tdsElement = tdsProfiles.find { it.id == doc.mappingId }
-            val rate = getTdsRate(tdsElement)
-            doc.tds = calculateTds(
-                rate = rate,
-                settledTds = doc.settledTds!!,
-                taxableAmount = doc.taxableAmount
-            )
-            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
-            doc.balanceAmount -= doc.tds
-            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
-            doc.status = settlementServiceHelper.getDocumentStatus(
-                docAmount = doc.documentAmount,
-                balanceAmount = doc.currentBalance,
-                docType = SettlementType.valueOf(doc.accountType)
-            )
-            doc.settledAllocation = BigDecimal.ZERO
-            doc.allocationAmount = doc.balanceAmount
-            doc.balanceAfterAllocation = BigDecimal.ZERO
-        }
+        val documentModel = calculatingTds(documentEntity)
 
         val checkDocumentData = documentModel.map {
             CheckDocument(

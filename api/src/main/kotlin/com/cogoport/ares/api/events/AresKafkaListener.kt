@@ -3,12 +3,14 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
+import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
@@ -26,6 +28,9 @@ class AresKafkaListener {
 
     @Inject
     private lateinit var knockoffService: KnockoffService
+
+    @Inject
+    private lateinit var settlementService: SettlementService
 
     /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
     @Topic("create-account-utilization")
@@ -69,5 +74,10 @@ class AresKafkaListener {
     @Topic("reverse-utr")
     fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
         knockoffService.reverseUtr(reverseUtrRequest)
+    }
+
+    @Topic("auto-knockoff")
+    fun settleWithSourceIdAndDestinationId(sassSettlementRequest: SassSettlementRequest) = runBlocking {
+        settlementService.settleWithSourceIdAndDestinationId(sassSettlementRequest)
     }
 }
