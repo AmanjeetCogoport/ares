@@ -411,7 +411,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_OUTSTANDING_INDEX, docId, orgOutstanding)
     }
 
-    private fun validateDueAmount(data: MutableList<DueAmount>) {
+    fun validateDueAmount(data: MutableList<DueAmount>) {
         data.forEach { if (it.amount == 0.toBigDecimal()) it.amount = 0.0.toBigDecimal() }
         listOf("INR", "USD").forEach { curr ->
             if (curr !in data.groupBy { it.currency }) {

@@ -31,6 +31,10 @@ class OutstandingController {
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList? {
         return Response<OutstandingList?>().ok(outStandingService.getOutstandingList(request))
     }
+    @Get("/bill-overall{?request*}")
+    suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): OutstandingList? {
+        return Response<OutstandingList?>().ok(outStandingService.getBillsOutstandingList(request))
+    }
 
     @Get("/invoice-list{?request*}")
     suspend fun getInvoiceList(@Valid request: InvoiceListRequest): ListInvoiceResponse? {

@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
+import com.cogoport.ares.api.payment.entity.BillOutsatndingAgeing
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -284,6 +285,60 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @WithSpan
     @Query(
         """
+        select organization_id,
+        organization_name,
+        sum(case when due_date >= now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
+        sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
+        sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
+        sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end) as ninety_amount,
+        sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end) as oneeighty_amount,
+        sum(case when (now()::date - due_date) between 180 and 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfive_amount,
+        sum(case when (now()::date - due_date) > 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfiveplus_amount,
+        sum(sign_flag *(amount_loc-pay_loc)) as total_outstanding,
+        sum(case when due_date >= now()::date then 1 else 0 end) as not_due_count,
+        sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
+        sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
+        sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
+        sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end) as oneeighty_count,
+        sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
+        sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
+        from account_utilizations
+        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AP' 
+        and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
+        and (:orgId is null or organization_id = :orgId::uuid) and  acc_type = 'PINV' and deleted_at is null
+        group by organization_id,organization_name
+        OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+        LIMIT :pageLimit
+        """
+    )
+    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<BillOutsatndingAgeing>
+
+    @WithSpan
+    @Query(
+        """
+            SELECT
+                count(t.organization_id)
+            FROM (
+                SELECT
+                    organization_id
+                FROM
+                    account_utilizations
+                WHERE
+                    zone_code = 'NORTH'
+                    AND acc_mode = 'AP'
+                    AND due_date IS NOT NULL
+                    AND document_status in('FINAL', 'PROFORMA')
+                    AND organization_id IS NOT NULL
+                    AND acc_type = 'PINV'
+                    AND deleted_at IS NULL
+                GROUP BY
+                    organization_id) AS t 
+        """
+    )
+    suspend fun getBillsOutstandingAgeingBucketCount(zone: String?, queryName: String?, orgId: String?): Int
+    @WithSpan
+    @Query(
+        """
         select organization_id::varchar, currency,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
@@ -294,7 +349,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
+        where acc_type in ('PINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
         and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
         group by organization_id, currency
         """

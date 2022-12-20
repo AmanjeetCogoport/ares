@@ -18,4 +18,6 @@ interface OutStandingService {
     suspend fun getCurrOutstanding(invoiceIds: List<Long>): Long
 
     suspend fun getCustomersOutstandingInINR(orgIds: List<String>): MutableMap<String, BigDecimal?>
+
+    suspend fun getBillsOutstandingList(request: OutstandingListRequest): OutstandingList
 }
