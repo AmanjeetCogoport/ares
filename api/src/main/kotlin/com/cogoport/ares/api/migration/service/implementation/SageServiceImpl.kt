@@ -1,7 +1,5 @@
 package com.cogoport.ares.api.migration.service.implementation
 
-import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -9,24 +7,14 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
-import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.brahma.sage.Client
-import com.cogoport.brahma.sage.SageException
-import com.cogoport.brahma.sage.model.request.JVEntryType
-import com.cogoport.brahma.sage.model.request.JVLineItem
-import com.cogoport.brahma.sage.model.request.JVRequest
-import com.cogoport.brahma.sage.model.request.JVType
-import com.cogoport.brahma.sage.model.request.SageResponse
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.json.JSONObject
-import org.json.XML
 
 @Singleton
 class SageServiceImpl : SageService {

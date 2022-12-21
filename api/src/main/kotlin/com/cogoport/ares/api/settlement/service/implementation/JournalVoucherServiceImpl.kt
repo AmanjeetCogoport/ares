@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -23,6 +25,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
@@ -33,22 +36,28 @@ import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.brahma.hashids.Hashids
-import com.cogoport.hades.client.HadesClient
-import com.cogoport.hades.model.incident.IncidentData
-import com.cogoport.hades.model.incident.Organization
+import com.cogoport.brahma.sage.Client
 import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.JVEntryType
 import com.cogoport.brahma.sage.model.request.JVLineItem
 import com.cogoport.brahma.sage.model.request.JVRequest
 import com.cogoport.brahma.sage.model.request.JVType
-import com.cogoport.brahma.sage.Client
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
+import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.json.JSONObject
+import org.json.XML
 import java.math.BigDecimal
 import java.sql.Date
 import java.sql.SQLException
@@ -57,8 +66,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
-import org.json.JSONObject
-import org.json.XML
 
 @Singleton
 open class JournalVoucherServiceImpl : JournalVoucherService {
@@ -78,12 +85,20 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
-
     @Inject
     lateinit var auditService: AuditService
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Inject
+    lateinit var railsClient: RailsClient
+
+    @Inject
+    lateinit var authClient: AuthClient
+
+    @Value("\${sage.databaseName}")
+    var sageDatabase: String? = null
 
     /**
      * Get List of JVs based on input filters.
@@ -372,22 +387,63 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             if (jvDetails.status != JVStatus.UTILIZED) {
                 throw AresException(AresError.ERR_1515, "")
             }
-            lateinit var result: SageResponse
-            
-            val jvLineItem = JVRequest(
-                    JVEntryType.MISC,
-                    jvDetails.jvNum,
-                    jvDetails.entityCode.toString(),
-                    JVType.MISC,
-                    jvDetails.currency!!,
-                    "",
-                    jvDetails.createdAt!!,
-                    "",
-                    arrayListOf(getJvLineItem(jvDetails), getJvGLLineItem(jvDetails))
+
+            val organization = railsClient.getListOrganizationTradePartyDetails(jvDetails.tradePartyId!!)
+
+            val sageOrganization = authClient.getSageOrganization(
+                SageOrganizationRequest(
+                    organization.list[0]["serial_id"]!!.toString(),
+                    "importer_exporter"
+                )
             )
+
+            val query = "Select SOHNUM_0 from $sageDatabase.SORDER where SOHNUM_0='${jvDetails.jvNum}'"
+            val resultFromQuery = Client.sqlQuery(query)
+            val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)["recordset"] as ArrayList<String>
+
+            if (records.size != 0) return true // this is done to prevent duplicate entry on sage
+
+            val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+            val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
+            val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            val sageOrganizationFromSageId = recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId
+
+            if (sageOrganization.sageOrganizationId.isNullOrEmpty()) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostJVToSage",
+                        "Journal Voucher",
+                        jvId,
+                        "JOURNAL_VOUCHER",
+                        "200",
+                        sageOrganization.toString(),
+                        "Sage organization not present",
+                        true
+                    )
+                )
+                return false
+            }
+
+            if (sageOrganization.sageOrganizationId != sageOrganizationFromSageId)
+                return false
+
+            lateinit var result: SageResponse
+
             if (jvDetails.status == JVStatus.APPROVED) {
                 result = Client.postJVToSage(
-
+                    JVRequest
+                    (
+                        JVEntryType.MISC,
+                        jvDetails.jvNum,
+                        jvDetails.entityCode.toString(),
+                        JVType.MISC,
+                        jvDetails.currency!!,
+                        "",
+                        jvDetails.createdAt!!,
+                        jvDetails.description!!,
+                        arrayListOf(getJvLineItem(jvDetails))
+                    )
                 )
 
                 val processedResponse = XML.toJSONObject(result.response)
@@ -446,7 +502,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return JVLineItem(
             acc = if (journalVoucher.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
             accMode = if (journalVoucher.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
-            sageBPRNumber = "", // Fix property name in brahma and call to fetch BPR number
+            sageBPRNumber = "",
             description = "",
             signFlag = getSignFlag(journalVoucher.accMode, journalVoucher.type.toString().uppercase()).toInt(),
             amount = journalVoucher.amount!!,
@@ -460,7 +516,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             JVCategory.EXCH -> SageGLCodes.EXCH
             JVCategory.ROFF -> SageGLCodes.ROFF
             JVCategory.WOFF -> SageGLCodes.WOFF
-            else -> {throw AresException(AresError.ERR_1516, journalVoucher.category.toString())}
+            else -> { throw AresException(AresError.ERR_1516, journalVoucher.category.toString()) }
         }
         return JVLineItem(
             glCode.value,
