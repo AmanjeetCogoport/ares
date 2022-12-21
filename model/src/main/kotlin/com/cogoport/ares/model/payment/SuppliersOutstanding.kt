@@ -1,0 +1,30 @@
+package com.cogoport.ares.model.payment
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
+import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
+
+@Introspected
+@ReflectiveAccess
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties(ignoreUnknown = true)
+class SuppliersOutstanding(
+    @JsonProperty("organizationId")
+    var organizationId: String?,
+    @JsonProperty("organizationName")
+    var organizationName: String?,
+    @JsonProperty("zoneCode")
+    var zoneCode: String?,
+    @JsonProperty("openInvoices")
+    var openInvoices: InvoiceStats?,
+    @JsonProperty("onAccountPayment")
+    var onAccountPayment: InvoiceStats?,
+    @JsonProperty("totalOutstanding")
+    var totalOutstanding: InvoiceStats?,
+    @JsonProperty("ageingBucket")
+    var ageingBucket: List<AgeingBucket>?,
+    @JsonProperty("ageingBucket")
+    var creditNoteCount: Int
+)

@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -19,5 +20,5 @@ interface OutStandingService {
 
     suspend fun getCustomersOutstandingInINR(orgIds: List<String>): MutableMap<String, BigDecimal?>
 
-    suspend fun getBillsOutstandingList(request: OutstandingListRequest): OutstandingList
+    suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList
 }

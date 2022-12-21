@@ -9,11 +9,13 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
@@ -175,16 +177,18 @@ class OutStandingServiceImpl : OutStandingService {
         return organizationOutStanding
     }
 
-    override suspend fun getBillsOutstandingList(request: OutstandingListRequest): OutstandingList {
+    override suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList {
         validateInput(request)
         val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
         val ageingBucket = mutableListOf<BillOutStandingAgeingResponse>()
-        val listOrganization: MutableList<CustomerOutstanding?> = mutableListOf()
-        queryResponse.forEach {
-            it
+        val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
+        val listOrganizationIds: MutableList<String?> = mutableListOf()
+        queryResponse.forEach { it ->
             ageingBucket.add(outstandingAgeingConverter.convertToBillModel(it))
+            listOrganizationIds.add(it.organizationId)
         }
+
         ageingBucket.forEach {
             var data = accountUtilizationRepository.generateOrgOutstanding(it.organizationId!!, request.zone)
             var dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
@@ -201,7 +205,7 @@ class OutStandingServiceImpl : OutStandingService {
             openSearchServiceImpl.validateDueAmount(outstandingDues)
             var orgId = it.organizationId
             var orgName = it.organizationName
-            var orgOutstanding = CustomerOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null)
+            var orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, 0)
             val zero = assignAgeingBucket("Not Due", it.notDueAmount, it.notDueCount, "not_due")
             val thirty = assignAgeingBucket("1-30", it.thirtyAmount, it.thirtyCount, "1_30")
             val sixty = assignAgeingBucket("31-60", it.sixtyAmount, it.sixtyCount, "31_60")
@@ -213,7 +217,7 @@ class OutStandingServiceImpl : OutStandingService {
             listOrganization.add(orgOutstanding)
         }
 
-        return OutstandingList(
+        return BillOutstandingList(
             list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
             totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
             totalRecords = totalRecords,
