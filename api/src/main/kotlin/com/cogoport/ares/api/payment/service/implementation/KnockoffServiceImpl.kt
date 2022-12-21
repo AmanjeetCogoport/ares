@@ -159,7 +159,7 @@ open class KnockoffServiceImpl : KnockoffService {
         if (leftAmount <= 0.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 0.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
-        var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null,knockOffRecord.createdBy)
+        var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
         try {
             emitPaymentStatus(accPayResponse)
         } catch (k: KafkaException) {
