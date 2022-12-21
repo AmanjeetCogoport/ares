@@ -16,6 +16,7 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -139,6 +140,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var journalVoucherService: JournalVoucherService
+
+    @Inject
+    lateinit var paymentRepository: PaymentRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -2192,7 +2196,8 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun settleWithSourceIdAndDestinationId(
         sassSettlementRequest: SassSettlementRequest
     ): List<CheckDocument>? {
-        val sourceDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.sourceId)[0], sassSettlementRequest.sourceType)
+        val sourceDocumentNo = paymentRepository.findByPaymentId(Hashids.decode(sassSettlementRequest.paymentIdAsSourceId)[0]).paymentNum!!
+        val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, sassSettlementRequest.sourceType)
         val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.destinationId)[0], sassSettlementRequest.destinationType)
 
         val listOfDocuments = mutableListOf<AccountUtilization>()

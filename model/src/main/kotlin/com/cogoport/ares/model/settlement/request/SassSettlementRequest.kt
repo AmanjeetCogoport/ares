@@ -4,7 +4,7 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class SassSettlementRequest(
-    var sourceId: String,
+    var paymentIdAsSourceId: String,
     var destinationId: String,
     var sourceType: String,
     var destinationType: String
