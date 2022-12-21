@@ -16,6 +16,7 @@ import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
@@ -27,6 +28,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
@@ -90,6 +92,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     @Inject
     lateinit var railsClient: RailsClient
@@ -384,9 +389,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         try {
             val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
 
-            if (jvDetails.status != JVStatus.UTILIZED) {
-                throw AresException(AresError.ERR_1515, "")
-            }
+//            if (jvDetails.status != JVStatus.UTILIZED) {
+//                throw AresException(AresError.ERR_1515, "")
+//            }
 
             val organization = railsClient.getListOrganizationTradePartyDetails(jvDetails.tradePartyId!!)
 
@@ -430,6 +435,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
             lateinit var result: SageResponse
 
+            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(jvId, listOf( SettlementType.ROFF))
+
+            val mapDestinationDocumentValue = destinationDocumentValue.map {
+                it?.destinationId
+            }.joinToString (",")
+
             if (jvDetails.status == JVStatus.APPROVED) {
                 result = Client.postJVToSage(
                     JVRequest
@@ -439,7 +450,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                         jvDetails.entityCode.toString(),
                         JVType.MISC,
                         jvDetails.currency!!,
-                        "",
+                        mapDestinationDocumentValue,
                         jvDetails.createdAt!!,
                         jvDetails.description!!,
                         arrayListOf(getJvLineItem(jvDetails))
