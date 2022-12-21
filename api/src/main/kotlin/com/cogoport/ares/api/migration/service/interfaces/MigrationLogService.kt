@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
+import com.cogoport.ares.api.migration.constants.MigrationStatus
 import java.math.BigDecimal
 
 interface MigrationLogService {
@@ -15,5 +16,11 @@ interface MigrationLogService {
         accountUtilLedAmount: BigDecimal?,
         errorMessage: String?
     )
-    suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, ex: String?, paymentNum: String?)
+    suspend fun saveMigrationLogs(
+        paymentId: Long?,
+        accUtilId: Long?,
+        ex: String?,
+        paymentNum: String?,
+        status: MigrationStatus
+    )
 }
