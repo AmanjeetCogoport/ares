@@ -1867,11 +1867,18 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private fun updateBalanceAmount(
+    private suspend fun updateBalanceAmount(
         accountUtilization: AccountUtilization,
         performedBy: UUID,
         performedByUserType: String?
     ) {
+
+        var paymentInvoiceInfo = settlementRepository.getPaymentDetailsByPaymentNumber(accountUtilization.documentNo)
+
+        if (accountUtilization.accType == AccountType.SCN && paymentInvoiceInfo?.transRefNumber != null) {
+            paymentInvoiceInfo?.transRefNumber = null
+        }
+
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
@@ -1879,7 +1886,12 @@ open class SettlementServiceImpl : SettlementService {
                     balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType,
-                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization),
+                    transRefNumber = paymentInvoiceInfo?.transRefNumber,
+                    settlementDate = paymentInvoiceInfo.settlementDate,
+                    sourceType = paymentInvoiceInfo.sourceType,
+                    sourceId = paymentInvoiceInfo.sourceId
+
                 )
             )
         )

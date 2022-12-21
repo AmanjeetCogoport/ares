@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
+import com.cogoport.ares.api.settlement.model.PaymentInvoiceInfo
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -210,6 +211,23 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
     )
     suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?): PaymentInfo?
+
+    @WithSpan
+    @Query(
+        """
+           SELECT
+                p.trans_ref_number, s.settlement_date::TIMESTAMP, s.source_type, s.source_id
+           FROM
+                settlements s
+                LEFT JOIN payments p  on p.payment_num = s.source_id WHERE
+                S.destination_id = :documentNo
+                And (p.acc_mode = 'AR' OR p.acc_mode IS NULL)
+                AND s.source_type not in ('CTDS')
+                order by s.created_at desc
+           LIMIT 1
+        """
+    )
+    suspend fun getPaymentDetailsByPaymentNumber(documentNo: Long?): PaymentInvoiceInfo
 
     @WithSpan
     @Query(
