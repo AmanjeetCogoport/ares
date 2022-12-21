@@ -389,9 +389,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         try {
             val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
 
-//            if (jvDetails.status != JVStatus.UTILIZED) {
-//                throw AresException(AresError.ERR_1515, "")
-//            }
+            if (jvDetails.status != JVStatus.UTILIZED) {
+                throw AresException(AresError.ERR_1515, "")
+            }
 
             val organization = railsClient.getListOrganizationTradePartyDetails(jvDetails.tradePartyId!!)
 
@@ -435,13 +435,13 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
             lateinit var result: SageResponse
 
-            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(jvId, listOf( SettlementType.ROFF))
+            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(jvId, listOf(SettlementType.ROFF))
 
             val mapDestinationDocumentValue = destinationDocumentValue.map {
                 it?.destinationId
             }.joinToString (",")
 
-            if (jvDetails.status == JVStatus.APPROVED) {
+            if (jvDetails.status == JVStatus.UTILIZED) {
                 result = Client.postJVToSage(
                     JVRequest
                     (
