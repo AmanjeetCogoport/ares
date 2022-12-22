@@ -16,6 +16,7 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
@@ -39,6 +40,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -142,7 +144,10 @@ open class SettlementServiceImpl : SettlementService {
     private lateinit var journalVoucherService: JournalVoucherService
 
     @Inject
-    lateinit var paymentRepository: PaymentRepository
+    private lateinit var paymentRepo: PaymentRepository
+
+    @Inject
+    private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1219,6 +1224,12 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
+
+        val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+        if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+            throw AresException(AresError.ERR_1515, "")
+        }
+
         val sourceType =
             when (settlementType) {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
@@ -2196,7 +2207,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun settleWithSourceIdAndDestinationId(
         sassSettlementRequest: SassSettlementRequest
     ): List<CheckDocument>? {
-        val sourceDocumentNo = paymentRepository.findByPaymentId(Hashids.decode(sassSettlementRequest.paymentIdAsSourceId)[0]).paymentNum!!
+        val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(sassSettlementRequest.paymentIdAsSourceId)[0]).paymentNum!!
         val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, sassSettlementRequest.sourceType)
         val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.destinationId)[0], sassSettlementRequest.destinationType)
 
