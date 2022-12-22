@@ -15,10 +15,10 @@ import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
-import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 
 interface SettlementService {
@@ -51,5 +51,5 @@ interface SettlementService {
 
     suspend fun getOrgSummary(request: OrgSummaryRequest): OrgSummaryResponse
 
-    suspend fun settleWithSourceIdAndDestinationId(sassSettlementRequest: SassSettlementRequest): List<CheckDocument>?
+    suspend fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>?
 }

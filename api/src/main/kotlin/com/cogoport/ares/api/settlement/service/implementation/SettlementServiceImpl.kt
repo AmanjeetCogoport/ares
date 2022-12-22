@@ -16,6 +16,8 @@ import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -38,6 +40,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -57,10 +60,10 @@ import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
-import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
@@ -139,6 +142,12 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var journalVoucherService: JournalVoucherService
+
+    @Inject
+    private lateinit var paymentRepo: PaymentRepository
+
+    @Inject
+    private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1215,6 +1224,12 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
+
+        val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+        if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+            throw AresException(AresError.ERR_1515, "")
+        }
+
         val sourceType =
             when (settlementType) {
                 SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
@@ -2190,10 +2205,11 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun settleWithSourceIdAndDestinationId(
-        sassSettlementRequest: SassSettlementRequest
+        autoKnockOffRequest: AutoKnockOffRequest
     ): List<CheckDocument>? {
-        val sourceDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.sourceId)[0], sassSettlementRequest.sourceType)
-        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.destinationId)[0], sassSettlementRequest.destinationType)
+        val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(autoKnockOffRequest.paymentIdAsSourceId)[0]).paymentNum!!
+        val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, autoKnockOffRequest.sourceType)
+        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(autoKnockOffRequest.destinationId)[0], autoKnockOffRequest.destinationType)
 
         val listOfDocuments = mutableListOf<AccountUtilization>()
         listOfDocuments.add(sourceDocument!!)
@@ -2265,7 +2281,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val checkRequest = CheckRequest(
             stackDetails = checkDocumentData,
-            createdBy = null,
+            createdBy = autoKnockOffRequest.createdBy,
             createdByUserType = null,
             incidentId = null,
             incidentMappingId = null,

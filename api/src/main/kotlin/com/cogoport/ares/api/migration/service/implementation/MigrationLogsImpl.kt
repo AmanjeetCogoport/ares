@@ -38,11 +38,17 @@ class MigrationLogsImpl : MigrationLogService {
         )
     }
 
-    override suspend fun saveMigrationLogs(paymentId: Long?, accUtilId: Long?, ex: String?, paymentNum: String?) {
+    override suspend fun saveMigrationLogs(
+        paymentId: Long?,
+        accUtilId: Long?,
+        ex: String?,
+        paymentNum: String?,
+        status: MigrationStatus
+    ) {
         migrationLogsRepository.save(
             MigrationLogs(
                 null, null, null, paymentNum, null, null, null, null,
-                null, null, MigrationStatus.FAILED, ex, Timestamp.from(Instant.now())
+                null, null, status, ex, Timestamp.from(Instant.now())
             )
         )
     }
