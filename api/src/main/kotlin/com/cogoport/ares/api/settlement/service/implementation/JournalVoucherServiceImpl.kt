@@ -54,7 +54,6 @@ import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -385,12 +384,16 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         }
     }
 
-    override suspend fun postJVToSage(jvId: Long): Boolean {
+    override suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean {
         try {
             val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
 
-            if (jvDetails.status != JVStatus.UTILIZED) {
+            if (jvDetails.status != JVStatus.UTILIZED && jvDetails.status != JVStatus.POSTING_FAILED) {
                 throw AresException(AresError.ERR_1516, "")
+            }
+
+            if (jvDetails.status == JVStatus.POSTED) {
+                throw AresException(AresError.ERR_1518, "")
             }
 
             val organization = railsClient.getListOrganizationTradePartyDetails(jvDetails.tradePartyId!!)
@@ -402,15 +405,13 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 )
             )
 
-            val jvLineItemDetails = getJvLineItem(jvDetails)
-            jvLineItemDetails.sageBPRNumber = sageOrganization.sageOrganizationId!!
-
             val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
             val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             val sageOrganizationFromSageId = recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId
 
             if (sageOrganization.sageOrganizationId.isNullOrEmpty()) {
+                journalVoucherRepository.updateStatus(jvId, JVStatus.POSTING_FAILED, performedBy)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -438,6 +439,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 it?.destinationId
             }.joinToString(",")
 
+            val jvLineItemDetails = getJvLineItem(jvDetails)
+            jvLineItemDetails.sageBPRNumber = sageOrganization.sageOrganizationId!!
+
             result = Client.postJVToSage(
                 JVRequest
                 (
@@ -457,6 +461,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             val status = getStatus(processedResponse)
 
             if (status == 1) {
+                journalVoucherRepository.updateStatus(jvId, JVStatus.POSTED, performedBy)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -472,6 +477,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 )
                 return true
             } else {
+                journalVoucherRepository.updateStatus(jvId, JVStatus.POSTING_FAILED, performedBy)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
