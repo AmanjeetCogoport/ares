@@ -436,7 +436,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
             val mapDestinationDocumentValue = destinationDocumentValue.map {
                 it?.destinationId
-            }.joinToString (",")
+            }.joinToString(",")
 
             result = Client.postJVToSage(
                 JVRequest
@@ -486,7 +486,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                     )
                 )
             }
-
         } catch (exception: SageException) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(

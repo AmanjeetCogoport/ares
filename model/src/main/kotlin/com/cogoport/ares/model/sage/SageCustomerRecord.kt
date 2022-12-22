@@ -6,15 +6,15 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 class SageCustomerRecord {
-        @JsonProperty("recordsets")
-        val recordSets: ArrayList<ArrayList<SageCustomer>>? = null
+    @JsonProperty("recordsets")
+    val recordSets: ArrayList<ArrayList<SageCustomer>>? = null
 
-        @JsonProperty("recordset")
-        val recordSet: ArrayList<SageCustomer>? = null
+    @JsonProperty("recordset")
+    val recordSet: ArrayList<SageCustomer>? = null
 
-        @JsonProperty("rowsAffected")
-        val recordAffected: ArrayList<Int>? = null
+    @JsonProperty("rowsAffected")
+    val recordAffected: ArrayList<Int>? = null
 
-        @JsonIgnore
-        val output: Any? = null
+    @JsonIgnore
+    val output: Any? = null
 }
