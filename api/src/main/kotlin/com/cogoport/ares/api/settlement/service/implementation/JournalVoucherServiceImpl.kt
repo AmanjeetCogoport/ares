@@ -388,7 +388,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         try {
             val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
 
-            if (jvDetails.status == JVStatus.APPROVED || jvDetails.status == JVStatus.PENDING) {
+            if (jvDetails.status != JVStatus.UTILIZED && jvDetails.status != JVStatus.POSTING_FAILED) {
                 throw AresException(AresError.ERR_1516, "")
             }
 
