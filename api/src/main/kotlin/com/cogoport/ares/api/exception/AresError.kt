@@ -38,7 +38,8 @@ enum class AresError(
     ERR_1511("ERR_1511", "Invalid File format: ", HttpStatus.BAD_REQUEST),
     ERR_1512("ERR_1512", "Settlement is not possible as some bills are present in payrun", HttpStatus.NOT_ACCEPTABLE),
     ERR_1513("ERR_1513", "Already Present", HttpStatus.BAD_REQUEST),
-    ERR_1514("ERR_1514", "Sage organization not found", HttpStatus.BAD_REQUEST);
+    ERR_1514("ERR_1514", "Sage organization not found", HttpStatus.BAD_REQUEST),
+    ERR_1515("ERR_1515", "Settled Through UTR. You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

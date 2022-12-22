@@ -10,16 +10,20 @@ import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.CollectionRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -39,4 +43,8 @@ interface DashboardService {
     suspend fun getOrgPayables(request: OrgPayableRequest): OrgPayableResponse
     suspend fun getOverallStats(request: KamPaymentRequest): StatsForKamResponse
     suspend fun getOverallStatsForCustomers(request: CustomerStatsRequest): ResponseList<StatsForCustomerResponse?>
+
+    suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<OverallStatsForTradeParty?>
+
+    suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?>
 }
