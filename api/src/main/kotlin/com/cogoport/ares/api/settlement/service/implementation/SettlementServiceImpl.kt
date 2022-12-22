@@ -60,10 +60,10 @@ import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
-import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
@@ -2205,11 +2205,11 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun settleWithSourceIdAndDestinationId(
-        sassSettlementRequest: SassSettlementRequest
+        autoKnockOffRequest: AutoKnockOffRequest
     ): List<CheckDocument>? {
-        val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(sassSettlementRequest.paymentIdAsSourceId)[0]).paymentNum!!
-        val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, sassSettlementRequest.sourceType)
-        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(sassSettlementRequest.destinationId)[0], sassSettlementRequest.destinationType)
+        val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(autoKnockOffRequest.paymentIdAsSourceId)[0]).paymentNum!!
+        val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, autoKnockOffRequest.sourceType)
+        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(autoKnockOffRequest.destinationId)[0], autoKnockOffRequest.destinationType)
 
         val listOfDocuments = mutableListOf<AccountUtilization>()
         listOfDocuments.add(sourceDocument!!)
@@ -2281,7 +2281,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val checkRequest = CheckRequest(
             stackDetails = checkDocumentData,
-            createdBy = sassSettlementRequest.createdBy,
+            createdBy = autoKnockOffRequest.createdBy,
             createdByUserType = null,
             incidentId = null,
             incidentMappingId = null,

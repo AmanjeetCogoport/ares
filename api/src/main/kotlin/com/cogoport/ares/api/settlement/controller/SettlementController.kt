@@ -23,10 +23,10 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
-import com.cogoport.ares.model.settlement.request.SassSettlementRequest
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -154,7 +154,7 @@ class SettlementController {
     }
 
     @Post("/settle-with-source-and-destination-id")
-    suspend fun settleWithSourceIdAndDestinationId(@Valid @Body sassSettlementRequest: SassSettlementRequest): List<CheckDocument>? {
-        return settlementService.settleWithSourceIdAndDestinationId(sassSettlementRequest)
+    suspend fun settleWithSourceIdAndDestinationId(@Valid @Body autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>? {
+        return settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
 }

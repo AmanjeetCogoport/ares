@@ -10,7 +10,7 @@ import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
-import com.cogoport.ares.model.settlement.request.SassSettlementRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
@@ -77,7 +77,7 @@ class AresKafkaListener {
     }
 
     @Topic("send-payment-details-for-autoKnockOff")
-    fun settleWithSourceIdAndDestinationId(sassSettlementRequest: SassSettlementRequest) = runBlocking {
-        settlementService.settleWithSourceIdAndDestinationId(sassSettlementRequest)
+    fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
+        settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
 }

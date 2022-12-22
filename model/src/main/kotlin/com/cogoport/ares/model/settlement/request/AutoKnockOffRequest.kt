@@ -6,7 +6,7 @@ import java.util.UUID
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-data class SassSettlementRequest(
+data class AutoKnockOffRequest(
     var paymentIdAsSourceId: String,
     var destinationId: String,
     var sourceType: String? = "PAY",
