@@ -15,7 +15,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.util.*
+import java.util.UUID
 import javax.validation.Valid
 
 /**
