@@ -1,4 +1,4 @@
-package com.cogoport.ares.api.settlement.model
+package com.cogoport.ares.model.settlement.event
 
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.core.annotation.Introspected
@@ -7,7 +7,7 @@ import java.sql.Timestamp
 
 @Introspected
 @MappedEntity
-class PaymentInvoiceInfo(
+class PaymentInvoiceInfo (
     var transRefNumber: String? = null,
     var settlementDate: Timestamp?,
     var sourceType: SettlementType?,

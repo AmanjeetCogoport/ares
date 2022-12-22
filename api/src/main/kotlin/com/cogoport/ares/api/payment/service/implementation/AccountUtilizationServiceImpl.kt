@@ -133,11 +133,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
                             paymentStatus = Utilities.getPaymentStatus(accUtilRes),
-                            transRefNumber = null,
-                            settlementDate = null,
-                            sourceType = null,
-                            sourceId = null,
-                        )
+                        ), knockoffDocuments = null,
                     )
                 )
             }

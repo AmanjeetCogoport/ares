@@ -1873,26 +1873,20 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        var paymentInvoiceInfo = settlementRepository.getPaymentDetailsByPaymentNumber(accountUtilization.documentNo)
 
-        if (accountUtilization.accType == AccountType.SCN && paymentInvoiceInfo?.transRefNumber != null) {
-            paymentInvoiceInfo?.transRefNumber = null
-        }
+        var knockOffDocuments = settlementRepository.getPaymentDetailsByPaymentNumber(accountUtilization.documentNo)
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
-                invoiceBalance = InvoiceBalance(
+                    invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
                     balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType,
-                    paymentStatus = Utilities.getPaymentStatus(accountUtilization),
-                    transRefNumber = paymentInvoiceInfo?.transRefNumber,
-                    settlementDate = paymentInvoiceInfo.settlementDate,
-                    sourceType = paymentInvoiceInfo.sourceType,
-                    sourceId = paymentInvoiceInfo.sourceId
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+                ),
+            knockoffDocuments = knockOffDocuments
 
-                )
             )
         )
     }
