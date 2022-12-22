@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
+import java.math.BigDecimal
 
 @Introspected
 @ReflectiveAccess
@@ -25,6 +26,8 @@ class SuppliersOutstanding(
     var totalOutstanding: InvoiceStats?,
     @JsonProperty("ageingBucket")
     var ageingBucket: List<AgeingBucket>?,
-    @JsonProperty("ageingBucket")
-    var creditNoteCount: Int
+    @JsonProperty("creditNoteCount")
+    var creditNoteCount: Int,
+    @JsonProperty("totalCreditAmount")
+    var totalCreditAmount: BigDecimal?
 )

@@ -205,7 +205,7 @@ class OutStandingServiceImpl : OutStandingService {
             openSearchServiceImpl.validateDueAmount(outstandingDues)
             var orgId = it.organizationId
             var orgName = it.organizationName
-            var orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, 0)
+            var orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
             val zero = assignAgeingBucket("Not Due", it.notDueAmount, it.notDueCount, "not_due")
             val thirty = assignAgeingBucket("1-30", it.thirtyAmount, it.thirtyCount, "1_30")
             val sixty = assignAgeingBucket("31-60", it.sixtyAmount, it.sixtyCount, "31_60")

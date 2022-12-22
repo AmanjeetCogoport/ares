@@ -15,11 +15,13 @@ data class BillOutsatndingAgeing(
     val threesixfiveAmount: BigDecimal?,
     val threesixfiveplusAmount: BigDecimal?,
     val totalOutstanding: BigDecimal?,
+    val totalCreditAmount: BigDecimal?,
     val notDueCount: Int,
     val thirtyCount: Int,
     val sixtyCount: Int,
     val ninetyCount: Int,
     val oneeightyCount: Int,
     val threesixfiveCount: Int,
-    val threesixfiveplusCount: Int
+    val threesixfiveplusCount: Int,
+    val creditNoteCount: Int
 )

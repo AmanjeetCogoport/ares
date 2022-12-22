@@ -308,30 +308,136 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @WithSpan
     @Query(
         """
-        select organization_id,
-        organization_name,
-        sum(case when due_date >= now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
-        sum(case when (now()::date - due_date) between 1 and 30 then (amount_loc - pay_loc) else 0 end) as thirty_amount,
-        sum(case when (now()::date - due_date) between 31 and 60 then (amount_loc - pay_loc) else 0 end) as sixty_amount,
-        sum(case when (now()::date - due_date) between 61 and 90 then (amount_loc - pay_loc) else 0 end) as ninety_amount,
-        sum(case when (now()::date - due_date) between 91 and 180 then (amount_loc - pay_loc) else 0 end) as oneeighty_amount,
-        sum(case when (now()::date - due_date) between 180 and 365 then (amount_loc - pay_loc) else 0 end) as threesixfive_amount,
-        sum(case when (now()::date - due_date) > 365 then (amount_loc - pay_loc) else 0 end) as threesixfiveplus_amount,
-        sum(sign_flag *(amount_loc-pay_loc)) as total_outstanding,
-        sum(case when due_date >= now()::date then 1 else 0 end) as not_due_count,
-        sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
-        sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
-        sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
-        sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end) as oneeighty_count,
-        sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
-        sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
-        from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AP' 
-        and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
-        and (:orgId is null or organization_id = :orgId::uuid) and  acc_type = 'PINV' and deleted_at is null
-        group by organization_id,organization_name
-        OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
-        LIMIT :pageLimit
+        SELECT
+            organization_id,
+            organization_name,
+            sum(
+                CASE WHEN (acc_type in('PINV')
+                    and(due_date >= now()::date)) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS not_due_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS thirty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS sixty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS ninety_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS oneeighty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 180 AND 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixfive_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixfiveplus_amount,
+            sum(
+                CASE WHEN acc_type in('PINV') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS total_outstanding,
+            sum(
+                CASE WHEN acc_type in('PCN') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS total_credit_amount,
+            sum(
+                CASE WHEN due_date >= now()::date THEN
+                    1
+                ELSE
+                    0
+                END) AS not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    1
+                ELSE
+                    0
+                END) AS thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    1
+                ELSE
+                    0
+                END) AS sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    1
+                ELSE
+                    0
+                END) AS ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    1
+                ELSE
+                    0
+                END) AS oneeighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixfive_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixfiveplus_count,
+            sum(
+                CASE WHEN (acc_type in('PCN')) THEN
+                    1
+                ELSE
+                    0
+                END) AS credit_note_count
+        FROM
+            account_utilizations
+        WHERE
+            organization_name ILIKE :queryName
+            and(:zone IS NULL
+                OR zone_code = :zone)
+            AND acc_mode = 'AP'
+            AND due_date IS NOT NULL
+            AND document_status in('FINAL', 'PROFORMA')
+            AND organization_id IS NOT NULL
+            and(:orgId IS NULL
+                OR organization_id = :orgId::uuid)
+            AND acc_type in('PINV', 'PCN')
+            AND deleted_at IS NULL
+        GROUP BY
+            organization_id,
+            organization_name OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+        LIMIT :pageLimit        
         """
     )
     suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<BillOutsatndingAgeing>

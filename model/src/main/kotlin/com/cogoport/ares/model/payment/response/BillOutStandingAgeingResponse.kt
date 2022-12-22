@@ -32,6 +32,8 @@ data class BillOutStandingAgeingResponse(
     val threesixfiveplusAmount: BigDecimal?,
     @JsonProperty("totalOutstanding")
     val totalOutstanding: BigDecimal?,
+    @JsonProperty("totalCreditAmount")
+    val totalCreditAmount: BigDecimal?,
     @JsonProperty("notDueCount")
     val notDueCount: Int,
     @JsonProperty("thirtyCount")
@@ -45,5 +47,8 @@ data class BillOutStandingAgeingResponse(
     @JsonProperty("threesixfiveCount")
     val threesixfiveCount: Int,
     @JsonProperty("threesixfiveplusCount")
-    val threesixfiveplusCount: Int
+    val threesixfiveplusCount: Int,
+    @JsonProperty("creditNoteCount")
+    val creditNoteCount: Int,
+
 )
