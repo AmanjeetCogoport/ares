@@ -9,13 +9,9 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
-import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
-import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
-import com.cogoport.ares.api.utils.logger
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
-import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
@@ -23,14 +19,6 @@ class SageServiceImpl : SageService {
 
     @Value("\${sage.databaseName}")
     var sageSchema: String? = null
-
-    @Inject
-    lateinit var journalVoucherRepository: JournalVoucherRepository
-
-    @Inject
-    lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
-
-    private val logger = logger()
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """

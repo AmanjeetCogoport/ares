@@ -8,7 +8,6 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
-import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -49,10 +48,10 @@ class JournalVoucherController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postJVToSageUsingJVId(id: String): Response<String> {
+    suspend fun postJVToSageUsingJVId(id: Long): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (journalVoucherService.postJVToSage(Hashids.decode(id)[0])) "Success." else "Failed."
+            if (journalVoucherService.postJVToSage(id)) "Success." else "Failed."
         )
     }
 }
