@@ -15,6 +15,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.*
 import javax.validation.Valid
 
 /**
@@ -48,10 +49,10 @@ class JournalVoucherController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postJVToSageUsingJVId(id: Long): Response<String> {
+    suspend fun postJVToSageUsingJVId(id: Long, performedBy: UUID): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (journalVoucherService.postJVToSage(id)) "Success." else "Failed."
+            if (journalVoucherService.postJVToSage(id, performedBy)) "Success." else "Failed."
         )
     }
 }
