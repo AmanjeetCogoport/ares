@@ -133,7 +133,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
                             paymentStatus = Utilities.getPaymentStatus(accUtilRes),
-                        ), knockoffDocuments = null,
+                        ),
+                        knockoffDocuments = null,
                     )
                 )
             }

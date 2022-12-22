@@ -7,7 +7,7 @@ import java.sql.Timestamp
 
 @Introspected
 @MappedEntity
-class PaymentInvoiceInfo (
+class PaymentInvoiceInfo(
     var transRefNumber: String? = null,
     var settlementDate: Timestamp?,
     var sourceType: SettlementType?,
