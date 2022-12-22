@@ -2270,7 +2270,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val checkRequest = CheckRequest(
             stackDetails = checkDocumentData,
-            createdBy = null,
+            createdBy = sassSettlementRequest.createdBy,
             createdByUserType = null,
             incidentId = null,
             incidentMappingId = null,

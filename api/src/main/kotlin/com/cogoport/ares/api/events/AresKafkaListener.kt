@@ -76,7 +76,7 @@ class AresKafkaListener {
         knockoffService.reverseUtr(reverseUtrRequest)
     }
 
-    @Topic("auto-knockoff")
+    @Topic("send-payment-details-for-autoKnockOff")
     fun settleWithSourceIdAndDestinationId(sassSettlementRequest: SassSettlementRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(sassSettlementRequest)
     }
