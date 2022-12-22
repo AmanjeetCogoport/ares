@@ -236,10 +236,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
 
-        if(!newPayCurr.equals(0)){
+        if (!newPayCurr.equals(0)) {
             accountUtilization.payCurr = newPayCurr
         }
-        if(!newPayLoc.equals(0)){
+        if (!newPayLoc.equals(0)) {
             accountUtilization.payLoc = newPayLoc
         }
 
