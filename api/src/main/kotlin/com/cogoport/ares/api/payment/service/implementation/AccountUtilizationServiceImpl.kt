@@ -238,8 +238,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.payCurr = newPayCurr
         accountUtilization.payLoc = newPayLoc
 
-        accUtilRepository.update(accountUtilization)
-
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
         accountUtilization.organizationId = updateInvoiceRequest.organizationId ?: accountUtilization.organizationId
@@ -254,6 +252,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
 
         val data = accUtilRepository.update(accountUtilization)
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
