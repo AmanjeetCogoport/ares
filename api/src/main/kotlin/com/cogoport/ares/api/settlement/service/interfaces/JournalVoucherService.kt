@@ -20,5 +20,5 @@ interface JournalVoucherService {
     suspend fun rejectJournalVoucher(request: JournalVoucherReject): String
 
     suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?)
-    suspend fun postJVToSage(jvId: Long): Boolean
+    suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean
 }
