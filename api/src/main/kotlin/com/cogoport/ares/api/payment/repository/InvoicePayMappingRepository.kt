@@ -18,7 +18,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
              
         """
     )
-    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse?
+    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse
 
     @WithSpan
     @Query(
@@ -27,4 +27,12 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun deletePaymentMappings(id: Long?)
+
+    @WithSpan
+    @Query(
+        """
+            select coalesce(count(*), 0) from payment_invoice_mapping where payment_id=:paymentId
+        """
+    )
+    suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
 }

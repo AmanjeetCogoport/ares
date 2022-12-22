@@ -1253,7 +1253,7 @@ open class SettlementServiceImpl : SettlementService {
         val documentNo = Hashids.decode(documentNo)[0]
 
         val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
-        if (invoicePaymentMappingRepo.findByPaymentId(documentNo, paymentId) != null) {
+        if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
             throw AresException(AresError.ERR_1515, "")
         }
 

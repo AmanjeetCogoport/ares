@@ -55,7 +55,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @WithSpan
     @Query(
         """
-            SELECT id FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null paymentCode 
+            SELECT id FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null  
         """
     )
     suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Long
