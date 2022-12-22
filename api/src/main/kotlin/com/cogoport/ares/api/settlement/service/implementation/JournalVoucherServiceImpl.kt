@@ -390,7 +390,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             val jvDetails = journalVoucherRepository.findById(jvId) ?: throw AresException(AresError.ERR_1002, "")
 
             if (jvDetails.status != JVStatus.UTILIZED) {
-                throw AresException(AresError.ERR_1515, "")
+                throw AresException(AresError.ERR_1516, "")
             }
 
             val organization = railsClient.getListOrganizationTradePartyDetails(jvDetails.tradePartyId!!)
@@ -522,7 +522,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             JVCategory.EXCH -> SageGLCodes.EXCH
             JVCategory.ROFF -> SageGLCodes.ROFF
             JVCategory.WOFF -> SageGLCodes.WOFF
-            else -> { throw AresException(AresError.ERR_1516, journalVoucher.category.toString()) }
+            else -> { throw AresException(AresError.ERR_1517, journalVoucher.category.toString()) }
         }
         return JVLineItem(
             glCode.value,

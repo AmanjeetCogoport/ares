@@ -39,8 +39,9 @@ enum class AresError(
     ERR_1512("ERR_1512", "Settlement is not possible as some bills are present in payrun", HttpStatus.NOT_ACCEPTABLE),
     ERR_1513("ERR_1513", "Already Present", HttpStatus.BAD_REQUEST),
     ERR_1514("ERR_1514", "Sage organization not found", HttpStatus.BAD_REQUEST),
-    ERR_1515("ERR_1515", "JV is not been utilized", HttpStatus.BAD_REQUEST),
-    ERR_1516("ERR_1516", "No GL Codes exists for this JV category: ", HttpStatus.BAD_REQUEST);
+    ERR_1515("ERR_1515", "Settled Through UTR. You can not delete it.", HttpStatus.NOT_ACCEPTABLE),
+    ERR_1516("ERR_1516", "JV is not been utilized", HttpStatus.BAD_REQUEST),
+    ERR_1517("ERR_1517", "No GL Codes exists for this JV category: ", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

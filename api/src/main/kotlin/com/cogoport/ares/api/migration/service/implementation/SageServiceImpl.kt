@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
+import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -134,8 +136,8 @@ class SageServiceImpl : SageService {
         return payments.recordSets!![0]
     }
 
-    override suspend fun migratePaymentsByDate(startDate: String, endDate: String): ArrayList<PaymentRecord> {
-        val sqlQuery =
+    override suspend fun migratePaymentsByDate(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<PaymentRecord> {
+        var sqlQuery =
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
@@ -166,6 +168,7 @@ class SageServiceImpl : SageService {
             ,GC.CURLED_0 as led_currency
             ,GC.RATMLT_0 as exchange_rate
             ,G.TYP_0 as account_type
+            ,G.UPDDATTIM_0 as utilized_updated_at
             ,case when P.BPRSAC_0='AR' then 
             (select XX1P4PANNO_0 from COGO2.BPCUSTOMER where BPCNUM_0=P.BPR_0)
             else (select XX1P4PANNO_0 from COGO2.BPSUPPLIER where BPSNUM_0=P.BPR_0) end as pan_number
@@ -174,12 +177,18 @@ class SageServiceImpl : SageService {
             INNER JOIN       
             (
              select NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SIGN(SUM(SNS_0*(AMTLOC_0-PAYLOC_0))) as sign_flag
-             ,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC')
+             ,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0, MAX(UPDDATTIM_0) as UPDDATTIM_0 
+             from  COGO2.GACCDUDATE G where SAC_0 in('AR','SC')
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in ('AR','SC') and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
+            where P.BPRSAC_0 in ('AR','SC')
             """
+        sqlQuery += if (updatedAt == null) {
+            """  and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
+        } else {
+            """ and cast(G.UPDDATTIM_0 as date) ='$updatedAt'"""
+        }
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
         return payments.recordSets!![0]
@@ -266,5 +275,55 @@ class SageServiceImpl : SageService {
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, SettlementRecordManager::class.java)
         return payments.recordSets!![0]
+    }
+
+    override suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails> {
+        var sqlQuery = """
+                select case when si.GTE_0 in('ZSINV','ZSDN','ZDN') then 'INVOICE' else 'CREDIT_NOTE' end  as invoiceType
+                ,si.AMTATIL_0 as ledger_total
+                ,si.NUM_0 as invoice_number
+                ,si.FCY_0 as entity_code_num
+                ,si.BPR_0 as sage_organization_id
+                ,acc.PAYCUR_0 as currency_amount_paid
+                ,acc.PAYLOC_0 as ledger_amount_paid
+                ,si.CREDATTIM_0 as created_at
+                ,si.UPDDATTIM_0 as updated_at
+                ,acc.UPDDATTIM_0  as utilization_updated_at
+                from COGO2.SINVOICE si with (NOLOCK)
+                INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
+        """.trimIndent()
+        sqlQuery += if (updatedAt == null) {
+            """ where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0 desc """
+        } else {
+            """ where cast(acc.UPDDATTIM_0 as date) = '$updatedAt' """
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val invoiceDetails = ObjectMapper().readValue(result, InvoiceDetailRecordManager::class.java)
+        return invoiceDetails.recordSets!![0]
+    }
+
+    override suspend fun getBillPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails> {
+        var sqlQuery = """
+            select  case when si.GTE_0 in('SPINV') then 'BILL' else 'CREDIT_NOTE' end  as invoiceType
+                            ,si.AMTATIL_0 as ledgerTotal
+                            ,si.NUM_0 as invoiceNumber
+                            ,si.FCY_0 as entityCodeNum
+                            ,si.BPR_0 as sageOrganizationId
+                            ,acc.PAYCUR_0 as currencyAmountPaid
+                            ,acc.PAYLOC_0 as ledgerAmountPaid
+                            ,si.CREDATTIM_0 as createdAt
+                            ,si.UPDDATTIM_0 as updatedAt
+                            ,acc.UPDDATTIM_0  as utilization_updated_at
+                            from COGO2.PINVOICE si with (NOLOCK)
+                            INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
+        """.trimIndent()
+        sqlQuery += if (updatedAt == null) {
+            """ where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0 desc """
+        } else {
+            """ where cast(acc.UPDDATTIM_0 as date) = '$updatedAt' """
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val invoiceDetails = ObjectMapper().readValue(result, InvoiceDetailRecordManager::class.java)
+        return invoiceDetails.recordSets!![0]
     }
 }

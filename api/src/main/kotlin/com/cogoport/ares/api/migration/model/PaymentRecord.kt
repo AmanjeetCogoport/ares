@@ -116,5 +116,8 @@ data class PaymentRecord(
     val bankId: UUID? = null,
 
     @JsonProperty("bank_short_code")
-    val bankShortCode: String? = null
+    val bankShortCode: String? = null,
+
+    @JsonProperty("utilized_updated_at")
+    val utilizedUpdatedAt: Timestamp? = null
 )

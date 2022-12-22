@@ -18,6 +18,8 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
+import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
@@ -76,6 +78,7 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var settlementRepository: SettlementRepository
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
@@ -116,7 +119,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum, MigrationStatus.FAILED)
         }
         return 1
     }
@@ -171,7 +174,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum, MigrationStatus.FAILED)
         }
         return 1
     }
@@ -604,5 +607,82 @@ class PaymentMigrationImpl : PaymentMigration {
             return -1
         }
         return 1
+    }
+
+    override suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest) {
+        try {
+            var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
+                payLocUpdateRequest.documentValue!!,
+                payLocUpdateRequest.sageOrganizationId!!, payLocUpdateRequest.amtLoc!!
+            ) ?: return
+            if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
+                return
+            }
+            if (platformUtilizedPayment.toBigInteger().compareTo(payLocUpdateRequest.payLoc?.toBigInteger()) == 1) {
+                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
+            } else {
+                accountUtilizationRepositoryMigration
+                    .updateUtilizationAmount(
+                        payLocUpdateRequest.documentValue,
+                        payLocUpdateRequest.sageOrganizationId,
+                        payLocUpdateRequest.amtLoc,
+                        payLocUpdateRequest.payLoc!!,
+                        payLocUpdateRequest.payCurr!!
+                    )
+                val response = accountUtilizationRepositoryMigration.getAccType(
+                    payLocUpdateRequest.documentValue,
+                    payLocUpdateRequest.sageOrganizationId,
+                    payLocUpdateRequest.amtLoc,
+                )
+                var status = if (payLocUpdateRequest.payLoc.compareTo(BigDecimal.ZERO) == 0) {
+                    "UNPAID"
+                } else if (payLocUpdateRequest.amtLoc > payLocUpdateRequest.payLoc) {
+                    "PARTIAL_PAID"
+                } else {
+                    "PAID"
+                }
+                if (AccountType.SINV.name.equals(response.accType) ||
+                    AccountType.SCN.equals(response.accType)
+                ) {
+                    aresKafkaEmitter.emitInvoiceStatus(
+                        PaidUnpaidStatus(
+                            documentValue = payLocUpdateRequest.documentValue,
+                            documentNumber = response.documentNo!!,
+                            status = status
+                        )
+                    )
+                }
+
+                if (AccountType.PCN.name.equals(response.accType) ||
+                    AccountType.PINV.name.equals(response.accType)
+                ) {
+                    if (status.equals("PARTIAL_PAID")) {
+                        status = "PARTIAL"
+                    } else if (status.equals("PAID")) {
+                        status = "FULL"
+                    }
+                    aresKafkaEmitter.emitBIllStatus(
+                        PaidUnpaidStatus(
+                            documentValue = payLocUpdateRequest.documentValue,
+                            documentNumber = response.documentNo!!,
+                            status = status
+                        )
+                    )
+                }
+            }
+
+            migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue, migrationStatus)
+        } catch (ex: Exception) {
+            var errorMessage = ex.stackTraceToString()
+            if (errorMessage.length > 5000) {
+                errorMessage = errorMessage.substring(0, 4998)
+            }
+            logger().error("Error while updating utilized amount ${payLocUpdateRequest.documentValue} " + ex.stackTraceToString())
+            migrationLogService.saveMigrationLogs(
+                null, null, errorMessage,
+                payLocUpdateRequest.documentValue, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
+        }
     }
 }
