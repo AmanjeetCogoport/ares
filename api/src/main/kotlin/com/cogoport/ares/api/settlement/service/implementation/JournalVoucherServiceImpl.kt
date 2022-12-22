@@ -398,15 +398,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             val sageOrganization = authClient.getSageOrganization(
                 SageOrganizationRequest(
                     organization.list[0]["serial_id"]!!.toString(),
-                    "importer_exporter"
+                    if (jvDetails.accMode == AccMode.AP) "service_provider" else "importer_exporter"
                 )
             )
 
-            val query = "Select SOHNUM_0 from $sageDatabase.SORDER where SOHNUM_0='${jvDetails.jvNum}'"
-            val resultFromQuery = Client.sqlQuery(query)
-            val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)["recordset"] as ArrayList<String>
-
-            if (records.size != 0) return true // this is done to prevent duplicate entry on sage
+            val jvLineItemDetails = getJvLineItem(jvDetails)
+            jvLineItemDetails.sageBPRNumber = sageOrganization.sageOrganizationId!!
 
             val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
             val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
@@ -435,62 +432,61 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
             lateinit var result: SageResponse
 
-            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(jvId, listOf(SettlementType.ROFF))
+            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(jvId, listOf(SettlementType.valueOf(jvDetails.category.toString())))
 
             val mapDestinationDocumentValue = destinationDocumentValue.map {
                 it?.destinationId
             }.joinToString (",")
 
-            if (jvDetails.status == JVStatus.UTILIZED) {
-                result = Client.postJVToSage(
-                    JVRequest
-                    (
-                        JVEntryType.MISC,
-                        jvDetails.jvNum,
-                        jvDetails.entityCode.toString(),
-                        JVType.MISC,
-                        jvDetails.currency!!,
-                        mapDestinationDocumentValue,
-                        jvDetails.createdAt!!,
-                        jvDetails.description!!,
-                        arrayListOf(getJvLineItem(jvDetails))
+            result = Client.postJVToSage(
+                JVRequest
+                (
+                    if (jvDetails.category == JVCategory.EXCH) JVEntryType.MCTTV else JVEntryType.MISC,
+                    jvDetails.jvNum,
+                    jvDetails.entityCode.toString(),
+                    JVType.MISC,
+                    jvDetails.currency!!,
+                    mapDestinationDocumentValue,
+                    jvDetails.createdAt!!,
+                    jvDetails.description!!,
+                    arrayListOf(jvLineItemDetails, getJvGLLineItem(jvDetails))
+                )
+            )
+
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getStatus(processedResponse)
+
+            if (status == 1) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostJVToSage",
+                        "Journal Voucher",
+                        jvId,
+                        "JOURNAL_VOUCHER",
+                        "200",
+                        result.requestString,
+                        result.response,
+                        true
                     )
                 )
-
-                val processedResponse = XML.toJSONObject(result.response)
-                val status = getStatus(processedResponse)
-
-                if (status == 1) {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "PostJVToSage",
-                            "Journal Voucher",
-                            jvId,
-                            "JOURNAL_VOUCHER",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            true
-                        )
+                return true
+            } else {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostJVToSage",
+                        "Journal Voucher",
+                        jvId,
+                        "JOURNAL_VOUCHER",
+                        "200",
+                        result.requestString,
+                        result.response,
+                        false
                     )
-                    return true
-                } else {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "PostJVToSage",
-                            "Journal Voucher",
-                            jvId,
-                            "JOURNAL_VOUCHER",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            false
-                        )
-                    )
-                }
+                )
             }
+
         } catch (exception: SageException) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
