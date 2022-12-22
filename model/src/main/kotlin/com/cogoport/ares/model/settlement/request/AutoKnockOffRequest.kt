@@ -9,7 +9,7 @@ import java.util.UUID
 data class AutoKnockOffRequest(
     var paymentIdAsSourceId: String,
     var destinationId: String,
-    var sourceType: String? = "PAY",
+    var sourceType: String? = "REC",
     var destinationType: String? = "SINV",
     var createdBy: UUID
 )
