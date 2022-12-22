@@ -235,13 +235,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-
-        if (!newPayCurr.equals(0)) {
-            accountUtilization.payCurr = newPayCurr
-        }
-        if (!newPayLoc.equals(0)) {
-            accountUtilization.payLoc = newPayLoc
-        }
+        accountUtilization.payCurr = newPayCurr
+        accountUtilization.payLoc = newPayLoc
 
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
