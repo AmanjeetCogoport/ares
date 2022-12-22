@@ -8,6 +8,7 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -44,5 +45,13 @@ class JournalVoucherController {
     @Post("/reject")
     suspend fun rejectJv(@Valid @Body request: JournalVoucherReject): Response<String> {
         return Response<String>().ok("Rejected", journalVoucherService.rejectJournalVoucher(request))
+    }
+
+    @Post("/post-to-sage")
+    suspend fun postJVToSageUsingJVId(id: Long): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            if (journalVoucherService.postJVToSage(id)) "Success." else "Failed."
+        )
     }
 }

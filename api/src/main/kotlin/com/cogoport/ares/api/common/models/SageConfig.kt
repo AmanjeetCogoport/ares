@@ -9,4 +9,7 @@ class SageConfig {
     var password: String? = null
     var queryClientUrl: String? = null
     var queryClientPassword: String? = null
+    var loginUrl: String? = null
+    var username: String? = null
+    var userpassword: String? = null
 }
