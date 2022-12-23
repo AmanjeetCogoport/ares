@@ -56,6 +56,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
+import com.cogoport.ares.model.settlement.event.PaymentInvoiceInfo
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
@@ -1873,7 +1874,7 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        var knockOffDocuments = settlementRepository.getPaymentDetailsByPaymentNumber(accountUtilization.documentNo)
+        var knockOffDocuments = knockOffListData(accountUtilization)
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
@@ -1888,6 +1889,25 @@ open class SettlementServiceImpl : SettlementService {
 
             )
         )
+    }
+
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization) : List<Any> {
+
+        val listOfKnockOffData: MutableList<Any> = mutableListOf()
+        var settlementData = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
+
+        settlementData.forEach { it ->
+            if(it.sourceType.toString() == "REC"){
+                listOfKnockOffData.add(settlementRepository.getPaymentDetailsInRec(it.sourceId?.toLong()))
+
+            }
+            else{
+                listOfKnockOffData.add(settlementRepository.getPaymentDetails(it.sourceId?.toLong()))
+
+            }
+        }
+
+        return listOfKnockOffData
     }
 
     /**

@@ -4,7 +4,9 @@ import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.PaymentInvoiceInfo
+import com.cogoport.ares.model.settlement.event.SettlementData
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -215,19 +217,64 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @WithSpan
     @Query(
         """
-           SELECT
-                p.trans_ref_number, s.settlement_date::TIMESTAMP, s.source_type, s.source_id
-           FROM
-                settlements s
-                LEFT JOIN payments p  on p.payment_num = s.source_id WHERE
-                S.destination_id = :documentNo
-                And (p.acc_mode = 'AR' OR p.acc_mode IS NULL)
-                AND s.source_type not in ('CTDS')
-                order by s.created_at desc
+        SELECT
+	p.trans_ref_number,
+	s.settlement_date::TIMESTAMP,
+	s.source_type,
+	s.source_id
+FROM
+	settlements s
+	LEFT JOIN payments p ON s.source_id = p.payment_num
+WHERE
+	s.source_id = :documentNo
+	AND source_type NOT in('CTDS')
+	And(p.acc_mode = 'AR'
+		OR p.acc_mode IS NULL)
+    AND s.destination_type in ('SINV')
+ORDER BY
+	s.created_at DESC
+LIMIT 1
+
           
         """
     )
-    suspend fun getPaymentDetailsByPaymentNumber(documentNo: Long?): List<PaymentInvoiceInfo>?
+    suspend fun getPaymentDetailsInRec(documentNo: Long?): PaymentInfoRec
+
+    @WithSpan
+    @Query(
+            """
+           SELECT
+	a.document_value,
+	s.settlement_date::TIMESTAMP,
+	s.source_type,
+	s.source_id
+FROM
+	settlements s
+	LEFT JOIN account_utilizations a ON s.source_id = a.document_no
+WHERE
+	s.source_id = :documentNo
+	AND source_type NOT in('CTDS')
+	And(a.acc_mode = 'AR'
+		OR a.acc_mode IS NULL)
+    AND s.destination_type in ('SINV')
+ORDER BY
+	s.created_at DESC
+LIMIT 1
+          
+        """
+    )
+    suspend fun getPaymentDetails(documentNo: Long?): PaymentInvoiceInfo
+
+    @WithSpan
+    @Query(
+            """
+              select source_id, source_type 
+              from 
+              settlements WHERE 
+              destination_id = :documentNo AND source_type not in ('CTDS') 
+        """
+    )
+    suspend fun getSettlementDetails(documentNo: Long?):List<SettlementData>
 
     @WithSpan
     @Query(
