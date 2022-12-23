@@ -1890,19 +1890,16 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun knockOffListData(accountUtilization: AccountUtilization) : List<Any> {
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<Any> {
 
         val listOfKnockOffData: MutableList<Any> = mutableListOf()
         var settlementData = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
 
         settlementData.forEach { it ->
-            if(it.sourceType.toString() == "REC"){
+            if (it.sourceType.toString() == "REC") {
                 listOfKnockOffData.add(settlementRepository.getPaymentDetailsInRec(it.sourceId?.toLong()))
-
-            }
-            else{
+            } else {
                 listOfKnockOffData.add(settlementRepository.getPaymentDetails(it.sourceId?.toLong()))
-
             }
         }
 

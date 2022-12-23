@@ -242,7 +242,7 @@ LIMIT 1
 
     @WithSpan
     @Query(
-            """
+        """
            SELECT
 	a.document_value,
 	s.settlement_date::TIMESTAMP,
@@ -267,14 +267,14 @@ LIMIT 1
 
     @WithSpan
     @Query(
-            """
+        """
               select source_id, source_type 
               from 
               settlements WHERE 
               destination_id = :documentNo AND source_type not in ('CTDS') 
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?):List<SettlementData>
+    suspend fun getSettlementDetails(documentNo: Long?): List<SettlementData>
 
     @WithSpan
     @Query(

@@ -6,7 +6,7 @@ import io.micronaut.data.annotation.MappedEntity
 
 @Introspected
 @MappedEntity
-class SettlementData (
+class SettlementData(
     var sourceId: Int?,
     var sourceType: SettlementType?,
 )
