@@ -454,8 +454,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM
                     account_utilizations
                 WHERE
-                    organization_name ILIKE :queryName 
-                    (:zone IS NULL OR zone_code = :zone)
+                    organization_name ILIKE :queryName
+                    AND (:zone IS NULL OR zone_code = :zone)
                     AND acc_mode = 'AP'
                     AND due_date IS NOT NULL
                     AND document_status in('FINAL', 'PROFORMA')
