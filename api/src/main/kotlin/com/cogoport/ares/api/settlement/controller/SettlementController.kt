@@ -23,6 +23,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
@@ -150,5 +151,10 @@ class SettlementController {
         return Response<OrgSummaryResponse>().ok(
             settlementService.getOrgSummary(request)
         )
+    }
+
+    @Post("/settle-with-source-and-destination-id")
+    suspend fun settleWithSourceIdAndDestinationId(@Valid @Body autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>? {
+        return settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
 }
