@@ -47,6 +47,5 @@ data class AccUtilizationRequest(
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var performedBy: UUID? = null,
     var performedByType: String? = null,
-    var migrated: Boolean?,
-    var paidTds: BigDecimal?
+    var migrated: Boolean?
 )
