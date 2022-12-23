@@ -190,7 +190,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         ageingBucket.forEach { it ->
-            var data = accountUtilizationRepository.generateOrgOutstanding(it.organizationId!!, request.zone)
+            var data = accountUtilizationRepository.generateBillOrgOutstanding(it.organizationId!!, request.zone)
             var dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
             var invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
             var paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
