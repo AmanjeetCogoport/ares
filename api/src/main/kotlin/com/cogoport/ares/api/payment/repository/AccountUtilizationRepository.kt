@@ -320,6 +320,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 END) AS not_due_amount,
             sum(
                 CASE WHEN acc_type in('PINV')
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS today_amount,        
+            sum(
+                CASE WHEN acc_type in('PINV')
                     and(now()::date - due_date) BETWEEN 1 AND 30 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
@@ -348,18 +355,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 END) AS oneeighty_amount,
             sum(
                 CASE WHEN acc_type in('PINV')
-                    and(now()::date - due_date) BETWEEN 180 AND 365 THEN
+                    and(now()::date - due_date) > 180 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
-                END) AS threesixfive_amount,
-            sum(
-                CASE WHEN acc_type in('PINV')
-                    and(now()::date - due_date) > 365 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END) AS threesixfiveplus_amount,
+                END) AS oneeightyplus_amount,
             sum(
                 CASE WHEN acc_type in('PINV') THEN
                     sign_flag * (amount_loc - pay_loc)
@@ -378,6 +378,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 ELSE
                     0
                 END) AS not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    1
+                ELSE
+                    0
+                END) AS today_count,
             sum(
                 CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
                     1
@@ -403,17 +409,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS oneeighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 THEN
+                CASE WHEN (now()::date - due_date) > 180 THEN
                     1
                 ELSE
                     0
-                END) AS threesixfive_count,
-            sum(
-                CASE WHEN (now()::date - due_date) > 365 THEN
-                    1
-                ELSE
-                    0
-                END) AS threesixfiveplus_count,
+                END) AS oneeightyplus_count,
             sum(
                 CASE WHEN (acc_type in('PCN')) THEN
                     1
@@ -436,7 +436,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND deleted_at IS NULL
         GROUP BY
             organization_id,
-            organization_name OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+            organization_name 
+        OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
         LIMIT :pageLimit        
         """
     )
@@ -453,7 +454,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM
                     account_utilizations
                 WHERE
-                    zone_code = 'NORTH'
+                    organization_name ILIKE :queryNameit 
+                    (:zone IS NULL OR zone_code = :zone)
                     AND acc_mode = 'AP'
                     AND due_date IS NOT NULL
                     AND document_status in('FINAL', 'PROFORMA')

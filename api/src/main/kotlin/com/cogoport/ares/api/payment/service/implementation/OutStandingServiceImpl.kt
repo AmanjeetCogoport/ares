@@ -189,31 +189,31 @@ class OutStandingServiceImpl : OutStandingService {
             listOrganizationIds.add(it.organizationId)
         }
 
-        ageingBucket.forEach {
+        ageingBucket.forEach { it ->
             var data = accountUtilizationRepository.generateOrgOutstanding(it.organizationId!!, request.zone)
             var dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-            var invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
-            var paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount.toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-            var outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount.toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
+            var invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
+            var paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
+            var outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
             var invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
             var paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-            var invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount!! }
-            var paymentsLedAmount = dataModel.sumOf { it.paymentsLedAmount!! }
-            var outstandingLedAmount = dataModel.sumOf { it.outstandingLedAmount!! }
+            var invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
+            var paymentsLedAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
+            var outstandingLedAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
             openSearchServiceImpl.validateDueAmount(invoicesDues)
             openSearchServiceImpl.validateDueAmount(paymentsDues)
             openSearchServiceImpl.validateDueAmount(outstandingDues)
             var orgId = it.organizationId
             var orgName = it.organizationName
             var orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
-            val zero = assignAgeingBucket("Not Due", it.notDueAmount, it.notDueCount, "not_due")
-            val thirty = assignAgeingBucket("1-30", it.thirtyAmount, it.thirtyCount, "1_30")
-            val sixty = assignAgeingBucket("31-60", it.sixtyAmount, it.sixtyCount, "31_60")
-            val ninety = assignAgeingBucket("61-90", it.ninetyAmount, it.ninetyCount, "61_90")
-            val oneEighty = assignAgeingBucket("91-180", it.oneeightyAmount, it.oneeightyCount, "91_180")
-            val threeSixtyFive = assignAgeingBucket("180-365", it.threesixfiveAmount, it.threesixfiveCount, "180_365")
-            val year = assignAgeingBucket("365+", it.threesixfiveplusAmount, it.threesixfiveplusCount, "365")
-            orgOutstanding.ageingBucket = listOf(zero, thirty, sixty, ninety, oneEighty, threeSixtyFive, year)
+            val zero = assignAgeingBucket("Not Due", it.notDueAmount?.abs(), it.notDueCount, "not_due")
+            val today = assignAgeingBucket("Today", it.todayAmount?.abs(), it.todayCount, "today")
+            val thirty = assignAgeingBucket("1-30", it.thirtyAmount?.abs(), it.thirtyCount, "1_30")
+            val sixty = assignAgeingBucket("31-60", it.sixtyAmount?.abs(), it.sixtyCount, "31_60")
+            val ninety = assignAgeingBucket("61-90", it.ninetyAmount?.abs(), it.ninetyCount, "61_90")
+            val oneEighty = assignAgeingBucket("91-180", it.oneeightyAmount?.abs(), it.oneeightyCount, "91_180")
+            val oneEightyPlus = assignAgeingBucket("185+", it.oneeightyplusAmount?.abs(), it.oneeightyplusCount, "180")
+            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, oneEightyPlus)
             listOrganization.add(orgOutstanding)
         }
 
