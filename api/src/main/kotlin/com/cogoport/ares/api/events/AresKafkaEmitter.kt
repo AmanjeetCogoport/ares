@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.model.payment.RestoreUtrResponse
@@ -44,4 +46,12 @@ interface AresKafkaEmitter {
     fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
     @Topic("settlement-migration")
     fun emitSettlementRecord(settlementRecord: SettlementRecord)
+
+    @Topic("update-utilization-amount")
+    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
+    @Topic("update-invoice-status-migration")
+    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus)
+
+    @Topic("update-bill-status-migration")
+    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
 }

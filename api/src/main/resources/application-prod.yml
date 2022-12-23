@@ -53,6 +53,8 @@ sentry:
 cogoport:
   api_url: https://api.cogoport.com
   bearer_token: 0b1848788c34b1099d33baa18f5e413744373abfdc193c69016bfe0e107f7532fc68487c243d90086a6034faea960efa4134395f5b06d1d77329a4b7c2759d15
+  bearer_token_new: ${BEARER_TOKEN}
+  auth_scope_id: ${AUTHORIZATION_SCOPE_ID}
   
 sage:
   soapUrl: ${SAGE_SOAP_URL}
