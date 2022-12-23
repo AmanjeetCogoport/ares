@@ -192,7 +192,10 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         receivableRequest.id = savedPayment.id
-//        receivableRequest.isPosted = false
+
+        if (receivableRequest.isPosted != true) {
+            receivableRequest.isPosted = false
+        }
         receivableRequest.isDeleted = false
         receivableRequest.paymentNum = payment.paymentNum
         receivableRequest.paymentNumValue = payment.paymentNumValue
