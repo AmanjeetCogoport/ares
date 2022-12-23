@@ -521,7 +521,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
-        if(receivableRequest.isPosted!!){
+        if (receivableRequest.isPosted!!) {
             accUtilizationModel.docStatus = DocumentStatus.FINAL
         }
         accUtilizationModel.docStatus = DocumentStatus.PROFORMA

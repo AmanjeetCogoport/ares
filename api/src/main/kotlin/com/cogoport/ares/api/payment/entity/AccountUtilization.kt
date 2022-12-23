@@ -46,5 +46,5 @@ data class AccountUtilization(
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var migrated: Boolean?,
-    var paidTds: BigDecimal?= 0.toBigDecimal()
+    var paidTds: BigDecimal? = 0.toBigDecimal()
 )
