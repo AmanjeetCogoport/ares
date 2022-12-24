@@ -6,7 +6,6 @@ import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.PaymentInvoiceInfo
-import com.cogoport.ares.model.settlement.event.SettlementData
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -224,21 +223,21 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 	s.source_id
 FROM
 	settlements s
-	LEFT JOIN payments p ON s.source_id = p.payment_num
+	INNER JOIN payments p ON s.source_id = p.payment_num
 WHERE
-	s.source_id = :documentNo
+	s.source_id in (:documentNo)
 	AND source_type NOT in('CTDS')
 	And(p.acc_mode = 'AR'
 		OR p.acc_mode IS NULL)
-    AND s.destination_type in ('SINV')
+    AND s.destination_type in ('SINV','SREIMB')
+        AND s.source_type = 'REC'
 ORDER BY
 	s.created_at DESC
-LIMIT 1
 
           
         """
     )
-    suspend fun getPaymentDetailsInRec(documentNo: Long?): PaymentInfoRec
+    suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
 
     @WithSpan
     @Query(
@@ -250,31 +249,31 @@ LIMIT 1
 	s.source_id
 FROM
 	settlements s
-	LEFT JOIN account_utilizations a ON s.source_id = a.document_no
+	INNER JOIN account_utilizations a ON s.source_id = a.document_no
 WHERE
-	s.source_id = :documentNo
+	s.source_id in (:documentNo)
 	AND source_type NOT in('CTDS')
 	And(a.acc_mode = 'AR'
 		OR a.acc_mode IS NULL)
-    AND s.destination_type in ('SINV')
+    AND s.destination_type in ('SINV', 'SREIMB')
+    AND s.source_type <> 'REC'
 ORDER BY
 	s.created_at DESC
-LIMIT 1
           
         """
     )
-    suspend fun getPaymentDetails(documentNo: Long?): PaymentInvoiceInfo
+    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInvoiceInfo>
 
     @WithSpan
     @Query(
         """
-              select source_id, source_type 
+              select source_id
               from 
               settlements WHERE 
-              destination_id = :documentNo AND source_type not in ('CTDS') 
+              destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV', 'SREIMB')
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?): List<SettlementData>
+    suspend fun getSettlementDetails(documentNo: Long?): List<Int>
 
     @WithSpan
     @Query(
