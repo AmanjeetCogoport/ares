@@ -423,6 +423,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         FROM
             account_utilizations
         WHERE
+            organization_name ILIKE :queryName
             (:zone IS NULL OR zone_code = :zone)
             AND acc_mode = 'AP'
             AND due_date IS NOT NULL
@@ -434,7 +435,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND deleted_at IS NULL
         GROUP BY
             organization_id
-        HAVING max(organization_name) ILIKE :queryName
         OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
         LIMIT :pageLimit        
         """
