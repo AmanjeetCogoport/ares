@@ -14,7 +14,7 @@ class UtilizationUpdateScheduler() {
 
     @Inject lateinit var paymentMigrationWrapper: PaymentMigrationWrapper
 
-    @Scheduled(cron = "0 34 12 ? * *")
+    @Scheduled(cron = "0 30 5 ? * *")
     fun updateUtilizationValues() = runBlocking {
         try {
             logger().info("Running scheduler for updating payment utilization amount")
