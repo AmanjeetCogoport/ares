@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.model.payment.PaymentCode
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -50,4 +51,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun findByTransRef(transRefNumber: String?): List<Payment>
+
+    @WithSpan
+    @Query(
+        """
+            SELECT id FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null  
+        """
+    )
+    suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Long
 }

@@ -132,8 +132,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
-                            paymentStatus = Utilities.getPaymentStatus(accUtilRes)
-                        )
+                            paymentStatus = Utilities.getPaymentStatus(accUtilRes),
+                        ),
+                        knockoffDocuments = null,
                     )
                 )
             }
@@ -235,10 +236,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-        accountUtilization.payCurr = newPayCurr
-        accountUtilization.payLoc = newPayLoc
 
-        accUtilRepository.update(accountUtilization)
+        if (!newPayCurr.equals(0)) {
+            accountUtilization.payCurr = newPayCurr
+        }
+        if (!newPayLoc.equals(0)) {
+            accountUtilization.payLoc = newPayLoc
+        }
 
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
@@ -254,6 +258,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
 
         val data = accUtilRepository.update(accountUtilization)
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
