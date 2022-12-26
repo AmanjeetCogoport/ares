@@ -110,7 +110,7 @@ class OutStandingServiceImpl : OutStandingService {
         val response = mutableListOf<CustomerInvoiceResponse?>()
         val list: SearchResponse<CustomerInvoiceResponse>? = OpenSearchClient().searchList(
             searchKey = request.orgId,
-            classType = CustomerInvoiceResponse ::class.java,
+            classType = CustomerInvoiceResponse::class.java,
             index = AresConstants.INVOICE_OUTSTANDING_INDEX,
             offset = offset,
             limit = request.pageLimit
@@ -212,7 +212,7 @@ class OutStandingServiceImpl : OutStandingService {
             val sixty = assignAgeingBucket("31-60", it.sixtyAmount?.abs(), it.sixtyCount, "31_60")
             val ninety = assignAgeingBucket("61-90", it.ninetyAmount?.abs(), it.ninetyCount, "61_90")
             val oneEighty = assignAgeingBucket("91-180", it.oneeightyAmount?.abs(), it.oneeightyCount, "91_180")
-            val oneEightyPlus = assignAgeingBucket("185+", it.oneeightyplusAmount?.abs(), it.oneeightyplusCount, "180")
+            val oneEightyPlus = assignAgeingBucket("180+", it.oneeightyplusAmount?.abs(), it.oneeightyplusCount, "180")
             orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, oneEightyPlus)
             listOrganization.add(orgOutstanding)
         }

@@ -310,7 +310,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         SELECT
             organization_id,
-            organization_name,
+            max(organization_name) as organization_name,
             sum(
                 CASE WHEN (acc_type in('PINV')
                     and(due_date >= now()::date)) THEN
@@ -423,9 +423,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         FROM
             account_utilizations
         WHERE
-            organization_name ILIKE :queryName
-            and(:zone IS NULL
-                OR zone_code = :zone)
+            (:zone IS NULL OR zone_code = :zone)
             AND acc_mode = 'AP'
             AND due_date IS NOT NULL
             AND document_status in('FINAL', 'PROFORMA')
@@ -435,8 +433,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND acc_type in('PINV', 'PCN')
             AND deleted_at IS NULL
         GROUP BY
-            organization_id,
-            organization_name 
+            organization_id
+        HAVING max(organization_name) ILIKE :queryName
         OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
         LIMIT :pageLimit        
         """
