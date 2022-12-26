@@ -1855,11 +1855,14 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private fun updateBalanceAmount(
+    private suspend fun updateBalanceAmount(
         accountUtilization: AccountUtilization,
         performedBy: UUID,
         performedByUserType: String?
     ) {
+
+        var knockOffDocuments = knockOffListData(accountUtilization)
+
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
@@ -1868,9 +1871,23 @@ open class SettlementServiceImpl : SettlementService {
                     performedBy = performedBy,
                     performedByUserType = performedByUserType,
                     paymentStatus = Utilities.getPaymentStatus(accountUtilization)
-                )
+                ),
+                knockoffDocuments = knockOffDocuments
+
             )
         )
+    }
+
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<Any> {
+
+        val listOfKnockOffData: MutableList<Any> = mutableListOf()
+
+        var listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
+
+        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
+        listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))
+
+        return listOfKnockOffData
     }
 
     /**
