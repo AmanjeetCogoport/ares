@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
+import com.cogoport.ares.api.payment.entity.BillOutsatndingAgeing
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -307,6 +308,167 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @WithSpan
     @Query(
         """
+        SELECT
+            organization_id,
+            max(organization_name) as organization_name,
+            sum(
+                CASE WHEN (acc_type in('PINV')
+                    and(due_date >= now()::date)) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS not_due_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS today_amount,        
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS thirty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS sixty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS ninety_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS oneeighty_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) > 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS oneeightyplus_amount,
+            sum(
+                CASE WHEN acc_type in('PINV') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS total_outstanding,
+            sum(
+                CASE WHEN acc_type in('PCN') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS total_credit_amount,
+            sum(
+                CASE WHEN due_date >= now()::date THEN
+                    1
+                ELSE
+                    0
+                END) AS not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    1
+                ELSE
+                    0
+                END) AS today_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    1
+                ELSE
+                    0
+                END) AS thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    1
+                ELSE
+                    0
+                END) AS sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    1
+                ELSE
+                    0
+                END) AS ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    1
+                ELSE
+                    0
+                END) AS oneeighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 180 THEN
+                    1
+                ELSE
+                    0
+                END) AS oneeightyplus_count,
+            sum(
+                CASE WHEN (acc_type in('PCN')) THEN
+                    1
+                ELSE
+                    0
+                END) AS credit_note_count
+        FROM
+            account_utilizations
+        WHERE
+            organization_name ILIKE :queryName
+            (:zone IS NULL OR zone_code = :zone)
+            AND acc_mode = 'AP'
+            AND due_date IS NOT NULL
+            AND document_status in('FINAL', 'PROFORMA')
+            AND organization_id IS NOT NULL
+            and(:orgId IS NULL
+                OR organization_id = :orgId::uuid)
+            AND acc_type in('PINV', 'PCN')
+            AND deleted_at IS NULL
+        GROUP BY
+            organization_id
+        OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+        LIMIT :pageLimit        
+        """
+    )
+    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<BillOutsatndingAgeing>
+
+    @WithSpan
+    @Query(
+        """
+            SELECT
+                count(t.organization_id)
+            FROM (
+                SELECT
+                    organization_id
+                FROM
+                    account_utilizations
+                WHERE
+                    organization_name ILIKE :queryName
+                    AND (:zone IS NULL OR zone_code = :zone)
+                    AND acc_mode = 'AP'
+                    AND due_date IS NOT NULL
+                    AND document_status in('FINAL', 'PROFORMA')
+                    AND organization_id IS NOT NULL
+                    AND acc_type = 'PINV'
+                    AND deleted_at IS NULL
+                GROUP BY
+                    organization_id) AS t 
+        """
+    )
+    suspend fun getBillsOutstandingAgeingBucketCount(zone: String?, queryName: String?, orgId: String?): Int
+
+    @WithSpan
+    @Query(
+        """
         select organization_id::varchar, currency,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
@@ -323,6 +485,25 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    @WithSpan
+    @Query(
+        """
+        select organization_id::varchar, currency,
+        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
+        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+        sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+        sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
+        sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
+        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
+        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+        from account_utilizations
+        where acc_type in ('PINV','PCN','PDN','PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
+        group by organization_id, currency
+        """
+    )
+    suspend fun generateBillOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
 
     @WithSpan
     @Query(
