@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -30,6 +31,10 @@ class OutstandingController {
     @Get("/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList? {
         return Response<OutstandingList?>().ok(outStandingService.getOutstandingList(request))
+    }
+    @Get("/bill-overall{?request*}")
+    suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): BillOutstandingList? {
+        return Response<BillOutstandingList?>().ok(outStandingService.getBillsOutstandingList(request))
     }
 
     @Get("/invoice-list{?request*}")
