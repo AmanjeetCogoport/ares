@@ -7,5 +7,5 @@ import io.micronaut.core.annotation.Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class UpdateInvoiceBalanceEvent(
     var invoiceBalance: InvoiceBalance,
-    var knockoffDocuments: List<Any>? = null
+    var knockoffDocuments: List<PaymentInfoRec>? = null
 )
