@@ -373,43 +373,43 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS total_credit_amount,
             sum(
-                CASE WHEN due_date >= now()::date THEN
+                CASE WHEN due_date >= now()::date AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS not_due_count,
             sum(
-                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS today_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS thirty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS sixty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS ninety_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
                 END) AS oneeighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 180 THEN
+                CASE WHEN (now()::date - due_date) > 180 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
@@ -429,6 +429,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND due_date IS NOT NULL
             AND document_status in('FINAL', 'PROFORMA')
             AND organization_id IS NOT NULL
+            AND amount_curr - pay_curr > 0
             and(:orgId IS NULL
                 OR organization_id = :orgId::uuid)
             AND acc_type in('PINV', 'PCN')
@@ -489,8 +490,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
         select organization_id::varchar, currency,
-        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
-        sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+        sum(case when acc_type not in ('PAY', 'PCN', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
+        sum(case when acc_type not in ('PAY', 'PCN', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
         sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
         sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
         sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
@@ -498,7 +499,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('PINV','PCN','PDN','PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
+        where acc_type in ('PINV', 'PCN', 'PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
         and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
         group by organization_id, currency
         """
