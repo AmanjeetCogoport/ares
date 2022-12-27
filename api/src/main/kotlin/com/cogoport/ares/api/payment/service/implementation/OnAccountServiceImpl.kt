@@ -192,7 +192,10 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         receivableRequest.id = savedPayment.id
-        receivableRequest.isPosted = false
+
+        if (receivableRequest.isPosted != true) {
+            receivableRequest.isPosted = false
+        }
         receivableRequest.isDeleted = false
         receivableRequest.paymentNum = payment.paymentNum
         receivableRequest.paymentNumValue = payment.paymentNumValue
@@ -504,7 +507,11 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isPosted = false
+
+        if (payment.isPosted != true) {
+            payment.isPosted = false
+        }
+//        payment.isPosted = false
         payment.isDeleted = false
     }
 
@@ -521,7 +528,10 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
-        accUtilizationModel.docStatus = DocumentStatus.PROFORMA
+        accUtilizationModel.docStatus = when (receivableRequest.isPosted!!) {
+            true -> DocumentStatus.FINAL
+            false -> DocumentStatus.PROFORMA
+        }
         accUtilizationModel.migrated = false
     }
 
