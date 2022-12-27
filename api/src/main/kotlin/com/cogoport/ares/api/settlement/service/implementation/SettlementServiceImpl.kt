@@ -1822,7 +1822,7 @@ open class SettlementServiceImpl : SettlementService {
             )
             updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
-            emitDashboardAndOutstandingEvent(paymentUtilization)
+//            emitDashboardAndOutstandingEvent(paymentUtilization)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -1862,7 +1862,7 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        var knockOffDocuments = knockOffListData(accountUtilization)
+        val knockOffDocuments = knockOffListData(accountUtilization)
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
@@ -1883,9 +1883,9 @@ open class SettlementServiceImpl : SettlementService {
 
         val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
-        var listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
+        val listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
 
-        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
+        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId!!))
         listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))
 
         return listOfKnockOffData
