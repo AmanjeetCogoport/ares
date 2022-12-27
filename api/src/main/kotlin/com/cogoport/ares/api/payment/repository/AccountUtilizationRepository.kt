@@ -997,7 +997,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
         COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND (:documentValues is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
+        WHERE acc_mode = 'AR' AND ((:documentValues) is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
         AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null
         GROUP BY tagged_organization_id) output
         ORDER BY
@@ -1051,7 +1051,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
         COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND (:documentValues is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
+        WHERE acc_mode = 'AR' AND ((:documentValues) is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
         AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null
         GROUP BY tagged_organization_id) as output
         """
