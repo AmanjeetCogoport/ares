@@ -217,7 +217,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
         SELECT
-	p.trans_ref_number,
+	p.trans_ref_number as document_number,
 	s.settlement_date::TIMESTAMP,
 	s.source_type,
 	s.source_id
@@ -243,7 +243,7 @@ ORDER BY
     @Query(
         """
            SELECT
-	a.document_value,
+	a.document_value as document_number,
 	s.settlement_date::TIMESTAMP,
 	s.source_type,
 	s.source_id
@@ -262,7 +262,7 @@ ORDER BY
           
         """
     )
-    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInvoiceInfo>
+    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInfoRec>
 
     @WithSpan
     @Query(

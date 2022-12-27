@@ -59,6 +59,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
+import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
@@ -1878,9 +1879,9 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<Any> {
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec> {
 
-        val listOfKnockOffData: MutableList<Any> = mutableListOf()
+        val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
         var listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
 

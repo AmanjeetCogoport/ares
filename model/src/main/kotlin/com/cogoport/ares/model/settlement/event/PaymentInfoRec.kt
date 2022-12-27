@@ -8,7 +8,7 @@ import java.sql.Timestamp
 @Introspected
 @MappedEntity
 class PaymentInfoRec(
-    var transRefNumber: String? = null,
+    var documentNumber: String? = null,
     var settlementDate: Timestamp?,
     var sourceType: SettlementType?,
     var sourceId: Int?
