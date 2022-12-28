@@ -6,7 +6,7 @@ import io.micronaut.data.annotation.MappedEntity
 @Introspected
 @MappedEntity
 data class CustomerStatsRequest(
-    val docValues: List<String>,
+    val docValues: List<String>?,
     val bookingPartyId: String?,
     val pageIndex: Int,
     val pageSize: Int,

@@ -11,7 +11,6 @@ import java.time.format.DateTimeFormatter
 
 @Singleton
 class UtilizationUpdateScheduler {
-
     @Inject lateinit var paymentMigrationWrapper: PaymentMigrationWrapper
 
     @Scheduled(cron = "0 30 5 ? * *")

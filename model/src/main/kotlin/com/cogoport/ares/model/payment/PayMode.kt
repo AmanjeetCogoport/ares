@@ -6,5 +6,6 @@ enum class PayMode(val dbValue: String) {
     CHQ("CHQ"),
     NEFT("NEFT"),
     RTGS("RTGS"),
-    BANK("BANK")
+    BANK("BANK"),
+    GATEWAY("GATEWAY")
 }

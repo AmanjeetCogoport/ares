@@ -9,5 +9,5 @@ data class InvoiceBalance(
     val balanceAmount: BigDecimal,
     val performedBy: UUID?,
     val performedByUserType: String?,
-    val paymentStatus: PaymentStatus
+    val paymentStatus: PaymentStatus,
 )
