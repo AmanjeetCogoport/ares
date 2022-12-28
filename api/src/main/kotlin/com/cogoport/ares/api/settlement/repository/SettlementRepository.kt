@@ -232,6 +232,7 @@ WHERE
         AND s.source_type = 'REC'
 ORDER BY
 	s.created_at DESC
+       
           
         """
     )

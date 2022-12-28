@@ -1862,7 +1862,7 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        val knockOffDocuments = knockOffListData(accountUtilization)
+        var knockOffDocuments = knockOffListData(accountUtilization)
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
