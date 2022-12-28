@@ -5,7 +5,6 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
-import com.cogoport.ares.model.settlement.event.PaymentInvoiceInfo
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -233,8 +232,7 @@ WHERE
         AND s.source_type = 'REC'
 ORDER BY
 	s.created_at DESC
-
-          
+	
         """
     )
     suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
