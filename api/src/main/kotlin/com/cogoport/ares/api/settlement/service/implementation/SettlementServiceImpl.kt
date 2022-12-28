@@ -1822,7 +1822,7 @@ open class SettlementServiceImpl : SettlementService {
             )
             updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
-//            emitDashboardAndOutstandingEvent(paymentUtilization)
+            emitDashboardAndOutstandingEvent(paymentUtilization)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -1863,27 +1863,27 @@ open class SettlementServiceImpl : SettlementService {
     ) {
 
         val knockOffDocuments = knockOffListData(accountUtilization)
-//
-//        aresKafkaEmitter.emitInvoiceBalance(
-//            invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
-//                invoiceBalance = InvoiceBalance(
-//                    invoiceId = accountUtilization.documentNo,
-//                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
-//                    performedBy = performedBy,
-//                    performedByUserType = performedByUserType,
-//                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
-//                ),
-//                knockoffDocuments = knockOffDocuments
-//
-//            )
-//        )
+
+        aresKafkaEmitter.emitInvoiceBalance(
+            invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
+                invoiceBalance = InvoiceBalance(
+                    invoiceId = accountUtilization.documentNo,
+                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+                    performedBy = performedBy,
+                    performedByUserType = performedByUserType,
+                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+                ),
+                knockoffDocuments = knockOffDocuments
+
+            )
+        )
     }
 
     private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec> {
 
         val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
-        val listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
+        var listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
 
         listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
         listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))

@@ -216,22 +216,23 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
         SELECT
-            p.trans_ref_number as document_number,
-	        s.settlement_date::TIMESTAMP,
-	        s.source_type,
-	        s.source_id
-        FROM
-	        settlements s
-	    INNER JOIN payments p ON s.source_id = p.payment_num
-        WHERE
-	        s.source_id in (:documentNo)
-	        AND source_type NOT in('CTDS')
-	        And(p.acc_mode = 'AR'
-		    OR p.acc_mode IS NULL)
-            AND s.destination_type in ('SINV','SREIMB')
-            AND s.source_type = 'REC'
-        ORDER BY
-	        s.created_at DESC  
+	p.trans_ref_number as document_number,
+	s.settlement_date::TIMESTAMP,
+	s.source_type,
+	s.source_id
+FROM
+	settlements s
+	INNER JOIN payments p ON s.source_id = p.payment_num
+WHERE
+	s.source_id in (:documentNo)
+	AND source_type NOT in('CTDS')
+	And(p.acc_mode = 'AR'
+		OR p.acc_mode IS NULL)
+    AND s.destination_type in ('SINV','SREIMB')
+        AND s.source_type = 'REC'
+ORDER BY
+	s.created_at DESC
+          
         """
     )
     suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
@@ -240,25 +241,26 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
            SELECT
-                a.document_value as document_number,
-	            s.settlement_date::TIMESTAMP,
-	            s.source_type,
-	            s.source_id
-            FROM
-	            settlements s
-	        INNER JOIN account_utilizations a ON s.source_id = a.document_no
-            WHERE
-	            s.source_id in (:documentNo)
-	            AND source_type NOT in('CTDS')
-	            And(a.acc_mode = 'AR'
-		        OR a.acc_mode IS NULL)
-                AND s.destination_type in ('SINV', 'SREIMB')
-                AND s.source_type <> 'REC'
-            ORDER BY
-	            s.created_at DESC
+	a.document_value as document_number,
+	s.settlement_date::TIMESTAMP,
+	s.source_type,
+	s.source_id
+FROM
+	settlements s
+	INNER JOIN account_utilizations a ON s.source_id = a.document_no
+WHERE
+	s.source_id in (:documentNo)
+	AND source_type NOT in('CTDS')
+	And(a.acc_mode = 'AR'
+		OR a.acc_mode IS NULL)
+    AND s.destination_type in ('SINV', 'SREIMB')
+    AND s.source_type <> 'REC'
+ORDER BY
+	s.created_at DESC
+          
         """
     )
-    suspend fun getKnockOffDocument(documentNo: List<Int?>?): List<PaymentInfoRec>
+    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInfoRec>
 
     @WithSpan
     @Query(
@@ -269,7 +271,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
               destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV', 'SREIMB')
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?): List<Int?>
+    suspend fun getSettlementDetails(documentNo: Long?): List<Int>
 
     @WithSpan
     @Query(
