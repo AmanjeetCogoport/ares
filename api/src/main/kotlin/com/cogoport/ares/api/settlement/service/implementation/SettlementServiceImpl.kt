@@ -1863,20 +1863,20 @@ open class SettlementServiceImpl : SettlementService {
     ) {
 
         val knockOffDocuments = knockOffListData(accountUtilization)
-
-        aresKafkaEmitter.emitInvoiceBalance(
-            invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
-                invoiceBalance = InvoiceBalance(
-                    invoiceId = accountUtilization.documentNo,
-                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
-                    performedBy = performedBy,
-                    performedByUserType = performedByUserType,
-                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
-                ),
-                knockoffDocuments = knockOffDocuments
-
-            )
-        )
+//
+//        aresKafkaEmitter.emitInvoiceBalance(
+//            invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
+//                invoiceBalance = InvoiceBalance(
+//                    invoiceId = accountUtilization.documentNo,
+//                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+//                    performedBy = performedBy,
+//                    performedByUserType = performedByUserType,
+//                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+//                ),
+//                knockoffDocuments = knockOffDocuments
+//
+//            )
+//        )
     }
 
     private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec> {
@@ -1885,7 +1885,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
 
-        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId!!))
+        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
         listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))
 
         return listOfKnockOffData

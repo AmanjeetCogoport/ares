@@ -234,7 +234,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 	        s.created_at DESC  
         """
     )
-    suspend fun getPaymentDetailsInRec(documentNo: List<Int?>?): List<PaymentInfoRec>
+    suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
 
     @WithSpan
     @Query(
@@ -269,7 +269,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
               destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV', 'SREIMB')
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?): List<Int?>?
+    suspend fun getSettlementDetails(documentNo: Long?): List<Int?>
 
     @WithSpan
     @Query(
