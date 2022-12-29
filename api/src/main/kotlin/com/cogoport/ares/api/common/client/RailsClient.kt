@@ -1,10 +1,13 @@
 package com.cogoport.ares.api.common.client
 
+import com.cogoport.ares.model.settlement.CreditPaymentRequest
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.client.annotation.Client
 import java.util.UUID
 
@@ -21,4 +24,7 @@ interface RailsClient {
 
     @Get("/list_organization_trade_party_details?filters%5Bid%5D={id}")
     suspend fun getListOrganizationTradePartyDetails(id: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Post("/create_organization_credit_consumption")
+    suspend fun sendInvoicePaymentKnockOff(@Body request: CreditPaymentRequest): String
 }

@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
@@ -22,6 +23,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
@@ -33,6 +35,7 @@ import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
@@ -46,6 +49,8 @@ import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
+import com.cogoport.ares.model.settlement.CreditPaymentDocuments
+import com.cogoport.ares.model.settlement.CreditPaymentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.HistoryDocument
@@ -149,6 +154,10 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
+
+    @Inject lateinit var railsClient: RailsClient
+
+    @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -2018,6 +2027,13 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl
             )
         val settleDoc = settlementRepository.save(settledDoc)
+
+        try {
+            aresKafkaEmitter.emitUnfreezeCreditConsumption(settleDoc)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.SETTLEMENT,
@@ -2343,5 +2359,66 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return documentModel
+    }
+
+    override suspend fun sendKnockOffDataToCreditConsumption(request: Settlement) {
+        val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.destinationId, "paymentMode")
+
+        if (invoiceData == null || invoiceData.value.toString().isBlank()) {
+            return
+        }
+
+        var transRefNumber: String? = null
+        if (request.sourceType == SettlementType.REC) {
+            transRefNumber = paymentRepo.findByPaymentId(request.sourceId).transRefNumber
+        }
+
+        val destinationDocument = accountUtilizationRepository.findRecord(request.destinationId, request.destinationType.name)
+
+        val payCurrency = "INR"
+        val transactionType = "credit"
+
+        val paymentRequest = CreditPaymentRequest(
+            organizationId = destinationDocument?.taggedOrganizationId,
+            invoiceNumber = destinationDocument?.documentValue!!,
+            invoiceDate = destinationDocument.dueDate.toString(),
+            invoiceDueDate = destinationDocument.dueDate.toString(),
+            invoiceAmount = destinationDocument.amountLoc,
+            paidAmount = request.amount,
+            transactionType = transactionType,
+            currency = payCurrency,
+            proformaNumber = destinationDocument.documentValue,
+            documents = arrayListOf(
+                CreditPaymentDocuments(
+                    documentType = destinationDocument.serviceType,
+                    documentPdfUrl = destinationDocument.serviceType
+                )
+            ),
+            paymentDate = request.settlementDate.toString(),
+            transactionRefNumber = transRefNumber,
+            isIRNGenerated = true
+        )
+
+        var response: String? = ""
+        response = try {
+            railsClient.sendInvoicePaymentKnockOff(paymentRequest)
+        } catch (e: Exception) {
+            logger().error(e.toString())
+            e.localizedMessage.toString()
+        }
+
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                id = null,
+                apiName = "CreditConsumption",
+                apiType = "On_Credit",
+                objectId = request.destinationId,
+                objectName = "UNFREEZE_CREDIT",
+                httpResponseCode = "",
+                requestParams = request.toString(),
+                response = response.toString(),
+                isSuccess = true
+            )
+        )
     }
 }

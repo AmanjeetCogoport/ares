@@ -3,6 +3,7 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -80,4 +81,7 @@ class AresKafkaListener {
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
+
+    @Topic("unfreeze-credit-consumpation")
+    suspend fun unfreezeCreditConsumption(request: Settlement) = run { settlementService.sendKnockOffDataToCreditConsumption(request) }
 }
