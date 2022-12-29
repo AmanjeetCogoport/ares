@@ -58,6 +58,7 @@ import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.event.EventData
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
@@ -1862,7 +1863,18 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        var knockOffDocuments = knockOffListData(accountUtilization)
+
+
+
+       var knockOffDocuments :List<PaymentInfoRec>? = null
+       if(accountUtilization.accType == AccountType.SINV)
+         knockOffDocuments = knockOffListData(accountUtilization)
+
+        var eventData = EventData(
+        knockOffData = knockOffDocuments,
+        errorMessage = null
+        )
+
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
@@ -1873,13 +1885,13 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = performedByUserType,
                     paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 ),
-                knockoffDocuments = knockOffDocuments
+                    eventData = eventData
 
             )
         )
     }
 
-    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec> {
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec>? {
 
         val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
