@@ -1866,9 +1866,6 @@ open class SettlementServiceImpl : SettlementService {
         if (accountUtilization.accType == AccountType.SINV)
             knockOffDocuments = knockOffListData(accountUtilization)
 
-
-
-
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
@@ -1878,7 +1875,7 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = performedByUserType,
                     paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 ),
-                    knockOffDocuments = knockOffDocuments
+                knockOffDocuments = knockOffDocuments
 
             )
         )
