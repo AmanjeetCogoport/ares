@@ -228,7 +228,7 @@ WHERE
 	AND source_type NOT in('CTDS')
 	And(p.acc_mode = 'AR'
 		OR p.acc_mode IS NULL)
-    AND s.destination_type in ('SINV', 'SREIMB')
+    AND s.destination_type in ('SINV','SREIMB')
         AND s.source_type = 'REC'
 ORDER BY
 	s.created_at DESC
@@ -253,7 +253,7 @@ WHERE
 	AND source_type NOT in('CTDS')
 	And(a.acc_mode = 'AR'
 		OR a.acc_mode IS NULL)
-    AND s.destination_type in ('SINV', 'SREIMB')
+    AND s.destination_type in ('SINV','SREIMB')
     AND s.source_type <> 'REC'
 ORDER BY
 	s.created_at DESC
@@ -268,7 +268,7 @@ ORDER BY
               select source_id
               from 
               settlements WHERE 
-              destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV', 'SREIMB)
+              destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB')
         """
     )
     suspend fun getSettlementDetails(documentNo: Long?): List<Int>
