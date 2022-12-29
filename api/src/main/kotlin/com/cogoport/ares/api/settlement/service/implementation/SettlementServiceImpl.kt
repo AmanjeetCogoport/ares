@@ -1862,7 +1862,9 @@ open class SettlementServiceImpl : SettlementService {
         performedByUserType: String?
     ) {
 
-        var knockOffDocuments = knockOffListData(accountUtilization)
+        var knockOffDocuments: List<PaymentInfoRec>? = null
+        if (accountUtilization.accType == AccountType.SINV)
+            knockOffDocuments = knockOffListData(accountUtilization)
 
         aresKafkaEmitter.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
@@ -1873,13 +1875,13 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = performedByUserType,
                     paymentStatus = Utilities.getPaymentStatus(accountUtilization)
                 ),
-                knockoffDocuments = knockOffDocuments
+                knockOffDocuments = knockOffDocuments
 
             )
         )
     }
 
-    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec> {
+    private suspend fun knockOffListData(accountUtilization: AccountUtilization): List<PaymentInfoRec>? {
 
         val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
