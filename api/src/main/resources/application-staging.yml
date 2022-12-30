@@ -36,6 +36,8 @@ r2dbc:
           password: ${DB_PASSWORD}
 
 kafka:
+  health:
+    enabled: false
   bootstrap:
     servers: ${KAFKA_SERVERS}
   security:
