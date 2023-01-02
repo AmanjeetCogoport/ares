@@ -27,6 +27,7 @@ enum class ServiceType {
     FCL_FREIGHT_LOCAL,
     DOMESTIC_AIR_FREIGHT,
     INSURANCE,
+    EXPENSE,
     AIR_FREIGHT_LOCAL
 }
 
