@@ -17,11 +17,11 @@ CREATE TYPE public."jv_status" AS ENUM (
 CREATE CAST (varchar AS JV_CATEGORY) WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS JV_STATUS) WITH INOUT AS IMPLICIT;
 
-insert into payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
-values('JV',1,now(),now());
+INSERT INTO payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
+VALUES('JV',1,now(),now());
 
 
-create table public.parent_journal_vouchers (
+CREATE TABLE public.parent_journal_vouchers (
     id bigserial constraint parent_journal_PK primary key,
     jv_num varchar(25) not null,
     category jv_category not null,

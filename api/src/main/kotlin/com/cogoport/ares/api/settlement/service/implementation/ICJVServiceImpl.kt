@@ -120,12 +120,8 @@ open class ICJVServiceImpl : ICJVService {
 
         val jvList = mutableListOf<JournalVoucherResponse>()
         documentEntity.forEach { doc ->
-            val jvData = journalVoucherConverter.convertToModelResponse((doc))
-            jvData.id = Hashids.encode(jvData.id!!).toLong()
-            jvData.parentJvId = Hashids.encode(jvData.parentJvId!!.toLong())
-            jvList.add(jvData)
+            jvList.add(journalVoucherConverter.convertToModelResponse((doc)))
         }
-
         return jvList
     }
     private fun validateCreateRequest(request: ParentJournalVoucherRequest) {

@@ -1,2 +1,2 @@
 ALTER TABLE journal_vouchers
-ADD COLUMN jv_id VARCHAR;
+ADD COLUMN parent_jv_id VARCHAR;

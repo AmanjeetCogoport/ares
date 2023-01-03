@@ -131,7 +131,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.parent_jv_id
             FROM journal_vouchers j 
             Where 
-                j.parent_jv_id = :parentId
+                j.parent_jv_id = :parentId::VARCHAR
         """
     )
     suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
