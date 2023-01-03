@@ -103,4 +103,36 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         """
     )
     suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID)
+
+    @WithSpan
+    @Query(
+        """
+            SELECT 
+            j.id,
+            j.entity_id,
+            j.entity_code,
+            j.jv_num,
+            j.type, 
+            j.category,
+            j.validity_date,
+            j.currency,
+            j.led_currency,
+            j.amount,
+            j.status,
+            j.exchange_rate,
+            j.trade_party_id,
+            j.trade_party_name,
+            j.created_at,
+            j.created_by,
+            j.updated_at,
+            j.updated_by,
+            j.description as description,
+            j.acc_mode,
+            j.parent_jv_id
+            FROM journal_vouchers j 
+            Where 
+                j.parent_jv_id = :parentId
+        """
+    )
+    suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
 }

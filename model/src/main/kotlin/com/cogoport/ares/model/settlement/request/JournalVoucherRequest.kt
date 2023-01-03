@@ -26,5 +26,6 @@ data class JournalVoucherRequest(
     val tradePartyName: String,
     var createdBy: UUID?,
     var accMode: AccMode,
-    var description: String?
+    var description: String?,
+    var parentJvId: String? = null,
 )
