@@ -74,8 +74,8 @@ open class ICJVServiceImpl : ICJVService {
 
         val parentData = ParentJournalVoucher(
             id = null,
-            status = request.status,
-            category = request.category,
+            status = request.status!!,
+            category = request.category!!,
             jvNum = parentJvNumber,
             createdBy = request.createdBy,
             updatedBy = request.createdBy
