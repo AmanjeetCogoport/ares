@@ -4,10 +4,13 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
+import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.api.settlement.repository.JournalVoucherParentRepo
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.ICJVService
@@ -18,16 +21,26 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.enums.IncidentStatus
+import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
+import com.cogoport.hades.model.incident.response.InterCompanyJournalVoucher
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Date
+import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import javax.transaction.Transactional
 
 @Singleton
 open class ICJVServiceImpl : ICJVService {
@@ -47,6 +60,13 @@ open class ICJVServiceImpl : ICJVService {
     @Inject
     lateinit var journalVoucherRepository: JournalVoucherRepository
 
+    @Inject
+    lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var auditService: AuditService
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
         validateCreateRequest(request)
 
@@ -61,6 +81,7 @@ open class ICJVServiceImpl : ICJVService {
             updatedBy = request.createdBy
         )
         val parentJvData = journalVoucherParentRepo.save(parentData)
+        val incidentModelData = mutableListOf<com.cogoport.hades.model.incident.JournalVoucher>()
 
         request.list.mapIndexed { index, it ->
             it.jvNum = parentJvNumber + "/L${index + 1}"
@@ -74,12 +95,15 @@ open class ICJVServiceImpl : ICJVService {
                 val formattedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it.validityDate)
                 val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(it)
                 incidentRequestModel.validityDate = Date.valueOf(formattedDate)
-//                journalVoucherService.sendToIncidentManagement(it, incidentRequestModel)
+                incidentModelData.add(incidentRequestModel)
             } else {
                 val signFlag = getSignFlag(it.accMode, it.type)
                 journalVoucherService.createJvAccUtil(jvEntity, it.accMode, signFlag)
             }
         }
+
+        sendToIncidentManagement(parentJvData, incidentModelData)
+
         return Hashids.encode(parentJvData.id!!)
     }
 
@@ -150,5 +174,120 @@ open class ICJVServiceImpl : ICJVService {
                 throw AresException(AresError.ERR_1009, "JV type")
             }
         }
+    }
+
+    private suspend fun sendToIncidentManagement(
+        parentJvData: ParentJournalVoucher,
+        data: MutableList<com.cogoport.hades.model.incident.JournalVoucher>
+    ) {
+        val interCompanyJournalVoucherRequest = InterCompanyJournalVoucher(
+            status = parentJvData.status.toString(),
+            category = parentJvData.category.toString(),
+            createdBy = parentJvData.createdBy.toString(),
+            id = parentJvData.id.toString(),
+            jvNum = parentJvData.jvNum!!,
+            list = data
+        )
+
+        val incidentData =
+            IncidentData(
+                organization = null,
+                journalVoucherRequest = null,
+                tdsRequest = null,
+                creditNoteRequest = null,
+                settlementRequest = null,
+                bankRequest = null,
+                interCompanyJournalVoucherRequest = interCompanyJournalVoucherRequest
+            )
+        val clientRequest = CreateIncidentRequest(
+            type = IncidentType.INTER_COMPANY_JOURNAL_VOUCHER_APPROVAL,
+            description = "Inter Company Journal Voucher Approval",
+            data = incidentData,
+            createdBy = parentJvData.createdBy!!
+        )
+        hadesClient.createIncident(clientRequest)
+    }
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
+        val parentJvId = Hashids.decode(request.journalVoucherData!!.id)[0]
+        // Update Journal Voucher
+        val parentJvData = journalVoucherParentRepo.findById(parentJvId)
+        parentJvData?.status = JVStatus.APPROVED
+        journalVoucherParentRepo.update(parentJvData!!)
+
+        val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
+
+        childJvData.map { it ->
+            it.status = JVStatus.APPROVED
+            it.updatedAt = Timestamp.from(Instant.now())
+            it.updatedBy = request.performedBy
+            it.description = request.remark
+            journalVoucherRepository.update(it)
+
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectId = it.id,
+                    actionName = AresConstants.UPDATE,
+                    data = it,
+                    performedBy = it.createdBy.toString(),
+                    performedByUserType = null
+                )
+            )
+
+            // Insert JV in account_utilizations
+            val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
+            val signFlag = getSignFlag(accMode, request.journalVoucherData.type)
+            val accUtilEntity = journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+        }
+        // Update Incident status on incident management
+        hadesClient.updateIncident(
+            request = UpdateIncidentRequest(
+                status = IncidentStatus.APPROVED,
+                data = null,
+                remark = request.remark,
+                updatedBy = request.performedBy!!
+            ),
+            id = request.incidentId
+        )
+
+        return request.incidentId!!
+    }
+
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
+        val parentJvId = Hashids.decode(request.journalVoucherId!!)[0]
+        val parentJvData = journalVoucherParentRepo.findById(parentJvId)
+
+        parentJvData?.status = JVStatus.APPROVED
+        journalVoucherParentRepo.update(parentJvData!!)
+
+        val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
+
+        childJvData.map { it ->
+            journalVoucherRepository.reject(it.id!!, request.performedBy!!, request.remark)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectId = it.id!!,
+                    actionName = AresConstants.UPDATE,
+                    data = mapOf("id" to it.id!!, "status" to JVStatus.REJECTED),
+                    performedBy = request.performedBy.toString(),
+                    performedByUserType = null
+                )
+            )
+        }
+
+        hadesClient.updateIncident(
+            request = UpdateIncidentRequest(
+                status = IncidentStatus.REJECTED,
+                data = null,
+                remark = request.remark,
+                updatedBy = request.performedBy!!
+            ),
+            id = request.incidentId
+        )
+        return request.incidentId!!
     }
 }

@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -48,7 +49,6 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
-import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
@@ -186,7 +186,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         // Update Incident status on incident management
         hadesClient.updateIncident(
             request = UpdateIncidentRequest(
-                status = IncidentStatus.APPROVED,
+                status = com.cogoport.hades.model.incident.enums.IncidentStatus.APPROVED,
                 data = null,
                 remark = request.remark,
                 updatedBy = request.performedBy!!
@@ -212,7 +212,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
         hadesClient.updateIncident(
             request = UpdateIncidentRequest(
-                status = IncidentStatus.REJECTED,
+                status = com.cogoport.hades.model.incident.enums.IncidentStatus.REJECTED,
                 data = null,
                 remark = request.remark,
                 updatedBy = request.performedBy!!
@@ -341,7 +341,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jv
     }
 
-    override suspend fun sendToIncidentManagement(
+    private suspend fun sendToIncidentManagement(
         request: JournalVoucherRequest,
         data: com.cogoport.hades.model.incident.JournalVoucher
     ) {

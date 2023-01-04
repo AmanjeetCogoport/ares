@@ -58,7 +58,9 @@ dependencies {
 
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:0.1.4.1")
-    implementation("com.cogoport.hades:hades-model:0.1.4-beta-2")
+//    implementation("com.cogoport.hades:hades-model:0.1.6.1")
+    implementation files("libs/hades-model-0.1.6.jar")
+
 
     //Kuber Client
     implementation("com.cogoport.kuber:kuber-model:0.1.25.4")

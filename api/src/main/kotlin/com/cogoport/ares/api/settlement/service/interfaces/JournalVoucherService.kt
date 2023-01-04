@@ -25,6 +25,5 @@ interface JournalVoucherService {
     suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?)
     suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean
     suspend fun createJV(jv: JournalVoucher): JournalVoucher
-    suspend fun sendToIncidentManagement(request: JournalVoucherRequest, data: com.cogoport.hades.model.incident.JournalVoucher)
     suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization
 }
