@@ -177,8 +177,6 @@ open class ICJVServiceImpl : ICJVService {
     private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.status = JVStatus.PENDING
-        jv.createdAt = Timestamp.from(Instant.now())
-        jv.updatedAt = Timestamp.from(Instant.now())
         jv.type = request.type.lowercase()
         return jv
     }
@@ -290,7 +288,7 @@ open class ICJVServiceImpl : ICJVService {
         val parentJvId = Hashids.decode(request.journalVoucherId!!)[0]
         val parentJvData = journalVoucherParentRepo.findById(parentJvId)
 
-        parentJvData?.status = JVStatus.APPROVED
+        parentJvData?.status = JVStatus.REJECTED
         journalVoucherParentRepo.update(parentJvData!!)
 
         val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)

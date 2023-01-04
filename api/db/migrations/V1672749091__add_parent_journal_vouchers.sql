@@ -3,12 +3,12 @@ VALUES('JV',1,now(),now());
 
 
 CREATE TABLE public.parent_journal_vouchers (
-    id bigserial constraint parent_journal_PK primary key,
-    jv_num varchar(25) not null,
-    category jv_category not null,
-    status jv_status not null,
-    created_at timestamp not null default now(),
-    created_by uuid,
-    updated_at timestamp not null default now(),
-    updated_by uuid
+    id BIGSERIAL CONSTRAINT parent_journal_PK PRIMARY KEY,
+    jv_num VARCHAR(25) NOT NULL,
+    category JV_CATEGORY NOT NULL,
+    status JV_STATUS NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    created_by UUID,
+    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_by UUID
 );
