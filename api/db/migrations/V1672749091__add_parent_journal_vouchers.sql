@@ -1,22 +1,3 @@
-CREATE TYPE public."jv_category" AS ENUM (
- 'EXCH',
- 'JVNOS',
- 'WOFF',
- 'ROFF',
- 'OUTST',
- 'ICJV'
- );
-
-CREATE TYPE public."jv_status" AS ENUM (
-	'PENDING',
-	'APPROVED',
-	'REJECTED',
-	'DELETED');
-
-
-CREATE CAST (varchar AS JV_CATEGORY) WITH INOUT AS IMPLICIT;
-CREATE CAST (varchar AS JV_STATUS) WITH INOUT AS IMPLICIT;
-
 INSERT INTO payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
 VALUES('JV',1,now(),now());
 
