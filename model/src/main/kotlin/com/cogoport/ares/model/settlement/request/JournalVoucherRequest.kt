@@ -16,7 +16,7 @@ data class JournalVoucherRequest(
     var jvNum: String?,
     val type: String,
     var status: JVStatus?,
-    val category: JVCategory,
+    var category: JVCategory,
     val validityDate: Date,
     val amount: BigDecimal,
     val currency: String,

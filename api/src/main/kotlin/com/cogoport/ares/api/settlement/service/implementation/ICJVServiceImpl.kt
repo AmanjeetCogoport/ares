@@ -75,15 +75,13 @@ open class ICJVServiceImpl : ICJVService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
         validateCreateRequest(request)
-        request.status = JVStatus.PENDING
-        request.category = JVCategory.ICJV
 
         val parentJvNumber = getJvNumber()
 
         val parentData = ParentJournalVoucher(
             id = null,
-            status = request.status!!,
-            category = request.category!!,
+            status = JVStatus.PENDING,
+            category = JVCategory.ICJV,
             jvNum = parentJvNumber,
             createdBy = request.createdBy,
             updatedBy = request.createdBy
@@ -95,6 +93,7 @@ open class ICJVServiceImpl : ICJVService {
             it.jvNum = parentJvNumber + "/L${index + 1}"
             it.parentJvId = parentJvData.id.toString()
             it.status = JVStatus.PENDING
+            it.category = JVCategory.ICJV
 
             if (it.entityId == null) {
                 val data = railsClient.getCogoEntity(it.entityCode.toString())

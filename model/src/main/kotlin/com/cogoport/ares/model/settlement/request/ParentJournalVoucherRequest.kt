@@ -12,8 +12,6 @@ import java.util.UUID
 @Introspected
 data class ParentJournalVoucherRequest(
     @field:Id @GeneratedValue var id: Long?,
-    var status: JVStatus? = null,
-    var category: JVCategory? = null,
     var jvNum: String?,
     var list: List<JournalVoucherRequest>,
     var createdBy: UUID?,
