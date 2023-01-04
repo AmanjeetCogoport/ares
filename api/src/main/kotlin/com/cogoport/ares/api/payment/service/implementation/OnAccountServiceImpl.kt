@@ -172,7 +172,7 @@ open class OnAccountServiceImpl : OnAccountService {
             receivableRequest.signFlag = SignSuffix.PAY.sign
         }
         if (receivableRequest.isSuspense == true && receivableRequest.accMode == AccMode.AP)
-            throw Exception("AP need to have trade party")
+            throw AresException(AresError.ERR_1519, "")
 
         setPaymentAmounts(receivableRequest)
 //        setOrganizations(receivableRequest)
@@ -307,7 +307,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
         if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
-        if (receivableRequest.isSuspense == true &&  receivableRequest.isPosted == true) throw Exception("cant post suspense accnt")
+        if (payment.isSuspense == true &&  receivableRequest.isPosted == true) throw AresException(AresError.ERR_1520, "")
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
         val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
@@ -331,6 +331,7 @@ open class OnAccountServiceImpl : OnAccountService {
 //            setTradePartyOrganizations(receivableRequest)
             if ((paymentEntity.isSuspense == true && receivableRequest.isSuspense == false) || paymentEntity.isSuspense == false) {
                 setTradePartyInfo(receivableRequest)
+                paymentEntity.isSuspense = receivableRequest.isSuspense
             }
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
@@ -352,7 +353,6 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentEntity.updatedAt = Timestamp.from(Instant.now())
             paymentEntity.bankId = receivableRequest.bankId
             paymentEntity.tradePartyDocument = receivableRequest.tradePartyDocument
-            paymentEntity.isSuspense = receivableRequest.isSuspense
 
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             accountUtilizationEntity.entityCode = receivableRequest.entityType!!
