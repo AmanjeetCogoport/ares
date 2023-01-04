@@ -35,7 +35,6 @@ data class Payment(
 
     // Trader partner details id
     @JsonProperty("customerId")
-    @field:NotNull(message = "UUID of the organization is required")
     var organizationId: UUID?,
 
     // Organization id of customer/service provider
@@ -139,5 +138,11 @@ data class Payment(
     var bankId: UUID?,
 
     @JsonProperty("performedByUserType")
-    val performedByUserType: String? = null
+    val performedByUserType: String? = null,
+
+    @JsonProperty("isSuspense")
+    val isSuspense: Boolean? = false,
+
+    @JsonProperty("tradePartyDocument")
+    val tradePartyDocument: String? = null
 )

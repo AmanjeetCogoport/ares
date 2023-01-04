@@ -47,5 +47,7 @@ data class Payment(
     var exchangeRate: BigDecimal?,
     var bankId: UUID?,
     var bankPayAmount: BigDecimal?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var isSuspense: Boolean?,
+    var tradePartyDocument: String?
 )

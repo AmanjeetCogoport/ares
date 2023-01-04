@@ -171,11 +171,18 @@ open class OnAccountServiceImpl : OnAccountService {
         } else {
             receivableRequest.signFlag = SignSuffix.PAY.sign
         }
+        if (receivableRequest.isSuspense == true && receivableRequest.accMode == AccMode.AP)
+            throw Exception("AP need to have trade party")
 
         setPaymentAmounts(receivableRequest)
 //        setOrganizations(receivableRequest)
 //        setTradePartyOrganizations(receivableRequest)
-        setTradePartyInfo(receivableRequest)
+        if (receivableRequest.isSuspense == false) {
+            setTradePartyInfo(receivableRequest)
+        }
+        else {
+            receivableRequest.organizationName = "SUSPENSE ACCOUNT"
+        }
 
         val payment = paymentConverter.convertToEntity(receivableRequest)
         setPaymentEntity(payment)
@@ -300,6 +307,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
         if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
+        if (receivableRequest.isSuspense == true &&  receivableRequest.isPosted == true) throw Exception("cant post suspense accnt")
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
         val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
@@ -321,7 +329,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
 //            setOrganizations(receivableRequest)
 //            setTradePartyOrganizations(receivableRequest)
-            setTradePartyInfo(receivableRequest)
+            if ((paymentEntity.isSuspense == true && receivableRequest.isSuspense == false) || paymentEntity.isSuspense == false) {
+                setTradePartyInfo(receivableRequest)
+            }
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             paymentEntity.entityCode = receivableRequest.entityType!!
@@ -341,6 +351,8 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber
             paymentEntity.updatedAt = Timestamp.from(Instant.now())
             paymentEntity.bankId = receivableRequest.bankId
+            paymentEntity.tradePartyDocument = receivableRequest.tradePartyDocument
+            paymentEntity.isSuspense = receivableRequest.isSuspense
 
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             accountUtilizationEntity.entityCode = receivableRequest.entityType!!
@@ -394,7 +406,7 @@ open class OnAccountServiceImpl : OnAccountService {
             /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
-            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+//            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
@@ -592,7 +604,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val clientResponse: TradePartyOrganizationResponse?
 
         val reqBody = MappingIdDetailRequest(
-            receivableRequest?.tradePartyMappingId.toString()
+            receivableRequest.tradePartyMappingId.toString()
         )
 
         clientResponse = authClient.getTradePartyInfo(reqBody)
