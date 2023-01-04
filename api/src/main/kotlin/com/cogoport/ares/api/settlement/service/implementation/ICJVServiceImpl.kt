@@ -20,6 +20,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
+import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
@@ -69,6 +70,8 @@ open class ICJVServiceImpl : ICJVService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
         validateCreateRequest(request)
+        request.status = JVStatus.PENDING
+        request.category = JVCategory.ICJV
 
         val parentJvNumber = getJvNumber()
 
