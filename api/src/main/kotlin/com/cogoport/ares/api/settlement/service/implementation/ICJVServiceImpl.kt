@@ -183,7 +183,7 @@ open class ICJVServiceImpl : ICJVService {
         val interCompanyJournalVoucherRequest = InterCompanyJournalVoucher(
             status = parentJvData.status.toString(),
             category = parentJvData.category.toString(),
-            createdBy = parentJvData.createdBy.toString(),
+            createdBy = parentJvData.createdBy!!,
             id = parentJvData.id.toString(),
             jvNum = parentJvData.jvNum!!,
             list = data
