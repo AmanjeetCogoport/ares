@@ -57,8 +57,8 @@ dependencies {
     implementation("com.cogoport.plutus:plutus-client:0.1.13")
 
     //Hades Client & Model
-    implementation("com.cogoport.hades:hades-client:0.1.4.2")
-    implementation("com.cogoport.hades:hades-model:0.1.6")
+    implementation("com.cogoport.hades:hades-client:0.1.4.3")
+    implementation("com.cogoport.hades:hades-model:0.1.6-beta")
 
     //Kuber Client
     implementation("com.cogoport.kuber:kuber-model:0.1.25.4")

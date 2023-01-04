@@ -12,7 +12,7 @@ import java.util.UUID
 data class JournalVoucherRequest(
     var id: String?,
     val entityCode: Int,
-    val entityId: UUID?,
+    var entityId: UUID?,
     var jvNum: String?,
     val type: String,
     var status: JVStatus?,
@@ -23,7 +23,7 @@ data class JournalVoucherRequest(
     val ledCurrency: String,
     val exchangeRate: BigDecimal,
     val tradePartyId: UUID,
-    val tradePartyName: String,
+    var tradePartyName: String?,
     var createdBy: UUID?,
     var accMode: AccMode,
     var description: String?,
