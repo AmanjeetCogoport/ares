@@ -405,7 +405,7 @@ open class OnAccountServiceImpl : OnAccountService {
             /*UPDATE THE OPEN SEARCH WITH UPDATED ACCOUNT UTILIZATION ENTRY */
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
-//            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
