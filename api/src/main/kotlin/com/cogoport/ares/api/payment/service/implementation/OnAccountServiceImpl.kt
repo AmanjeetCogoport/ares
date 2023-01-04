@@ -179,8 +179,7 @@ open class OnAccountServiceImpl : OnAccountService {
 //        setTradePartyOrganizations(receivableRequest)
         if (receivableRequest.isSuspense == false) {
             setTradePartyInfo(receivableRequest)
-        }
-        else {
+        } else {
             receivableRequest.organizationName = "SUSPENSE ACCOUNT"
         }
 
@@ -307,7 +306,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
         if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
-        if (payment.isSuspense == true &&  receivableRequest.isPosted == true) throw AresException(AresError.ERR_1520, "")
+        if (payment.isSuspense == true && receivableRequest.isPosted == true) throw AresException(AresError.ERR_1520, "")
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
         val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode)
