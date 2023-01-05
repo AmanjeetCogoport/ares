@@ -19,6 +19,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
@@ -26,6 +27,7 @@ import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
@@ -433,5 +435,13 @@ class OpenSearchServiceImpl : OpenSearchService {
         serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
         invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
+    }
+
+    override suspend fun getSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SuppliersOutstandingResponse?> {
+        val response = OpenSearchClient().listSupplierOutstanding(request)
+
+
+
+
     }
 }

@@ -1,15 +1,18 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -35,6 +38,11 @@ class OutstandingController {
     @Get("/bill-overall{?request*}")
     suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): BillOutstandingList? {
         return Response<BillOutstandingList?>().ok(outStandingService.getBillsOutstandingList(request))
+    }
+
+    @Get("/by-supplier{?request*}")
+    suspend fun getBillOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?> {
+        return Response<ResponseList<SupplierOutstandingResponse?>>().ok(pushToClientService.getSupplierOutstanding(request))
     }
 
     @Get("/invoice-list{?request*}")

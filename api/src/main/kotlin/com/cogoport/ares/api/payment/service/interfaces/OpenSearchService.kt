@@ -2,7 +2,10 @@ package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.SuppliersOutstanding
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import java.util.UUID
 
 interface OpenSearchService {
@@ -21,4 +24,6 @@ interface OpenSearchService {
     suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String, defaultersOrgIds: List<UUID>?)
 
     suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
+
+    suspend fun getSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SuppliersOutstandingResponse?>
 }

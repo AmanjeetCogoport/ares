@@ -5,6 +5,7 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
@@ -13,6 +14,7 @@ import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Operator
 import org.opensearch.client.opensearch._types.query_dsl.Query
+import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
@@ -434,6 +436,187 @@ class OpenSearchClient {
                 },
                 classType
             )
+        return response
+    }
+
+
+    fun listSupplierOutstanding(request: SupplierOutstandingRequest) : SearchResponse<SupplierOutstandingResponse>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        val searchFilterFields: MutableList<String> = mutableListOf("legalName", "businessName")
+        val response = Client.search({
+            t ->
+            t.index(AresConstants.SUPPLIERS_OUTSTANDING_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            if (request.name != null) {
+                                b.must { s ->
+                                    s.queryString { qs ->
+                                        qs.fields(searchFilterFields).query("*${request.name}*")
+                                                .lenient(true)
+                                                .allowLeadingWildcard(true)
+                                                .defaultOperator(Operator.Or)
+                                    }
+                                }
+                                b
+                            }
+                            if (request.supplyAgentIds != null) {
+                                b.must { s ->
+                                    s.terms { v ->
+                                        v.field("supplyAgentId.keyword").terms(
+                                                TermsQueryField.of { a ->
+                                                    a.value(
+                                                            request.supplyAgentIds?.map {
+                                                                FieldValue.of(it.toString())
+                                                            }
+                                                    )
+                                                }
+                                        )
+                                    }
+                                }
+                                b
+                            }
+                            if (request.countryIds != null) {
+                                b.must { s ->
+                                    s.terms { v ->
+                                        v.field("countryId.keyword").terms(
+                                                TermsQueryField.of { a ->
+                                                    a.value(
+                                                            request.countryIds?.map {
+                                                                FieldValue.of(it.toString())
+                                                            }
+                                                    )
+                                                }
+                                        )
+                                    }
+                                }
+                                b
+                            }
+                            if (request.cogoEntityId != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("cogoEntityId.keyword").query(FieldValue.of(request.cogoEntityId.toString()))
+                                    }
+                                }
+                                b
+                            }
+                            if (request.taxNo != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("taxNumber.keyword").query(FieldValue.of(request.taxNo.toString()))
+                                    }
+                                }
+                                b
+                            }
+                            if (request.companyType != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("companyType.keyword").query(FieldValue.of(request.companyType)
+                                    }
+                                }
+                                b
+                            }
+                            if (request.category != null) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("category.keyword").query(FieldValue.of(request.category)
+                                    }
+                                }
+                                b
+                            }
+                            if (request.ageingKey.isNotEmpty()) {
+                                b.minimumShouldMatch("1")
+                                if (request.ageingKey.contains(AresConstants.AGEING_NOT_DUE)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_DUE_TODAY)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_1_30)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_31_60)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_61_90)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_91_180)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_181_365)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                                if (request.ageingKey.contains(AresConstants.AGEING_365_PLUS)) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("ageingBucket.ageingDurationKey.keyword").query(FieldValue.of(request.ageingKey)
+                                        }
+                                    }
+                                }
+                            b
+                        }
+                        b
+                    }q
+                    }.sort {t ->
+                        if (request.sortBy != null) {
+                            if (request.sortType != null) {
+                                if(request.sortBy == "total_outstanding") {
+                                    t.field { f -> f.field("totalOutstanding.amountDue.amount").order(SortOrder.valueOf(request.sortType.toString())) }
+                                }
+                                if(request.sortBy == "on_account") {
+                                    t.field { f -> f.field("onAccountPayment.amountDue.amount").order(SortOrder.valueOf(request.sortType.toString())) }
+                                }
+                                if(request.sortBy == "open_invoices") {
+                                    t.field { f -> f.field("openInvoices.amountDue.amount").order(SortOrder.valueOf(request.sortType.toString())) }
+                                }
+                            }
+                            else {
+                                if(request.sortBy == "total_outstanding") {
+                                    t.field { f -> f.field("totalOutstanding.amountDue.amount").order(SortOrder.Desc)}
+                                }
+                                if(request.sortBy == "on_account") {
+                                    t.field { f -> f.field("onAccountPayment.amountDue.amount").order(SortOrder.Desc) }
+                                }
+                                if(request.sortBy == "open_invoices") {
+                                    t.field { f -> f.field("openInvoices.amountDue.amount").order(SortOrder.Desc) }
+                                }
+                            }
+
+                        } else {
+                            t.field { f -> f.field("businessName").order(SortOrder.Asc) }
+                        }
+                    }
+                    .from(offset).size(request.limit)
+                 },SupplierOutstandingResponse::class.java)
+
         return response
     }
 }

@@ -75,4 +75,13 @@ object AresConstants {
     const val JV = "JV"
 
     const val LIMIT = 10000
+
+    const val AGEING_NOT_DUE = "not_due"
+    const val AGEING_DUE_TODAY = "today"
+    const val AGEING_1_30 = "1_30"
+    const val AGEING_31_60 = "31_60"
+    const val AGEING_61_90 = "61_90"
+    const val AGEING_91_180 = "91_180"
+    const val AGEING_181_365 = "181_365"
+    const val AGEING_365_PLUS = "365"
 }
