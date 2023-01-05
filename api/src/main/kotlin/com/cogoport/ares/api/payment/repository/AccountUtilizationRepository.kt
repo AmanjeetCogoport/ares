@@ -1406,4 +1406,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getInvoicesCountForTradeParty(
         documentValues: List<String>
     ): Long?
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT DISTINCT organization_id::VARCHAR
+        FROM account_utilizations
+        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL
+        """
+    )
+    suspend fun getSupplierOrgIds(): List<String>
 }
