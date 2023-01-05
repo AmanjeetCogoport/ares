@@ -1235,7 +1235,6 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-
         if (settlementType.name == PaymentCode.PAY.name) {
             val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
             if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {

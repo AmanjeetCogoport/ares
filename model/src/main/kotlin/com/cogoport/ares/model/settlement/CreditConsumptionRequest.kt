@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.util.UUID
 import java.util.Date
+import java.util.UUID
 import kotlin.collections.ArrayList
 
 @Introspected
