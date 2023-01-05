@@ -31,7 +31,6 @@ import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
-import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
@@ -146,8 +145,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var settlementService: SettlementService
-    @Inject
-    lateinit var settlementRepository: SettlementRepository
+
     @Inject
     lateinit var suspenseAccountRepo: SuspenseAccountRepo
 
@@ -347,10 +345,20 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.tradePartyMappingId != null) {
             val id = createNonSuspensePaymentEntry(receivableRequest)
             suspenseEntity.paymentId = id
-        } else {
-            updateSuspenseAccountEntity(receivableRequest, suspenseEntity)
         }
-        return OnAccountApiCommonResponse(id = suspenseEntity.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
+        updateSuspenseAccountEntity(receivableRequest, suspenseEntity)
+        val updatedEntity = suspenseAccountRepo.update(suspenseEntity)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.SUSPENSE_ACCOUNT,
+                objectId = suspenseEntity.id,
+                actionName = AresConstants.UPDATE,
+                data = suspenseEntity,
+                performedBy = receivableRequest.createdBy.toString(),
+                performedByUserType = receivableRequest.performedByUserType
+            )
+        )
+        return OnAccountApiCommonResponse(id = updatedEntity.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
@@ -475,66 +483,86 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun deletePaymentEntry(deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
 
-        val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
+        if (deletePaymentRequest.isSuspense == false) {
+            val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
+            if (payment.isDeleted)
+                throw AresException(AresError.ERR_1007, "")
 
-        if (payment.isDeleted)
-            throw AresException(AresError.ERR_1007, "")
-
-        payment.isDeleted = true
-        /*MARK THE PAYMENT AS DELETED IN DATABASE*/
-        val paymentResponse = paymentRepository.update(payment)
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.PAYMENTS,
-                objectId = payment.id,
-                actionName = AresConstants.DELETE,
-                data = payment,
-                performedBy = deletePaymentRequest.performedById,
-                performedByUserType = deletePaymentRequest.performedByUserType
+            payment.isDeleted = true
+            /*MARK THE PAYMENT AS DELETED IN DATABASE*/
+            val paymentResponse = paymentRepository.update(payment)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.PAYMENTS,
+                    objectId = payment.id,
+                    actionName = AresConstants.DELETE,
+                    data = payment,
+                    performedBy = deletePaymentRequest.performedById,
+                    performedByUserType = deletePaymentRequest.performedByUserType
+                )
             )
-        )
-        val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
-        openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
-        var accType = AccountType.REC
-        if (deletePaymentRequest.accMode == AccMode.AP) {
-            accType = AccountType.PAY
-        }
-        val accountUtilization = accountUtilizationRepository.findRecord(
-            payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
-        ) ?: throw AresException(AresError.ERR_1005, "")
-        accountUtilization.documentStatus = DocumentStatus.DELETED
+            val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
+            openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
+            var accType = AccountType.REC
+            if (deletePaymentRequest.accMode == AccMode.AP) {
+                accType = AccountType.PAY
+            }
+            val accountUtilization = accountUtilizationRepository.findRecord(
+                payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
+            ) ?: throw AresException(AresError.ERR_1005, "")
+            accountUtilization.documentStatus = DocumentStatus.DELETED
 
-        /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
-        val accUtilRes = accountUtilizationRepository.update(accountUtilization)
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                objectId = accountUtilization.id,
-                actionName = AresConstants.DELETE,
-                data = accountUtilization,
-                performedBy = deletePaymentRequest.performedById,
-                performedByUserType = deletePaymentRequest.performedByUserType
+            /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
+            val accUtilRes = accountUtilizationRepository.update(accountUtilization)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accountUtilization.id,
+                    actionName = AresConstants.DELETE,
+                    data = accountUtilization,
+                    performedBy = deletePaymentRequest.performedById,
+                    performedByUserType = deletePaymentRequest.performedByUserType
+                )
             )
-        )
-        /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel, true)
+            /*MARK THE PAYMENT AS DELETED IN OPEN SEARCH*/
+            Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModel, true)
 
-        if (payment.isPosted) {
-            val request = DeleteSettlementRequest(
-                documentNo = Hashids.encode(payment.paymentNum!!),
-                deletedBy = UUID.fromString(deletePaymentRequest.performedById),
-                deletedByUserType = deletePaymentRequest.performedByUserType,
-                settlementType = SettlementType.PAY
-            )
-            settlementService.delete(request)
-        }
-        try {
-            /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
+            if (payment.isPosted) {
+                val request = DeleteSettlementRequest(
+                    documentNo = Hashids.encode(payment.paymentNum!!),
+                    deletedBy = UUID.fromString(deletePaymentRequest.performedById),
+                    deletedByUserType = deletePaymentRequest.performedByUserType,
+                    settlementType = SettlementType.PAY
+                )
+                settlementService.delete(request)
+            }
+            try {
+                /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
+                Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
 //             Emitting Kafka message to Update Outstanding and Dashboard
-            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-        } catch (ex: Exception) {
-            logger().error(ex.stackTraceToString())
+                emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+            } catch (ex: Exception) {
+                logger().error(ex.stackTraceToString())
+            }
+        } else {
+            val suspenseEntity = suspenseAccountRepo.findBySuspenseId(deletePaymentRequest.paymentId)
+                ?: throw AresException(AresError.ERR_1002, "")
+            if (suspenseEntity.isDeleted)
+                throw AresException(AresError.ERR_1007, "")
+
+            suspenseEntity.isDeleted = true
+            /*MARK THE PAYMENT AS DELETED IN DATABASE*/
+            val paymentResponse = suspenseAccountRepo.update(suspenseEntity)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.SUSPENSE_ACCOUNT,
+                    objectId = paymentResponse.id,
+                    actionName = AresConstants.DELETE,
+                    data = suspenseEntity,
+                    performedBy = deletePaymentRequest.performedById,
+                    performedByUserType = deletePaymentRequest.performedByUserType
+                )
+            )
         }
 
         return OnAccountApiCommonResponse(id = deletePaymentRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
