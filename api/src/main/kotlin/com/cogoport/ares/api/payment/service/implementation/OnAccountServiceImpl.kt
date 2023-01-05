@@ -181,7 +181,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
         if (receivableRequest.isSuspense == true && receivableRequest.accMode == AccMode.AP)
-            throw AresException(AresError.ERR_1519, "")
+            throw AresException(AresError.ERR_1521, "")
 
         setPaymentAmounts(receivableRequest)
         val paymentId = if (receivableRequest.isSuspense == true)
@@ -339,7 +339,7 @@ open class OnAccountServiceImpl : OnAccountService {
      * @return Payment
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        if (receivableRequest.isSuspense == true && receivableRequest.isPosted == true) throw AresException(AresError.ERR_1520, "")
+        if (receivableRequest.isSuspense == true && receivableRequest.isPosted == true) throw AresException(AresError.ERR_1522, "")
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
