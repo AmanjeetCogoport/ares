@@ -183,7 +183,7 @@ open class ICJVServiceImpl : ICJVService {
     }
 
     private fun getSignFlag(type: String): Short {
-        return when (type) {
+        return when (type.uppercase()) {
             "CREDIT" -> { -1 }
             "DEBIT" -> { 1 }
             else -> {
@@ -192,7 +192,7 @@ open class ICJVServiceImpl : ICJVService {
         }
     }
 
-    private suspend fun sendToIncidentManagement(
+    private fun sendToIncidentManagement(
         parentJvData: ParentJournalVoucher,
         data: MutableList<com.cogoport.hades.model.incident.JournalVoucher>
     ) {
@@ -241,9 +241,13 @@ open class ICJVServiceImpl : ICJVService {
     override suspend fun updateICJV(request: ICJVUpdateRequest): String {
         val parentJvId = Hashids.decode(request.parentJvId!!)[0]
         // Update Journal Voucher
-        val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1516, "")
+        val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1519, "")
 
-        parentJvData.status = request.status!!
+        when (parentJvData.status == request.status!!) {
+            true -> throw AresException(AresError.ERR_1520, "${request.status}")
+            false -> parentJvData.status = request.status
+        }
+
         journalVoucherParentRepo.update(parentJvData)
 
         val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
