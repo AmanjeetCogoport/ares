@@ -239,7 +239,7 @@ open class ICJVServiceImpl : ICJVService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun updateICJV(request: ICJVUpdateRequest): String {
-        val parentJvId = Hashids.decode(request.parentJvId!!)[0]
+        val parentJvId = request.parentJvId!!.toLong()
         // Update Journal Voucher
         val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1519, "")
 
