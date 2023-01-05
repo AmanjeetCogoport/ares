@@ -1,7 +1,10 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -55,4 +58,6 @@ interface SettlementService {
     suspend fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>?
 
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
+
+    suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
 }

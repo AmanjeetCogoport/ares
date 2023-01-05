@@ -1235,9 +1235,12 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
-        if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
-            throw AresException(AresError.ERR_1515, "")
+
+        if (settlementType.name == PaymentCode.PAY.name) {
+            val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+            if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+                throw AresException(AresError.ERR_1515, "")
+            }
         }
 
         val sourceType =
@@ -1379,6 +1382,7 @@ open class SettlementServiceImpl : SettlementService {
             )
             val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
             updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType)
+            sendInvoiceDataToDebitConsumption(accUtil)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
         } catch (e: Exception) {
@@ -2381,22 +2385,23 @@ open class SettlementServiceImpl : SettlementService {
         val paymentRequest = CreditPaymentRequest(
             organizationId = destinationDocument?.taggedOrganizationId,
             invoiceNumber = destinationDocument?.documentValue!!,
-            invoiceDate = destinationDocument.dueDate.toString(),
+            invoiceDate = invoiceData.invoiceDate,
             invoiceDueDate = destinationDocument.dueDate.toString(),
             invoiceAmount = destinationDocument.amountLoc,
             paidAmount = request.amount,
             transactionType = transactionType,
             currency = payCurrency,
-            proformaNumber = destinationDocument.documentValue,
+            proformaNumber = invoiceData.proformaNumber,
             documents = arrayListOf(
                 CreditPaymentDocuments(
-                    documentType = destinationDocument.serviceType,
-                    documentPdfUrl = destinationDocument.serviceType
+                    documentType = invoiceData.invoiceType.name,
+                    documentPdfUrl = invoiceData.invoicePdfUrl
                 )
             ),
             paymentDate = request.settlementDate.toString(),
             transactionRefNumber = transRefNumber,
-            isIRNGenerated = true
+            isIRNGenerated = true,
+            triggerSource = "knockoff_invoked"
         )
 
         var response: String? = ""
@@ -2414,6 +2419,60 @@ open class SettlementServiceImpl : SettlementService {
                 apiType = "On_Credit",
                 objectId = request.destinationId,
                 objectName = "UNFREEZE_CREDIT",
+                httpResponseCode = "",
+                requestParams = request.toString(),
+                response = response.toString(),
+                isSuccess = true
+            )
+        )
+    }
+
+    override suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization) {
+        val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.documentNo, "paymentMode")
+
+        if ((invoiceData == null) || invoiceData.value.toString().isBlank()) {
+            return
+        }
+
+        val destinationDocument = accountUtilizationRepository.findRecord(request.documentNo, request.accType.name, request.accMode.name)
+
+        val paymentRequest = CreditPaymentRequest(
+            organizationId = destinationDocument?.taggedOrganizationId,
+            invoiceNumber = destinationDocument?.documentValue!!,
+            invoiceDate = invoiceData.invoiceDate,
+            invoiceDueDate = destinationDocument.dueDate.toString(),
+            invoiceAmount = destinationDocument.amountLoc,
+            paidAmount = request.payLoc * BigDecimal.valueOf(-1),
+            transactionType = "debit",
+            currency = "INR",
+            proformaNumber = invoiceData.proformaNumber,
+            documents = arrayListOf(
+                CreditPaymentDocuments(
+                    documentType = invoiceData.invoiceType.name,
+                    documentPdfUrl = invoiceData.invoicePdfUrl
+                )
+            ),
+            paymentDate = request.updatedAt.toString(),
+            transactionRefNumber = "",
+            isIRNGenerated = true,
+            triggerSource = "knockoff_reverted"
+        )
+
+        var response: String? = ""
+        response = try {
+            railsClient.sendInvoicePaymentKnockOff(paymentRequest)
+        } catch (e: Exception) {
+            logger().error(e.toString())
+            e.localizedMessage.toString()
+        }
+
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                id = null,
+                apiName = "CreditConsumption",
+                apiType = "On_Credit",
+                objectId = request.documentNo,
+                objectName = "UNFREEZE_CREDIT_DELETED",
                 httpResponseCode = "",
                 requestParams = request.toString(),
                 response = response.toString(),

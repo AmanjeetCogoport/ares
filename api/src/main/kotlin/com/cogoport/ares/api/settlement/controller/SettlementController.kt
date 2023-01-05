@@ -1,9 +1,12 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
@@ -28,6 +31,7 @@ import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -156,5 +160,10 @@ class SettlementController {
     @Post("/settle-with-source-and-destination-id")
     suspend fun settleWithSourceIdAndDestinationId(@Valid @Body autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>? {
         return settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
+    }
+
+    @Post("/send-utilization-to-debit")
+    suspend fun sendPaymentDataToDebit(@Valid @Body request: AccountUtilization) {
+        return settlementService.sendInvoiceDataToDebitConsumption(request)
     }
 }

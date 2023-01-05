@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.util.UUID
+import java.util.Date
 import kotlin.collections.ArrayList
 
 @Introspected
@@ -19,7 +20,7 @@ data class CreditPaymentRequest(
     @JsonProperty("invoice_number")
     var invoiceNumber: String,
     @JsonProperty("invoice_date")
-    var invoiceDate: String,
+    var invoiceDate: Date,
     @JsonProperty("invoice_due_date")
     var invoiceDueDate: String,
     @JsonProperty("invoice_amount")
@@ -30,14 +31,16 @@ data class CreditPaymentRequest(
     var transactionType: String?,
     @JsonProperty("currency")
     var currency: String? = "INR",
-    @JsonProperty("documents")
+    @JsonProperty("transaction_documents")
     var documents: ArrayList<CreditPaymentDocuments>? = null,
     @JsonProperty("payment_date")
     var paymentDate: String?,
     @JsonProperty("transaction_ref_number")
     var transactionRefNumber: String? = null,
     @JsonProperty("is_irn_generated")
-    var isIRNGenerated: Boolean?
+    var isIRNGenerated: Boolean?,
+    @JsonProperty("trigger_source")
+    var triggerSource: String?
 )
 
 @Introspected
