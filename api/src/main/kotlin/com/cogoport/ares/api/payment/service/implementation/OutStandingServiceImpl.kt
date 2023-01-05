@@ -230,7 +230,7 @@ class OutStandingServiceImpl : OutStandingService {
             page = request.page
         )
     }
-    override suspend fun updateSupplierOutStanding(orgId: String) {
+    override suspend fun updateSupplierOutstanding(orgId: String) {
         val index = AresConstants.SUPPLIERS_OUTSTANDING_INDEX
         val searchResponse = Client.search({ s ->
             s.index(index)

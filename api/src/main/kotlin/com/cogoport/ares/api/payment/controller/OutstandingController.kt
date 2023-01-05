@@ -64,6 +64,6 @@ class OutstandingController {
 
     @Post("/supplier-card/{orgId}")
     suspend fun updateSupplierCard(@PathVariable("orgId") orgId: String) {
-        return outStandingService.updateSupplierOutStanding(orgId)
+        return outStandingService.updateSupplierOutstanding(orgId)
     }
 }
