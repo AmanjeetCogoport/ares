@@ -34,6 +34,7 @@ interface PaymentToPaymentMapper {
     @Mapping(target = "organizationName", constant = "Suspense Account")
     @Mapping(target = "isPosted", constant = "false")
     @Mapping(target = "isSuspense", constant = "true")
+    @Mapping(target = "accMode", constant = "AR")
     fun convertSuspenseEntityToPaymentResponse(suspenseEntities: SuspenseAccount): PaymentResponse
 
     fun convertSuspenseEntityListToPaymentResponse(suspenseEntities: List<SuspenseAccount>): List<PaymentResponse>
