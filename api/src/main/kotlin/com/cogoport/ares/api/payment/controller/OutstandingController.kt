@@ -37,7 +37,7 @@ class OutstandingController {
     }
     @Get("/bill-overall{?request*}")
     suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): BillOutstandingList? {
-        return Response<BillOutstandingList?>().ok(outStandingService.getBillsOutstandingList(request))
+        return Response<BillOutstandingList?>().ok(outStandingService.getSupplierOutstandingList(request))
     }
 
     @Get("/by-supplier{?request*}")
@@ -68,5 +68,10 @@ class OutstandingController {
     @Post("/customer-outstanding")
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?> {
         return Response<MutableMap<String, BigDecimal?>>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
+    }
+
+    @Post("/supplier-card/{orgId}")
+    suspend fun updateSupplierCard(@PathVariable("orgId") orgId: String) {
+        return outStandingService.updateSupplierOutstanding(orgId)
     }
 }

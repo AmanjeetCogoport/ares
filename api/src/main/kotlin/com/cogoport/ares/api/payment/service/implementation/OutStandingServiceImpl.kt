@@ -6,6 +6,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
+import com.cogoport.ares.api.payment.model.SupplierOutstandingResponse
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.payment.AgeingBucket
@@ -21,10 +22,14 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
+import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.math.ceil
 
@@ -177,7 +182,7 @@ class OutStandingServiceImpl : OutStandingService {
         return organizationOutStanding
     }
 
-    override suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList {
+    override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList {
         validateInput(request)
         val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
@@ -185,7 +190,7 @@ class OutStandingServiceImpl : OutStandingService {
         val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()
         queryResponse.forEach { it ->
-            ageingBucket.add(outstandingAgeingConverter.convertToBillModel(it))
+            ageingBucket.add(outstandingAgeingConverter.convertToOutStandingModel(it))
             listOrganizationIds.add(it.organizationId)
         }
 
@@ -212,8 +217,9 @@ class OutStandingServiceImpl : OutStandingService {
             val sixty = assignAgeingBucket("31-60", it.sixtyAmount?.abs(), it.sixtyCount, "31_60")
             val ninety = assignAgeingBucket("61-90", it.ninetyAmount?.abs(), it.ninetyCount, "61_90")
             val oneEighty = assignAgeingBucket("91-180", it.oneeightyAmount?.abs(), it.oneeightyCount, "91_180")
-            val oneEightyPlus = assignAgeingBucket("180+", it.oneeightyplusAmount?.abs(), it.oneeightyplusCount, "180")
-            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, oneEightyPlus)
+            val threeSixtyFive = assignAgeingBucket("181-365", it.threesixtyfiveAmount?.abs(), it.threesixtyfiveCount, "181_365")
+            val threeSixtyFivePlus = assignAgeingBucket("365+", it.threesixtyfiveplusAmount?.abs(), it.threesixtyfiveplusCount, "365")
+            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, threeSixtyFive, threeSixtyFivePlus)
             listOrganization.add(orgOutstanding)
         }
 
@@ -223,5 +229,48 @@ class OutStandingServiceImpl : OutStandingService {
             totalRecords = totalRecords,
             page = request.page
         )
+    }
+    override suspend fun updateSupplierOutstanding(orgId: String) {
+        val index = AresConstants.SUPPLIERS_OUTSTANDING_INDEX
+        val searchResponse = Client.search({ s ->
+            s.index(index)
+                .query { q ->
+                    q.match { m -> m.field("organizationId").query(FieldValue.of(orgId)) }
+                }
+        }, SupplierOutstandingResponse::class.java)
+        var supplierDoc: SupplierOutstandingResponse? = null
+        if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+            supplierDoc = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+        }
+        val outStandings = getSupplierOutstandingList(OutstandingListRequest(orgId = orgId))
+        if (!outStandings.list.isNullOrEmpty()) {
+            outStandings.list!!.forEach { supplier ->
+                val supplierOutstandingResponse = SupplierOutstandingResponse(
+                    organizationId = supplier?.organizationId,
+                    legalName = null,
+                    businessName = null,
+                    taxNumber = null,
+                    serialId = null,
+                    sageId = null,
+                    countryCode = null,
+                    countryId = null,
+                    category = null,
+                    collectionPartyType = null,
+                    supplyAgent = null,
+                    creditDays = null,
+                    updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    onAccountPayment = supplier?.onAccountPayment,
+                    openInvoices = supplier?.openInvoices,
+                    totalOutstanding = supplier?.totalOutstanding,
+                    ageingBucket = supplier?.ageingBucket,
+                    cogoEntityId = null
+                )
+                if (supplierDoc == null) {
+                    Client.addDocument(index, orgId, supplierOutstandingResponse, true)
+                } else {
+                    Client.updateDocument(index, orgId, supplierOutstandingResponse, true)
+                }
+            }
+        }
     }
 }

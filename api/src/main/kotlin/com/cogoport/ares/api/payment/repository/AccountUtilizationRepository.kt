@@ -355,11 +355,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 END) AS oneeighty_amount,
             sum(
                 CASE WHEN acc_type in('PINV')
-                    and(now()::date - due_date) > 180 THEN
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
-                END) AS oneeightyplus_amount,
+                END) AS threesixtyfive_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_amount,
             sum(
                 CASE WHEN acc_type in('PINV') THEN
                     sign_flag * (amount_loc - pay_loc)
@@ -409,11 +416,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS oneeighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 180 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
-                END) AS oneeightyplus_count,
+                END) AS threesixtyfive_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PINV') THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_count,
             sum(
                 CASE WHEN (acc_type in('PCN')) THEN
                     1
@@ -1406,4 +1419,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getInvoicesCountForTradeParty(
         documentValues: List<String>
     ): Long?
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT DISTINCT organization_id::VARCHAR
+        FROM account_utilizations
+        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL
+        """
+    )
+    suspend fun getSupplierOrgIds(): List<String>
 }
