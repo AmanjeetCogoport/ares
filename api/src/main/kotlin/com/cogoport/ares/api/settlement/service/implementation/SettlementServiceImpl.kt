@@ -82,6 +82,7 @@ import com.cogoport.kuber.model.bills.BillDocResponse
 import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.common.enums.TransactionType
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -2381,7 +2382,7 @@ open class SettlementServiceImpl : SettlementService {
         val destinationDocument = accountUtilizationRepository.findRecord(request.destinationId, request.destinationType.name)
 
         val payCurrency = "INR"
-        val transactionType = "credit"
+        val transactionType = TransactionType.CREDIT.name
 
         val paymentRequest = CreditPaymentRequest(
             organizationId = destinationDocument?.taggedOrganizationId,
@@ -2444,7 +2445,7 @@ open class SettlementServiceImpl : SettlementService {
             invoiceDueDate = destinationDocument.dueDate.toString(),
             invoiceAmount = destinationDocument.amountLoc,
             paidAmount = request.payLoc * BigDecimal.valueOf(-1),
-            transactionType = "debit",
+            transactionType = TransactionType.DEBIT.name,
             currency = "INR",
             proformaNumber = invoiceData.proformaNumber,
             documents = arrayListOf(
