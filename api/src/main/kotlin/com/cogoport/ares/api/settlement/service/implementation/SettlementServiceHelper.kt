@@ -81,11 +81,11 @@ class SettlementServiceHelper {
     fun <T : Any> getJvList(classType: Class<T>): List<T> {
         return if (classType == SettlementType::class.java) {
             listOf(
-                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST
+                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST, SettlementType.ICJV
             ) as List<T>
         } else {
             listOf(
-                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST
+                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST, AccountType.ICJV
             ) as List<T>
         }
     }

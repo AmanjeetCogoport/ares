@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.client
 
+import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Get
@@ -21,4 +22,7 @@ interface RailsClient {
 
     @Get("/list_organization_trade_party_details?filters%5Bid%5D={id}")
     suspend fun getListOrganizationTradePartyDetails(id: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/list_cogo_entities?filters%5Bentity_code%5D={entityCode}")
+    suspend fun getCogoEntity(entityCode: String): ListCogoEntities
 }

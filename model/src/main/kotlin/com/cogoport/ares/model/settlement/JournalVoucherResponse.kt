@@ -27,5 +27,6 @@ data class JournalVoucherResponse(
     var createdAt: Timestamp?,
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
-    var description: String?
+    var description: String?,
+    var parentJvId: String? = null,
 )
