@@ -10,7 +10,7 @@ import kotlinx.coroutines.runBlocking
 @Singleton
 class Scheduler(private var outStandingService: OutStandingService, private var accountUtilizationRepository: AccountUtilizationRepository) {
 
-    @Scheduled(cron = "* * * * * *")
+    @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
         runBlocking {
             val orgIds = accountUtilizationRepository.getSupplierOrgIds()
