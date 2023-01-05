@@ -241,9 +241,10 @@ open class ICJVServiceImpl : ICJVService {
     override suspend fun updateICJV(request: ICJVUpdateRequest): String {
         val parentJvId = Hashids.decode(request.parentJvId!!)[0]
         // Update Journal Voucher
-        val parentJvData = journalVoucherParentRepo.findById(parentJvId)
-        parentJvData?.status = request.status!!
-        journalVoucherParentRepo.update(parentJvData!!)
+        val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1516, "")
+
+        parentJvData.status = request.status!!
+        journalVoucherParentRepo.update(parentJvData)
 
         val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
 
