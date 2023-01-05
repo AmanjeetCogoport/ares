@@ -42,7 +42,9 @@ enum class AresError(
     ERR_1515("ERR_1515", "Settled Through UTR. You can not delete it.", HttpStatus.NOT_ACCEPTABLE),
     ERR_1516("ERR_1516", "JV is not been utilized", HttpStatus.BAD_REQUEST),
     ERR_1517("ERR_1517", "No GL Codes exists for this JV category: ", HttpStatus.BAD_REQUEST),
-    ERR_1518("ERR_1518", "JV already posted", HttpStatus.BAD_REQUEST);
+    ERR_1518("ERR_1518", "JV already posted", HttpStatus.BAD_REQUEST),
+    ERR_1519("ERR_1519", "No Jv is present", HttpStatus.BAD_REQUEST),
+    ERR_1520("ERR_1520", "JV is already", HttpStatus.NOT_ACCEPTABLE);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
