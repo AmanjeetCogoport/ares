@@ -100,6 +100,9 @@ data class Payment(
     @JsonProperty("createdBy")
     var createdBy: String? = "",
 
+    @JsonProperty("updatedBy")
+    var updatedBy: String? = "",
+
     @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
 

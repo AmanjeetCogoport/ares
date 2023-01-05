@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.mapper
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.api.payment.entity.SuspenseAccount
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.mapstruct.ReportingPolicy
@@ -18,4 +19,9 @@ interface PaymentToPaymentMapper {
     @Mapping(source = "transRefNumber", target = "utr")
     @Mapping(source = "cogoAccountNo", target = "bankAccountNumber")
     fun convertToModel(payment: Payment): com.cogoport.ares.model.payment.Payment
+
+    @Mapping(source = "entityType", target = "entityCode")
+    @Mapping(source = "utr", target = "transRefNumber")
+    @Mapping(source = "bankAccountNumber", target = "cogoAccountNo")
+    fun convertToSuspenseEntity(payment: com.cogoport.ares.model.payment.Payment): SuspenseAccount
 }

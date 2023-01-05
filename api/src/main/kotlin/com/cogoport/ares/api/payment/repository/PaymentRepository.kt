@@ -23,7 +23,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              from payments where id =:id and deleted_at is null
         """
     )
-    suspend fun findByPaymentId(id: Long?): Payment
+    suspend fun findByPaymentId(id: Long?): Payment?
 
     @WithSpan
     @Query(

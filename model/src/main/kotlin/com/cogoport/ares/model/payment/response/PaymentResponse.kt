@@ -122,5 +122,11 @@ data class PaymentResponse(
     var taggedOrganizationId: UUID? = null,
 
     @JsonProperty("tradePartyMappingId")
-    var tradePartyMappingId: UUID? = null
+    var tradePartyMappingId: UUID? = null,
+
+    @JsonProperty("isSuspense")
+    val isSuspense: Boolean? = false,
+
+    @JsonProperty("tradePartyDocument")
+    val tradePartyDocument: String? = null
 )
