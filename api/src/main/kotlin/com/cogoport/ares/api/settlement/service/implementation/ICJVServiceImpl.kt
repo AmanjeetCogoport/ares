@@ -272,7 +272,7 @@ open class ICJVServiceImpl : ICJVService {
         }
         // Update Incident status on incident management
 
-        val incidentStatus = when (request.status.name){
+        val incidentStatus = when (request.status.name) {
             "APPROVED" -> IncidentStatus.APPROVED
             "REJECTED" -> IncidentStatus.REJECTED
             else -> IncidentStatus.REQUESTED
@@ -289,5 +289,4 @@ open class ICJVServiceImpl : ICJVService {
 
         return request.incidentId!!
     }
-
 }

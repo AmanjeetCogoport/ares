@@ -16,5 +16,4 @@ interface ICJVService {
     suspend fun getJournalVoucherByParentJVId(@QueryValue("parentId") parentId: String): List<JournalVoucherResponse>
 
     suspend fun updateICJV(request: ICJVUpdateRequest): String
-
 }

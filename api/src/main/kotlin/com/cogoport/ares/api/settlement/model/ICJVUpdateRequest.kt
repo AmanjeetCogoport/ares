@@ -2,7 +2,7 @@ package com.cogoport.ares.api.settlement.model
 
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
-import java.util.*
+import java.util.UUID
 import javax.validation.constraints.NotNull
 
 @Introspected

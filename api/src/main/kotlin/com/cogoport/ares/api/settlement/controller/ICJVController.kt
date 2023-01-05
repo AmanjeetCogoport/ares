@@ -43,5 +43,4 @@ class ICJVController {
     suspend fun updateICJV(@Valid @Body request: ICJVUpdateRequest): String {
         return icjvService.updateICJV(request)
     }
-
 }
