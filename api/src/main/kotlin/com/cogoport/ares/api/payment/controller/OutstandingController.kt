@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.SupplierOutstandingResponse
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -42,8 +41,8 @@ class OutstandingController {
     }
 
     @Get("/by-supplier{?request*}")
-    suspend fun getBillOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?>? {
-        return Response<ResponseList<SupplierOutstandingResponse?>?>().ok(OpenSearchClient().listSupplierOutstanding(request))
+    suspend fun getSupplierOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?> {
+        return Response<ResponseList<SupplierOutstandingResponse?>>().ok(outStandingService.listSupplierOutstanding(request))
     }
 
     @Get("/invoice-list{?request*}")

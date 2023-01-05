@@ -9,6 +9,7 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.SupplierOutstandingResponse
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -19,6 +20,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
@@ -272,5 +274,21 @@ class OutStandingServiceImpl : OutStandingService {
                 }
             }
         }
+    }
+
+    override suspend fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?> {
+        val response = OpenSearchClient().listSupplierOutstanding(request)
+        var list: List<SupplierOutstandingResponse?> = listOf()
+        if (!response?.hits()?.hits().isNullOrEmpty()) {
+            list = response?.hits()?.hits()?.map { it.source() }!!
+        }
+        val responseList = ResponseList<SupplierOutstandingResponse?>()
+
+        responseList.list = list
+        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
+        responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
     }
 }

@@ -2,7 +2,6 @@ package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.payment.model.SupplierOutstandingResponse
-import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
@@ -441,7 +440,7 @@ class OpenSearchClient {
         return response
     }
 
-    fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?>? {
+    fun listSupplierOutstanding(request: SupplierOutstandingRequest): SearchResponse<SupplierOutstandingResponse>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("legalName", "businessName")
         val response = Client.search({ t ->
@@ -527,21 +526,77 @@ class OpenSearchClient {
                     }
                     q
                 }
+                .sort { t ->
+                    if (request.sortBy != null && request.sortType != null) {
+                        if (request.sortBy == "total_outstanding") {
+                            t.field { f -> f.field("totalOutstandingInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "on_account") {
+                            t.field { f -> f.field("onAccountPaymentInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "open_invoices") {
+                            t.field { f -> f.field("openInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "not_due") {
+                            t.field { f -> f.field("notDueAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "1_30") {
+                            t.field { f -> f.field("thirtyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "31_60") {
+                            t.field { f -> f.field("sixtyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "61_90") {
+                            t.field { f -> f.field("nintyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "91_180") {
+                            t.field { f -> f.field("oneEightyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "180_365") {
+                            t.field { f -> f.field("threeSixtyFiveAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                        if (request.sortBy == "365+") {
+                            t.field { f -> f.field("threeSixtyFivePlusAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        }
+                    } else if (request.sortBy != null) {
+                        if (request.sortBy == "total_outstanding") {
+                            t.field { f -> f.field("totalOutstandingInvoiceLedAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "on_account") {
+                            t.field { f -> f.field("onAccountPaymentInvoiceLedAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "open_invoices") {
+                            t.field { f -> f.field("openInvoiceLedAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "not_due") {
+                            t.field { f -> f.field("notDueAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "1_30") {
+                            t.field { f -> f.field("thirtyAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "31_60") {
+                            t.field { f -> f.field("sixtyAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "61_90") {
+                            t.field { f -> f.field("ninetyAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "91_180") {
+                            t.field { f -> f.field("oneEightyAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "180_365") {
+                            t.field { f -> f.field("threeSixtyFiveAmount").order(SortOrder.Desc) }
+                        }
+                        if (request.sortBy == "365+") {
+                            t.field { f -> f.field("threeSixtyFivePlusAmount").order(SortOrder.Desc) }
+                        }
+                    } else {
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                    }
+                    t
+                }
                 .from(offset).size(request.limit)
         }, SupplierOutstandingResponse::class.java)
 
-        var list: List<SupplierOutstandingResponse?>? = listOf()
-        if (!response?.hits()?.hits().isNullOrEmpty()) {
-            list = response?.hits()?.hits()?.map { it.source() }
-        }
-        val responseList = ResponseList<SupplierOutstandingResponse?>()
-        if (list != null) {
-            responseList.list = list
-        }
-        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
-        responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
-        responseList.pageNo = request.page!!
-
-        return responseList
+        return response
     }
 }
