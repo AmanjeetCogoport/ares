@@ -157,16 +157,19 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
         val total: Int
         val payments: List<PaymentResponse?>?
+        var startDate: Timestamp? = null
+        var endDate: Timestamp? = null
+        if (request.startDate != null && request.endDate != null) {
+            startDate = Timestamp.valueOf(request.startDate)
+            endDate = Timestamp.valueOf(request.endDate)
+        }
         if (request.isSuspense == false) {
             val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
             payments = data.hits().hits().map { it.source() }
             total = data.hits().total().value().toInt()
         } else {
-            val startDate = Timestamp.valueOf(request.startDate)
-            val endDate = Timestamp.valueOf(request.endDate)
-
             val data = suspenseAccountRepo.getSuspenseAccounts(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
-            payments = paymentConverter.convertSuspenseEntityToPaymentResponse(data)
+            payments = paymentConverter.convertSuspenseEntityListToPaymentResponse(data!!)
             total = suspenseAccountRepo.getSuspenseCount(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
         }
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
@@ -177,7 +180,6 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
-        receivableRequest.serviceType = ServiceType.NA
         if (receivableRequest.isSuspense == true && receivableRequest.accMode == AccMode.AP)
             throw AresException(AresError.ERR_1519, "")
 
@@ -237,6 +239,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.isPosted != true) {
             receivableRequest.isPosted = false
         }
+        receivableRequest.serviceType = ServiceType.NA
         receivableRequest.isDeleted = false
         receivableRequest.paymentNum = payment.paymentNum
         receivableRequest.paymentNumValue = payment.paymentNumValue

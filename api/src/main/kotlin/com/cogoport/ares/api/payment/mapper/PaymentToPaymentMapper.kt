@@ -31,5 +31,10 @@ interface PaymentToPaymentMapper {
     @Mapping(source = "narration", target = "remarks")
     @Mapping(source = "transRefNumber", target = "utr")
     @Mapping(source = "cogoAccountNo", target = "bankAccountNumber")
-    fun convertSuspenseEntityToPaymentResponse(suspenseEntities: List<SuspenseAccount>?): List<PaymentResponse?>?
+    @Mapping(target = "organizationName", constant = "Suspense Account")
+    @Mapping(target = "isPosted", constant = "false")
+    @Mapping(target = "isSuspense", constant = "true")
+    fun convertSuspenseEntityToPaymentResponse(suspenseEntities: SuspenseAccount): PaymentResponse
+
+    fun convertSuspenseEntityListToPaymentResponse(suspenseEntities: List<SuspenseAccount>): List<PaymentResponse>
 }

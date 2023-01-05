@@ -7,7 +7,6 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.sql.Timestamp
 
-
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
 
@@ -21,10 +20,11 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
     @Query(
         """ SELECT * FROM suspense_accounts
             WHERE (:entityType IS NULL OR entity_code = :entityType)
-            AND (:currencyType IS NULL OR entity_code = :currencyType)
+            AND (:currencyType IS NULL OR currency = :currencyType)
             AND ( (:startDate IS NULL AND :endDate IS NULL) OR 
                 (transaction_date >= :startDate AND  transaction_date <= :endDate) )
             AND (:query IS NULL OR trans_ref_number ilike :query || '%')
+            AND payment_id = 0
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
@@ -34,10 +34,11 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
         """
             SELECT count(*) FROM suspense_accounts
        WHERE (:entityType IS NULL OR entity_code = :entityType)
-            AND (:currencyType IS NULL OR entity_code = :currencyType)
+            AND (:currencyType IS NULL OR currency = :currencyType)
             AND ( (:startDate IS NULL AND :endDate IS NULL) OR 
                 (transaction_date >= :startDate AND  transaction_date <= :endDate) )
             AND (:query IS NULL OR trans_ref_number ilike :query || '%')
+            AND payment_id = 0
         """
     )
     fun getSuspenseCount(entityType: Int?, startDate: Timestamp?, endDate: Timestamp?, currencyType: String?, page: Int, pageLimit: Int, query: String?): Int
