@@ -13,4 +13,6 @@ interface OutstandingAgeingMapper {
     fun convertToEntity(outstandingAgeing: OutstandingAgeingResponse): OutstandingAgeing
 
     fun convertToBillModel(billOutstanding: BillOutsatndingAgeing): BillOutStandingAgeingResponse
+
+    fun convertToOutStandingModel(billOutstanding: BillOutsatndingAgeing): BillOutStandingAgeingResponse
 }
