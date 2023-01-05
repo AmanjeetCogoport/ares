@@ -134,7 +134,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             performedByUserType = accUtilizationRequest.performedByType,
                             paymentStatus = Utilities.getPaymentStatus(accUtilRes),
                         ),
-                        knockoffDocuments = null,
+                        knockOffDocuments = null,
                     )
                 )
             }

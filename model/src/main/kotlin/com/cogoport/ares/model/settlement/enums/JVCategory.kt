@@ -5,7 +5,8 @@ enum class JVCategory(val value: String) {
     JVNOS("Nostro"),
     WOFF("Write Off"),
     ROFF("Round Off"),
-    OUTST("Outstanding");
+    OUTST("Outstanding"),
+    ICJV("Intercompany");
 
     open operator fun contains(value: String?): Boolean {
         for (c in JVCategory.values()) {
