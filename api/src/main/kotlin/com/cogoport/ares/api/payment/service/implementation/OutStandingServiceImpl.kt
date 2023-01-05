@@ -261,12 +261,34 @@ class OutStandingServiceImpl : OutStandingService {
                     supplyAgent = null,
                     creditDays = null,
                     updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                    onAccountPayment = supplier?.onAccountPayment,
-                    openInvoices = supplier?.openInvoices,
-                    totalOutstanding = supplier?.totalOutstanding,
-                    ageingBucket = supplier?.ageingBucket,
-                    cogoEntityId = null
+                    onAccountPaymentAmountDue = supplier?.onAccountPayment!!.amountDue,
+                    totalOutstandingAmountDue = supplier.totalOutstanding!!.amountDue,
+                    openInvoiceAmountDue = supplier.openInvoices!!.amountDue,
+                    onAccountPaymentInvoiceCount = supplier.onAccountPayment!!.invoicesCount,
+                    openInvoiceCount = supplier.openInvoices!!.invoicesCount,
+                    totalOutstandingInvoiceCount = supplier.totalOutstanding!!.invoicesCount,
+                    totalOutstandingInvoiceLedAmount = supplier.totalOutstanding!!.invoiceLedAmount,
+                    onAccountPaymentInvoiceLedAmount = supplier.onAccountPayment!!.invoiceLedAmount,
+                    openInvoiceLedAmount = supplier.openInvoices!!.invoiceLedAmount,
+                    cogoEntityId = null,
+                    notDueAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
+                    notDueCount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
+                    todayAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
+                    todayCount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.count,
+                    thirtyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.amount,
+                    thirtyCount = supplier.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.count,
+                    sixtyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.amount,
+                    sixtyCount = supplier.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.count,
+                    nintyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.amount,
+                    nintyCount = supplier.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.count,
+                    oneEightyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.amount,
+                    oneEightyCount = supplier.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.count,
+                    threeSixtyFiveAmount = supplier.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.amount,
+                    threeSixtyFiveCount = supplier.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.count,
+                    threeSixtyFivePlusAmount = supplier.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.amount,
+                    threeSixtyFivePlusCount = supplier.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.count
                 )
+
                 if (supplierDoc == null) {
                     Client.addDocument(index, orgId, supplierOutstandingResponse, true)
                 } else {

@@ -11,6 +11,7 @@ import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
+import java.util.UUID
 
 @KafkaClient
 interface AresKafkaEmitter {
@@ -54,4 +55,7 @@ interface AresKafkaEmitter {
 
     @Topic("update-bill-status-migration")
     fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+
+    @Topic("update-supplier-details")
+    fun emitSupplierDetails(orgId: UUID?)
 }
