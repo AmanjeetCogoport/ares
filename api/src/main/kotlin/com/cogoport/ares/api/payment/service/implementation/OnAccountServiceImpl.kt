@@ -221,6 +221,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+        if (accUtilRes.accMode == AccMode.AP) {
+            aresKafkaEmitter.emitSupplierDetails(accUtilRes.organizationId)
+        }
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,

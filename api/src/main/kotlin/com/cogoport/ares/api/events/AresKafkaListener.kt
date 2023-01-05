@@ -3,6 +3,7 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -17,6 +18,7 @@ import io.micronaut.configuration.kafka.annotation.OffsetStrategy
 import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
 
 @KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "300000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 2, heartbeatInterval = "1000ms")
 class AresKafkaListener {
@@ -31,6 +33,9 @@ class AresKafkaListener {
 
     @Inject
     private lateinit var settlementService: SettlementService
+
+    @Inject
+    private lateinit var outStandingService: OutStandingService
 
     /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
     @Topic("create-account-utilization")
@@ -79,5 +84,10 @@ class AresKafkaListener {
     @Topic("send-payment-details-for-autoKnockOff")
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
+    }
+
+    @Topic("update-supplier-details")
+    fun updateSupplierDetail(orgId: UUID?) = runBlocking {
+        outStandingService.updateSupplierOutstanding(orgId.toString())
     }
 }

@@ -153,6 +153,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         val listResponse = add(accUtilizationList)
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
+            if (accUtilizationRequest.accMode == AccMode.AP) {
+                aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+            }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -188,6 +191,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
                 try {
                     emitDashboardAndOutstandingEvent(accUtilizationRequest)
+                    if (accountUtilization.accMode == AccMode.AP) {
+                        aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+                    }
                 } catch (e: Exception) {
                     logger().error(e.stackTraceToString())
                 }
@@ -275,6 +281,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
+            if (accUtilizationRequest.accMode == AccMode.AP) {
+                aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+            }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
