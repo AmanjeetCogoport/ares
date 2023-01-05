@@ -30,5 +30,5 @@ interface RailsClient {
     suspend fun getCogoEntity(entityCode: String): ListCogoEntities
 
     @Post("/create_organization_credit_consumption")
-    suspend fun sendInvoicePaymentKnockOff(@Body request: CreditPaymentRequest): String
+    suspend fun sendInvoicePaymentKnockOff(@Body request: com.cogoport.plutus.model.invoice.CreditPaymentRequest): String
 }
