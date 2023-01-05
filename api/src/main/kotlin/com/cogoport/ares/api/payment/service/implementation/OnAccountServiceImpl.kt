@@ -21,7 +21,6 @@ import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
-import com.cogoport.ares.api.payment.mapper.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
@@ -29,6 +28,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.repository.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -155,9 +155,20 @@ open class OnAccountServiceImpl : OnAccountService {
      * @return : AccountCollectionResponse
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
-        val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
-        val payments = data.hits().hits().map { it.source() }
-        val total = data.hits().total().value().toInt()
+        val total: Int
+        val payments: List<PaymentResponse?>?
+        if (request.isSuspense == false) {
+            val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
+            payments = data.hits().hits().map { it.source() }
+            total = data.hits().total().value().toInt()
+        } else {
+            val startDate = Timestamp.valueOf(request.startDate)
+            val endDate = Timestamp.valueOf(request.endDate)
+
+            val data = suspenseAccountRepo.getSuspenseAccounts(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
+            payments = paymentConverter.convertSuspenseEntityToPaymentResponse(data)
+            total = suspenseAccountRepo.getSuspenseCount(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
+        }
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 
@@ -180,7 +191,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun createSuspensePaymentEntry(receivableRequest: Payment): Long {
-        val suspenseEntity = paymentConverter.convertToSuspenseEntity(receivableRequest)
+        val suspenseEntity = paymentConverter.convertPaymentToSuspenseEntity(receivableRequest)
         val savedSuspense = suspenseAccountRepo.save(suspenseEntity)
         auditService.createAudit(
             AuditRequest(

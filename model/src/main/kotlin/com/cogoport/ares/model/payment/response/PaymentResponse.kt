@@ -85,6 +85,9 @@ data class PaymentResponse(
     @JsonProperty("createdBy")
     var createdBy: String? = "",
 
+    @JsonProperty("updatedBy")
+    var updatedBy: String? = "",
+
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
 

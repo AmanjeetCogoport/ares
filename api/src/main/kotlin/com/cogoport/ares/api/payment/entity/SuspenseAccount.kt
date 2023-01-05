@@ -19,6 +19,7 @@ data class SuspenseAccount(
     var amount: BigDecimal,
     var ledCurrency: String?,
     var ledAmount: BigDecimal?,
+    var narration: String?,
     var payMode: PayMode?,
     var transRefNumber: String?,
     var refPaymentId: Long?,
