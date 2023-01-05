@@ -182,7 +182,7 @@ class OutStandingServiceImpl : OutStandingService {
         return organizationOutStanding
     }
 
-    override suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList {
+    override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList {
         validateInput(request)
         val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
@@ -242,7 +242,7 @@ class OutStandingServiceImpl : OutStandingService {
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
             supplierDoc = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
         }
-        val outStandings = getBillsOutstandingList(OutstandingListRequest(orgId = orgId))
+        val outStandings = getSupplierOutstandingList(OutstandingListRequest(orgId = orgId))
         if (!outStandings.list.isNullOrEmpty()) {
             outStandings.list!!.forEach { supplier ->
                 val supplierOutstandingResponse = SupplierOutstandingResponse(
@@ -262,7 +262,8 @@ class OutStandingServiceImpl : OutStandingService {
                     onAccountPayment = supplier?.onAccountPayment,
                     openInvoices = supplier?.openInvoices,
                     totalOutstanding = supplier?.totalOutstanding,
-                    ageingBucket = supplier?.ageingBucket
+                    ageingBucket = supplier?.ageingBucket,
+                    cogoEntityId = null
                 )
                 if (supplierDoc == null) {
                     Client.addDocument(index, orgId, supplierOutstandingResponse, true)

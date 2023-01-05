@@ -20,7 +20,7 @@ interface OutStandingService {
 
     suspend fun getCustomersOutstandingInINR(orgIds: List<String>): MutableMap<String, BigDecimal?>
 
-    suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList
+    suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList
 
     suspend fun updateSupplierOutStanding(orgId: String)
 }
