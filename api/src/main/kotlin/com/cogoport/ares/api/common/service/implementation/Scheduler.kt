@@ -17,9 +17,8 @@ class Scheduler(private var openSearchService: OpenSearchService) {
     suspend fun updateSupplierOutstandingOnOpenSearch() {
         runBlocking {
             val orgIds = accountUtilizationRepository.getSupplierOrgIds()
-            val batches = orgIds.chunked(100)
-            for (batch in batches) {
-                openSearchService.updateSupplierOutstanding(batch)
+            for (id in orgIds) {
+                openSearchService.updateSupplierOutstanding(id)
             }
         }
     }
