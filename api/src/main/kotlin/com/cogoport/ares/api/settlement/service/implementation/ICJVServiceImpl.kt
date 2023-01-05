@@ -177,6 +177,8 @@ open class ICJVServiceImpl : ICJVService {
     private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.status = JVStatus.PENDING
+        jv.createdAt = Timestamp.from(Instant.now())
+        jv.updatedAt = Timestamp.from(Instant.now())
         jv.type = request.type.lowercase()
         return jv
     }
