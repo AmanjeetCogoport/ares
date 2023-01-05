@@ -192,7 +192,7 @@ open class ICJVServiceImpl : ICJVService {
         }
     }
 
-    private fun sendToIncidentManagement(
+    private suspend fun sendToIncidentManagement(
         parentJvData: ParentJournalVoucher,
         data: MutableList<com.cogoport.hades.model.incident.JournalVoucher>
     ) {
@@ -234,7 +234,7 @@ open class ICJVServiceImpl : ICJVService {
             data = incidentData,
             createdBy = parentJvData.createdBy!!
         )
-//        hadesClient.createIncident(clientRequest)
+        hadesClient.createIncident(clientRequest)
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
