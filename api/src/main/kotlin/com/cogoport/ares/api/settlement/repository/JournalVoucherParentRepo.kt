@@ -34,13 +34,13 @@ interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVouche
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN j.created_at                         
-                         WHEN :sortBy = 'updatedAt' THEN j.updated_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
                     END
             END 
             Desc,
             CASE WHEN :sortType = 'Asc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN j.created_at
-                         WHEN :sortBy = 'updatedAt' THEN j.updated_at
+                         WHEN :sortBy = 'validityDate' THEN j.validity_date
                     END        
             END 
             Asc
