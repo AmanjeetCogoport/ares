@@ -357,6 +357,9 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     open suspend fun updateSuspensePayment(receivableRequest: Payment, suspenseEntity: SuspenseAccount): OnAccountApiCommonResponse {
         if (receivableRequest.tradePartyMappingId != null) {
+            val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
+            val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
+            receivableRequest.transactionDate = filterDateFromTs
             val id = createNonSuspensePaymentEntry(receivableRequest)
             suspenseEntity.tradePartyDocumentUrl = receivableRequest.tradePartyDocument
             suspenseEntity.paymentId = id
