@@ -1407,7 +1407,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.ROFF,
                 SettlementType.JVNOS,
                 SettlementType.EXCH,
-                SettlementType.OUTST
+                SettlementType.OUTST,
+                SettlementType.ICJV
             )
         for (doc in request.stackDetails!!.reversed()) {
             if (creditType.contains(doc.accountType)) {
@@ -1841,7 +1842,7 @@ open class SettlementServiceImpl : SettlementService {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
-            AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS ->
+            AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
                     status = JVStatus.UTILIZED,
@@ -2091,6 +2092,9 @@ open class SettlementServiceImpl : SettlementService {
                 jvSettleList
             }
             SettlementType.JVNOS -> {
+                jvSettleList
+            }
+            SettlementType.ICJV -> {
                 jvSettleList
             }
             SettlementType.PREIMB -> {
