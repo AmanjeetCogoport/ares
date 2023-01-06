@@ -453,7 +453,7 @@ class OpenSearchClient {
                                     qs.fields(searchFilterFields).query("*${request.name}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
-                                        .defaultOperator(Operator.Or)
+                                        .defaultOperator(Operator.And)
                                 }
                             }
                             b
@@ -527,13 +527,14 @@ class OpenSearchClient {
                     q
                 }
                 .sort { t ->
-                    if (request.sortBy != null && request.sortType != null) {
-                        t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
-                    }
-                    if (request.sortBy != null && request.sortType == null) {
-                        t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                    if (!request.sortBy.isNullOrBlank()) {
+                        if (!request.sortType.isNullOrBlank()) {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
+                        } else {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                        }
                     } else {
-                        t.field { f -> f.field("thirtyAmount").order(SortOrder.Asc) }
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
                     }
                 }
                 .from(offset).size(request.limit)
