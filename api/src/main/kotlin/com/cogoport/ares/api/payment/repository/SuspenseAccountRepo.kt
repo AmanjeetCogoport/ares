@@ -12,7 +12,7 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
 
     @Query(
         """
-            SELECT * FROM suspense_accounts where id = :id and is_deleted is false
+            SELECT * FROM suspense_accounts WHERE id = :id AND is_deleted IS FALSE
         """
     )
     fun findBySuspenseId(id: Long): SuspenseAccount?
@@ -23,12 +23,12 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
             AND (:currencyType IS NULL OR currency = :currencyType)
             AND ( (:startDate IS NULL AND :endDate IS NULL) OR 
                 (transaction_date >= :startDate AND  transaction_date <= :endDate) )
-            AND (:query IS NULL OR trans_ref_number ilike :query || '%')
-            AND payment_id = 0
+            AND (:query IS NULL OR trans_ref_number ILIKE :query || '%')
+            AND payment_id IS NULL
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
-    fun getSuspenseAccounts(entityType: Int?, startDate: Timestamp?, endDate: Timestamp?, currencyType: String?, page: Int, pageLimit: Int, query: String?): List<SuspenseAccount>?
+    fun getSuspenseAccounts(entityType: Int?, startDate: Timestamp?, endDate: Timestamp?, currencyType: String?, page: Int, pageLimit: Int, query: String?): List<SuspenseAccount>
 
     @Query(
         """
@@ -37,8 +37,8 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
             AND (:currencyType IS NULL OR currency = :currencyType)
             AND ( (:startDate IS NULL AND :endDate IS NULL) OR 
                 (transaction_date >= :startDate AND  transaction_date <= :endDate) )
-            AND (:query IS NULL OR trans_ref_number ilike :query || '%')
-            AND payment_id = 0
+            AND (:query IS NULL OR trans_ref_number ILIKE :query || '%')
+            AND payment_id IS NULL
         """
     )
     fun getSuspenseCount(entityType: Int?, startDate: Timestamp?, endDate: Timestamp?, currencyType: String?, page: Int, pageLimit: Int, query: String?): Int

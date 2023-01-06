@@ -13,14 +13,14 @@ import java.util.UUID
 @MappedEntity(value = "suspense_accounts")
 data class SuspenseAccount(
     @field:Id @GeneratedValue var id: Long?,
-    var paymentId: Long,
+    var paymentId: Long?,
     var entityCode: Int,
     var currency: String,
     var amount: BigDecimal,
-    var ledCurrency: String?,
-    var ledAmount: BigDecimal?,
+    var ledgerCurrency: String?,
+    var ledgerAmount: BigDecimal?,
     var narration: String?,
-    var payMode: PayMode?,
+    var paymentMode: PayMode?,
     var transRefNumber: String?,
     var refPaymentId: Long?,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
@@ -36,5 +36,5 @@ data class SuspenseAccount(
     @DateCreated var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     @DateUpdated var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var deletedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var tradePartyDocument: String?
+    var tradePartyDocumentUrl: String?
 )
