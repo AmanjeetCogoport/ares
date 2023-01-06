@@ -166,7 +166,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (request.isSuspense == false) {
             val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
             payments = data.hits().hits().map { it.source() }
-            payments.forEach{
+            payments.forEach {
                 it?.isSuspense = false
             }
             total = data.hits().total().value().toInt()
