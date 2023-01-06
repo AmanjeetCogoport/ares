@@ -16,4 +16,6 @@ data class DeletePaymentRequest(
     var performedByUserType: String? = null,
     @JsonProperty("accMode")
     var accMode: AccMode? = AccMode.AR,
+    @JsonProperty("isSuspense")
+    var isSuspense: Boolean? = false,
 )
