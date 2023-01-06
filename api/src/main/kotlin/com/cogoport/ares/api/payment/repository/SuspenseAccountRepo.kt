@@ -15,7 +15,7 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
             SELECT * FROM suspense_accounts WHERE id = :id AND is_deleted IS FALSE
         """
     )
-    fun findBySuspenseId(id: Long): SuspenseAccount?
+    fun findBySuspenseId(id: Long?): SuspenseAccount
 
     @Query(
         """ SELECT * FROM suspense_accounts
