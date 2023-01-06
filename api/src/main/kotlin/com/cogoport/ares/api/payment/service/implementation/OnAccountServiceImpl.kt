@@ -169,7 +169,7 @@ open class OnAccountServiceImpl : OnAccountService {
             total = data.hits().total().value().toInt()
         } else {
             val data = suspenseAccountRepo.getSuspenseAccounts(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
-            payments = paymentConverter.convertSuspenseEntityListToPaymentResponse(data!!)
+            payments = paymentConverter.convertSuspenseEntityListToPaymentResponse(data)
             total = suspenseAccountRepo.getSuspenseCount(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
         }
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
@@ -357,7 +357,11 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     open suspend fun updateSuspensePayment(receivableRequest: Payment, suspenseEntity: SuspenseAccount): OnAccountApiCommonResponse {
         if (receivableRequest.tradePartyMappingId != null) {
+            val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
+            val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
+            receivableRequest.transactionDate = filterDateFromTs
             val id = createNonSuspensePaymentEntry(receivableRequest)
+            suspenseEntity.tradePartyDocumentUrl = receivableRequest.tradePartyDocument
             suspenseEntity.paymentId = id
         }
         updateSuspenseAccountEntity(receivableRequest, suspenseEntity)
@@ -445,13 +449,13 @@ open class OnAccountServiceImpl : OnAccountService {
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         suspenseEntity.entityCode = receivableRequest.entityType!!
         suspenseEntity.bankName = receivableRequest.bankName
-        suspenseEntity.payMode = receivableRequest.payMode
+        suspenseEntity.paymentMode = receivableRequest.payMode
         suspenseEntity.transactionDate = filterDateFromTs
         suspenseEntity.transRefNumber = receivableRequest.utr
         suspenseEntity.amount = receivableRequest.amount!!
         suspenseEntity.currency = receivableRequest.currency!!
-        suspenseEntity.ledAmount = receivableRequest.amount!! * receivableRequest.exchangeRate!!
-        suspenseEntity.ledCurrency = receivableRequest.ledCurrency
+        suspenseEntity.ledgerAmount = receivableRequest.amount!! * receivableRequest.exchangeRate!!
+        suspenseEntity.ledgerCurrency = receivableRequest.ledCurrency
         suspenseEntity.exchangeRate = receivableRequest.exchangeRate
         suspenseEntity.bankName = receivableRequest.bankName
         suspenseEntity.cogoAccountNo = receivableRequest.bankAccountNumber

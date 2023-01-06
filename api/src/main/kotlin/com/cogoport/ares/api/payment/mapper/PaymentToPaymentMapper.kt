@@ -25,6 +25,10 @@ interface PaymentToPaymentMapper {
     @Mapping(source = "remarks", target = "narration")
     @Mapping(source = "utr", target = "transRefNumber")
     @Mapping(source = "bankAccountNumber", target = "cogoAccountNo")
+    @Mapping(source = "ledCurrency", target = "ledgerCurrency")
+    @Mapping(source = "ledAmount", target = "ledgerAmount")
+    @Mapping(source = "payMode", target = "paymentMode")
+    @Mapping(source = "tradePartyDocument", target = "tradePartyDocumentUrl")
     fun convertPaymentToSuspenseEntity(payment: com.cogoport.ares.model.payment.Payment): SuspenseAccount
 
     @Mapping(source = "entityCode", target = "entityType")
@@ -35,6 +39,10 @@ interface PaymentToPaymentMapper {
     @Mapping(target = "isPosted", constant = "false")
     @Mapping(target = "isSuspense", constant = "true")
     @Mapping(target = "accMode", constant = "AR")
+    @Mapping(target = "ledCurrency", source = "ledgerCurrency")
+    @Mapping(target = "ledAmount", source = "ledgerAmount")
+    @Mapping(target = "payMode", source = "paymentMode")
+    @Mapping(source = "tradePartyDocumentUrl", target = "tradePartyDocument")
     fun convertSuspenseEntityToPaymentResponse(suspenseEntities: SuspenseAccount): PaymentResponse
 
     fun convertSuspenseEntityListToPaymentResponse(suspenseEntities: List<SuspenseAccount>): List<PaymentResponse>
