@@ -5,6 +5,7 @@ import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
@@ -54,4 +55,7 @@ interface AresKafkaEmitter {
 
     @Topic("update-bill-status-migration")
     fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+
+    @Topic("unfreeze-credit-consumpation")
+    fun emitUnfreezeCreditConsumption(request: Settlement)
 }

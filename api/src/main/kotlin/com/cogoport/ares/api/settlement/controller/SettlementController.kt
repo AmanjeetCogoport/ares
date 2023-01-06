@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.common.models.Response
@@ -156,5 +158,15 @@ class SettlementController {
     @Post("/settle-with-source-and-destination-id")
     suspend fun settleWithSourceIdAndDestinationId(@Valid @Body autoKnockOffRequest: AutoKnockOffRequest): List<CheckDocument>? {
         return settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
+    }
+
+    @Post("/send-utilization-to-debit")
+    suspend fun sendPaymentDataToDebit(@Valid @Body request: AccountUtilization) {
+        return settlementService.sendInvoiceDataToDebitConsumption(request)
+    }
+
+    @Post("/unfreeze-credit-consumption")
+    suspend fun unfreezeCreditConsumption(@Valid @Body request: Settlement) {
+        return settlementService.sendKnockOffDataToCreditConsumption(request)
     }
 }
