@@ -20,15 +20,17 @@ interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVouche
             j.jv_num,
             j.category,
             j.status,
+            j.validity_date,
             j.created_at,
             j.created_by,
             j.updated_at,
             j.updated_by
             FROM parent_journal_vouchers j
             where 
-                (:status is null OR  status = :status::JV_STATUS) AND
-                (:category is null OR  category = :category::JV_CATEGORY) AND
-                (:query is null OR jv_num ilike '%'||:query||'%')
+                (:status is null OR  j.status = :status::JV_STATUS) AND
+                (:category is null OR  j.category = :category::JV_CATEGORY) AND
+                ((:query is null OR j.jv_num ilike '%'||:query||'%') OR
+                ((j.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ilike '%'||:query||'%')))))
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN j.created_at                         
