@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.common.client
 
-import com.cogoport.ares.model.settlement.CreditPaymentRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
