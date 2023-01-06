@@ -178,9 +178,10 @@ class OpenSearchClient {
                                 if (request.query != null) {
                                     b.must { m ->
                                         m.queryString { q ->
-                                            q.query("*${request.query!!.replace("/", "\\/")}*")
-                                                .fields("organizationName", "utr.keyword")
+                                            q.query("*${request.query!!}*")
+                                                .fields("organizationName", "utr")
                                                 .lenient(true)
+                                                .escape(true)
                                                 .allowLeadingWildcard(true)
                                                 .defaultOperator(Operator.And)
                                         }

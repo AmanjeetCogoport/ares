@@ -132,8 +132,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                             balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
-                            paymentStatus = Utilities.getPaymentStatus(accUtilRes)
-                        )
+                            paymentStatus = Utilities.getPaymentStatus(accUtilRes),
+                        ),
+                        knockoffDocuments = null,
                     )
                 )
             }
@@ -162,7 +163,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
     override suspend fun delete(request: DeleteInvoiceRequest): Boolean {
         var result = false
         for (obj in request.data) {
-
             val accountUtilization = accUtilRepository.findRecord(obj.first, obj.second)
 //                ?: throw AresException(AresError.ERR_1005, obj.first.toString())
 
@@ -203,7 +203,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * @param UpdateInvoiceRequest
      */
     override suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest) {
-
         val accountUtilization =
             accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
                 ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
@@ -235,10 +234,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-        accountUtilization.payCurr = newPayCurr
-        accountUtilization.payLoc = newPayLoc
 
-        accUtilRepository.update(accountUtilization)
+        if (!newPayCurr.equals(0)) {
+            accountUtilization.payCurr = newPayCurr
+        }
+        if (!newPayLoc.equals(0)) {
+            accountUtilization.payLoc = newPayLoc
+        }
 
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
@@ -254,6 +256,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
 
         val data = accUtilRepository.update(accountUtilization)
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -431,10 +434,11 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     private fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
         try {
-            if (accUtilizationRequest.accType == AccountType.PINV)
+            if (accUtilizationRequest.accType == AccountType.PINV) {
                 aresKafkaEmitter.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)
-            else if (accUtilizationRequest.accType == AccountType.SINV)
+            } else if (accUtilizationRequest.accType == AccountType.SINV) {
                 aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
+            }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
@@ -443,9 +447,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount - accountUtilization.amountCurr
         var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount - accountUtilization.amountLoc
         for (payment in paymentEntry) {
-
-            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal())
+            if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal()) {
                 continue
+            }
 
             if (payment?.payCurr!! < payment?.amountCurr) {
                 var toUpdatePayCurr: BigDecimal
@@ -478,8 +482,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var totalUtilisedTillNowPay = accountUtilization.payCurr
         var totalUtilisedTillNowLed = accountUtilization.payLoc
 
-        if (updateInvoiceRequest.currAmount >= totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount >= totalUtilisedTillNowLed)
+        if (updateInvoiceRequest.currAmount >= totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount >= totalUtilisedTillNowLed) {
             return
+        }
 
         var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.currAmount
         var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.ledAmount

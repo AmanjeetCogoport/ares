@@ -58,7 +58,11 @@ class Bootstrap {
                 user = sageConfig.user!!,
                 password = sageConfig.password!!,
                 queryClientUrl = sageConfig.queryClientUrl!!,
-                queryClientPassword = sageConfig.queryClientPassword!!
+                queryClientPassword = sageConfig.queryClientPassword!!,
+                loginUrl = sageConfig.loginUrl!!,
+                username = sageConfig.username!!,
+                userpassword = sageConfig.userpassword!!,
+                sageRestToken = null
             )
         )
     }

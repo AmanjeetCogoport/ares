@@ -22,20 +22,24 @@ import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CollectionRequest
+import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.ReceivableRequest
+import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DpoResponse
 import com.cogoport.ares.model.payment.response.DsoResponse
+import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
+import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
@@ -726,6 +730,31 @@ class DashboardServiceImpl : DashboardService {
         val responseList = ResponseList<StatsForCustomerResponse?>()
         responseList.list = list
         responseList.totalRecords = accountUtilizationRepository.getCount(request.docValues, request.bookingPartyId)
+        responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
+        responseList.pageNo = request.pageIndex
+        return responseList
+    }
+
+    override suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<OverallStatsForTradeParty?> {
+        val list = accountUtilizationRepository.getOverallStatsForTradeParty(
+            request.docValues, request.pageIndex, request.pageSize
+        )
+        val responseList = ResponseList<OverallStatsForTradeParty?>()
+        responseList.list = list
+        responseList.totalRecords = accountUtilizationRepository.getTradePartyCount(request.docValues)
+        responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
+        responseList.pageNo = request.pageIndex
+        return responseList
+    }
+
+    override suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?> {
+        val invoiceList = accountUtilizationRepository.getInvoiceListForTradeParty(
+            request.docValues, request.sortBy, request.sortType,
+            request.pageIndex, request.pageSize
+        )
+        val responseList = ResponseList<InvoiceListResponse?>()
+        responseList.list = invoiceList
+        responseList.totalRecords = accountUtilizationRepository.getInvoicesCountForTradeParty(request.docValues)
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
         responseList.pageNo = request.pageIndex
         return responseList

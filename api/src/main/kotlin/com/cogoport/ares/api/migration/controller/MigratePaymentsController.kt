@@ -80,4 +80,42 @@ class MigratePaymentsController {
             "Request to migrate settlements received, total records: $size"
         )
     }
+    @Get("/update-utilization-amount-date")
+    suspend fun migrateUtilizationAmountByDate(
+        @QueryValue startDate: String,
+        @QueryValue endDate: String
+    ): Response<String> {
+        val count = paymentMigration.updateUtilizationAmount(startDate, endDate, null)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request received to update utilizations for payments total record: $count"
+        )
+    }
+
+    @Post("/update-utilization-amount")
+    suspend fun migrateUtilizationAmount(@Body request: List<String>): Response<String> {
+        val count = paymentMigration.updateUtilizationAmountByPaymentNum(request)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request received to update utilizations for payments total record: $count"
+        )
+    }
+
+    @Get("/update-invoice-utilization")
+    suspend fun updateInvoiceUtilization(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
+        val count = paymentMigration.updateUtilizationForInvoice(startDate, endDate, null)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request received to update utilizations for invoice total record: $count"
+        )
+    }
+
+    @Get("/update-bill-utilization")
+    suspend fun updateBillUtilization(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
+        val count = paymentMigration.updateUtilizationForBill(startDate, endDate, null)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request received to update utilizations for bill total record: $count"
+        )
+    }
 }
