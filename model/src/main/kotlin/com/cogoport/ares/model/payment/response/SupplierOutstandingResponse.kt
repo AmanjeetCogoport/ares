@@ -1,7 +1,6 @@
-package com.cogoport.ares.api.payment.model
+package com.cogoport.ares.model.payment.response
 
 import com.cogoport.ares.model.payment.DueAmount
-import com.cogoport.kuber.model.GetUserResponse
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonIgnoreType
@@ -26,7 +25,7 @@ data class SupplierOutstandingResponse(
     @JsonProperty("companyType")
     var companyType: String?,
     @JsonProperty("supplyAgent")
-    var supplyAgent: GetUserResponse?,
+    var supplyAgent: SupplyAgent?,
     @JsonProperty("sageId")
     var sageId: String?,
     @JsonProperty("countryId")
