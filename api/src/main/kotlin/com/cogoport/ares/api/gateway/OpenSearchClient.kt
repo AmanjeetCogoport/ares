@@ -528,71 +528,13 @@ class OpenSearchClient {
                 }
                 .sort { t ->
                     if (request.sortBy != null && request.sortType != null) {
-                        if (request.sortBy == "total_outstanding") {
-                            t.field { f -> f.field("totalOutstandingInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "on_account") {
-                            t.field { f -> f.field("onAccountPaymentInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "open_invoices") {
-                            t.field { f -> f.field("openInvoiceLedAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "not_due") {
-                            t.field { f -> f.field("notDueAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "1_30") {
-                            t.field { f -> f.field("thirtyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "31_60") {
-                            t.field { f -> f.field("sixtyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "61_90") {
-                            t.field { f -> f.field("nintyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "91_180") {
-                            t.field { f -> f.field("oneEightyAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "180_365") {
-                            t.field { f -> f.field("threeSixtyFiveAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                        if (request.sortBy == "365+") {
-                            t.field { f -> f.field("threeSixtyFivePlusAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        }
-                    } else if (request.sortBy != null) {
-                        if (request.sortBy == "total_outstanding") {
-                            t.field { f -> f.field("totalOutstandingInvoiceLedAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "on_account") {
-                            t.field { f -> f.field("onAccountPaymentInvoiceLedAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "open_invoices") {
-                            t.field { f -> f.field("openInvoiceLedAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "not_due") {
-                            t.field { f -> f.field("notDueAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "1_30") {
-                            t.field { f -> f.field("thirtyAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "31_60") {
-                            t.field { f -> f.field("sixtyAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "61_90") {
-                            t.field { f -> f.field("ninetyAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "91_180") {
-                            t.field { f -> f.field("oneEightyAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "180_365") {
-                            t.field { f -> f.field("threeSixtyFiveAmount").order(SortOrder.Desc) }
-                        }
-                        if (request.sortBy == "365+") {
-                            t.field { f -> f.field("threeSixtyFivePlusAmount").order(SortOrder.Desc) }
-                        }
-                    } else {
-                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                        t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
                     }
-                    t
+                    if (request.sortBy != null && request.sortType == null) {
+                        t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                    } else {
+                        t.field { f -> f.field("thirtyAmount").order(SortOrder.Asc) }
+                    }
                 }
                 .from(offset).size(request.limit)
         }, SupplierOutstandingResponse::class.java)

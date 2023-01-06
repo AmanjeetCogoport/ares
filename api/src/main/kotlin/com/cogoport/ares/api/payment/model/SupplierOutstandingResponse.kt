@@ -40,12 +40,12 @@ data class SupplierOutstandingResponse(
     var serialId: String?,
     @JsonProperty("creditDays")
     var creditDays: String?,
-    @JsonProperty("openInvoiceAmountDue")
-    var openInvoiceAmountDue: List<DueAmount>?,
-    @JsonProperty("onAccountPaymentAmountDue")
-    var onAccountPaymentAmountDue: List<DueAmount>?,
-    @JsonProperty("totalOutstandingAmountDue")
-    var totalOutstandingAmountDue: List<DueAmount>?,
+    @JsonProperty("openInvoice")
+    var openInvoice: List<DueAmount>?,
+    @JsonProperty("onAccountPayment")
+    var onAccountPayment: List<DueAmount>?,
+    @JsonProperty("totalOutstanding")
+    var totalOutstanding: List<DueAmount>?,
     @JsonProperty("openInvoiceCount")
     var openInvoiceCount: Int?,
     @JsonProperty("onAccountPaymentInvoiceCount")
@@ -66,8 +66,8 @@ data class SupplierOutstandingResponse(
     var thirtyAmount: BigDecimal?,
     @JsonProperty("sixtyAmount")
     var sixtyAmount: BigDecimal?,
-    @JsonProperty("nintyAmount")
-    var nintyAmount: BigDecimal?,
+    @JsonProperty("ninetyAmount")
+    var ninetyAmount: BigDecimal?,
     @JsonProperty("oneEightyAmount")
     var oneEightyAmount: BigDecimal?,
     @JsonProperty("threeSixtyFiveAmount")
@@ -82,8 +82,8 @@ data class SupplierOutstandingResponse(
     var thirtyCount: Int?,
     @JsonProperty("sixtyCount")
     var sixtyCount: Int?,
-    @JsonProperty("nintyCount")
-    var nintyCount: Int?,
+    @JsonProperty("ninetyCount")
+    var ninetyCount: Int?,
     @JsonProperty("oneEightyCount")
     var oneEightyCount: Int?,
     @JsonProperty("threeSixtyFiveCount")
