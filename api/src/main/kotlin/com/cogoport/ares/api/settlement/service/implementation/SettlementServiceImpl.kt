@@ -2368,7 +2368,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun sendKnockOffDataToCreditConsumption(request: Settlement) {
         val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.destinationId, "paymentMode")
 
-        if (invoiceData == null || invoiceData.value.toString().isBlank()) {
+        if ((invoiceData == null) || invoiceData.value.toString().isBlank() || (invoiceData.value != TransactionType.CREDIT.value)) {
             return
         }
 
@@ -2414,7 +2414,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization) {
         val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.documentNo, "paymentMode")
 
-        if ((invoiceData == null) || invoiceData.value.toString().isBlank()) {
+        if ((invoiceData == null) || invoiceData.value.toString().isBlank() || (invoiceData.value != TransactionType.CREDIT.value)) {
             return
         }
 
