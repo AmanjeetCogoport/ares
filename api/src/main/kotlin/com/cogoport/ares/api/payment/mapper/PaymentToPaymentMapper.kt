@@ -43,6 +43,7 @@ interface PaymentToPaymentMapper {
     @Mapping(target = "ledAmount", source = "ledgerAmount")
     @Mapping(target = "payMode", source = "paymentMode")
     @Mapping(source = "tradePartyDocumentUrl", target = "tradePartyDocument")
+    @Mapping(source = "transactionDate", target = "paymentDate", dateFormat = "yyyy-MM-dd")
     fun convertSuspenseEntityToPaymentResponse(suspenseEntities: SuspenseAccount): PaymentResponse
 
     fun convertSuspenseEntityListToPaymentResponse(suspenseEntities: List<SuspenseAccount>): List<PaymentResponse>
