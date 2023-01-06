@@ -440,11 +440,11 @@ class OpenSearchClient {
         return response
     }
 
-    fun listSupplierOutstanding(request: SupplierOutstandingRequest): SearchResponse<SupplierOutstandingResponse>? {
+    fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingResponse>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("legalName", "businessName")
         val response = Client.search({ t ->
-            t.index(AresConstants.SUPPLIERS_OUTSTANDING_INDEX)
+            t.index(index)
                 .query { q ->
                     q.bool { b ->
                         if (request.name != null) {
@@ -490,22 +490,6 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.cogoEntityId != null) {
-                            b.must { t ->
-                                t.match { v ->
-                                    v.field("cogoEntityId.keyword").query(FieldValue.of(request.cogoEntityId.toString()))
-                                }
-                            }
-                            b
-                        }
-                        if (request.taxNo != null) {
-                            b.must { t ->
-                                t.match { v ->
-                                    v.field("taxNumber.keyword").query(FieldValue.of(request.taxNo.toString()))
-                                }
-                            }
-                            b
-                        }
                         if (request.companyType != null) {
                             b.must { t ->
                                 t.match { v ->
@@ -514,10 +498,18 @@ class OpenSearchClient {
                             }
                             b
                         }
+                        if (request.taxNo != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("taxNumber.keyword").query(FieldValue.of(request.taxNo))
+                                }
+                            }
+                            b
+                        }
                         if (request.category != null) {
                             b.must { t ->
                                 t.match { v ->
-                                    v.field("category.keyword").query(FieldValue.of(request.category))
+                                    v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
                                 }
                             }
                             b

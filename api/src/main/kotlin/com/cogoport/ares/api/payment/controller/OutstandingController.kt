@@ -70,8 +70,13 @@ class OutstandingController {
         return Response<MutableMap<String, BigDecimal?>>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
     }
 
-    @Post("/supplier-outstanding/{orgId}")
-    suspend fun updateSupplierOutstanding(@PathVariable("orgId") orgId: String) {
-        return outStandingService.updateSupplierOutstanding(orgId)
+    @Post("/supplier")
+    suspend fun createSupplierOutstanding(@Valid @Body request: SupplierOutstandingResponse) {
+        return outStandingService.createSupplierOutstanding(request)
+    }
+
+    @Post("/supplier/{id}")
+    suspend fun updateSupplierOutstanding(@PathVariable("id") id: String) {
+        return outStandingService.updateSupplierOutstanding(id)
     }
 }

@@ -25,7 +25,8 @@ interface OutStandingService {
 
     suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList
 
-    suspend fun updateSupplierOutstanding(orgId: String)
+    suspend fun createSupplierOutstanding(request: SupplierOutstandingResponse)
+    suspend fun updateSupplierOutstanding(id: String)
 
     suspend fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?>
 }

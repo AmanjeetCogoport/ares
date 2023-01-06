@@ -2,7 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.BillOutsatndingAgeing
+import com.cogoport.ares.api.payment.entity.BillOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -438,6 +438,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         WHERE
             organization_name ILIKE :queryName
             AND (:zone IS NULL OR zone_code = :zone)
+            AND (:entityCode IS NULL OR entity_code = :entityCode)
             AND acc_mode = 'AP'
             AND due_date IS NOT NULL
             AND document_status in('FINAL', 'PROFORMA')
@@ -453,7 +454,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         LIMIT :pageLimit        
         """
     )
-    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<BillOutsatndingAgeing>
+    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<BillOutstandingAgeing>
 
     @WithSpan
     @Query(
@@ -513,11 +514,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('PINV', 'PCN', 'PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
-        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
     )
-    suspend fun generateBillOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateBillOrgOutstanding(orgId: String, zone: String?, entityCode: Int?): List<OrgOutstanding>
 
     @WithSpan
     @Query(
@@ -1429,5 +1430,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         AND deleted_at IS NULL
         """
     )
-    suspend fun getSupplierOrgIds(): List<String>
+    suspend fun getSupplierOrgIds(): List<UUID>
 }
