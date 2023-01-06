@@ -8,6 +8,7 @@ import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.Date
 import java.util.UUID
 
 @Introspected
@@ -18,6 +19,7 @@ data class ParentJournalVoucher(
     var status: JVStatus,
     var category: JVCategory,
     var jvNum: String?,
+    var validityDate: Date?,
     var createdBy: UUID?,
     var updatedBy: UUID?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),

@@ -134,8 +134,20 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.parent_jv_id
             FROM journal_vouchers j 
             Where 
-                j.parent_jv_id = :parentId::VARCHAR
+                j.parent_jv_id = :parentId
         """
     )
     suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
+
+    @WithSpan
+    @Query(
+        """
+            SELECT 
+            count(*) 
+            FROM journal_vouchers j 
+            Where 
+                j.parent_jv_id = :parentId
+        """
+    )
+    suspend fun getCountOfJournalVoucherByParentJVId(parentId: Long): Long
 }
