@@ -22,10 +22,6 @@ object AresConstants {
     const val SUPPLIERS_OUTSTANDING_201_INDEX = "supplier_outstanding_201"
     const val SUPPLIERS_OUTSTANDING_301_INDEX = "supplier_outstanding_301"
     const val SUPPLIERS_OUTSTANDING_401_INDEX = "supplier_outstanding_401"
-    const val ENTITY_CODE_101 = 101
-    const val ENTITY_CODE_201 = 201
-    const val ENTITY_CODE_301 = 301
-    const val ENTITY_CODE_401 = 401
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
