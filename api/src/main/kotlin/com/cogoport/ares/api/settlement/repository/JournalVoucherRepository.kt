@@ -36,13 +36,15 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_at,
             j.updated_by,
             j.description as description,
-            j.acc_mode
+            j.acc_mode,
+            j.parent_jv_id
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
-                (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%')
+                (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%') AND
+                (parent_jv_id is null)
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN j.created_at
@@ -79,7 +81,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:status is null OR  status = :status::JV_STATUS) AND
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
-                (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%')
+                (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%') AND
+                (parent_jv_id is null)
         """
     )
     fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long
@@ -131,8 +134,20 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.parent_jv_id
             FROM journal_vouchers j 
             Where 
-                j.parent_jv_id = :parentId::VARCHAR
+                j.parent_jv_id = :parentId
         """
     )
     suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
+
+    @WithSpan
+    @Query(
+        """
+            SELECT 
+            count(*) 
+            FROM journal_vouchers j 
+            Where 
+                j.parent_jv_id = :parentId
+        """
+    )
+    suspend fun getCountOfJournalVoucherByParentJVId(parentId: Long): Long
 }

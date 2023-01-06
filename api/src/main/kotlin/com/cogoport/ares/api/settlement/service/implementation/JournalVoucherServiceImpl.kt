@@ -527,6 +527,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             JVCategory.EXCH -> SageGLCodes.EXCH
             JVCategory.ROFF -> SageGLCodes.ROFF
             JVCategory.WOFF -> SageGLCodes.WOFF
+            JVCategory.ICJV -> SageGLCodes.ICJV
             else -> { throw AresException(AresError.ERR_1517, journalVoucher.category.toString()) }
         }
         return JVLineItem(

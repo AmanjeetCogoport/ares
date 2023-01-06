@@ -11,7 +11,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
-import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
+import com.cogoport.ares.api.settlement.model.ICJVUpdateRequest
 import com.cogoport.ares.api.settlement.repository.JournalVoucherParentRepo
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.service.interfaces.ICJVService
@@ -23,7 +23,6 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.model.settlement.request.JournalVoucherReject
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
@@ -77,11 +76,13 @@ open class ICJVServiceImpl : ICJVService {
         validateCreateRequest(request)
 
         val parentJvNumber = getJvNumber()
+        val validityDate = request.list.first().validityDate
 
         val parentData = ParentJournalVoucher(
             id = null,
             status = JVStatus.PENDING,
             category = JVCategory.ICJV,
+            validityDate = validityDate,
             jvNum = parentJvNumber,
             createdBy = request.createdBy,
             updatedBy = request.createdBy
@@ -143,8 +144,10 @@ open class ICJVServiceImpl : ICJVService {
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
         documentEntity.forEach { doc ->
+            val countOfChildrenJvs = journalVoucherRepository.getCountOfJournalVoucherByParentJVId(doc.id!!)
             val jvData = journalVoucherConverter.convertICJVEntityToModel((doc))
             jvData.id = Hashids.encode(jvData.id.toLong())
+            jvData.countOfChildrenJvs = countOfChildrenJvs
             jvList.add(jvData)
         }
 
@@ -177,12 +180,14 @@ open class ICJVServiceImpl : ICJVService {
     private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.status = JVStatus.PENDING
+        jv.createdAt = Timestamp.from(Instant.now())
+        jv.updatedAt = Timestamp.from(Instant.now())
         jv.type = request.type.lowercase()
         return jv
     }
 
     private fun getSignFlag(type: String): Short {
-        return when (type) {
+        return when (type.uppercase()) {
             "CREDIT" -> { -1 }
             "DEBIT" -> { 1 }
             else -> {
@@ -237,17 +242,22 @@ open class ICJVServiceImpl : ICJVService {
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun approveJournalVoucher(request: JournalVoucherApproval): String {
-        val parentJvId = Hashids.decode(request.journalVoucherData!!.id)[0]
+    override suspend fun updateICJV(request: ICJVUpdateRequest): String {
+        val parentJvId = request.parentJvId!!.toLong()
         // Update Journal Voucher
-        val parentJvData = journalVoucherParentRepo.findById(parentJvId)
-        parentJvData?.status = JVStatus.APPROVED
-        journalVoucherParentRepo.update(parentJvData!!)
+        val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1519, "")
+
+        when (parentJvData.status == request.status!!) {
+            true -> throw AresException(AresError.ERR_1520, "${request.status}")
+            false -> parentJvData.status = request.status
+        }
+
+        journalVoucherParentRepo.update(parentJvData)
 
         val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
 
         childJvData.map { it ->
-            it.status = JVStatus.APPROVED
+            it.status = request.status
             it.updatedAt = Timestamp.from(Instant.now())
             it.updatedBy = request.performedBy
             it.description = request.remark
@@ -265,57 +275,27 @@ open class ICJVServiceImpl : ICJVService {
             )
 
             // Insert JV in account_utilizations
-            val accMode = AccMode.valueOf(request.journalVoucherData.accMode)
-            val signFlag = getSignFlag(request.journalVoucherData.type)
+            val accMode = AccMode.valueOf(it.accMode.name)
+            val signFlag = getSignFlag(it.type!!)
             val accUtilEntity = journalVoucherService.createJvAccUtil(it, accMode, signFlag)
         }
         // Update Incident status on incident management
-        hadesClient.updateIncident(
-            request = UpdateIncidentRequest(
-                status = IncidentStatus.APPROVED,
-                data = null,
-                remark = request.remark,
-                updatedBy = request.performedBy!!
-            ),
-            id = request.incidentId
-        )
 
-        return request.incidentId!!
-    }
-
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun rejectJournalVoucher(request: JournalVoucherReject): String {
-        val parentJvId = Hashids.decode(request.journalVoucherId!!)[0]
-        val parentJvData = journalVoucherParentRepo.findById(parentJvId)
-
-        parentJvData?.status = JVStatus.REJECTED
-        journalVoucherParentRepo.update(parentJvData!!)
-
-        val childJvData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
-
-        childJvData.map { it ->
-            journalVoucherRepository.reject(it.id!!, request.performedBy!!, request.remark)
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = AresConstants.JOURNAL_VOUCHERS,
-                    objectId = it.id!!,
-                    actionName = AresConstants.UPDATE,
-                    data = mapOf("id" to it.id!!, "status" to JVStatus.REJECTED),
-                    performedBy = request.performedBy.toString(),
-                    performedByUserType = null
-                )
-            )
+        val incidentStatus = when (request.status.name) {
+            "APPROVED" -> IncidentStatus.APPROVED
+            "REJECTED" -> IncidentStatus.REJECTED
+            else -> IncidentStatus.REQUESTED
         }
-
         hadesClient.updateIncident(
             request = UpdateIncidentRequest(
-                status = IncidentStatus.REJECTED,
+                status = incidentStatus,
                 data = null,
                 remark = request.remark,
                 updatedBy = request.performedBy!!
             ),
             id = request.incidentId
         )
+
         return request.incidentId!!
     }
 }

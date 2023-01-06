@@ -62,6 +62,7 @@ object AresConstants {
     const val PAYING_PARTY = "self,paying_party"
 
     const val PAYMENTS = "payments"
+    const val SUSPENSE_ACCOUNT = "suspense_account"
     const val ACCOUNT_UTILIZATIONS = "account_utilizations"
     const val SETTLEMENT = "settlement"
     const val INCIDENT_MAPPINGS = "incident_mappings"

@@ -37,6 +37,7 @@ class SettlementServiceHelper {
             AccountType.JVNOS -> getVoucherType(signFlag) + InvoiceType.JVNOS.value
             AccountType.SREIMB -> InvoiceType.SREIMB.value
             AccountType.PREIMB -> InvoiceType.PREIMB.value
+            AccountType.ICJV -> getVoucherType(signFlag) + InvoiceType.ICJV.value
             else -> throw AresException(AresError.ERR_1009, "accountType")
         }
     }
