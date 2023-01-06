@@ -36,5 +36,5 @@ data class JournalVoucher(
     var updatedAt: Timestamp?,
     var description: String?,
     var accMode: AccMode,
-    var parentJvId: String? = null
+    var parentJvId: Long? = null
 )
