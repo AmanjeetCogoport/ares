@@ -128,7 +128,7 @@ data class PaymentResponse(
     var tradePartyMappingId: UUID? = null,
 
     @JsonProperty("isSuspense")
-    val isSuspense: Boolean? = false,
+    var isSuspense: Boolean? = false,
 
     @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null

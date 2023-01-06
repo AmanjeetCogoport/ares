@@ -156,7 +156,7 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
         val total: Int
-        val payments: List<PaymentResponse?>?
+        var payments: List<PaymentResponse?>?
         var startDate: Timestamp? = null
         var endDate: Timestamp? = null
         if (request.startDate != null && request.endDate != null) {
@@ -166,6 +166,9 @@ open class OnAccountServiceImpl : OnAccountService {
         if (request.isSuspense == false) {
             val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
             payments = data.hits().hits().map { it.source() }
+            payments.forEach{
+                it?.isSuspense = false
+            }
             total = data.hits().total().value().toInt()
         } else {
             val data = suspenseAccountRepo.getSuspenseAccounts(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
@@ -340,10 +343,10 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         if (receivableRequest.isSuspense == true && receivableRequest.isPosted == true) throw AresException(AresError.ERR_1522, "")
-        val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
         return if (receivableRequest.isSuspense == false) {
+            val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
             val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
             if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
             val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
@@ -563,8 +566,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 logger().error(ex.stackTraceToString())
             }
         } else {
-            val suspenseEntity = suspenseAccountRepo.findBySuspenseId(deletePaymentRequest.paymentId)
-                ?: throw AresException(AresError.ERR_1002, "")
+            val suspenseEntity = suspenseAccountRepo.findById(deletePaymentRequest.paymentId) ?: throw AresException(AresError.ERR_1002, "")
             if (suspenseEntity.isDeleted)
                 throw AresException(AresError.ERR_1007, "")
 
