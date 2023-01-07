@@ -12,7 +12,7 @@ import io.micronaut.core.annotation.Introspected
 @JsonIgnoreType
 data class SupplyAgent(
     @JsonProperty("id")
-    var id: String?,
+    var id: String,
     @JsonProperty("name")
     var name: String?,
 )

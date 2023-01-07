@@ -13,7 +13,7 @@ import java.sql.Timestamp
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreType
-data class SupplierOutstandingResponse(
+data class SupplierOutstandingDocument(
     @JsonProperty("organizationId")
     var organizationId: String?,
     @JsonProperty("businessName")

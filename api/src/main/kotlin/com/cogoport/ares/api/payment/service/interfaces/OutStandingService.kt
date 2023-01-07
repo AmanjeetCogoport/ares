@@ -8,7 +8,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
-import com.cogoport.ares.model.payment.response.SupplierOutstandingResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import java.math.BigDecimal
 
 interface OutStandingService {
@@ -25,8 +25,8 @@ interface OutStandingService {
 
     suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList
 
-    suspend fun createSupplierOutstanding(request: SupplierOutstandingResponse)
+    suspend fun createSupplierOutstanding(request: SupplierOutstandingDocument)
     suspend fun updateSupplierOutstanding(id: String)
 
-    suspend fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?>
+    suspend fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?>
 }

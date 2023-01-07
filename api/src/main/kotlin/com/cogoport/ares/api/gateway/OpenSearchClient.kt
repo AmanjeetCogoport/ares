@@ -7,7 +7,7 @@ import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.SupplierOutstandingResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
@@ -440,7 +440,7 @@ class OpenSearchClient {
         return response
     }
 
-    fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingResponse>? {
+    fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("legalName", "businessName")
         val response = Client.search({ t ->
@@ -458,13 +458,13 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.supplyAgentIds != null) {
+                        if (request.supplyAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("supplyAgentId.keyword").terms(
+                                    v.field("supplyAgent.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
-                                                request.supplyAgentIds?.map {
+                                                request.supplyAgentId?.map {
                                                     FieldValue.of(it.toString())
                                                 }
                                             )
@@ -474,13 +474,13 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.countryIds != null) {
+                        if (request.countryId != null) {
                             b.must { s ->
                                 s.terms { v ->
                                     v.field("countryId.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
-                                                request.countryIds?.map {
+                                                request.countryId?.map {
                                                     FieldValue.of(it.toString())
                                                 }
                                             )
@@ -530,7 +530,7 @@ class OpenSearchClient {
                     }
                 }
                 .from(offset).size(request.limit)
-        }, SupplierOutstandingResponse::class.java)
+        }, SupplierOutstandingDocument::class.java)
 
         return response
     }

@@ -12,7 +12,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
-import com.cogoport.ares.model.payment.response.SupplierOutstandingResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -41,8 +41,8 @@ class OutstandingController {
     }
 
     @Get("/by-supplier{?request*}")
-    suspend fun getSupplierOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingResponse?> {
-        return Response<ResponseList<SupplierOutstandingResponse?>>().ok(outStandingService.listSupplierOutstanding(request))
+    suspend fun getSupplierOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+        return Response<ResponseList<SupplierOutstandingDocument?>>().ok(outStandingService.listSupplierOutstanding(request))
     }
 
     @Get("/invoice-list{?request*}")
@@ -71,7 +71,7 @@ class OutstandingController {
     }
 
     @Post("/supplier")
-    suspend fun createSupplierOutstanding(@Valid @Body request: SupplierOutstandingResponse) {
+    suspend fun createSupplierOutstanding(@Valid @Body request: SupplierOutstandingDocument) {
         return outStandingService.createSupplierOutstanding(request)
     }
 
