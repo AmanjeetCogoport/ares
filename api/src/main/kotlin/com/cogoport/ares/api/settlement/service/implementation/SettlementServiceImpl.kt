@@ -1937,7 +1937,7 @@ open class SettlementServiceImpl : SettlementService {
         } else {
             settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         }
-        aresKafkaEmitter.emitSupplierDetails(accountUtilization.organizationId)
+        aresKafkaEmitter.emitUpdateSupplierOutstanding(accountUtilization.organizationId)
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,

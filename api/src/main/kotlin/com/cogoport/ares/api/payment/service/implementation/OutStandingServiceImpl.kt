@@ -233,16 +233,20 @@ class OutStandingServiceImpl : OutStandingService {
         )
     }
 
-    override suspend fun updateSupplierOutstanding(id: String) {
+    override suspend fun updateSupplierOutstanding(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
         var supplierOutstanding: SupplierOutstandingDocument? = null
-        val searchResponse = Client.search({ s ->
-            s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
-                .query { q ->
-                    q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
-                }
-        }, SupplierOutstandingDocument::class.java)
-        if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-            supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+        if (flag) {
+            supplierOutstanding = document
+        } else {
+            val searchResponse = Client.search({ s ->
+                s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
+                    .query { q ->
+                        q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
+                    }
+            }, SupplierOutstandingDocument::class.java)
+            if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+                supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+            }
         }
 
         if (supplierOutstanding != null) {
@@ -281,7 +285,6 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun createSupplierOutstanding(request: SupplierOutstandingDocument) {
-        var supplierOutstanding: SupplierOutstandingDocument? = null
         val searchResponse = Client.search({ s ->
             s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                 .query { q ->
@@ -290,11 +293,7 @@ class OutStandingServiceImpl : OutStandingService {
         }, SupplierOutstandingDocument::class.java)
 
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-            supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
-        }
-
-        if (supplierOutstanding != null) {
-            updateSupplierOutstanding(request.organizationId!!)
+            updateSupplierOutstanding(request.organizationId!!, flag = true, request)
         } else {
             val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierOutstandingRequestToDocument(request)
             Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, supplierOutstandingDocument, true)
@@ -342,7 +341,8 @@ class OutStandingServiceImpl : OutStandingService {
                 category = supplierOutstanding.category,
                 collectionPartyType = supplierOutstanding.collectionPartyType,
                 companyType = supplierOutstanding.companyType,
-                supplyAgent = supplierOutstanding.supplyAgent,
+                supplyAgentId = supplierOutstanding.supplyAgentId,
+                supplyAgentName = supplierOutstanding.supplyAgentName,
                 creditDays = supplierOutstanding.creditDays,
                 updatedAt = Timestamp.valueOf(LocalDateTime.now()),
                 onAccountPayment = supplier?.onAccountPayment!!.amountDue,

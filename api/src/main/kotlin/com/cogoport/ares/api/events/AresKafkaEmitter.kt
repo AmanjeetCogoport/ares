@@ -61,5 +61,5 @@ interface AresKafkaEmitter {
     fun emitUnfreezeCreditConsumption(request: Settlement)
 
     @Topic("update-supplier-details")
-    fun emitSupplierDetails(orgId: UUID?)
+    fun emitUpdateSupplierOutstanding(orgId: UUID?)
 }

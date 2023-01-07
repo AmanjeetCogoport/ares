@@ -1424,7 +1424,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @WithSpan
     @Query(
         """ 
-        SELECT DISTINCT organization_id::VARCHAR
+        SELECT DISTINCT organization_id
         FROM account_utilizations
         WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
         AND deleted_at IS NULL

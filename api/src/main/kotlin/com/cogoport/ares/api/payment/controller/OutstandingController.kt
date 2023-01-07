@@ -77,6 +77,6 @@ class OutstandingController {
 
     @Post("/supplier/{id}")
     suspend fun updateSupplierOutstanding(@PathVariable("id") id: String) {
-        return outStandingService.updateSupplierOutstanding(id)
+        return outStandingService.updateSupplierOutstanding(id, flag = false, document = null)
     }
 }

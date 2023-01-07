@@ -24,8 +24,10 @@ data class SupplierOutstandingDocument(
     var collectionPartyType: List<String?>,
     @JsonProperty("companyType")
     var companyType: String?,
-    @JsonProperty("supplyAgent")
-    var supplyAgent: SupplyAgent?,
+    @JsonProperty("supplyAgentId")
+    var supplyAgentId: String?,
+    @JsonProperty("supplyAgentName")
+    var supplyAgentName: String?,
     @JsonProperty("sageId")
     var sageId: String?,
     @JsonProperty("countryId")

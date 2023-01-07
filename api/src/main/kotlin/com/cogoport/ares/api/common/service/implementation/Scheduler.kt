@@ -16,7 +16,7 @@ class Scheduler(private var emitter: AresKafkaEmitter, private var accountUtiliz
             val orgIds = accountUtilizationRepository.getSupplierOrgIds()
             for (id in orgIds) {
                 try {
-                    emitter.emitSupplierDetails(id)
+                    emitter.emitUpdateSupplierOutstanding(id)
                 } catch (e: Exception) {
                     logger().error("error while running cron for updating supplier outstanding")
                 }

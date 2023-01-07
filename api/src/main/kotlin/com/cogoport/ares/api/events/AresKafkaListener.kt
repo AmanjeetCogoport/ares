@@ -88,8 +88,8 @@ class AresKafkaListener {
     }
 
     @Topic("update-supplier-details")
-    fun updateSupplierDetail(orgId: UUID?) = runBlocking {
-        outStandingService.updateSupplierOutstanding(orgId.toString())
+    fun updateSupplierOutstanding(orgId: UUID?) = runBlocking {
+        outStandingService.updateSupplierOutstanding(orgId.toString(), false, null)
     }
 
     @Topic("unfreeze-credit-consumpation")

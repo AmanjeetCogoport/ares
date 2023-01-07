@@ -154,7 +154,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+                aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -192,7 +192,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 try {
                     emitDashboardAndOutstandingEvent(accUtilizationRequest)
                     if (accountUtilization.accMode == AccMode.AP) {
-                        aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+                        aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
                     }
                 } catch (e: Exception) {
                     logger().error(e.stackTraceToString())
@@ -282,7 +282,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitSupplierDetails(accUtilizationRequest.organizationId)
+                aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
