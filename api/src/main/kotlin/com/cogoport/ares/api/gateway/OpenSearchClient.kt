@@ -442,15 +442,15 @@ class OpenSearchClient {
 
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
-        val searchFilterFields: MutableList<String> = mutableListOf("businessName")
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "taxNumber")
         val response = Client.search({ t ->
             t.index(index)
                 .query { q ->
                     q.bool { b ->
-                        if (request.name != null) {
+                        if (request.q != null) {
                             b.must { s ->
                                 s.queryString { qs ->
-                                    qs.fields(searchFilterFields).query("*${request.name}*")
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
@@ -494,14 +494,6 @@ class OpenSearchClient {
                             b.must { t ->
                                 t.match { v ->
                                     v.field("companyType.keyword").query(FieldValue.of(request.companyType))
-                                }
-                            }
-                            b
-                        }
-                        if (request.taxNo != null) {
-                            b.must { t ->
-                                t.match { v ->
-                                    v.field("taxNumber.keyword").query(FieldValue.of(request.taxNo))
                                 }
                             }
                             b

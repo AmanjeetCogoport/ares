@@ -5,9 +5,8 @@ import java.util.UUID
 
 @Introspected
 data class SupplierOutstandingRequest(
-    var name: String? = null,
+    var q: String? = null,
     var supplyAgentId: List<UUID>? = null,
-    var taxNo: String? = null,
     var countryId: List<UUID>? = null,
     var ageingKey: List<String?> = listOf(),
     var companyType: String? = null,
