@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
@@ -22,6 +23,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
@@ -33,6 +35,7 @@ import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
@@ -77,6 +80,8 @@ import com.cogoport.kuber.model.bills.BillDocResponse
 import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.common.enums.TransactionType
+import com.cogoport.plutus.model.invoice.TransactionDocuments
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -88,8 +93,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
-import java.util.Date
-import java.util.UUID
+import java.util.*
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
@@ -149,6 +153,10 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
+
+    @Inject lateinit var railsClient: RailsClient
+
+    @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1226,9 +1234,11 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
-        if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
-            throw AresException(AresError.ERR_1515, "")
+        if (settlementType.name == PaymentCode.PAY.name) {
+            val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+            if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+                throw AresException(AresError.ERR_1515, "")
+            }
         }
 
         val sourceType =
@@ -1370,6 +1380,7 @@ open class SettlementServiceImpl : SettlementService {
             )
             val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
             updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType)
+            sendInvoiceDataToDebitConsumption(accUtil)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
         } catch (e: Exception) {
@@ -2021,6 +2032,13 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl
             )
         val settleDoc = settlementRepository.save(settledDoc)
+
+        try {
+            aresKafkaEmitter.emitUnfreezeCreditConsumption(settleDoc)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.SETTLEMENT,
@@ -2349,5 +2367,113 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return documentModel
+    }
+
+    override suspend fun sendKnockOffDataToCreditConsumption(request: Settlement) {
+        val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.destinationId, "paymentMode")
+
+        if ((invoiceData == null) || invoiceData.value.toString().isBlank() || (invoiceData.value != TransactionType.CREDIT.value)) {
+            return
+        }
+
+        var transRefNumber: String? = null
+        if (request.sourceType == SettlementType.REC) {
+            transRefNumber = paymentRepo.findTransRefNumByPaymentNum(request.sourceId)
+        }
+
+        val destinationDocument = accountUtilizationRepository.findRecord(request.destinationId, request.destinationType.name)
+
+        val payCurrency = "INR"
+        val transactionType = TransactionType.CREDIT.value
+
+        val paymentRequest = com.cogoport.plutus.model.invoice.CreditPaymentRequest(
+            organizationId = destinationDocument?.taggedOrganizationId,
+            invoiceNumber = destinationDocument?.documentValue!!,
+            invoiceDate = invoiceData.invoiceDate.toString(),
+            invoiceDueDate = destinationDocument.dueDate.toString(),
+            invoiceAmount = destinationDocument.amountLoc,
+            paidAmount = request.amount,
+            transactionType = transactionType,
+            currency = payCurrency,
+            proformaNumber = invoiceData.proformaNumber,
+            paymentDate = request.settlementDate.toString(),
+            triggerSource = "knockoff_invoked",
+            transactionDetails = com.cogoport.plutus.model.invoice.TransactionDetails(
+                utrNumber = transRefNumber,
+                irnNumber = null,
+                referenceProformaNumber = null,
+                transactionDocuments = arrayListOf(
+                    TransactionDocuments(
+                        type = invoiceData.invoiceType.name,
+                        url = invoiceData.invoicePdfUrl
+                    )
+                )
+            )
+        )
+
+        val objectName = "UNFREEZE_CREDIT"
+        payLaterUtilizationAndKnockOffCall(paymentRequest, request.destinationId, objectName)
+    }
+
+    override suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization) {
+        val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.documentNo, "paymentMode")
+
+        if ((invoiceData == null) || invoiceData.value.toString().isBlank() || (invoiceData.value != TransactionType.CREDIT.value)) {
+            return
+        }
+
+        val destinationDocument = accountUtilizationRepository.findRecord(request.documentNo, request.accType.name, request.accMode.name)
+
+        val paymentRequest = com.cogoport.plutus.model.invoice.CreditPaymentRequest(
+            organizationId = destinationDocument?.taggedOrganizationId,
+            invoiceNumber = destinationDocument?.documentValue!!,
+            invoiceDate = invoiceData.invoiceDate.toString(),
+            invoiceDueDate = destinationDocument.dueDate.toString(),
+            invoiceAmount = destinationDocument.amountLoc,
+            paidAmount = request.payLoc * BigDecimal.valueOf(-1),
+            transactionType = TransactionType.DEBIT.value,
+            currency = "INR",
+            proformaNumber = invoiceData.proformaNumber,
+            triggerSource = "knockoff_reverted",
+            paymentDate = null,
+            transactionDetails = com.cogoport.plutus.model.invoice.TransactionDetails(
+                utrNumber = null,
+                irnNumber = null,
+                referenceProformaNumber = null,
+                transactionDocuments = arrayListOf(
+                    TransactionDocuments(
+                        type = invoiceData.invoiceType.name,
+                        url = invoiceData.invoicePdfUrl
+                    )
+                )
+            )
+        )
+
+        val objectName = "UNFREEZE_CREDIT_DELETED"
+        payLaterUtilizationAndKnockOffCall(paymentRequest, request.documentNo, objectName)
+    }
+
+    private suspend fun payLaterUtilizationAndKnockOffCall(request: com.cogoport.plutus.model.invoice.CreditPaymentRequest, invoiceId: Long, objectName: String) {
+        var response: String? = ""
+        response = try {
+            railsClient.sendInvoicePaymentKnockOff(request)
+        } catch (e: Exception) {
+            logger().error(e.toString())
+            e.localizedMessage.toString()
+        }
+
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                id = null,
+                apiName = "CreditConsumption",
+                apiType = "On_Credit",
+                objectId = invoiceId,
+                objectName = objectName,
+                httpResponseCode = "",
+                requestParams = request.toString(),
+                response = response.toString(),
+                isSuccess = true
+            )
+        )
     }
 }
