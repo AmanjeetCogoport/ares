@@ -18,6 +18,7 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
@@ -75,7 +76,7 @@ class OutstandingController {
         return outStandingService.createSupplierOutstanding(request)
     }
 
-    @Post("/supplier/{id}")
+    @Put("/supplier/{id}")
     suspend fun updateSupplierOutstanding(@PathVariable("id") id: String) {
         return outStandingService.updateSupplierOutstanding(id, flag = false, document = null)
     }
