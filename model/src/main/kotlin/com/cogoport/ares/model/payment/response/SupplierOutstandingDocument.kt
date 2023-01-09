@@ -19,6 +19,8 @@ import java.time.LocalDateTime
 data class SupplierOutstandingDocument(
     @JsonProperty("organizationId")
     var organizationId: String?,
+    @JsonProperty("selfOrganizationId")
+    var selfOrganizationId: String?,
     @JsonProperty("businessName")
     var businessName: String?,
     @JsonProperty("taxNumber")

@@ -332,6 +332,7 @@ class OutStandingServiceImpl : OutStandingService {
         outstanding.list!!.forEach { supplier ->
             supplierOutstandingDocument = SupplierOutstandingDocument(
                 organizationId = supplierOutstanding.organizationId,
+                selfOrganizationId = supplierOutstanding.selfOrganizationId,
                 businessName = supplierOutstanding.businessName,
                 taxNumber = supplierOutstanding.taxNumber,
                 serialId = supplierOutstanding.serialId,
