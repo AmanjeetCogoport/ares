@@ -15,5 +15,6 @@ data class AccountCollectionRequest(
     @QueryValue(AresModelConstants.CURRENCY_TYPE) val currencyType: String? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
-    @QueryValue(AresModelConstants.QUERY) val query: String? = null
+    @QueryValue(AresModelConstants.QUERY) val query: String? = null,
+    @QueryValue(AresModelConstants.IS_SUSPENSE) val isSuspense: Boolean? = false
 )

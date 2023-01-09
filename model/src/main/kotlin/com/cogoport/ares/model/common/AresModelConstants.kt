@@ -37,6 +37,7 @@ object AresModelConstants {
     const val CATEGORY = "category"
     const val TYPE = "type"
     const val FLAG = "flag"
+    const val IS_SUSPENSE = "isSuspense"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000

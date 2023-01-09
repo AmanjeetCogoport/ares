@@ -3,9 +3,11 @@ package com.cogoport.ares.api.common.client
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
+import io.micronaut.http.annotation.Post
 import io.micronaut.http.client.annotation.Client
 import java.util.UUID
 
@@ -25,4 +27,7 @@ interface RailsClient {
 
     @Get("/list_cogo_entities?filters%5Bentity_code%5D={entityCode}")
     suspend fun getCogoEntity(entityCode: String): ListCogoEntities
+
+    @Post("/create_organization_credit_consumption")
+    suspend fun sendInvoicePaymentKnockOff(@Body request: com.cogoport.plutus.model.invoice.CreditPaymentRequest): String
 }

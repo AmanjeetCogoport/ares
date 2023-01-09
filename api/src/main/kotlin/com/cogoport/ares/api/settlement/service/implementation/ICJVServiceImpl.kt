@@ -76,11 +76,13 @@ open class ICJVServiceImpl : ICJVService {
         validateCreateRequest(request)
 
         val parentJvNumber = getJvNumber()
+        val validityDate = request.list.first().validityDate
 
         val parentData = ParentJournalVoucher(
             id = null,
             status = JVStatus.PENDING,
             category = JVCategory.ICJV,
+            validityDate = validityDate,
             jvNum = parentJvNumber,
             createdBy = request.createdBy,
             updatedBy = request.createdBy
@@ -142,8 +144,10 @@ open class ICJVServiceImpl : ICJVService {
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
         documentEntity.forEach { doc ->
+            val countOfChildrenJvs = journalVoucherRepository.getCountOfJournalVoucherByParentJVId(doc.id!!)
             val jvData = journalVoucherConverter.convertICJVEntityToModel((doc))
             jvData.id = Hashids.encode(jvData.id.toLong())
+            jvData.countOfChildrenJvs = countOfChildrenJvs
             jvList.add(jvData)
         }
 
