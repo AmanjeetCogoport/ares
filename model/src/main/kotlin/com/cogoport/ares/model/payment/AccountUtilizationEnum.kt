@@ -28,7 +28,8 @@ enum class ServiceType {
     DOMESTIC_AIR_FREIGHT,
     INSURANCE,
     EXPENSE,
-    AIR_FREIGHT_LOCAL
+    AIR_FREIGHT_LOCAL,
+    RAIL_DOMESTIC_FREIGHT
 }
 
 enum class ZoneCode {
