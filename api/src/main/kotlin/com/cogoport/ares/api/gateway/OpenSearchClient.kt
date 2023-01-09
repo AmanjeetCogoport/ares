@@ -461,7 +461,7 @@ class OpenSearchClient {
                         if (request.supplyAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("supplyAgentId.keyword").terms(
+                                    v.field("supplyAgent.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.supplyAgentId?.map {

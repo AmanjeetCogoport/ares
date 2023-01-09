@@ -6,13 +6,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.time.LocalDateTime
 
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreType
+@ReflectiveAccess
 data class SupplierOutstandingDocument(
     @JsonProperty("organizationId")
     var organizationId: String?,
@@ -21,13 +24,11 @@ data class SupplierOutstandingDocument(
     @JsonProperty("taxNumber")
     var taxNumber: String?,
     @JsonProperty("collectionPartyType")
-    var collectionPartyType: List<String?>,
+    var collectionPartyType: List<String?>?,
     @JsonProperty("companyType")
     var companyType: String?,
-    @JsonProperty("supplyAgentId")
-    var supplyAgentId: String?,
-    @JsonProperty("supplyAgentName")
-    var supplyAgentName: String?,
+    @JsonProperty("supplyAgent")
+    var supplyAgent: SupplyAgent?,
     @JsonProperty("sageId")
     var sageId: String?,
     @JsonProperty("countryId")
@@ -35,7 +36,7 @@ data class SupplierOutstandingDocument(
     @JsonProperty("countryCode")
     var countryCode: String?,
     @JsonProperty("category")
-    var category: List<String?>,
+    var category: List<String?>?,
     @JsonProperty("serialId")
     var serialId: String?,
     @JsonProperty("creditDays")
@@ -91,5 +92,5 @@ data class SupplierOutstandingDocument(
     @JsonProperty("threeSixtyFivePlusCount")
     var threeSixtyFivePlusCount: Int?,
     @JsonProperty("updatedAt")
-    var updatedAt: Timestamp?,
+    var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
 )
