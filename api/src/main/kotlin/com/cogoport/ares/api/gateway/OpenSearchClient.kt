@@ -442,7 +442,7 @@ class OpenSearchClient {
 
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
-        val searchFilterFields: MutableList<String> = mutableListOf("legalName", "businessName")
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName")
         val response = Client.search({ t ->
             t.index(index)
                 .query { q ->
@@ -461,7 +461,7 @@ class OpenSearchClient {
                         if (request.supplyAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("supplyAgent.id.keyword").terms(
+                                    v.field("supplyAgentId.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.supplyAgentId?.map {
