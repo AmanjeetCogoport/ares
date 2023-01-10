@@ -4,17 +4,22 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.payment.BillOutstandingList
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
@@ -33,8 +38,13 @@ class OutstandingController {
         return Response<OutstandingList?>().ok(outStandingService.getOutstandingList(request))
     }
     @Get("/bill-overall{?request*}")
-    suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): BillOutstandingList? {
-        return Response<BillOutstandingList?>().ok(outStandingService.getBillsOutstandingList(request))
+    suspend fun getBillOutstanding(@Valid request: OutstandingListRequest): SupplierOutstandingList? {
+        return Response<SupplierOutstandingList?>().ok(outStandingService.getSupplierOutstandingList(request))
+    }
+
+    @Get("/by-supplier{?request*}")
+    suspend fun getSupplierDetails(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+        return Response<ResponseList<SupplierOutstandingDocument?>>().ok(outStandingService.listSupplierDetails(request))
     }
 
     @Get("/invoice-list{?request*}")
@@ -60,5 +70,16 @@ class OutstandingController {
     @Post("/customer-outstanding")
     suspend fun getCustomersOutstandingInINR(@Body orgIds: List<String>): MutableMap<String, BigDecimal?> {
         return Response<MutableMap<String, BigDecimal?>>().ok(outStandingService.getCustomersOutstandingInINR(orgIds))
+    }
+
+    @Post("/supplier")
+    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument): Response<String> {
+        outStandingService.createSupplierDetails(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Put("/supplier/{id}")
+    suspend fun updateSupplierDetails(@PathVariable("id") id: String) {
+        return outStandingService.updateSupplierDetails(id, flag = false, document = null)
     }
 }
