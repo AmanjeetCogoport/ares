@@ -62,6 +62,17 @@ cogoport:
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
 
+sage:
+  soapUrl: http://13.126.196.22:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
+  user: admin
+  password: admin@2
+  queryClientUrl: https://gozaf35uzpkokesxfgw3g2ribi0hddzk.lambda-url.ap-south-1.on.aws
+  queryClientPassword: KjjzzU2qneGMtzQQyFJ9QwEiPMFYZgut
+  databaseName: 'COGO2'
+  loginUrl: ${ SAGE_LOGIN_URL:`http://13.126.196.22/` }
+  username: ${ SAGE_REST_API_USER:`rajveer.singh@cogoport.com` }
+  userpassword: ${ SAGE_REST_API_PASSWORD:`Abcd@12345` }
+
 endpoints:
   prometheus:
     sensitive: false
