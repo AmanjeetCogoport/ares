@@ -280,8 +280,34 @@ class OutStandingServiceImpl : OutStandingService {
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
             updateSupplierDetails(request.organizationId!!, flag = true, request)
         } else {
+
             val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierDetailsRequestToDocument(request)
             supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            supplierOutstandingDocument.onAccountPayment = listOf<DueAmount>()
+            supplierOutstandingDocument.totalOutstanding = listOf<DueAmount>()
+            supplierOutstandingDocument.openInvoice = listOf<DueAmount>()
+            supplierOutstandingDocument.onAccountPaymentInvoiceCount = 0
+            supplierOutstandingDocument.openInvoiceCount = 0
+            supplierOutstandingDocument.totalOutstandingInvoiceCount = 0
+            supplierOutstandingDocument.totalOutstandingInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.onAccountPaymentInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.openInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.notDueAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.notDueCount = 0
+            supplierOutstandingDocument.todayAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.todayCount = 0
+            supplierOutstandingDocument.thirtyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.thirtyCount = 0
+            supplierOutstandingDocument.sixtyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.sixtyCount = 0
+            supplierOutstandingDocument.ninetyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.ninetyCount = 0
+            supplierOutstandingDocument.oneEightyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.oneEightyCount = 0
+            supplierOutstandingDocument.threeSixtyFiveAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.threeSixtyFiveCount = 0
+            supplierOutstandingDocument.threeSixtyFivePlusAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.threeSixtyFivePlusCount = 0
             Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, supplierOutstandingDocument, true)
             AresConstants.COGO_ENTITIES.forEach {
                 val index = "supplier_outstanding_$it"
