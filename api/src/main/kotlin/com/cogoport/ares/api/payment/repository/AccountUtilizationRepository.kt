@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.BillOutsatndingAgeing
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -13,6 +12,7 @@ import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
 import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
@@ -355,11 +355,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 END) AS oneeighty_amount,
             sum(
                 CASE WHEN acc_type in('PINV')
-                    and(now()::date - due_date) > 180 THEN
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
-                END) AS oneeightyplus_amount,
+                END) AS threesixtyfive_amount,
+            sum(
+                CASE WHEN acc_type in('PINV')
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_amount,
             sum(
                 CASE WHEN acc_type in('PINV') THEN
                     sign_flag * (amount_loc - pay_loc)
@@ -409,11 +416,17 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS oneeighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 180 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PINV') THEN
                     1
                 ELSE
                     0
-                END) AS oneeightyplus_count,
+                END) AS threesixtyfive_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PINV') THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_count,
             sum(
                 CASE WHEN (acc_type in('PCN')) THEN
                     1
@@ -425,6 +438,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         WHERE
             organization_name ILIKE :queryName
             AND (:zone IS NULL OR zone_code = :zone)
+            AND (:entityCode IS NULL OR entity_code = :entityCode)
             AND acc_mode = 'AP'
             AND due_date IS NOT NULL
             AND document_status in('FINAL', 'PROFORMA')
@@ -440,7 +454,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         LIMIT :pageLimit        
         """
     )
-    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, page: Int, pageLimit: Int): List<BillOutsatndingAgeing>
+    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<SupplierOutstandingAgeing>
 
     @WithSpan
     @Query(
@@ -500,11 +514,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'PAY' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('PINV', 'PCN', 'PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'PREIMB') and acc_mode = 'AP' and document_status in ('FINAL', 'PROFORMA') 
-        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
     )
-    suspend fun generateBillOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateBillOrgOutstanding(orgId: String, zone: String?, entityCode: Int?): List<OrgOutstanding>
 
     @WithSpan
     @Query(
@@ -1406,4 +1420,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun getInvoicesCountForTradeParty(
         documentValues: List<String>
     ): Long?
+
+    @WithSpan
+    @Query(
+        """ 
+        SELECT DISTINCT organization_id
+        FROM account_utilizations
+        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL
+        """
+    )
+    suspend fun getSupplierOrgIds(): List<UUID>
 }

@@ -5,7 +5,9 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
@@ -13,6 +15,7 @@ import org.opensearch.client.opensearch._types.Script
 import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Operator
 import org.opensearch.client.opensearch._types.query_dsl.Query
+import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
@@ -434,6 +437,111 @@ class OpenSearchClient {
                 },
                 classType
             )
+        return response
+    }
+
+    fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
+        val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
+        val response = Client.search({ t ->
+            t.index(index)
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.supplyAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("supplyAgent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.supplyAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.countryId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("countryId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.countryId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType.keyword").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        if (request.category != null) {
+                            if (request.category in categoryTypes) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
+                                    }
+                                }
+                                b
+                            } else {
+                                b.mustNot { s ->
+                                    s.terms { v ->
+                                        v.field("category").terms(
+                                            TermsQueryField.of { a ->
+                                                a.value(
+                                                    categoryTypes.map {
+                                                        FieldValue.of(it)
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                                b
+                            }
+                        }
+                        b
+                    }
+                    q
+                }
+                .sort { t ->
+                    if (!request.sortBy.isNullOrBlank()) {
+                        if (!request.sortType.isNullOrBlank()) {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
+                        } else {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                        }
+                    } else {
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                    }
+                }
+                .from(offset).size(request.limit)
+        }, SupplierOutstandingDocument::class.java)
+
         return response
     }
 }

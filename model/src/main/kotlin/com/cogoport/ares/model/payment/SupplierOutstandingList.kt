@@ -10,7 +10,7 @@ import io.micronaut.core.annotation.Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonInclude
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class BillOutstandingList(
+data class SupplierOutstandingList(
     @JsonProperty("list")
     val list: List<SuppliersOutstanding?>? = null,
     @JsonProperty("totalPage")
