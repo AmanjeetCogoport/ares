@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -32,6 +33,9 @@ class OutstandingController {
     lateinit var outStandingService: OutStandingService
     @Inject
     lateinit var pushToClientService: OpenSearchService
+
+    @Inject
+    lateinit var scheduler: Scheduler
 
     @Get("/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList? {
@@ -81,5 +85,10 @@ class OutstandingController {
     @Put("/supplier/{id}")
     suspend fun updateSupplierDetails(@PathVariable("id") id: String) {
         return outStandingService.updateSupplierDetails(id, flag = false, document = null)
+    }
+
+    @Put("/supplier-outstanding-migrate")
+    suspend fun migrateSupplierOutstanding() {
+        return scheduler.updateSupplierOutstandingOnOpenSearch()
     }
 }
