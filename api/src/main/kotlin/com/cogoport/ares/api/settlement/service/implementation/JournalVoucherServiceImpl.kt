@@ -48,7 +48,6 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
-import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
@@ -186,7 +185,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         // Update Incident status on incident management
         hadesClient.updateIncident(
             request = UpdateIncidentRequest(
-                status = IncidentStatus.APPROVED,
+                status = com.cogoport.hades.model.incident.enums.IncidentStatus.APPROVED,
                 data = null,
                 remark = request.remark,
                 updatedBy = request.performedBy!!
@@ -212,7 +211,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
         hadesClient.updateIncident(
             request = UpdateIncidentRequest(
-                status = IncidentStatus.REJECTED,
+                status = com.cogoport.hades.model.incident.enums.IncidentStatus.REJECTED,
                 data = null,
                 remark = request.remark,
                 updatedBy = request.performedBy!!
@@ -256,7 +255,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    private suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
+    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -312,7 +311,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             SequenceSuffix.JV.prefix
         )
 
-    private suspend fun createJV(jv: JournalVoucher): JournalVoucher {
+    override suspend fun createJV(jv: JournalVoucher): JournalVoucher {
         val jvObj = journalVoucherRepository.save(jv)
         auditService.createAudit(
             AuditRequest(
@@ -506,6 +505,21 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 )
             )
             throw exception
+        } catch (e: Exception) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher",
+                    jvId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    "",
+                    e.toString(),
+                    false
+                )
+            )
+            throw e
         }
         return false
     }
@@ -528,6 +542,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             JVCategory.EXCH -> SageGLCodes.EXCH
             JVCategory.ROFF -> SageGLCodes.ROFF
             JVCategory.WOFF -> SageGLCodes.WOFF
+            JVCategory.ICJV -> SageGLCodes.ICJV
             else -> { throw AresException(AresError.ERR_1517, journalVoucher.category.toString()) }
         }
         return JVLineItem(

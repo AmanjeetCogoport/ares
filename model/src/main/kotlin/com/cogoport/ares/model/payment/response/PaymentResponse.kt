@@ -85,6 +85,9 @@ data class PaymentResponse(
     @JsonProperty("createdBy")
     var createdBy: String? = "",
 
+    @JsonProperty("updatedBy")
+    var updatedBy: String? = "",
+
     @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
 
@@ -122,5 +125,11 @@ data class PaymentResponse(
     var taggedOrganizationId: UUID? = null,
 
     @JsonProperty("tradePartyMappingId")
-    var tradePartyMappingId: UUID? = null
+    var tradePartyMappingId: UUID? = null,
+
+    @JsonProperty("isSuspense")
+    var isSuspense: Boolean? = false,
+
+    @JsonProperty("tradePartyDocument")
+    val tradePartyDocument: String? = null
 )

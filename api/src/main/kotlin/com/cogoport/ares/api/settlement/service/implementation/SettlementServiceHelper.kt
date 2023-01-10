@@ -37,6 +37,7 @@ class SettlementServiceHelper {
             AccountType.JVNOS -> getVoucherType(signFlag) + InvoiceType.JVNOS.value
             AccountType.SREIMB -> InvoiceType.SREIMB.value
             AccountType.PREIMB -> InvoiceType.PREIMB.value
+            AccountType.ICJV -> getVoucherType(signFlag) + InvoiceType.ICJV.value
             else -> throw AresException(AresError.ERR_1009, "accountType")
         }
     }
@@ -81,11 +82,11 @@ class SettlementServiceHelper {
     fun <T : Any> getJvList(classType: Class<T>): List<T> {
         return if (classType == SettlementType::class.java) {
             listOf(
-                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST
+                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST, SettlementType.ICJV
             ) as List<T>
         } else {
             listOf(
-                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST
+                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST, AccountType.ICJV
             ) as List<T>
         }
     }

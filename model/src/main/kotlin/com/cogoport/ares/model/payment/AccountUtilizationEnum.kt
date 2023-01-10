@@ -27,7 +27,9 @@ enum class ServiceType {
     FCL_FREIGHT_LOCAL,
     DOMESTIC_AIR_FREIGHT,
     INSURANCE,
-    AIR_FREIGHT_LOCAL
+    EXPENSE,
+    AIR_FREIGHT_LOCAL,
+    RAIL_DOMESTIC_FREIGHT
 }
 
 enum class ZoneCode {
@@ -51,7 +53,8 @@ enum class InvoiceType(val value: String) {
     PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment"),
     WOFF("Write Off Voucher"), ROFF("Round Off Voucher"), EXCH("Exchange Voucher"), OUTST("Outstanding Voucher"), JVNOS("Nostro Voucher"),
     SREIMB("Reimbursement Sales Invoice"),
-    PREIMB("Reimbursement Purchase Invoice")
+    PREIMB("Reimbursement Purchase Invoice"),
+    ICJV("Inter Company Journal Voucher")
 }
 
 /**
