@@ -32,6 +32,7 @@ import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
@@ -167,6 +168,7 @@ open class KnockoffServiceImpl : KnockoffService {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
         }
         return accPayResponse
     }
@@ -426,7 +428,11 @@ open class KnockoffServiceImpl : KnockoffService {
 
             )
         )
-        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+        try {
+            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+        } catch (e: Exception) {
+            Sentry.captureException(e)
+        }
     }
 
     private suspend fun createAudit(

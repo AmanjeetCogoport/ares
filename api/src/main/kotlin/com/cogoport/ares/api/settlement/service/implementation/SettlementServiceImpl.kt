@@ -84,6 +84,7 @@ import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -1955,7 +1956,11 @@ open class SettlementServiceImpl : SettlementService {
                 paymentDate = paymentInfo?.settlementDate
             )
         )
-        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+        try {
+            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+        } catch (e: Exception) {
+            Sentry.captureException(e)
+        }
     }
 
     private fun emitDashboardAndOutstandingEvent(

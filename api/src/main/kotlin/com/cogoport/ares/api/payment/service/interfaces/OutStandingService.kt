@@ -1,10 +1,10 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
@@ -23,7 +23,7 @@ interface OutStandingService {
 
     suspend fun getCustomersOutstandingInINR(orgIds: List<String>): MutableMap<String, BigDecimal?>
 
-    suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList
+    suspend fun getSupplierOutstandingList(request: OutstandingListRequest): SupplierOutstandingList
 
     suspend fun createSupplierDetails(request: SupplierOutstandingDocument)
     suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?)

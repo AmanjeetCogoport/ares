@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import io.micronaut.scheduling.annotation.Scheduled
+import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 
@@ -19,7 +20,8 @@ class Scheduler(private var emitter: AresKafkaEmitter, private var accountUtiliz
                 try {
                     emitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
                 } catch (e: Exception) {
-                    logger().error("error while running cron for updating supplier outstanding")
+                    logger().error(e.message)
+                    Sentry.captureException(e)
                 }
             }
         }

@@ -30,6 +30,7 @@ import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.brahma.opensearch.Client
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -159,6 +160,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
         }
         // emitAccUtilizationToDemeter(accUtilizationRequest)
         return listResponse[0]
@@ -197,6 +199,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     }
                 } catch (e: Exception) {
                     logger().error(e.stackTraceToString())
+                    Sentry.captureException(e)
                 }
                 // emitAccUtilizationToDemeter(accUtilizationRequest)
                 result = true
@@ -287,6 +290,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
         }
         // emitAccUtilizationToDemeter(accUtilizationRequest)
     }

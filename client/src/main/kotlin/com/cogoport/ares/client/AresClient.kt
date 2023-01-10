@@ -177,5 +177,5 @@ interface AresClient {
     ): ResponseList<InvoiceListResponse?>
 
     @Post("/payments/outstanding/supplier")
-    suspend fun createSupplierOutstanding(@Valid @Body request: SupplierOutstandingDocument)
+    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument)
 }

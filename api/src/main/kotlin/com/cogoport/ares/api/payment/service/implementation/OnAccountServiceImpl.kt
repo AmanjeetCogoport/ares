@@ -81,6 +81,7 @@ import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.io.ByteArrayInputStream
@@ -288,6 +289,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
+            Sentry.captureException(ex)
         }
         return savedPayment.id!!
     }

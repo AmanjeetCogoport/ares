@@ -10,12 +10,12 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
@@ -184,7 +184,7 @@ class OutStandingServiceImpl : OutStandingService {
         return organizationOutStanding
     }
 
-    override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): BillOutstandingList {
+    override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): SupplierOutstandingList {
         validateInput(request)
         val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
@@ -225,7 +225,7 @@ class OutStandingServiceImpl : OutStandingService {
             listOrganization.add(orgOutstanding)
         }
 
-        return BillOutstandingList(
+        return SupplierOutstandingList(
             list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
             totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
             totalRecords = totalRecords,
@@ -337,7 +337,7 @@ class OutStandingServiceImpl : OutStandingService {
         return responseList
     }
 
-    private fun supplierOutstandingResponseMapper(outstanding: BillOutstandingList, supplierOutstanding: SupplierOutstandingDocument): SupplierOutstandingDocument {
+    private fun supplierOutstandingResponseMapper(outstanding: SupplierOutstandingList, supplierOutstanding: SupplierOutstandingDocument): SupplierOutstandingDocument {
         var supplierOutstandingDocument: SupplierOutstandingDocument? = null
 
         outstanding.list!!.forEach { supplier ->
