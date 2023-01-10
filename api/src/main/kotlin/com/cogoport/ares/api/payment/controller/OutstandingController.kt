@@ -13,6 +13,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -72,8 +73,9 @@ class OutstandingController {
     }
 
     @Post("/supplier")
-    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument) {
-        return outStandingService.createSupplierDetails(request)
+    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument): Response<String> {
+        outStandingService.createSupplierDetails(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
     }
 
     @Put("/supplier/{id}")
