@@ -8,23 +8,30 @@ import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucket
-import com.cogoport.ares.model.payment.BillOutstandingList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.math.ceil
 
@@ -177,51 +184,207 @@ class OutStandingServiceImpl : OutStandingService {
         return organizationOutStanding
     }
 
-    override suspend fun getBillsOutstandingList(request: OutstandingListRequest): BillOutstandingList {
+    override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): SupplierOutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.page, request.pageLimit)
+        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
         val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
         val ageingBucket = mutableListOf<BillOutStandingAgeingResponse>()
         val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()
         queryResponse.forEach { it ->
-            ageingBucket.add(outstandingAgeingConverter.convertToBillModel(it))
+            ageingBucket.add(outstandingAgeingConverter.convertToOutstandingModel(it))
             listOrganizationIds.add(it.organizationId)
         }
 
         ageingBucket.forEach { it ->
-            var data = accountUtilizationRepository.generateBillOrgOutstanding(it.organizationId!!, request.zone)
-            var dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-            var invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
-            var paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-            var outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
-            var invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
-            var paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-            var invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
-            var paymentsLedAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
-            var outstandingLedAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
+            val data = accountUtilizationRepository.generateBillOrgOutstanding(it.organizationId!!, request.zone, request.entityCode)
+            val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
+            val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
+            val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
+            val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
+            val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
+            val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
+            val invoicesLedgerAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
+            val paymentsLedgerAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
+            val outstandingLedgerAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
             openSearchServiceImpl.validateDueAmount(invoicesDues)
             openSearchServiceImpl.validateDueAmount(paymentsDues)
             openSearchServiceImpl.validateDueAmount(outstandingDues)
-            var orgId = it.organizationId
-            var orgName = it.organizationName
-            var orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
+            val orgId = it.organizationId
+            val orgName = it.organizationName
+            val orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedgerAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedgerAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedgerAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
             val zero = assignAgeingBucket("Not Due", it.notDueAmount?.abs(), it.notDueCount, "not_due")
             val today = assignAgeingBucket("Today", it.todayAmount?.abs(), it.todayCount, "today")
             val thirty = assignAgeingBucket("1-30", it.thirtyAmount?.abs(), it.thirtyCount, "1_30")
             val sixty = assignAgeingBucket("31-60", it.sixtyAmount?.abs(), it.sixtyCount, "31_60")
             val ninety = assignAgeingBucket("61-90", it.ninetyAmount?.abs(), it.ninetyCount, "61_90")
             val oneEighty = assignAgeingBucket("91-180", it.oneeightyAmount?.abs(), it.oneeightyCount, "91_180")
-            val oneEightyPlus = assignAgeingBucket("180+", it.oneeightyplusAmount?.abs(), it.oneeightyplusCount, "180")
-            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, oneEightyPlus)
+            val threeSixtyFive = assignAgeingBucket("181-365", it.threesixtyfiveAmount?.abs(), it.threesixtyfiveCount, "181_365")
+            val threeSixtyFivePlus = assignAgeingBucket("365+", it.threesixtyfiveplusAmount?.abs(), it.threesixtyfiveplusCount, "365")
+            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, threeSixtyFive, threeSixtyFivePlus)
             listOrganization.add(orgOutstanding)
         }
 
-        return BillOutstandingList(
+        return SupplierOutstandingList(
             list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
             totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
             totalRecords = totalRecords,
             page = request.page
         )
+    }
+
+    override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
+        var supplierOutstanding: SupplierOutstandingDocument? = null
+        if (flag) {
+            supplierOutstanding = document
+        } else {
+            val searchResponse = Client.search({ s ->
+                s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
+                    .query { q ->
+                        q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
+                    }
+            }, SupplierOutstandingDocument::class.java)
+            if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+                supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+            }
+        }
+
+        if (supplierOutstanding != null) {
+            var outstandingResponse: SupplierOutstandingDocument
+
+            val overallOutstanding = getSupplierOutstandingList(OutstandingListRequest(orgId = id))
+            if (!overallOutstanding.list.isNullOrEmpty()) {
+                outstandingResponse = supplierOutstandingResponseMapper(overallOutstanding, supplierOutstanding)
+                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
+            }
+
+            AresConstants.COGO_ENTITIES.forEach {
+                val outstandingForEntity = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
+                if (!outstandingForEntity.list.isNullOrEmpty()) {
+                    outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity, supplierOutstanding)
+                    val index = "supplier_outstanding_$it"
+                    Client.updateDocument(index, id, outstandingResponse, true)
+                }
+            }
+        }
+    }
+
+    override suspend fun createSupplierDetails(request: SupplierOutstandingDocument) {
+        val searchResponse = Client.search({ s ->
+            s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
+                .query { q ->
+                    q.match { m -> m.field("organizationId").query(FieldValue.of(request.organizationId)) }
+                }
+        }, SupplierOutstandingDocument::class.java)
+
+        if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+            updateSupplierDetails(request.organizationId!!, flag = true, request)
+        } else {
+
+            val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierDetailsRequestToDocument(request)
+            supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            supplierOutstandingDocument.onAccountPayment = listOf<DueAmount>()
+            supplierOutstandingDocument.totalOutstanding = listOf<DueAmount>()
+            supplierOutstandingDocument.openInvoice = listOf<DueAmount>()
+            supplierOutstandingDocument.onAccountPaymentInvoiceCount = 0
+            supplierOutstandingDocument.openInvoiceCount = 0
+            supplierOutstandingDocument.totalOutstandingInvoiceCount = 0
+            supplierOutstandingDocument.totalOutstandingInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.onAccountPaymentInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.openInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.notDueAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.notDueCount = 0
+            supplierOutstandingDocument.todayAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.todayCount = 0
+            supplierOutstandingDocument.thirtyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.thirtyCount = 0
+            supplierOutstandingDocument.sixtyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.sixtyCount = 0
+            supplierOutstandingDocument.ninetyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.ninetyCount = 0
+            supplierOutstandingDocument.oneEightyAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.oneEightyCount = 0
+            supplierOutstandingDocument.threeSixtyFiveAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.threeSixtyFiveCount = 0
+            supplierOutstandingDocument.threeSixtyFivePlusAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.threeSixtyFivePlusCount = 0
+            Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, supplierOutstandingDocument, true)
+            AresConstants.COGO_ENTITIES.forEach {
+                val index = "supplier_outstanding_$it"
+                Client.addDocument(index, request.organizationId!!, supplierOutstandingDocument, true)
+            }
+        }
+    }
+
+    override suspend fun listSupplierDetails(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+        var index: String = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX
+
+        if (request.flag != "overall") {
+            index = "supplier_outstanding_${request.flag}"
+        }
+
+        val response = OpenSearchClient().listSupplierOutstanding(request, index)
+        var list: List<SupplierOutstandingDocument?> = listOf()
+        if (!response?.hits()?.hits().isNullOrEmpty()) {
+            list = response?.hits()?.hits()?.map { it.source() }!!
+        }
+        val responseList = ResponseList<SupplierOutstandingDocument?>()
+
+        responseList.list = list
+        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
+        responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
+    }
+
+    private fun supplierOutstandingResponseMapper(outstanding: SupplierOutstandingList, supplierOutstanding: SupplierOutstandingDocument): SupplierOutstandingDocument {
+        var supplierOutstandingDocument: SupplierOutstandingDocument? = null
+
+        outstanding.list!!.forEach { supplier ->
+            supplierOutstandingDocument = SupplierOutstandingDocument(
+                organizationId = supplierOutstanding.organizationId,
+                selfOrganizationId = supplierOutstanding.selfOrganizationId,
+                businessName = supplierOutstanding.businessName,
+                registrationNumber = supplierOutstanding.registrationNumber,
+                serialId = supplierOutstanding.serialId,
+                organizationSerialId = supplierOutstanding.organizationSerialId,
+                sageId = supplierOutstanding.sageId,
+                countryCode = supplierOutstanding.countryCode,
+                countryId = supplierOutstanding.countryId,
+                category = supplierOutstanding.category,
+                collectionPartyType = supplierOutstanding.collectionPartyType,
+                companyType = supplierOutstanding.companyType,
+                supplyAgent = supplierOutstanding.supplyAgent,
+                creditDays = supplierOutstanding.creditDays,
+                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                onAccountPayment = supplier?.onAccountPayment!!.amountDue,
+                totalOutstanding = supplier.totalOutstanding!!.amountDue,
+                openInvoice = supplier.openInvoices!!.amountDue,
+                onAccountPaymentInvoiceCount = supplier.onAccountPayment!!.invoicesCount,
+                openInvoiceCount = supplier.openInvoices!!.invoicesCount,
+                totalOutstandingInvoiceCount = supplier.totalOutstanding!!.invoicesCount,
+                totalOutstandingInvoiceLedgerAmount = supplier.totalOutstanding!!.invoiceLedAmount,
+                onAccountPaymentInvoiceLedgerAmount = supplier.onAccountPayment!!.invoiceLedAmount,
+                openInvoiceLedgerAmount = supplier.openInvoices!!.invoiceLedAmount,
+                notDueAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
+                notDueCount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
+                todayAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
+                todayCount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.count,
+                thirtyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.amount,
+                thirtyCount = supplier.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.count,
+                sixtyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.amount,
+                sixtyCount = supplier.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.count,
+                ninetyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.amount,
+                ninetyCount = supplier.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.count,
+                oneEightyAmount = supplier.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.amount,
+                oneEightyCount = supplier.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.count,
+                threeSixtyFiveAmount = supplier.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.amount,
+                threeSixtyFiveCount = supplier.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.count,
+                threeSixtyFivePlusAmount = supplier.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.amount,
+                threeSixtyFivePlusCount = supplier.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.count
+            )
+        }
+        return supplierOutstandingDocument!!
     }
 }

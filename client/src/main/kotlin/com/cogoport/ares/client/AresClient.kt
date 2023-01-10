@@ -48,6 +48,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
@@ -174,4 +175,7 @@ interface AresClient {
     suspend fun getInvoiceListForTradeParties(
         @Valid @Body request: InvoiceListRequestForTradeParty
     ): ResponseList<InvoiceListResponse?>
+
+    @Post("/payments/outstanding/supplier")
+    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument)
 }
