@@ -296,6 +296,7 @@ class OutStandingServiceImpl : OutStandingService {
             updateSupplierOutstanding(request.organizationId!!, flag = true, request)
         } else {
             val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierOutstandingRequestToDocument(request)
+            supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
             Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, supplierOutstandingDocument, true)
         }
     }

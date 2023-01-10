@@ -443,6 +443,7 @@ class OpenSearchClient {
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "taxNumber")
+        val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)
                 .query { q ->
@@ -499,12 +500,29 @@ class OpenSearchClient {
                             b
                         }
                         if (request.category != null) {
-                            b.must { t ->
-                                t.match { v ->
-                                    v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
+                            if (request.category in categoryTypes) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
+                                    }
                                 }
+                                b
+                            } else {
+                                b.mustNot { s ->
+                                    s.terms { v ->
+                                        v.field("category").terms(
+                                            TermsQueryField.of { a ->
+                                                a.value(
+                                                    categoryTypes.map {
+                                                        FieldValue.of(it)
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                                b
                             }
-                            b
                         }
                         b
                     }
