@@ -318,8 +318,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun listSupplierDetails(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
         var index: String = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX
-        AresConstants.COGO_ENTITIES.forEach {
-            index = "supplier_outstanding_$it"
+
+        if (request.flag != "overall") {
+            index = "supplier_outstanding_${request.flag}"
         }
 
         val response = OpenSearchClient().listSupplierOutstanding(request, index)
