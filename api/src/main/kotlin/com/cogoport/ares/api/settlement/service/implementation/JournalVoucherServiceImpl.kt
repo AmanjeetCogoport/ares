@@ -505,6 +505,21 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 )
             )
             throw exception
+        } catch (e: Exception) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher",
+                    jvId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    "",
+                    e.toString(),
+                    false
+                )
+            )
+            throw e
         }
         return false
     }
