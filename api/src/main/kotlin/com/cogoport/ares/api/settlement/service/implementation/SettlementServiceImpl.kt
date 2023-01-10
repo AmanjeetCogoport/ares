@@ -2381,13 +2381,13 @@ open class SettlementServiceImpl : SettlementService {
 
         var transRefNumber: String? = null
         if (request.sourceType == SettlementType.REC) {
-            transRefNumber = paymentRepo.findByPaymentId(request.sourceId).transRefNumber
+            transRefNumber = paymentRepo.findTransRefNumByPaymentNum(request.sourceId)
         }
 
         val destinationDocument = accountUtilizationRepository.findRecord(request.destinationId, request.destinationType.name)
 
         val payCurrency = "INR"
-        val transactionType = TransactionType.CREDIT.name
+        val transactionType = TransactionType.CREDIT.value
 
         val paymentRequest = com.cogoport.plutus.model.invoice.CreditPaymentRequest(
             organizationId = destinationDocument?.taggedOrganizationId,
@@ -2434,7 +2434,7 @@ open class SettlementServiceImpl : SettlementService {
             invoiceDueDate = destinationDocument.dueDate.toString(),
             invoiceAmount = destinationDocument.amountLoc,
             paidAmount = request.payLoc * BigDecimal.valueOf(-1),
-            transactionType = TransactionType.DEBIT.name,
+            transactionType = TransactionType.DEBIT.value,
             currency = "INR",
             proformaNumber = invoiceData.proformaNumber,
             triggerSource = "knockoff_reverted",

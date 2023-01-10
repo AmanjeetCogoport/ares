@@ -59,4 +59,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Long
+
+    @WithSpan
+    @Query(
+        """
+            SELECT trans_ref_number FROM payments WHERE payment_num = :paymentNum and acc_mode = 'AR' and deleted_at is null
+        """
+    )
+    suspend fun findTransRefNumByPaymentNum(paymentNum: Long?): String
 }

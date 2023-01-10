@@ -53,7 +53,7 @@ dependencies {
     implementation("com.cogoport.loki:loki-model:0.1.41.1")
 
     //Plutus Client
-    implementation("com.cogoport.plutus:plutus-model:0.1.23.3")
+    implementation("com.cogoport.plutus:plutus-model:0.1.23.3-beta")
     implementation("com.cogoport.plutus:plutus-client:0.1.14.7")
 
     //Hades Client & Model
