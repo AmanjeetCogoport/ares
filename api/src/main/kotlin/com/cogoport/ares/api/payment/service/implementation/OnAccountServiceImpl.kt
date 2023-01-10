@@ -60,6 +60,7 @@ import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
@@ -268,9 +269,6 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
-        if (accUtilRes.accMode == AccMode.AP) {
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilRes.organizationId)
-        }
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -285,6 +283,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            if (accUtilRes.accMode == AccMode.AP) {
+                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }

@@ -192,7 +192,7 @@ class OutStandingServiceImpl : OutStandingService {
         val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()
         queryResponse.forEach { it ->
-            ageingBucket.add(outstandingAgeingConverter.convertToOutStandingModel(it))
+            ageingBucket.add(outstandingAgeingConverter.convertToOutstandingModel(it))
             listOrganizationIds.add(it.organizationId)
         }
 
@@ -204,15 +204,15 @@ class OutStandingServiceImpl : OutStandingService {
             val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
             val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
             val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-            val invoicesLedAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
-            val paymentsLedAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
-            val outstandingLedAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
+            val invoicesLedgerAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
+            val paymentsLedgerAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
+            val outstandingLedgerAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
             openSearchServiceImpl.validateDueAmount(invoicesDues)
             openSearchServiceImpl.validateDueAmount(paymentsDues)
             openSearchServiceImpl.validateDueAmount(outstandingDues)
             val orgId = it.organizationId
             val orgName = it.organizationName
-            val orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
+            val orgOutstanding = SuppliersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedgerAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedgerAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedgerAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount)
             val zero = assignAgeingBucket("Not Due", it.notDueAmount?.abs(), it.notDueCount, "not_due")
             val today = assignAgeingBucket("Today", it.todayAmount?.abs(), it.todayCount, "today")
             val thirty = assignAgeingBucket("1-30", it.thirtyAmount?.abs(), it.thirtyCount, "1_30")
@@ -233,7 +233,7 @@ class OutStandingServiceImpl : OutStandingService {
         )
     }
 
-    override suspend fun updateSupplierOutstanding(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
+    override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
         var supplierOutstanding: SupplierOutstandingDocument? = null
         if (flag) {
             supplierOutstanding = document
@@ -258,33 +258,18 @@ class OutStandingServiceImpl : OutStandingService {
                 Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
             }
 
-            val outstandingForEntity101 = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = 101))
-            if (!outstandingForEntity101.list.isNullOrEmpty()) {
-                outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity101, supplierOutstanding)
-                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_101_INDEX, id, outstandingResponse, true)
-            }
-
-            val outstandingForEntity201 = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = 201))
-            if (!outstandingForEntity201.list.isNullOrEmpty()) {
-                outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity201, supplierOutstanding)
-                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_201_INDEX, id, outstandingResponse, true)
-            }
-
-            val outstandingForEntity301 = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = 301))
-            if (!outstandingForEntity301.list.isNullOrEmpty()) {
-                outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity301, supplierOutstanding)
-                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_301_INDEX, id, outstandingResponse, true)
-            }
-
-            val outstandingForEntity401 = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = 401))
-            if (!outstandingForEntity401.list.isNullOrEmpty()) {
-                outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity401, supplierOutstanding)
-                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_401_INDEX, id, outstandingResponse, true)
+            AresConstants.COGO_ENTITIES.forEach {
+                val outstandingForEntity = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
+                if (!outstandingForEntity.list.isNullOrEmpty()) {
+                    outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity, supplierOutstanding)
+                    val index = "supplier_outstanding_$it"
+                    Client.updateDocument(index, id, outstandingResponse, true)
+                }
             }
         }
     }
 
-    override suspend fun createSupplierOutstanding(request: SupplierOutstandingDocument) {
+    override suspend fun createSupplierDetails(request: SupplierOutstandingDocument) {
         val searchResponse = Client.search({ s ->
             s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                 .query { q ->
@@ -293,25 +278,24 @@ class OutStandingServiceImpl : OutStandingService {
         }, SupplierOutstandingDocument::class.java)
 
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-            updateSupplierOutstanding(request.organizationId!!, flag = true, request)
+            updateSupplierDetails(request.organizationId!!, flag = true, request)
         } else {
-            val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierOutstandingRequestToDocument(request)
+            val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierDetailsRequestToDocument(request)
             supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
             Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, supplierOutstandingDocument, true)
+            AresConstants.COGO_ENTITIES.forEach {
+                val index = "supplier_outstanding_$it"
+                Client.addDocument(index, request.organizationId!!, supplierOutstandingDocument, true)
+            }
         }
     }
 
-    override suspend fun listSupplierOutstanding(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+    override suspend fun listSupplierDetails(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
         var index: String = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX
-        if (request.flag == "101") {
-            index = AresConstants.SUPPLIERS_OUTSTANDING_101_INDEX
-        } else if (request.flag == "201") {
-            index = AresConstants.SUPPLIERS_OUTSTANDING_201_INDEX
-        } else if (request.flag == "301") {
-            index = AresConstants.SUPPLIERS_OUTSTANDING_301_INDEX
-        } else if (request.flag == "401") {
-            index = AresConstants.SUPPLIERS_OUTSTANDING_401_INDEX
+        AresConstants.COGO_ENTITIES.forEach {
+            index = "supplier_outstanding_$it"
         }
+
         val response = OpenSearchClient().listSupplierOutstanding(request, index)
         var list: List<SupplierOutstandingDocument?> = listOf()
         if (!response?.hits()?.hits().isNullOrEmpty()) {
@@ -335,8 +319,9 @@ class OutStandingServiceImpl : OutStandingService {
                 organizationId = supplierOutstanding.organizationId,
                 selfOrganizationId = supplierOutstanding.selfOrganizationId,
                 businessName = supplierOutstanding.businessName,
-                taxNumber = supplierOutstanding.taxNumber,
+                registrationNumber = supplierOutstanding.registrationNumber,
                 serialId = supplierOutstanding.serialId,
+                organizationSerialId = supplierOutstanding.organizationSerialId,
                 sageId = supplierOutstanding.sageId,
                 countryCode = supplierOutstanding.countryCode,
                 countryId = supplierOutstanding.countryId,
@@ -352,9 +337,9 @@ class OutStandingServiceImpl : OutStandingService {
                 onAccountPaymentInvoiceCount = supplier.onAccountPayment!!.invoicesCount,
                 openInvoiceCount = supplier.openInvoices!!.invoicesCount,
                 totalOutstandingInvoiceCount = supplier.totalOutstanding!!.invoicesCount,
-                totalOutstandingInvoiceLedAmount = supplier.totalOutstanding!!.invoiceLedAmount,
-                onAccountPaymentInvoiceLedAmount = supplier.onAccountPayment!!.invoiceLedAmount,
-                openInvoiceLedAmount = supplier.openInvoices!!.invoiceLedAmount,
+                totalOutstandingInvoiceLedgerAmount = supplier.totalOutstanding!!.invoiceLedAmount,
+                onAccountPaymentInvoiceLedgerAmount = supplier.onAccountPayment!!.invoiceLedAmount,
+                openInvoiceLedgerAmount = supplier.openInvoices!!.invoiceLedAmount,
                 notDueAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
                 notDueCount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
                 todayAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,

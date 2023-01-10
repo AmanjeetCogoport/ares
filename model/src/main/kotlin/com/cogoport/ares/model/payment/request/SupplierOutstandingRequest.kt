@@ -13,7 +13,7 @@ data class SupplierOutstandingRequest(
     var category: String? = null,
     var flag: String? = "overall",
     var sortBy: String? = null,
-    var sortType: String? = null,
+    var sortType: String? = "Desc",
     var page: Int? = 1,
     var limit: Int? = 10
 )

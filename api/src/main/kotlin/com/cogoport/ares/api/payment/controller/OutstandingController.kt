@@ -42,8 +42,8 @@ class OutstandingController {
     }
 
     @Get("/by-supplier{?request*}")
-    suspend fun getSupplierOutstanding(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
-        return Response<ResponseList<SupplierOutstandingDocument?>>().ok(outStandingService.listSupplierOutstanding(request))
+    suspend fun getSupplierDetails(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+        return Response<ResponseList<SupplierOutstandingDocument?>>().ok(outStandingService.listSupplierDetails(request))
     }
 
     @Get("/invoice-list{?request*}")
@@ -72,12 +72,12 @@ class OutstandingController {
     }
 
     @Post("/supplier")
-    suspend fun createSupplierOutstanding(@Valid @Body request: SupplierOutstandingDocument) {
-        return outStandingService.createSupplierOutstanding(request)
+    suspend fun createSupplierDetails(@Valid @Body request: SupplierOutstandingDocument) {
+        return outStandingService.createSupplierDetails(request)
     }
 
     @Put("/supplier/{id}")
-    suspend fun updateSupplierOutstanding(@PathVariable("id") id: String) {
-        return outStandingService.updateSupplierOutstanding(id, flag = false, document = null)
+    suspend fun updateSupplierDetails(@PathVariable("id") id: String) {
+        return outStandingService.updateSupplierDetails(id, flag = false, document = null)
     }
 }

@@ -8,11 +8,11 @@ import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import io.micronaut.configuration.kafka.annotation.KafkaClient
 import io.micronaut.configuration.kafka.annotation.Topic
-import java.util.UUID
 
 @KafkaClient
 interface AresKafkaEmitter {
@@ -61,5 +61,5 @@ interface AresKafkaEmitter {
     fun emitUnfreezeCreditConsumption(request: Settlement)
 
     @Topic("update-supplier-details")
-    fun emitUpdateSupplierOutstanding(orgId: UUID?)
+    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
 }

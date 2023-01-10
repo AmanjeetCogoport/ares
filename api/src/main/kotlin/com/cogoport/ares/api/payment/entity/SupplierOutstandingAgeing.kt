@@ -4,7 +4,7 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
 @MappedEntity
-data class BillOutstandingAgeing(
+data class SupplierOutstandingAgeing(
     val organizationId: String?,
     val organizationName: String?,
     val notDueAmount: BigDecimal?,
@@ -23,7 +23,7 @@ data class BillOutstandingAgeing(
     val sixtyCount: Int,
     val ninetyCount: Int,
     val oneeightyCount: Int,
-    val threesixtyfiveCount: Int?,
+    val threesixtyfiveCount: Int,
     val threesixtyfiveplusCount: Int,
     val creditNoteCount: Int
 )

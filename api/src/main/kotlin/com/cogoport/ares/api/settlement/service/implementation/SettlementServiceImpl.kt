@@ -46,6 +46,7 @@ import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -1937,7 +1938,6 @@ open class SettlementServiceImpl : SettlementService {
         } else {
             settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         }
-        aresKafkaEmitter.emitUpdateSupplierOutstanding(accountUtilization.organizationId)
         aresKafkaEmitter.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
@@ -1955,6 +1955,7 @@ open class SettlementServiceImpl : SettlementService {
                 paymentDate = paymentInfo?.settlementDate
             )
         )
+        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
     }
 
     private fun emitDashboardAndOutstandingEvent(

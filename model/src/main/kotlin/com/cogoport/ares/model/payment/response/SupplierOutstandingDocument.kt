@@ -23,8 +23,8 @@ data class SupplierOutstandingDocument(
     var selfOrganizationId: String?,
     @JsonProperty("businessName")
     var businessName: String?,
-    @JsonProperty("taxNumber")
-    var taxNumber: String?,
+    @JsonProperty("registrationNumber")
+    var registrationNumber: String?,
     @JsonProperty("collectionPartyType")
     var collectionPartyType: List<String?>?,
     @JsonProperty("companyType")
@@ -41,6 +41,8 @@ data class SupplierOutstandingDocument(
     var category: List<String?>?,
     @JsonProperty("serialId")
     var serialId: String?,
+    @JsonProperty("organizationSerialId")
+    var organizationSerialId: String?,
     @JsonProperty("creditDays")
     var creditDays: String?,
     @JsonProperty("openInvoice")
@@ -55,12 +57,12 @@ data class SupplierOutstandingDocument(
     var onAccountPaymentInvoiceCount: Int?,
     @JsonProperty("totalOutstandingInvoiceCount")
     var totalOutstandingInvoiceCount: Int?,
-    @JsonProperty("openInvoiceLedAmount")
-    var openInvoiceLedAmount: BigDecimal?,
-    @JsonProperty("onAccountPaymentInvoiceLedAmount")
-    var onAccountPaymentInvoiceLedAmount: BigDecimal?,
-    @JsonProperty("totalOutstandingInvoiceLedAmount")
-    var totalOutstandingInvoiceLedAmount: BigDecimal?,
+    @JsonProperty("openInvoiceLedgerAmount")
+    var openInvoiceLedgerAmount: BigDecimal?,
+    @JsonProperty("onAccountPaymentInvoiceLedgerAmount")
+    var onAccountPaymentInvoiceLedgerAmount: BigDecimal?,
+    @JsonProperty("totalOutstandingInvoiceLedgerAmount")
+    var totalOutstandingInvoiceLedgerAmount: BigDecimal?,
     @JsonProperty("notDueAmount")
     var notDueAmount: BigDecimal?,
     @JsonProperty("todayAmount")

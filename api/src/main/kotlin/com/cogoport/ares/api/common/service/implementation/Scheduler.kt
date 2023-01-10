@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.service.implementation
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
@@ -14,9 +15,9 @@ class Scheduler(private var emitter: AresKafkaEmitter, private var accountUtiliz
     fun updateSupplierOutstandingOnOpenSearch() {
         runBlocking {
             val orgIds = accountUtilizationRepository.getSupplierOrgIds()
-            for (id in orgIds) {
+            for (orgId in orgIds) {
                 try {
-                    emitter.emitUpdateSupplierOutstanding(id)
+                    emitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
                 } catch (e: Exception) {
                     logger().error("error while running cron for updating supplier outstanding")
                 }

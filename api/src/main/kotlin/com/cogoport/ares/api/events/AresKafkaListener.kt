@@ -12,6 +12,7 @@ import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
@@ -19,7 +20,6 @@ import io.micronaut.configuration.kafka.annotation.OffsetStrategy
 import io.micronaut.configuration.kafka.annotation.Topic
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
-import java.util.UUID
 
 @KafkaListener(offsetReset = OffsetReset.LATEST, pollTimeout = "300000ms", offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 2, heartbeatInterval = "1000ms")
 class AresKafkaListener {
@@ -36,7 +36,7 @@ class AresKafkaListener {
     private lateinit var settlementService: SettlementService
 
     @Inject
-    private lateinit var outStandingService: OutStandingService
+    private lateinit var outstandingService: OutStandingService
 
     /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
     @Topic("create-account-utilization")
@@ -88,8 +88,8 @@ class AresKafkaListener {
     }
 
     @Topic("update-supplier-details")
-    fun updateSupplierOutstanding(orgId: UUID?) = runBlocking {
-        outStandingService.updateSupplierOutstanding(orgId.toString(), false, null)
+    fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
+        outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
     }
 
     @Topic("unfreeze-credit-consumpation")

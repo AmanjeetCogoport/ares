@@ -24,6 +24,7 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
@@ -154,7 +155,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
+                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -192,7 +193,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 try {
                     emitDashboardAndOutstandingEvent(accUtilizationRequest)
                     if (accountUtilization.accMode == AccMode.AP) {
-                        aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
+                        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
                     }
                 } catch (e: Exception) {
                     logger().error(e.stackTraceToString())
@@ -282,7 +283,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitUpdateSupplierOutstanding(accUtilizationRequest.organizationId)
+                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())

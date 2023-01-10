@@ -29,6 +29,7 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.ReverseUtrRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import jakarta.inject.Inject
@@ -161,7 +162,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
         try {
             emitPaymentStatus(accPayResponse)
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(knockOffRecord.organizationId)
+            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
         } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
@@ -410,7 +411,6 @@ open class KnockoffServiceImpl : KnockoffService {
             }
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
-        aresKafkaEmitter.emitUpdateSupplierOutstanding(accountUtilization.organizationId)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
@@ -426,6 +426,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
             )
         )
+        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
     }
 
     private suspend fun createAudit(

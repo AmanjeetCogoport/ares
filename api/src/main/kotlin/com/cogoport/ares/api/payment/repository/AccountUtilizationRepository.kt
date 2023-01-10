@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.BillOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -13,6 +12,7 @@ import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
 import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
@@ -454,7 +454,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         LIMIT :pageLimit        
         """
     )
-    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<BillOutstandingAgeing>
+    suspend fun getBillsOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<SupplierOutstandingAgeing>
 
     @WithSpan
     @Query(

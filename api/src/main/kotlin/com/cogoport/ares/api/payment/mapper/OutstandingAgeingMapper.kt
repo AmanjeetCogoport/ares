@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.payment.mapper
 
-import com.cogoport.ares.api.payment.entity.BillOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
+import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
@@ -13,9 +13,9 @@ interface OutstandingAgeingMapper {
 
     fun convertToEntity(outstandingAgeing: OutstandingAgeingResponse): OutstandingAgeing
 
-    fun convertToBillModel(billOutstanding: BillOutstandingAgeing): BillOutStandingAgeingResponse
+    fun convertToBillModel(billOutstanding: SupplierOutstandingAgeing): BillOutStandingAgeingResponse
 
-    fun convertToOutStandingModel(billOutstanding: BillOutstandingAgeing): BillOutStandingAgeingResponse
+    fun convertToOutstandingModel(billOutstanding: SupplierOutstandingAgeing): BillOutStandingAgeingResponse
 
-    fun convertSupplierOutstandingRequestToDocument(request: SupplierOutstandingDocument): SupplierOutstandingDocument
+    fun convertSupplierDetailsRequestToDocument(request: SupplierOutstandingDocument): SupplierOutstandingDocument
 }
