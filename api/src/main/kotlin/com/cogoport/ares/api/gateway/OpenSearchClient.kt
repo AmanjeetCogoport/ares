@@ -536,7 +536,7 @@ class OpenSearchClient {
                             t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
                         }
                     } else {
-                        t.field { f -> f.field("totalOutstandingInvoiceLedgerAmount").order(SortOrder.Desc) }
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
                     }
                 }
                 .from(offset).size(request.limit)
