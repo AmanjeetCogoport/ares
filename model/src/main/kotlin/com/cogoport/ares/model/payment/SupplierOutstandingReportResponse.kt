@@ -16,6 +16,8 @@ data class SupplierOutstandingReportResponse(
     var businessName: String?,
     @ExcelColumn("Sage Id")
     var sageId: String?,
+    @ExcelColumn("Serial Id")
+    var organizationSerialId: String?,
     @ExcelColumn("Registration Number")
     var registrationNumber: String?,
     @ExcelColumn("Collection Party Type")

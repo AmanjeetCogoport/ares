@@ -101,6 +101,7 @@ class ReportServiceImpl(
             supplyAgentMobileCountryCode = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.mobileCountryCode,
             supplyAgentMobileNumber = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.mobileNumber,
             sageId = supplier.sageId,
+            organizationSerialId = supplier.organizationSerialId,
             countryCode = supplier.countryCode,
             category = supplier.category,
             serialId = supplier.serialId,
