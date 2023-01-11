@@ -37,49 +37,49 @@ data class SupplierOutstandingReportResponse(
     @ExcelColumn("Category")
     var category: List<String?>?,
     @ExcelColumn("Credit Days")
-    var creditDays: Long?,
+    var creditDays: Long? = 0,
     @ExcelColumn("Open Invoice Count")
-    var openInvoiceCount: Int?,
+    var openInvoiceCount: Int? = 0,
     @ExcelColumn("Open Invoice Amount")
-    var openInvoiceAmount: BigDecimal?,
+    var openInvoiceAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("On Account Invoice Count")
-    var onAccountPaymentInvoiceCount: Int?,
+    var onAccountPaymentInvoiceCount: Int? = 0,
     @ExcelColumn("On Account Payment Amount")
-    var onAccountPaymentAmount: BigDecimal?,
+    var onAccountPaymentAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("Total Outstanding Count")
-    var totalOutstandingCount: Int?,
+    var totalOutstandingCount: Int? = 0,
     @ExcelColumn("Total Outstanding Amount")
-    var totalOutstandingAmount: BigDecimal?,
+    var totalOutstandingAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("Not Due Count")
-    var notDueCount: Int?,
+    var notDueCount: Int? = 0,
     @ExcelColumn("Not Due Amount")
-    var notDueAmount: BigDecimal?,
+    var notDueAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("Today Count")
-    var todayCount: Int?,
+    var todayCount: Int? = 0,
     @ExcelColumn("Today Amount")
-    var todayAmount: BigDecimal?,
+    var todayAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("0 - 30 Days Due Count")
-    var thirtyCount: Int?,
+    var thirtyCount: Int? = 0,
     @ExcelColumn("0 - 30 Days Due Amount")
-    var thirtyAmount: BigDecimal?,
+    var thirtyAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("31 - 60 Days Due Count")
-    var sixtyCount: Int?,
+    var sixtyCount: Int? = 0,
     @ExcelColumn("31 - 60 Days Due Amount")
-    var sixtyAmount: BigDecimal?,
+    var sixtyAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("61-90 Days Due Count")
-    var ninetyCount: Int?,
+    var ninetyCount: Int? = 0,
     @ExcelColumn("61-90 Days Due Amount")
-    var ninetyAmount: BigDecimal?,
+    var ninetyAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("91-180 Days Due Count")
-    var oneEightyCount: Int?,
+    var oneEightyCount: Int? = 0,
     @ExcelColumn("91-180 Days Due Amount")
-    var oneEightyAmount: BigDecimal?,
+    var oneEightyAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("181-365 Days Due Count")
-    var threeSixtyFiveCount: Int?,
+    var threeSixtyFiveCount: Int? = 0,
     @ExcelColumn("181-365 Days Due Amount")
-    var threeSixtyFiveAmount: BigDecimal?,
+    var threeSixtyFiveAmount: BigDecimal? = BigDecimal.ZERO,
     @ExcelColumn("365+ Days Due Count")
-    var threeSixtyFivePlusCount: Int?,
+    var threeSixtyFivePlusCount: Int? = 0,
     @ExcelColumn("365+ Days Due Amount")
-    var threeSixtyFivePlusAmount: BigDecimal?
+    var threeSixtyFivePlusAmount: BigDecimal? = BigDecimal.ZERO
 )
