@@ -15,5 +15,6 @@ data class SupplierOutstandingRequest(
     var sortBy: String? = null,
     var sortType: String? = "Desc",
     var page: Int? = 1,
-    var limit: Int? = 10
+    var limit: Int? = 10,
+    var performedBy: UUID? = null
 )
