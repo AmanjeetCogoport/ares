@@ -53,38 +53,7 @@ class ReportServiceImpl(
         }
         val reportList: MutableList<SupplierOutstandingReportResponse> = mutableListOf()
         list.forEach {
-            val supplier = SupplierOutstandingReportResponse(
-                organizationId = it.organizationId,
-                selfOrganizationId = it.selfOrganizationId,
-                businessName = it.businessName,
-                registrationNumber = it.registrationNumber,
-                collectionPartyType = "",
-                companyType = it.companyType,
-                supplyAgentId = if (it.supplyAgent == null) null else it.supplyAgent!!.id.toString(),
-                supplyAgentName = if (it.supplyAgent == null) null else it.supplyAgent!!.name,
-                supplyAgentEmail = if (it.supplyAgent == null) null else it.supplyAgent!!.email,
-                supplyAgentMobileCountryCode = if (it.supplyAgent == null) null else it.supplyAgent!!.mobileCountryCode,
-                supplyAgentMobileNumber = if (it.supplyAgent == null) null else it.supplyAgent!!.mobileNumber,
-                sageId = it.sageId,
-                countryId = it.countryId,
-                countryCode = it.countryCode,
-                category = "",
-                serialId = it.serialId,
-                organizationSerialId = it.organizationSerialId,
-                creditDays = if (it.creditDays == null) "" else it.creditDays!!.toString(),
-                openInvoice = it.openInvoiceCount.toString(),
-                totalOutstanding = it.totalOutstandingInvoiceLedgerAmount.toString(),
-                onAccountPayment = it.onAccountPaymentInvoiceLedgerAmount.toString(),
-                notDueAmount = it.notDueAmount.toString(),
-                todayAmount = it.todayAmount.toString(),
-                thirtyAmount = it.thirtyAmount.toString(),
-                sixtyAmount = it.sixtyAmount.toString(),
-                ninetyAmount = it.ninetyAmount.toString(),
-                oneEightyAmount = it.oneEightyAmount.toString(),
-                threeSixtyFiveAmount = it.threeSixtyFiveAmount.toString(),
-                threeSixtyFivePlusAmount = it.threeSixtyFivePlusAmount.toString()
-            )
-            reportList.add(supplier)
+            reportList.add(getSupplierOutstandingReportResponse(it))
         }
         val excelName = "Supplier_Outstanding" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) + "_" + reportList.size
         val file = writeIntoExcel(reportList, excelName)
@@ -101,7 +70,6 @@ class ReportServiceImpl(
             )
         )
         url = URLDecoder.decode(url, "UTF-8")
-
         val inputStreamFile = s3Client.download(url)
         val excelFile = File("/tmp/Supplier_Outstanding_Report_${Hashids.encode(result.id!!)}_${Instant.now()}.xlsx")
         Files.copy(inputStreamFile.inputStream(), excelFile.toPath())
@@ -121,5 +89,45 @@ class ReportServiceImpl(
                 )
             ).data(outstandingList).build()
         return file
+    }
+    private fun getSupplierOutstandingReportResponse(supplier: SupplierOutstandingDocument): SupplierOutstandingReportResponse {
+        return SupplierOutstandingReportResponse(
+            businessName = supplier.businessName,
+            registrationNumber = supplier.registrationNumber,
+            collectionPartyType = supplier.collectionPartyType,
+            companyType = supplier.companyType,
+            supplyAgentName = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.name,
+            supplyAgentEmail = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.email,
+            supplyAgentMobileCountryCode = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.mobileCountryCode,
+            supplyAgentMobileNumber = if (supplier.supplyAgent == null) null else supplier.supplyAgent!!.mobileNumber,
+            sageId = supplier.sageId,
+            countryId = supplier.countryId,
+            countryCode = supplier.countryCode,
+            category = supplier.category,
+            serialId = supplier.serialId,
+            creditDays = if (supplier.creditDays == null) 0 else supplier.creditDays?.toLong(),
+            openInvoiceCount = supplier.openInvoiceCount,
+            openInvoiceAmount = supplier.openInvoiceLedgerAmount,
+            totalOutstandingAmount = supplier.totalOutstandingInvoiceLedgerAmount,
+            totalOutstandingCount = supplier.totalOutstandingInvoiceCount,
+            onAccountPaymentAmount = supplier.onAccountPaymentInvoiceLedgerAmount,
+            onAccountPaymentInvoiceCount = supplier.onAccountPaymentInvoiceCount,
+            notDueCount = supplier.notDueCount,
+            todayCount = supplier.todayCount,
+            thirtyCount = supplier.thirtyCount,
+            sixtyCount = supplier.sixtyCount,
+            ninetyCount = supplier.ninetyCount,
+            oneEightyCount = supplier.oneEightyCount,
+            threeSixtyFiveCount = supplier.threeSixtyFiveCount,
+            threeSixtyFivePlusCount = supplier.threeSixtyFivePlusCount,
+            notDueAmount = supplier.notDueAmount,
+            todayAmount = supplier.todayAmount,
+            thirtyAmount = supplier.thirtyAmount,
+            sixtyAmount = supplier.sixtyAmount,
+            ninetyAmount = supplier.ninetyAmount,
+            oneEightyAmount = supplier.oneEightyAmount,
+            threeSixtyFiveAmount = supplier.threeSixtyFiveAmount,
+            threeSixtyFivePlusAmount = supplier.threeSixtyFivePlusAmount
+        )
     }
 }
