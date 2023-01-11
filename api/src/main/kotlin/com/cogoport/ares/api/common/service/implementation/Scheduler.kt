@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.common.service.implementation
 
-import com.cogoport.ares.api.events.AresBunnyEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -10,7 +10,7 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 
 @Singleton
-class Scheduler(private var emitter: AresBunnyEmitter, private var accountUtilizationRepository: AccountUtilizationRepository) {
+class Scheduler(private var emitter: AresMessagePublisher, private var accountUtilizationRepository: AccountUtilizationRepository) {
 
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {

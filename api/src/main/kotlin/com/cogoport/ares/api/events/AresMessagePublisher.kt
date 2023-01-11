@@ -7,7 +7,7 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 
 @RabbitClient("ares")
 @RabbitProperty(name = "deliveryMode", value = "2")
-interface AresBunnyEmitter {
+interface AresMessagePublisher {
     @Binding("supplier-outstanding")
     fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
 }
