@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.config
 
 import com.cogoport.ares.api.common.models.SageConfig
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import io.micronaut.runtime.event.annotation.EventListener
@@ -19,15 +20,13 @@ class Bootstrap {
 
     @Inject private lateinit var sageConfig: SageConfig
 
-    @Inject private lateinit var rabbitMqBootstrap: RabbitMqBootstrap
-
     @EventListener
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         // Add all bootstrap services here
+        logger().info("Log from normal bootstrapper")
         configureOpenSearch()
         configureSentry()
         configureSage()
-        rabbitMqBootstrap.initialize(null, "")
     }
 
     private fun configureOpenSearch() {

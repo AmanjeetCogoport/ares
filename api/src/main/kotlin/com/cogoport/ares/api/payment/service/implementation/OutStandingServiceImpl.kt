@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -26,6 +27,7 @@ import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.opensearch.Configuration
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch._types.FieldValue
@@ -53,6 +55,8 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var openSearchServiceImpl: OpenSearchServiceImpl
+
+    @Inject private lateinit var openSearchConfig: OpenSearchConfig
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -235,6 +239,18 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
+        logger().info("Starting to update supplier details")
+        Client.configure(
+            configuration =
+            Configuration(
+                scheme = openSearchConfig.scheme,
+                host = openSearchConfig.host,
+                port = openSearchConfig.port,
+                user = openSearchConfig.user,
+                pass = openSearchConfig.pass
+            )
+        )
+
         try {
             var supplierOutstanding: SupplierOutstandingDocument? = null
             if (flag) {
