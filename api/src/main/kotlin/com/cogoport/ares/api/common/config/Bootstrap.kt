@@ -19,12 +19,15 @@ class Bootstrap {
 
     @Inject private lateinit var sageConfig: SageConfig
 
+    @Inject private lateinit var rabbitMqBootstrap: RabbitMqBootstrap
+
     @EventListener
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         // Add all bootstrap services here
         configureOpenSearch()
         configureSentry()
         configureSage()
+        rabbitMqBootstrap.initialize(null, "")
     }
 
     private fun configureOpenSearch() {

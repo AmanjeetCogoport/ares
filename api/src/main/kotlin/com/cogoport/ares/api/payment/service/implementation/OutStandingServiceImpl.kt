@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -234,38 +235,44 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
-        var supplierOutstanding: SupplierOutstandingDocument? = null
-        if (flag) {
-            supplierOutstanding = document
-        } else {
-            val searchResponse = Client.search({ s ->
-                s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
-                    .query { q ->
-                        q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
-                    }
-            }, SupplierOutstandingDocument::class.java)
-            if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-                supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
-            }
-        }
-
-        if (supplierOutstanding != null) {
-            var outstandingResponse: SupplierOutstandingDocument
-
-            val overallOutstanding = getSupplierOutstandingList(OutstandingListRequest(orgId = id))
-            if (!overallOutstanding.list.isNullOrEmpty()) {
-                outstandingResponse = supplierOutstandingResponseMapper(overallOutstanding, supplierOutstanding)
-                Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
-            }
-
-            AresConstants.COGO_ENTITIES.forEach {
-                val outstandingForEntity = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
-                if (!outstandingForEntity.list.isNullOrEmpty()) {
-                    outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity, supplierOutstanding)
-                    val index = "supplier_outstanding_$it"
-                    Client.updateDocument(index, id, outstandingResponse, true)
+        try {
+            var supplierOutstanding: SupplierOutstandingDocument? = null
+            if (flag) {
+                supplierOutstanding = document
+            } else {
+                val searchResponse = Client.search({ s ->
+                    s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
+                        .query { q ->
+                            q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
+                            q
+                        }
+                }, SupplierOutstandingDocument::class.java)
+                if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+                    supplierOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
                 }
             }
+
+            if (supplierOutstanding != null) {
+                var outstandingResponse: SupplierOutstandingDocument
+
+                val overallOutstanding = getSupplierOutstandingList(OutstandingListRequest(orgId = id))
+                if (!overallOutstanding.list.isNullOrEmpty()) {
+                    outstandingResponse = supplierOutstandingResponseMapper(overallOutstanding, supplierOutstanding)
+                    Client.updateDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
+                }
+
+                AresConstants.COGO_ENTITIES.forEach {
+                    val outstandingForEntity = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
+                    if (!outstandingForEntity.list.isNullOrEmpty()) {
+                        outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity, supplierOutstanding)
+                        val index = "supplier_outstanding_$it"
+                        Client.updateDocument(index, id, outstandingResponse, true)
+                    }
+                }
+            }
+        } catch (error: Exception) {
+            logger().error(error.toString())
+            logger().error(error.stackTraceToString())
         }
     }
 

@@ -17,6 +17,9 @@ micronaut:
       read-timeout: 30s
   metrics:
     enabled: false
+  executors:
+    consumer:
+      type: FIXED
 
 netty:
   default:
@@ -78,3 +81,12 @@ ares:
 aws:
   s3:
     bucket: business-finance-test
+
+rabbitmq:
+#  uri: amqp://guest:guest@192.168.2.138:5672
+  connections:
+    default:
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
