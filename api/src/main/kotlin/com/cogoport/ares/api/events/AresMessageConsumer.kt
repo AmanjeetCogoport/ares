@@ -8,7 +8,7 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
 
 @RabbitListener
-class AresBunnyListener {
+class AresMessageConsumer {
     @Inject
     lateinit var outstandingService: OutStandingService
     @Queue("update-supplier-details", prefetch = 10)
