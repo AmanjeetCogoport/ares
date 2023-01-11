@@ -80,7 +80,7 @@ data class Payment(
     var utr: String? = "",
 
     @JsonProperty("refPaymentId")
-    var refPaymentId: Long? = 0,
+    var refPaymentId: String? = null,
 
     @JsonProperty("refAccountNo")
     var refAccountNo: String?,
@@ -143,7 +143,7 @@ data class Payment(
     @JsonProperty("performedByUserType")
     val performedByUserType: String? = null,
 
-    @JsonProperty("isSuspense")
+    @JsonProperty("isStransuspense")
     val isSuspense: Boolean? = false,
 
     @JsonProperty("tradePartyDocument")
