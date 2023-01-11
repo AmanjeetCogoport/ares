@@ -5,12 +5,12 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationEntity, Long> {
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT EXISTS
@@ -24,7 +24,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     )
     suspend fun checkPaymentExists(paymentNumValue: String, accMode: String, paymentCode: String, accType: String): Boolean
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             select exists (select j.id from journal_vouchers j 
@@ -37,7 +37,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     )
     suspend fun checkJVExists(jvNum: String, accMode: String, accType: String): Boolean
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
         select payment_num from payments where payment_num_value=:paymentNumValue  
@@ -53,7 +53,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         sageOrganizationId: String
     ): Long
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             select document_no from account_utilizations 
@@ -68,7 +68,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         sageOrganizationId: String
     ): Long
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             select exists (select id from settlements 
@@ -79,7 +79,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     )
     suspend fun checkDuplicateForSettlements(sourceId: Long, destinationId: Long, ledgerAmount: BigDecimal): Boolean
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             select document_no from account_utilizations 
@@ -92,6 +92,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         accMode: String
     ): Long
 
+    @NewSpan
     @Query(
         """
             select payment_num from payments where payment_num_value=:paymentNumValue  
