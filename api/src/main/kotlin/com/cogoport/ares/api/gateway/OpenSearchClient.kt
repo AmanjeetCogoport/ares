@@ -442,7 +442,7 @@ class OpenSearchClient {
 
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
-        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName.keyword", "registrationNumber.keyword")
         val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)
@@ -452,6 +452,39 @@ class OpenSearchClient {
                             b.must { s ->
                                 s.queryString { qs ->
                                     qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.sageId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.organizationSerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartySerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("serialId.keyword")).query("*${request.tradePartySerialId}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
