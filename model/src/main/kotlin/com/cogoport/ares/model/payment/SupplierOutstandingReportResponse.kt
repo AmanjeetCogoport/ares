@@ -30,8 +30,6 @@ data class SupplierOutstandingReportResponse(
     var supplyAgentMobileCountryCode: String?,
     @ExcelColumn("Supply Agent Mobile Number")
     var supplyAgentMobileNumber: String?,
-    @ExcelColumn("Country Id")
-    var countryId: String?,
     @ExcelColumn("Country Code")
     var countryCode: String?,
     @ExcelColumn("Category")
