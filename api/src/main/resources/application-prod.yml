@@ -8,6 +8,11 @@ router:
     swagger:
       paths: classpath:META-INF/swagger
       mapping: /swagger/**
+executors:
+  rabbit:
+    type: FIXED
+  consumer:
+    type: FIXED
 netty:
   default:
     allocator:
@@ -82,3 +87,7 @@ tracing:
     sender:
       agentHost: ${GRAFANA_TEMPO_DOMAIN:localhost}
       agentPort: ${GRAFANA_TEMPO_PORT:6831}
+
+rabbitmq:
+  uri: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_IP}:${RABBITMQ_PORT}
+  consumer-executor: rabbit
