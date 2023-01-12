@@ -18,6 +18,8 @@ micronaut:
   metrics:
     enabled: false
   executors:
+    rabbit:
+      type: FIXED
     consumer:
       type: FIXED
 
@@ -83,10 +85,5 @@ aws:
     bucket: business-finance-test
 
 rabbitmq:
-#  uri: amqp://admin:admin123@10.0.211.121:5672
-  connections:
-    default:
-      host: localhost
-      port: 5672
-      username: guest
-      password: guest
+  uri: amqp://guest@localhost:5672
+  consumer-executor: rabbit

@@ -240,16 +240,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
         logger().info("Starting to update supplier details")
-        Client.configure(
-            configuration =
-            Configuration(
-                scheme = openSearchConfig.scheme,
-                host = openSearchConfig.host,
-                port = openSearchConfig.port,
-                user = openSearchConfig.user,
-                pass = openSearchConfig.pass
-            )
-        )
+        configureOpenSearchForRabbitMqListener()
 
         try {
             var supplierOutstanding: SupplierOutstandingDocument? = null
@@ -289,6 +280,26 @@ class OutStandingServiceImpl : OutStandingService {
         } catch (error: Exception) {
             logger().error(error.toString())
             logger().error(error.stackTraceToString())
+        }
+    }
+
+    /**
+     * Workaround for making rabbitmq consumers interact with
+     * opensearch client. Since on deployments, consumers start
+     * before the server startup event.
+     */
+    private fun configureOpenSearchForRabbitMqListener() {
+        if (Client.getLowLevelClient() != null) {
+            Client.configure(
+                configuration =
+                Configuration(
+                    scheme = openSearchConfig.scheme,
+                    host = openSearchConfig.host,
+                    port = openSearchConfig.port,
+                    user = openSearchConfig.user,
+                    pass = openSearchConfig.pass
+                )
+            )
         }
     }
 
