@@ -283,11 +283,11 @@ class OutStandingServiceImpl : OutStandingService {
 
     /**
      * Workaround for making rabbitmq consumers interact with
-     * opensearch client. Since on deployments, consumers start
+     * opensearch client since on deployments, consumers start
      * before the server startup event.
      */
     private fun configureOpenSearchForRabbitMqListener() {
-        if (Client.getLowLevelClient() != null) {
+        if (Client.getLowLevelClient() == null) {
             Client.configure(
                 configuration =
                 Configuration(
