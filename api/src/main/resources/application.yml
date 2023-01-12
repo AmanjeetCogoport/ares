@@ -15,8 +15,6 @@ micronaut:
   http:
     client:
       read-timeout: 30s
-  metrics:
-    enabled: false
 
 netty:
   default:
