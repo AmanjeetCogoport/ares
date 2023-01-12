@@ -6,13 +6,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.micronaut.tracing.annotation.NewSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
              select id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
@@ -24,7 +24,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun findByPaymentId(id: Long?): Payment
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
         select exists( select id from payments where organization_id = :organizationId and trans_ref_number = :transRefNumber and deleted_at is null)
@@ -32,7 +32,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun isTransRefNumberExists(organizationId: UUID?, transRefNumber: String): Boolean
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             UPDATE payments SET deleted_at = NOW(),updated_at = NOW() WHERE id = :paymentId
@@ -40,7 +40,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun deletePayment(paymentId: Long?)
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
@@ -52,7 +52,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun findByTransRef(transRefNumber: String?): List<Payment>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT id FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null  
@@ -60,7 +60,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Long
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT trans_ref_number FROM payments WHERE payment_num = :paymentNum and acc_mode = 'AR' and deleted_at is null

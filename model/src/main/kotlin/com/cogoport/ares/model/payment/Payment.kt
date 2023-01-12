@@ -80,7 +80,7 @@ data class Payment(
     var utr: String? = "",
 
     @JsonProperty("refPaymentId")
-    var refPaymentId: Long? = 0,
+    var refPaymentId: String? = null,
 
     @JsonProperty("refAccountNo")
     var refAccountNo: String?,

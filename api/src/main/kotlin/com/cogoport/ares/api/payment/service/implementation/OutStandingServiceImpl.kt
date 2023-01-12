@@ -241,7 +241,6 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
         logger().info("Starting to update supplier details")
         configureOpenSearchForRabbitMqListener()
-
         try {
             var supplierOutstanding: SupplierOutstandingDocument? = null
             if (flag) {
@@ -250,8 +249,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val searchResponse = Client.search({ s ->
                     s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                         .query { q ->
-                            q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
-                            q
+                            q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
                         }
                 }, SupplierOutstandingDocument::class.java)
                 if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
@@ -281,6 +279,7 @@ class OutStandingServiceImpl : OutStandingService {
             logger().error(error.toString())
             logger().error(error.stackTraceToString())
         }
+
     }
 
     /**
@@ -307,7 +306,7 @@ class OutStandingServiceImpl : OutStandingService {
         val searchResponse = Client.search({ s ->
             s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                 .query { q ->
-                    q.match { m -> m.field("organizationId").query(FieldValue.of(request.organizationId)) }
+                    q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
                 }
         }, SupplierOutstandingDocument::class.java)
 

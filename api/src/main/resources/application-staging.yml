@@ -13,16 +13,6 @@ executors:
     type: FIXED
   consumer:
     type: FIXED
-metrics:
-  enabled: true
-  export:
-    prometheus:
-      enabled: true
-      descriptions: true
-      step: PT1M
-  binders:
-    r2dbc:
-      enabled: false
 netty:
   default:
     allocator:
@@ -78,21 +68,16 @@ sage:
   username: ${ SAGE_REST_API_USER:`rajveer.singh@cogoport.com` }
   userpassword: ${ SAGE_REST_API_PASSWORD:`Abcd@12345` }
 
-endpoints:
-  prometheus:
-    sensitive: false
-
-otel:
-  exporter:
-    otlp:
-      traces:
-        endpoint: http://${GRAFANA_AGENT_DOMAIN:localhost}:${GRAFANA_AGENT_PORT:4317}
-  service:
-    name: ares
-  traces:
-    exporter: otlp
+tracing:
   exclusions:
     - /payments/prometheus
+  jaeger:
+    enabled: true
+    sampler:
+      probability: 1
+    sender:
+      agentHost: ${GRAFANA_TEMPO_DOMAIN:localhost}
+      agentPort: ${GRAFANA_TEMPO_PORT:6831}
 
 rabbitmq:
   uri: amqp://guest@13.235.115.20:5672

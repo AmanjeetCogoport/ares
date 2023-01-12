@@ -9,19 +9,19 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
 
-    @WithSpan
+    @NewSpan
     suspend fun deleteByIdIn(ids: List<Long>)
 
-    @WithSpan
+    @NewSpan
     suspend fun findByIdIn(ids: List<Long>): List<Settlement>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -47,7 +47,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findByDestIdAndDestType(destId: Long, destType: SettlementType): List<Settlement?>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -73,7 +73,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findBySourceIdAndSourceType(sourceId: Long, sourceType: List<SettlementType>): List<Settlement?>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
          WITH INVOICES AS (
@@ -133,7 +133,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun findSettlement(sourceId: Long, sourceType: SettlementType, pageIndex: Int, pageSize: Int): List<SettledInvoice?>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """SELECT count(1) 
             FROM settlements 
@@ -144,7 +144,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long
 
-    @WithSpan
+    @NewSpan
     @Query(
         """SELECT count(1) 
             FROM settlements 
@@ -156,7 +156,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -176,7 +176,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun getPaymentIds(query: String): List<Long>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
@@ -184,7 +184,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun deleleSettlement(id: List<Long>)
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
           SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null
@@ -193,7 +193,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
            SELECT
@@ -212,7 +212,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     )
     suspend fun getPaymentDetailsByPaymentNum(documentNo: Long?): PaymentInfo?
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
         SELECT
@@ -237,7 +237,7 @@ ORDER BY
     )
     suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
            SELECT
@@ -262,7 +262,7 @@ ORDER BY
     )
     suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInfoRec>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
               select source_id
@@ -273,7 +273,7 @@ ORDER BY
     )
     suspend fun getSettlementDetails(documentNo: Long?): List<Int>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
            SELECT
