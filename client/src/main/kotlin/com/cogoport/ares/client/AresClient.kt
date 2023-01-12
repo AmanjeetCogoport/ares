@@ -54,7 +54,6 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
-import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
@@ -70,7 +69,7 @@ import kotlin.collections.HashMap
 @Client(id = "ares")
 interface AresClient {
     @Get("/payments/dashboard/overall-stats{?request*}")
-    public suspend fun getOverallStats(@Header()@Valid request: OverallStatsRequest): OverallStatsResponseData?
+    public suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData?
 
     @Get("/payments/dashboard/daily-sales-outstanding{?request*}")
     public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?

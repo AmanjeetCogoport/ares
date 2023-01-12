@@ -11,7 +11,7 @@ import kotlinx.coroutines.runBlocking
 class AresMessageConsumer {
     @Inject
     lateinit var outstandingService: OutStandingService
-    @Queue("update-supplier-details", reQueue = true, prefetch = 1, numberOfConsumers = 2)
+    @Queue("update-supplier-details", reQueue = true, prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
         outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
     }
