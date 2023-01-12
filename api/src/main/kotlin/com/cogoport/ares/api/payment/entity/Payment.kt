@@ -32,7 +32,7 @@ data class Payment(
     var payMode: PayMode?,
     var narration: String? = null,
     var transRefNumber: String?,
-    var refPaymentId: Long?,
+    var refPaymentId: String?,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isPosted: Boolean,
     var isDeleted: Boolean,
