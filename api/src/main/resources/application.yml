@@ -15,6 +15,11 @@ micronaut:
   http:
     client:
       read-timeout: 30s
+  executors:
+    rabbit:
+      type: FIXED
+    consumer:
+      type: FIXED
 
 netty:
   default:
@@ -76,3 +81,7 @@ ares:
 aws:
   s3:
     bucket: business-finance-test
+
+rabbitmq:
+  uri: amqp://guest@localhost:5672
+  consumer-executor: rabbit

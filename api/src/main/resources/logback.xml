@@ -9,7 +9,11 @@
         </encoder>
     </appender>
     <logger name="io.micronaut.data.query" level="error"/>
-    <root level="ERROR">
+    <logger name="io.micronaut.rabbitmq" level="error"/>
+    <logger name="org.apache.kafka" level="error"/>
+    <logger name="io.micronaut.configuration.kafka" level="error"/>
+    <logger name="io.micronaut.management" level="error"/>
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 

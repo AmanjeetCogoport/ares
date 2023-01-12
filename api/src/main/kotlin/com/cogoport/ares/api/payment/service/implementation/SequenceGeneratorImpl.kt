@@ -1,12 +1,10 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
-import io.micronaut.context.annotation.Context
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
-@Context
 class SequenceGeneratorImpl() {
 
     @Inject
