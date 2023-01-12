@@ -36,7 +36,7 @@ data class PaymentMigrationModel(
     var refAccountNo: String? = null,
     var bankName: String? = null,
     var transRefNumber: String? = null,
-    var refPaymentId: Long? = null,
+    var refPaymentId: String? = null,
     var transactionDate: Timestamp? = null,
     var isPosted: Boolean,
     var isDeleted: Boolean,
