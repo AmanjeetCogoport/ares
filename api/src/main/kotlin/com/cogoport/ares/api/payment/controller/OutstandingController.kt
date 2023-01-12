@@ -13,6 +13,7 @@ import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -82,9 +83,9 @@ class OutstandingController {
         return Response<String>().ok("created", HttpStatus.OK.name)
     }
 
-    @Put("/supplier/{id}")
-    suspend fun updateSupplierDetails(@PathVariable("id") id: String) {
-        return outStandingService.updateSupplierDetails(id, flag = false, document = null)
+    @Put("/supplier")
+    suspend fun updateSupplierDetails(@Valid @Body request: UpdateSupplierOutstandingRequest) {
+        return outStandingService.updateSupplierDetails(request.orgId.toString(), flag = false, document = null)
     }
 
     @Put("/supplier-outstanding-migrate")

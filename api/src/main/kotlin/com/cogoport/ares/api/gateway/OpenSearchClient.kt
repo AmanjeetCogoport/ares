@@ -454,7 +454,7 @@ class OpenSearchClient {
     @NewSpan
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
-        val searchFilterFields: MutableList<String> = mutableListOf("businessName.keyword", "registrationNumber.keyword")
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
         val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)
