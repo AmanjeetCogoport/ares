@@ -279,7 +279,6 @@ class OutStandingServiceImpl : OutStandingService {
             logger().error(error.toString())
             logger().error(error.stackTraceToString())
         }
-
     }
 
     /**
