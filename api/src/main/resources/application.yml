@@ -83,7 +83,7 @@ aws:
     bucket: business-finance-test
 
 rabbitmq:
-#  uri: amqp://guest:guest@192.168.2.138:5672
+#  uri: amqp://admin:admin123@10.0.211.121:5672
   connections:
     default:
       host: localhost
