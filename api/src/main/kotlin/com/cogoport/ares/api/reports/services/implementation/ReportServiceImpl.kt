@@ -35,7 +35,7 @@ class ReportServiceImpl(
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
-    override suspend fun outstandingReportDownload(request: SupplierOutstandingRequest): File {
+    override suspend fun outstandingReportDownload(request: SupplierOutstandingRequest): String {
         request.limit = AresConstants.LIMIT
         var index: String = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX
 
@@ -69,9 +69,13 @@ class ReportServiceImpl(
                 updatedAt = Timestamp.valueOf(LocalDateTime.now())
             )
         )
-        url = URLDecoder.decode(url, "UTF-8")
+        return Hashids.encode(result.id!!)
+    }
+
+    override suspend fun downloadOutstandingReport(id: Long): File {
+        val url = URLDecoder.decode(aresDocumentRepository.getSupplierOutstandingUrl(id), "UTF-8")
         val inputStreamFile = s3Client.download(url)
-        val excelFile = File("/tmp/Supplier_Outstanding_Report_${Hashids.encode(result.id!!)}_${Instant.now()}.xlsx")
+        val excelFile = File("/tmp/Supplier_Outstanding_Report_${Hashids.encode(id)}_${Instant.now()}.xlsx")
         Files.copy(inputStreamFile.inputStream(), excelFile.toPath())
         return excelFile
     }

@@ -5,5 +5,7 @@ import java.io.File
 
 interface ReportService {
 
-    suspend fun outstandingReportDownload(request: SupplierOutstandingRequest): File
+    suspend fun outstandingReportDownload(request: SupplierOutstandingRequest): String
+
+    suspend fun downloadOutstandingReport(id: Long): File
 }
