@@ -241,7 +241,7 @@ class OutStandingServiceImpl : OutStandingService {
             val searchResponse = Client.search({ s ->
                 s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                     .query { q ->
-                        q.match { m -> m.field("organizationId").query(FieldValue.of(id)) }
+                        q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
                     }
             }, SupplierOutstandingDocument::class.java)
             if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
@@ -273,7 +273,7 @@ class OutStandingServiceImpl : OutStandingService {
         val searchResponse = Client.search({ s ->
             s.index(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX)
                 .query { q ->
-                    q.match { m -> m.field("organizationId").query(FieldValue.of(request.organizationId)) }
+                    q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
                 }
         }, SupplierOutstandingDocument::class.java)
 
