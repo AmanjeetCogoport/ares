@@ -80,5 +80,5 @@ tracing:
       agentPort: ${GRAFANA_TEMPO_PORT:6831}
 
 rabbitmq:
-  uri: amqp://admin:admin123@13.235.115.20:5672
+  uri: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_IP}:${RABBITMQ_PORT}
   consumer-executor: rabbit
