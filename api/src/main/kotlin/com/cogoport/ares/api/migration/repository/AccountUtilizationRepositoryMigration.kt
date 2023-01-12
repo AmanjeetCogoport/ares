@@ -6,11 +6,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<AccountUtilizationMigration, Long> {
 
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -28,6 +30,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         amountLedger: BigDecimal
     ): BigDecimal?
 
+    @NewSpan
     @Query(
         """
             UPDATE account_utilizations 
@@ -51,6 +54,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         payCurrency: BigDecimal
     )
 
+    @NewSpan
     @Query(
         """
             select acc_type,document_no from account_utilizations 

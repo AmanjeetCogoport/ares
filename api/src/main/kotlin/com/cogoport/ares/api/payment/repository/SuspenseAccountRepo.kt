@@ -5,11 +5,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
 
+    @NewSpan
     @Query(
         """
             SELECT * FROM suspense_accounts WHERE id = :id AND is_deleted IS FALSE
@@ -17,6 +19,7 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
     )
     fun findBySuspenseId(id: Long?): SuspenseAccount
 
+    @NewSpan
     @Query(
         """ SELECT * FROM suspense_accounts
             WHERE (:entityType IS NULL OR entity_code = :entityType)
@@ -30,6 +33,7 @@ interface SuspenseAccountRepo : CoroutineCrudRepository<SuspenseAccount, Long> {
     )
     fun getSuspenseAccounts(entityType: Int?, startDate: Timestamp?, endDate: Timestamp?, currencyType: String?, page: Int, pageLimit: Int, query: String?): List<SuspenseAccount>
 
+    @NewSpan
     @Query(
         """
             SELECT count(*) FROM suspense_accounts

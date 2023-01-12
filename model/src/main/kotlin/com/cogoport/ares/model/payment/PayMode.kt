@@ -8,5 +8,6 @@ enum class PayMode(val dbValue: String) {
     RTGS("RTGS"),
     BANK("BANK"),
     GATEWAY("GATEWAY"),
-    UPI("UPI")
+    UPI("UPI"),
+    RAZORPAY("RAZORPAY")
 }

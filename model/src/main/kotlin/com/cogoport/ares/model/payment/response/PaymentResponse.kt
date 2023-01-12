@@ -70,7 +70,7 @@ data class PaymentResponse(
     var utr: String? = "",
 
     @JsonProperty("refPaymentId")
-    var refPaymentId: Long? = 0,
+    var refPaymentId: String? = null,
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd hh:mm:ss")
     @JsonProperty("transactionDate")

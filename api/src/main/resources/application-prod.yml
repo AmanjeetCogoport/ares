@@ -71,3 +71,14 @@ sage:
 aws:
   s3:
     bucket: business-finance-prod
+
+tracing:
+  exclusions:
+    - /payments/prometheus
+  jaeger:
+    enabled: true
+    sampler:
+      probability: 1
+    sender:
+      agentHost: ${GRAFANA_TEMPO_DOMAIN:localhost}
+      agentPort: ${GRAFANA_TEMPO_PORT:6831}

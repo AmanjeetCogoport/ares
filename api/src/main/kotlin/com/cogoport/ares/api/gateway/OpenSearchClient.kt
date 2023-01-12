@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
+import io.micronaut.tracing.annotation.NewSpan
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
@@ -23,6 +24,7 @@ import java.time.LocalDateTime
 
 class OpenSearchClient {
 
+    @NewSpan
     fun <T : Any> search(
         searchKey: String,
         classType: Class<T>,
@@ -45,6 +47,7 @@ class OpenSearchClient {
         return outResp
     }
 
+    @NewSpan
     fun <T : Any> searchList(
         searchKey: String?,
         classType: Class<T>,
@@ -75,6 +78,7 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun <T : Any> listApi(
         index: String,
         classType: Class<T>,
@@ -95,10 +99,12 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun <T> updateDocument(index: String, docId: String, docData: T) {
         Client.updateDocument(index, docId, docData, true)
     }
 
+    @NewSpan
     fun listCustomerSaleOutstanding(
         index: String,
         classType: Class<CustomerOutstanding>,
@@ -116,6 +122,7 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun <T : Any> onAccountSearch(
         request: AccountCollectionRequest,
         classType: Class<T>
@@ -204,6 +211,7 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun getOrgCollection(
         request: OrganizationReceivablesRequest,
         startDate: LocalDateTime,
@@ -270,6 +278,7 @@ class OpenSearchClient {
             ?.map { it.source() }
     }
 
+    @NewSpan
     fun getOrgPayables(
         orgId: String? = null,
         startDate: Timestamp? = null,
@@ -358,6 +367,7 @@ class OpenSearchClient {
         )
     }
 
+    @NewSpan
     fun <T : Any> onAccountUtilizationSearch(
         request: LedgerSummaryRequest,
         classType: Class<T>
@@ -416,6 +426,7 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun listCustomerOutstandingOfAllZone(
         index: String,
         classType: Class<CustomerOutstanding>,
@@ -440,9 +451,10 @@ class OpenSearchClient {
         return response
     }
 
+    @NewSpan
     fun listSupplierOutstanding(request: SupplierOutstandingRequest, index: String): SearchResponse<SupplierOutstandingDocument>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
-        val searchFilterFields: MutableList<String> = mutableListOf("businessName.keyword", "registrationNumber.keyword")
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
         val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)

@@ -22,7 +22,7 @@ data class SuspenseAccount(
     var narration: String?,
     var paymentMode: PayMode?,
     var transRefNumber: String?,
-    var refPaymentId: Long?,
+    var refPaymentId: String?,
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
     var isDeleted: Boolean,
     var cogoAccountNo: String?,
