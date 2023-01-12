@@ -239,7 +239,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?) {
-        logger().info("Starting to update supplier details")
+        logger().info("Starting to update supplier details of $id")
         configureOpenSearchForRabbitMqListener()
         try {
             var supplierOutstanding: SupplierOutstandingDocument? = null
