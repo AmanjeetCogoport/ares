@@ -7,12 +7,12 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVoucher, Long> {
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -57,7 +57,7 @@ interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVouche
         sortBy: String?
     ): List<ParentJournalVoucher>
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
         SELECT count(1)

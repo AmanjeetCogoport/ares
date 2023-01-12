@@ -28,7 +28,7 @@ data class PaymentMigrationEntity(
     var payMode: PayMode?,
     var narration: String? = null,
     var transRefNumber: String?,
-    var refPaymentId: Long?,
+    var refPaymentId: String?,
     var transactionDate: Timestamp? = null,
     var isPosted: Boolean,
     var isDeleted: Boolean,
