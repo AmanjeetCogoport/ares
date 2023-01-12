@@ -5,13 +5,13 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 
 interface AresDocumentRepository : CoroutineCrudRepository<AresDocument, Long> {
 
-    @WithSpan
+    @NewSpan
     @Query(
         """
         SELECT 
