@@ -11,7 +11,6 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
-import javax.transaction.Transactional
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -236,8 +235,7 @@ ORDER BY
 	
         """
     )
-    @Transactional(Transactional.TxType.MANDATORY)
-    suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
+    suspend fun getPaymentDetailsInRec(documentNo: List<Long?>): List<PaymentInfoRec>
 
     @NewSpan
     @Query(
@@ -262,8 +260,7 @@ ORDER BY
           
         """
     )
-    @Transactional(Transactional.TxType.MANDATORY)
-    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInfoRec>
+    suspend fun getKnockOffDocument(documentNo: List<Long?>): List<PaymentInfoRec>
 
     @NewSpan
     @Query(
@@ -274,8 +271,7 @@ ORDER BY
               destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB')
         """
     )
-    @Transactional(Transactional.TxType.MANDATORY)
-    suspend fun getSettlementDetails(documentNo: Long?): List<Int>
+    suspend fun getSettlementDetails(documentNo: Long?): List<Long>
 
     @NewSpan
     @Query(
