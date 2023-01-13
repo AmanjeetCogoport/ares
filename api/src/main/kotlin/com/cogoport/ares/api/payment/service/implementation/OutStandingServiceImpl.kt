@@ -324,6 +324,8 @@ class OutStandingServiceImpl : OutStandingService {
             supplierOutstandingDocument.totalOutstandingInvoiceLedgerAmount = BigDecimal.ZERO
             supplierOutstandingDocument.onAccountPaymentInvoiceLedgerAmount = BigDecimal.ZERO
             supplierOutstandingDocument.openInvoiceLedgerAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.totalCreditNoteAmount = BigDecimal.ZERO
+            supplierOutstandingDocument.creditNoteCount = 0
             supplierOutstandingDocument.notDueAmount = BigDecimal.ZERO
             supplierOutstandingDocument.notDueCount = 0
             supplierOutstandingDocument.todayAmount = BigDecimal.ZERO
@@ -399,6 +401,8 @@ class OutStandingServiceImpl : OutStandingService {
                 totalOutstandingInvoiceLedgerAmount = supplier.totalOutstanding!!.invoiceLedAmount,
                 onAccountPaymentInvoiceLedgerAmount = supplier.onAccountPayment!!.invoiceLedAmount,
                 openInvoiceLedgerAmount = supplier.openInvoices!!.invoiceLedAmount,
+                totalCreditNoteAmount = supplier.totalCreditAmount,
+                creditNoteCount = supplier.creditNoteCount,
                 notDueAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
                 notDueCount = supplier.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
                 todayAmount = supplier.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
