@@ -1901,10 +1901,10 @@ open class SettlementServiceImpl : SettlementService {
         val listOfKnockOffData: MutableList<PaymentInfoRec> = mutableListOf()
 
         var listOfSourceId = settlementRepository.getSettlementDetails(accountUtilization.documentNo)
-
-        listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
-        listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))
-
+        if (listOfSourceId != null) {
+            listOfKnockOffData.addAll(settlementRepository.getPaymentDetailsInRec(listOfSourceId))
+            listOfKnockOffData.addAll(settlementRepository.getKnockOffDocument(listOfSourceId))
+        }
         return listOfKnockOffData
     }
 
