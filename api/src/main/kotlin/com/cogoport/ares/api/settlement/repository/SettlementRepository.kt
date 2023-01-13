@@ -271,7 +271,7 @@ ORDER BY
               destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB')
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?): List<Long>
+    suspend fun getSettlementDetails(documentNo: Long?): List<Long>?
 
     @NewSpan
     @Query(
