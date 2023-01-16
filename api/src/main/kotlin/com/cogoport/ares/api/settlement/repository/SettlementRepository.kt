@@ -235,7 +235,7 @@ ORDER BY
 	
         """
     )
-    suspend fun getPaymentDetailsInRec(documentNo: List<Int?>): List<PaymentInfoRec>
+    suspend fun getPaymentDetailsInRec(documentNo: List<Long?>): List<PaymentInfoRec>
 
     @NewSpan
     @Query(
@@ -260,7 +260,7 @@ ORDER BY
           
         """
     )
-    suspend fun getKnockOffDocument(documentNo: List<Int?>): List<PaymentInfoRec>
+    suspend fun getKnockOffDocument(documentNo: List<Long?>): List<PaymentInfoRec>
 
     @NewSpan
     @Query(
@@ -271,7 +271,7 @@ ORDER BY
               destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB')
         """
     )
-    suspend fun getSettlementDetails(documentNo: Long?): List<Int>
+    suspend fun getSettlementDetails(documentNo: Long?): List<Long?>?
 
     @NewSpan
     @Query(

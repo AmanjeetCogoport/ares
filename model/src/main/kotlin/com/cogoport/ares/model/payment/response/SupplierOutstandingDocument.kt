@@ -23,6 +23,8 @@ data class SupplierOutstandingDocument(
     var selfOrganizationId: String?,
     @JsonProperty("businessName")
     var businessName: String?,
+    @JsonProperty("selfOrganizationName")
+    var selfOrganizationName: String?,
     @JsonProperty("registrationNumber")
     var registrationNumber: String?,
     @JsonProperty("collectionPartyType")
@@ -77,6 +79,10 @@ data class SupplierOutstandingDocument(
     var oneEightyAmount: BigDecimal?,
     @JsonProperty("threeSixtyFiveAmount")
     var threeSixtyFiveAmount: BigDecimal?,
+    @JsonProperty("totalCreditNoteAmount")
+    var totalCreditNoteAmount: BigDecimal?,
+    @JsonProperty("creditNoteCount")
+    var creditNoteCount: Int?,
     @JsonProperty("threeSixtyFivePlusAmount")
     var threeSixtyFivePlusAmount: BigDecimal?,
     @JsonProperty("notDueCount")
