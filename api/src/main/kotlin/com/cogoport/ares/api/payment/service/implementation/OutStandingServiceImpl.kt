@@ -380,6 +380,7 @@ class OutStandingServiceImpl : OutStandingService {
                 organizationId = supplierOutstanding.organizationId,
                 selfOrganizationId = supplierOutstanding.selfOrganizationId,
                 businessName = supplierOutstanding.businessName,
+                selfOrganizationName = supplierOutstanding.selfOrganizationName,
                 registrationNumber = supplierOutstanding.registrationNumber,
                 serialId = supplierOutstanding.serialId,
                 organizationSerialId = supplierOutstanding.organizationSerialId,
