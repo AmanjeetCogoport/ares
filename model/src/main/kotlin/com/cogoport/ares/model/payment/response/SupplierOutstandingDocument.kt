@@ -23,6 +23,8 @@ data class SupplierOutstandingDocument(
     var selfOrganizationId: String?,
     @JsonProperty("businessName")
     var businessName: String?,
+    @JsonProperty("selfOrganizationName")
+    var selfOrganizationName: String?,
     @JsonProperty("registrationNumber")
     var registrationNumber: String?,
     @JsonProperty("collectionPartyType")
