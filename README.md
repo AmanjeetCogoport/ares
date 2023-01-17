@@ -26,7 +26,7 @@ We have to install jdk explicitly to use Intellj build and run functionality.
 
 
 
-2. Go to Downloads folder and run following command
+2. Go to Downloads folder and run following command.
    ```
    tar -xzf graalvm-ce-java17-darwin-amd64-22.0.0.2.tar.gz
    ```
