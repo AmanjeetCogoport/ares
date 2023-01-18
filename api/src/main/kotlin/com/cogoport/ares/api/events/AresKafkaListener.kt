@@ -4,16 +4,8 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
-import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
-import com.cogoport.ares.model.payment.AccountUtilizationEvent
-import com.cogoport.ares.model.payment.ReverseUtrRequest
-import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
-import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
-import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
-import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
-import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
