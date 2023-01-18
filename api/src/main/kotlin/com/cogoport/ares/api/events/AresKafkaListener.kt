@@ -24,11 +24,11 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
-    offsetReset = OffsetReset.EARLIEST, pollTimeout = "5000ms",
+    offsetReset = OffsetReset.EARLIEST, pollTimeout = "10000ms",
     offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 12, heartbeatInterval = "1000ms",
     properties = [
         Property(name = ConsumerConfig.MAX_POLL_RECORDS_CONFIG, value = "10"),
-        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "10000")
+        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "20000")
     ]
 )
 class AresKafkaListener {
