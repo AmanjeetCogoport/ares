@@ -17,5 +17,11 @@ class RabbitMqBootstrap : ChannelInitializer() {
         channel?.exchangeDeclare("ares", "topic", true)
         channel?.queueDeclare("update-supplier-details", true, false, false, null)
         channel?.queueBind("update-supplier-details", "ares", "supplier.outstanding", null)
+
+        channel?.queueDeclare("knockoff-payables", true, false, false, null)
+        channel?.queueBind("knockoff-payables", "ares", "knockoff.payables", null)
+
+        channel?.queueDeclare("reverse-utr", true, false, false, null)
+        channel?.queueBind("reverse-utr", "ares", "reverse.utr", null)
     }
 }

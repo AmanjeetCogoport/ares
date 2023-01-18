@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
@@ -56,6 +57,9 @@ open class KnockoffServiceImpl : KnockoffService {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Inject
     lateinit var invoicePayMappingRepo: InvoicePayMappingRepository
@@ -416,7 +420,7 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
-        aresKafkaEmitter.emitPostRestoreUtr(
+        kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,
                 paidAmount = amountPaid,
