@@ -15,7 +15,7 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
-    offsetReset = OffsetReset.LATEST, pollTimeout = "10000ms",
+    offsetReset = OffsetReset.EARLIEST, pollTimeout = "10000ms",
     offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 12, heartbeatInterval = "1000ms",
     properties = [
         Property(name = ConsumerConfig.MAX_POLL_RECORDS_CONFIG, value = "10"),

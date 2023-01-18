@@ -4,8 +4,16 @@ import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationServic
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.ReverseUtrRequest
+import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
@@ -16,11 +24,11 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
-    offsetReset = OffsetReset.LATEST, pollTimeout = "5000ms",
+    offsetReset = OffsetReset.EARLIEST, pollTimeout = "10000ms",
     offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 12, heartbeatInterval = "1000ms",
     properties = [
         Property(name = ConsumerConfig.MAX_POLL_RECORDS_CONFIG, value = "10"),
-        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "10000")
+        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "20000")
     ]
 )
 class AresKafkaListener {
@@ -40,29 +48,29 @@ class AresKafkaListener {
     private lateinit var outstandingService: OutStandingService
 
     /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
-//    @Topic("create-account-utilization")
-//    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
-//        accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
-//    }
-//
-//    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-//    @Topic("update-account-utilization")
-//    fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
-//        accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
-//    }
-//
-//    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-//    @Topic("update-account-status")
-//    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
-//        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
-//    }
-//
-//    /*For deleting the invoices*/
-//    @Topic("delete-account-utilization")
-//    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
-//        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
-//    }
-//
+    @Topic("create-account-utilization")
+    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
+        accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
+    }
+
+    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
+    @Topic("update-account-utilization")
+    fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
+        accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
+    }
+
+    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
+    @Topic("update-account-status")
+    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
+        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
+    }
+
+    /*For deleting the invoices*/
+    @Topic("delete-account-utilization")
+    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
+    }
+
     @Topic("receivables-dashboard-data")
     fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
@@ -78,21 +86,21 @@ class AresKafkaListener {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)
     }
 
-//    @Topic("reverse-utr")
-//    fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
-//        knockoffService.reverseUtr(reverseUtrRequest)
-//    }
-//
-//    @Topic("send-payment-details-for-autoKnockOff")
-//    fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
-//        settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
-//    }
-//
-//    @Topic("update-supplier-details")
-//    fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
-//        outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
-//    }
-//
-//    @Topic("unfreeze-credit-consumpation")
-//    suspend fun unfreezeCreditConsumption(request: Settlement) = run { settlementService.sendKnockOffDataToCreditConsumption(request) }
+    @Topic("reverse-utr")
+    fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
+        knockoffService.reverseUtr(reverseUtrRequest)
+    }
+
+    @Topic("send-payment-details-for-autoKnockOff")
+    fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
+        settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
+    }
+
+    @Topic("update-supplier-details")
+    fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
+        outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
+    }
+
+    @Topic("unfreeze-credit-consumpation")
+    suspend fun unfreezeCreditConsumption(request: Settlement) = run { settlementService.sendKnockOffDataToCreditConsumption(request) }
 }
