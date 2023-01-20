@@ -28,7 +28,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
     offsetStrategy = OffsetStrategy.SYNC_PER_RECORD, threads = 12, heartbeatInterval = "1000ms",
     properties = [
         Property(name = ConsumerConfig.MAX_POLL_RECORDS_CONFIG, value = "10"),
-        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "20000")
+        Property(name = ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, value = "20000"),
+        Property(name = ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, value = "org.apache.kafka.clients.consumer.RoundRobinAssignor")
     ]
 )
 class AresKafkaListener {
