@@ -1961,7 +1961,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
         try {
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
         } catch (e: Exception) {
             Sentry.captureException(e)
         }
@@ -1978,7 +1978,7 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
         val date: Date = accUtilizationRequest.transactionDate!!
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -1996,7 +1996,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
-        aresKafkaEmitter.emitOutstandingData(
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,

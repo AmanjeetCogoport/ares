@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -51,6 +52,9 @@ open class KnockoffServiceImpl : KnockoffService {
 
     @Inject
     lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
     lateinit var payableFileToPaymentMapper: PayableFileToPaymentMapper
@@ -167,7 +171,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
         try {
             emitPaymentStatus(accPayResponse)
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
         } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
@@ -433,7 +437,7 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
         try {
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
         } catch (e: Exception) {
             Sentry.captureException(e)
         }

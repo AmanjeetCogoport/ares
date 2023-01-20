@@ -80,6 +80,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
 
+    @Inject lateinit var aresMessagePublisher: AresMessagePublisher
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
@@ -432,7 +434,7 @@ class PaymentMigrationImpl : PaymentMigration {
      */
     private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,
@@ -443,7 +445,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         )
-        aresKafkaEmitter.emitOutstandingData(
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,

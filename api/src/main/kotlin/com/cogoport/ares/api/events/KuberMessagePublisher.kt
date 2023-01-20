@@ -9,4 +9,7 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 interface KuberMessagePublisher {
     @Binding("restore.utr")
     fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
+
+    @Binding("update.bill.archive")
+    fun emitUpdateBillsToArchive(billId: Long)
 }
