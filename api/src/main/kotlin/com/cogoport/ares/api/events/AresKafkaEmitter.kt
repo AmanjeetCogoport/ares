@@ -20,11 +20,11 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("receivables-dashboard-data")
-    fun emitDashboardData(openSearchEvent: OpenSearchEvent)
+    fun emitDashboardData(openSearchEvent: OpenSearchEvent) // moved to rabbit mq
 
     @NewSpan
     @Topic("receivables-outstanding-data")
-    fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
+    fun emitOutstandingData(openSearchEvent: OpenSearchEvent) // moved to rabbit MQ
 
     @NewSpan
     @Topic("payables-bill-status")
@@ -48,15 +48,15 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("update-bill-archive")
-    fun emitUpdateBillsToArchive(billId: Long)
+    fun emitUpdateBillsToArchive(billId: Long) // moved to rabbit mq
 
     @NewSpan
     @Topic("update-invoice-archive")
-    fun emitUpdateInvoicesToArchive(invoiceId: Long)
+    fun emitUpdateInvoicesToArchive(invoiceId: Long) // moved to rabbit mq
 
     @NewSpan
     @Topic("post-restore-utr")
-    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
+    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse) // already in rabbit
 
     @NewSpan
     @Topic("settlement-migration")
@@ -76,9 +76,9 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("unfreeze-credit-consumpation")
-    fun emitUnfreezeCreditConsumption(request: Settlement)
+    fun emitUnfreezeCreditConsumption(request: Settlement) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-supplier-details")
-    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
+    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) // moved to rabbitMQ
 }
