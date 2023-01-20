@@ -56,7 +56,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("post-restore-utr")
-    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
+    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse) // already in rab
 
     @NewSpan
     @Topic("settlement-migration")
@@ -76,9 +76,9 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("unfreeze-credit-consumpation")
-    fun emitUnfreezeCreditConsumption(request: Settlement)
+    fun emitUnfreezeCreditConsumption(request: Settlement) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-supplier-details")
-    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
+    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) // moved to rabbitMQ
 }

@@ -8,6 +8,7 @@ import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -129,6 +130,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
@@ -2042,7 +2046,7 @@ open class SettlementServiceImpl : SettlementService {
         val settleDoc = settlementRepository.save(settledDoc)
 
         try {
-            aresKafkaEmitter.emitUnfreezeCreditConsumption(settleDoc)
+            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }
