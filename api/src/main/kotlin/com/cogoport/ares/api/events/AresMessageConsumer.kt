@@ -48,12 +48,12 @@ class AresMessageConsumer {
         settlementService.sendKnockOffDataToCreditConsumption(request)
     }
 
-    @Queue("receivables-dashboard-data")
+    @Queue("receivables-dashboard-data", reQueue = true, prefetch = 1)
     fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
     }
 
-    @Queue("receivables-outstanding-data")
+    @Queue("receivables-outstanding-data", reQueue = true, prefetch = 1)
     fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
     }

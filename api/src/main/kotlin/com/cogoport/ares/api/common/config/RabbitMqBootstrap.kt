@@ -33,5 +33,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("receivables-outstanding-data", true, false, false, null)
         channel?.queueBind("receivables-outstanding-data", "ares", "receivables.outstanding.data", null)
+
+        channel?.queueDeclare("update-utilization-amount", true, false, false, null)
+        channel?.queueBind("update-utilization-amount", "ares", "update.utilization.amount", null)
     }
 }
