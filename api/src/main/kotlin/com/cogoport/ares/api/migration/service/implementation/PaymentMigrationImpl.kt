@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -78,6 +79,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var settlementRepository: SettlementRepository
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
+
+    @Inject lateinit var aresMessagePublisher: AresMessagePublisher
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -431,7 +434,7 @@ class PaymentMigrationImpl : PaymentMigration {
      */
     private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,
@@ -442,7 +445,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         )
-        aresKafkaEmitter.emitOutstandingData(
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,
