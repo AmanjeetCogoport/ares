@@ -21,8 +21,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
     ]
 )
 class AresKafkaListener {
-    @Inject
-    private lateinit var accountUtilService: AccountUtilizationService
+//    @Inject
+//    private lateinit var accountUtilService: AccountUtilizationService
 //
 //    @Inject
 //    private lateinit var openSearchService: OpenSearchService
@@ -55,10 +55,10 @@ class AresKafkaListener {
 //    }
 
     /*For deleting the invoices*/
-    @Topic("delete-account-utilization")
-    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
-        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
-    }
+//    @Topic("delete-account-utilization")
+//    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+//        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
+//    }
 
 //    @Topic("receivables-dashboard-data")
 //    fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
