@@ -59,15 +59,15 @@ class AresKafkaListener {
 //        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
 //    }
 //
-//    @Topic("receivables-dashboard-data")
-//    fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
-//        openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
-//    }
-//
-    @Topic("receivables-outstanding-data")
-    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
-        openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
+    @Topic("receivables-dashboard-data")
+    fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
+        openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
     }
+//
+//    @Topic("receivables-outstanding-data")
+//    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
+//        openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
+//    }
 //
 //    @Topic("knockoff-payables")
 //    fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
