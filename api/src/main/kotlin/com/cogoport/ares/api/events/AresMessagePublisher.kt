@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
+import com.cogoport.ares.api.migration.model.PaymentRecord
+import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import io.micronaut.rabbitmq.annotation.Binding
@@ -24,4 +27,13 @@ interface AresMessagePublisher {
 
     @Binding("update.utilization.amount")
     fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
+
+    @Binding("settlement.migration")
+    fun emitSettlementRecord(settlementRecord: SettlementRecord)
+
+    @Binding("sage.payment.migration")
+    fun emitPaymentMigration(paymentRecord: PaymentRecord)
+
+    @Binding("sage.jv.migration")
+    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 }

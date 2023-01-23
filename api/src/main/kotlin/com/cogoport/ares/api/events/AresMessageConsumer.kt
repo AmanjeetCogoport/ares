@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
+import com.cogoport.ares.api.migration.model.PaymentRecord
+import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
@@ -96,5 +99,20 @@ class AresMessageConsumer {
     @Queue("update-account-status", reQueue = true, prefetch = 1)
     fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
         accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
+    }
+
+    @Queue("settlement-migration", reQueue = true, prefetch = 1)
+    fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
+        paymentMigration.migrateSettlements(settlementRecord)
+    }
+
+    @Queue("sage-payment-migration", reQueue = true, prefetch = 1)
+    fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
+        paymentMigration.migratePayment(paymentRecord)
+    }
+
+    @Queue("sage-jv-migration", reQueue = true, prefetch = 1)
+    fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
+        paymentMigration.migarteJournalVoucher(journalVoucherRecord)
     }
 }

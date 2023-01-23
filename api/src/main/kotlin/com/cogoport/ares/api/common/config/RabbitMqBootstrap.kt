@@ -48,5 +48,14 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("update-account-status", true, false, false, null)
         channel?.queueBind("update-account-status", "ares", "update.account.status", null)
+
+        channel?.queueDeclare("settlement-migration", true, false, false, null)
+        channel?.queueBind("settlement-migration", "ares", "settlement.migration", null)
+
+        channel?.queueDeclare("sage-payment-migration", true, false, false, null)
+        channel?.queueBind("sage-payment-migration", "ares", "sage.payment.migration", null)
+
+        channel?.queueDeclare("sage-jv-migration", true, false, false, null)
+        channel?.queueBind("sage-jv-migration", "ares", "sage.jv.migration", null)
     }
 }

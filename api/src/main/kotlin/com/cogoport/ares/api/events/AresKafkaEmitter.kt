@@ -36,11 +36,11 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("sage-payment-migration")
-    fun emitPaymentMigration(paymentRecord: PaymentRecord)
+    fun emitPaymentMigration(paymentRecord: PaymentRecord) // moved to rabbit mq
 
     @NewSpan
     @Topic("sage-jv-migration")
-    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord) // moved to rabbit mq
 
     @NewSpan
     @Topic("update-bill-payment-status")
@@ -60,7 +60,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("settlement-migration")
-    fun emitSettlementRecord(settlementRecord: SettlementRecord)
+    fun emitSettlementRecord(settlementRecord: SettlementRecord) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-utilization-amount")
