@@ -36,5 +36,17 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("update-utilization-amount", true, false, false, null)
         channel?.queueBind("update-utilization-amount", "ares", "update.utilization.amount", null)
+
+        channel?.queueDeclare("create-account-utilization", true, false, false, null)
+        channel?.queueBind("create-account-utilization", "ares", "create.account.utilization", null)
+
+        channel?.queueDeclare("update-account-utilization", true, false, false, null)
+        channel?.queueBind("update-account-utilization", "ares", "update.account.utilization", null)
+
+        channel?.queueDeclare("delete-account-utilization", true, false, false, null)
+        channel?.queueBind("delete-account-utilization", "ares", "delete.account.utilization", null)
+
+        channel?.queueDeclare("update-account-status", true, false, false, null)
+        channel?.queueBind("update-account-status", "ares", "update.account.status", null)
     }
 }
