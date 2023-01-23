@@ -1,9 +1,6 @@
 package com.cogoport.ares.api.events
 
-import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
-import com.cogoport.ares.api.migration.model.PaymentRecord
-import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
@@ -27,18 +24,18 @@ class SageMigrationKafkaListener {
     @Inject
     lateinit var paymentMigration: PaymentMigration
 
-    @Topic("sage-payment-migration")
-    fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
-        paymentMigration.migratePayment(paymentRecord)
-    }
-    @Topic("sage-jv-migration")
-    fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
-        paymentMigration.migarteJournalVoucher(journalVoucherRecord)
-    }
-    @Topic("settlement-migration")
-    fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
-        paymentMigration.migrateSettlements(settlementRecord)
-    }
+//    @Topic("sage-payment-migration")
+//    fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
+//        paymentMigration.migratePayment(paymentRecord)
+//    }
+//    @Topic("sage-jv-migration")
+//    fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
+//        paymentMigration.migarteJournalVoucher(journalVoucherRecord)
+//    }
+//    @Topic("settlement-migration")
+//    fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
+//        paymentMigration.migrateSettlements(settlementRecord)
+//    }
 
     @Topic("update-utilization-amount")
     fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
