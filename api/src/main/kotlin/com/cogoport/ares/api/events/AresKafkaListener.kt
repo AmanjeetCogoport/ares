@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
-import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
+import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
@@ -20,11 +21,11 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
     ]
 )
 class AresKafkaListener {
-//    @Inject
-//    private lateinit var accountUtilService: AccountUtilizationService
-//
     @Inject
-    private lateinit var openSearchService: OpenSearchService
+    private lateinit var accountUtilService: AccountUtilizationService
+//
+//    @Inject
+//    private lateinit var openSearchService: OpenSearchService
 //
 //    @Inject
 //    private lateinit var knockoffService: KnockoffService
@@ -52,17 +53,17 @@ class AresKafkaListener {
 //    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
 //        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
 //    }
-//
-//    /*For deleting the invoices*/
-//    @Topic("delete-account-utilization")
-//    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
-//        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
-//    }
-//
-    @Topic("receivables-dashboard-data")
-    fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
-        openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
+
+    /*For deleting the invoices*/
+    @Topic("delete-account-utilization")
+    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
     }
+
+//    @Topic("receivables-dashboard-data")
+//    fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
+//        openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
+//    }
 //
 //    @Topic("receivables-outstanding-data")
 //    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
