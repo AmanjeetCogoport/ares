@@ -10,6 +10,7 @@ import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -164,6 +165,9 @@ open class SettlementServiceImpl : SettlementService {
     @Inject lateinit var railsClient: RailsClient
 
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Inject
+    lateinit var plutusMessagePublisher: PlutusMessagePublisher
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1885,7 +1889,7 @@ open class SettlementServiceImpl : SettlementService {
         if (accountUtilization.accType == AccountType.SINV)
             knockOffDocuments = knockOffListData(accountUtilization)
 
-        aresKafkaEmitter.emitInvoiceBalance(
+        plutusMessagePublisher.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,

@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -21,6 +22,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject
     lateinit var paymentMigration: PaymentMigration
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -103,7 +107,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         val paymentRecords = sageService.migratePaymentsByDate(startDate, endDate, updatedAt)
         for (paymentRecord in paymentRecords) {
             val payLocRecord = getPayLocRecord(paymentRecord)
-            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+            aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
     }
@@ -118,7 +122,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
         for (paymentRecord in paymentRecords) {
             val payLocRecord = getPayLocRecord(paymentRecord)
-            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+            aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
     }
@@ -127,7 +131,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate, endDate, updatedAt)
         for (invoiceDetail in invoiceDetails) {
             val payLocRecord = getPayLocRecordForInvoice(invoiceDetail)
-            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+            aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return invoiceDetails.size
     }
@@ -136,7 +140,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         val billDetails = sageService.getBillPayLocDetails(startDate, endDate, updatedAt)
         for (billDetail in billDetails) {
             val payLocRecord = getPayLocRecordForInvoice(billDetail)
-            aresKafkaEmitter.emitUtilizationUpdateRecord(payLocRecord)
+            aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return billDetails.size
     }

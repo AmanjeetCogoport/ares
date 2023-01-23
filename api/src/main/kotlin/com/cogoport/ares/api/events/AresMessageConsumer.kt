@@ -1,12 +1,19 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
+import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
+import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.ReverseUtrRequest
+import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
@@ -27,6 +34,12 @@ class AresMessageConsumer {
 
     @Inject
     private lateinit var openSearchService: OpenSearchService
+
+    @Inject
+    lateinit var paymentMigration: PaymentMigration
+
+    @Inject
+    lateinit var accountUtilService: AccountUtilizationService
 
     @Queue("update-supplier-details", reQueue = true, prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -56,5 +69,32 @@ class AresMessageConsumer {
     @Queue("receivables-outstanding-data", reQueue = true, prefetch = 1)
     fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
+    }
+
+    @Queue("update-utilization-amount", reQueue = true, prefetch = 1)
+    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
+        paymentMigration.updatePayment(payLocUpdateRequest)
+    }
+
+    /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
+    @Queue("create-account-utilization", reQueue = true, prefetch = 1)
+    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
+        accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
+    }
+
+    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
+    @Queue("update-account-utilization", reQueue = true, prefetch = 1)
+    fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
+        accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
+    }
+
+    @Queue("delete-account-utilization", reQueue = true, prefetch = 1)
+    fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
+        accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
+    }
+
+    @Queue("update-account-status")
+    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
+        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
     }
 }

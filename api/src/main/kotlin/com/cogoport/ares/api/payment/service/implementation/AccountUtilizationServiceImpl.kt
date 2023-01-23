@@ -139,7 +139,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 )
             )
             if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.SREIMB)) {
-                aresKafkaEmitter.emitInvoiceBalance(
+                plutusMessagePublisher.emitInvoiceBalance(
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(
                             invoiceId = accUtilRes.documentNo,

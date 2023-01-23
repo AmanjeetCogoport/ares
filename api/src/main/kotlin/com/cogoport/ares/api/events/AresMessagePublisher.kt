@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import io.micronaut.rabbitmq.annotation.Binding
@@ -20,4 +21,7 @@ interface AresMessagePublisher {
 
     @Binding("receivables.outstanding.data")
     fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
+
+    @Binding("update.utilization.amount")
+    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
 }

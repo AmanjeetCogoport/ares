@@ -32,7 +32,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("update-invoice-balance")
-    fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent)
+    fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent) // moved to rabbitMQ
 
     @NewSpan
     @Topic("sage-payment-migration")
@@ -64,7 +64,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("update-utilization-amount")
-    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
+    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-invoice-status-migration")
