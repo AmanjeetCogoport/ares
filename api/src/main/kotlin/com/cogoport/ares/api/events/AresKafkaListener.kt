@@ -1,9 +1,14 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
+import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
+import io.micronaut.configuration.kafka.annotation.Topic
 import io.micronaut.context.annotation.Property
+import jakarta.inject.Inject
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
@@ -16,8 +21,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
     ]
 )
 class AresKafkaListener {
-//    @Inject
-//    private lateinit var accountUtilService: AccountUtilizationService
+    @Inject
+    private lateinit var accountUtilService: AccountUtilizationService
 //
 //    @Inject
 //    private lateinit var openSearchService: OpenSearchService
@@ -44,10 +49,10 @@ class AresKafkaListener {
 //    }
 //
 //    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-//    @Topic("update-account-status")
-//    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
-//        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
-//    }
+    @Topic("update-account-status")
+    fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
+        accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
+    }
 
     /*For deleting the invoices*/
 //    @Topic("delete-account-utilization")
