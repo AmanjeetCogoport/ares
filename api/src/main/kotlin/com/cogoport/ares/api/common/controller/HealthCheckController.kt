@@ -5,10 +5,10 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 
-@Controller("/service-health-check")
+@Controller("/health-check")
 class HealthCheckController {
 
-    @Get("/healthcheck")
+    @Get
     fun healthCheck(): HttpResponse<Map<String, String>> {
         try {
             return HttpResponse
