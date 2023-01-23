@@ -432,7 +432,7 @@ class PaymentMigrationImpl : PaymentMigration {
      * to update Dashboard and Receivables outstanding documents on OpenSearch
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
+    private suspend fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
         aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(

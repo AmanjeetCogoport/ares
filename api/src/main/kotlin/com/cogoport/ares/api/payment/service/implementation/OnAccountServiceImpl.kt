@@ -323,7 +323,7 @@ open class OnAccountServiceImpl : OnAccountService {
      * to update Dashboard and Receivables outstanding documents on OpenSearch
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
+    private suspend fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
         aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
