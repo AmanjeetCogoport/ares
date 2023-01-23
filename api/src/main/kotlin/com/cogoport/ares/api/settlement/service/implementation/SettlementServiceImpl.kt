@@ -1971,7 +1971,7 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun emitDashboardAndOutstandingEvent(
+    private suspend fun emitDashboardAndOutstandingEvent(
         accUtilizationRequest: AccountUtilization
     ) {
         emitDashboardData(accUtilizationRequest)
@@ -1980,7 +1980,7 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
+    private suspend fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
         val date: Date = accUtilizationRequest.transactionDate!!
         aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(

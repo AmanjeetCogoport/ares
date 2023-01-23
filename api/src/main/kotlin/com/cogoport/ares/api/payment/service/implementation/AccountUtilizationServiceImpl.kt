@@ -395,7 +395,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(
+    private suspend fun emitDashboardAndOutstandingEvent(
         accUtilizationRequest: AccUtilizationRequest,
         proformaDate: Date? = null
     ) {
@@ -430,7 +430,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+    private suspend fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
         val date: Date = proformaDate ?: accUtilizationRequest.transactionDate!!
         aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(

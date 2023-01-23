@@ -93,7 +93,7 @@ class AresMessageConsumer {
         accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
     }
 
-    @Queue("update-account-status")
+    @Queue("update-account-status", reQueue = true, prefetch = 1)
     fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
         accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
     }

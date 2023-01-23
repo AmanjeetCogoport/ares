@@ -17,7 +17,7 @@ interface AresMessagePublisher {
     fun emitUnfreezeCreditConsumption(request: Settlement)
 
     @Binding("receivables.dashboard.data")
-    fun emitDashboardData(openSearchEvent: OpenSearchEvent)
+    suspend fun emitDashboardData(openSearchEvent: OpenSearchEvent)
 
     @Binding("receivables.outstanding.data")
     fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
