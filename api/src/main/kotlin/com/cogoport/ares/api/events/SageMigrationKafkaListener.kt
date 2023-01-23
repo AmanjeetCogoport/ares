@@ -1,14 +1,9 @@
 package com.cogoport.ares.api.events
 
-import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
-import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
-import io.micronaut.configuration.kafka.annotation.Topic
 import io.micronaut.context.annotation.Property
-import jakarta.inject.Inject
-import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
@@ -21,8 +16,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
     ]
 )
 class SageMigrationKafkaListener {
-    @Inject
-    lateinit var paymentMigration: PaymentMigration
+//    @Inject
+//    lateinit var paymentMigration: PaymentMigration
 
 //    @Topic("sage-payment-migration")
 //    fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
@@ -37,8 +32,8 @@ class SageMigrationKafkaListener {
 //        paymentMigration.migrateSettlements(settlementRecord)
 //    }
 
-    @Topic("update-utilization-amount")
-    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
-        paymentMigration.updatePayment(payLocUpdateRequest)
-    }
+//    @Topic("update-utilization-amount")
+//    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
+//        paymentMigration.updatePayment(payLocUpdateRequest)
+//    }
 }

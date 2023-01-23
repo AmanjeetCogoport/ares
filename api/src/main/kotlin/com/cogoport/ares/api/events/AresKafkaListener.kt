@@ -1,9 +1,13 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
+import io.micronaut.configuration.kafka.annotation.Topic
 import io.micronaut.context.annotation.Property
+import jakarta.inject.Inject
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerConfig
 
 @KafkaListener(
@@ -19,8 +23,8 @@ class AresKafkaListener {
 //    @Inject
 //    private lateinit var accountUtilService: AccountUtilizationService
 //
-//    @Inject
-//    private lateinit var openSearchService: OpenSearchService
+    @Inject
+    private lateinit var openSearchService: OpenSearchService
 //
 //    @Inject
 //    private lateinit var knockoffService: KnockoffService
@@ -60,10 +64,10 @@ class AresKafkaListener {
 //        openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
 //    }
 //
-//    @Topic("receivables-outstanding-data")
-//    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
-//        openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
-//    }
+    @Topic("receivables-outstanding-data")
+    fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
+        openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
+    }
 //
 //    @Topic("knockoff-payables")
 //    fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
