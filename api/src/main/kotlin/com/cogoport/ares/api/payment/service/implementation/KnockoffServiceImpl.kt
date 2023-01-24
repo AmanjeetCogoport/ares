@@ -190,9 +190,9 @@ open class KnockoffServiceImpl : KnockoffService {
      * Emits Kafka message on topic <b>payables-bill-status</b>
      * @param : accPayResponseList
      */
-    private fun emitPaymentStatus(accPayResponseList: AccountPayableFileResponse) {
+    private suspend fun emitPaymentStatus(accPayResponseList: AccountPayableFileResponse) {
         var event = com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent(accPayResponseList)
-        aresKafkaEmitter.emitBillPaymentStatus(event)
+        kuberMessagePublisher.emitBillPaymentStatus(event)
     }
 
     private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean, performedBy: String? = null, performedByType: String? = null): Payment {

@@ -28,7 +28,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("payables-bill-status")
-    fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
+    fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent) // moved to rabbit MQ
 
     @NewSpan
     @Topic("update-invoice-balance")
@@ -44,7 +44,7 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("update-bill-payment-status")
-    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
+    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest) // moved to rabbit MQ
 
     @NewSpan
     @Topic("update-bill-archive")
@@ -68,11 +68,11 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("update-invoice-status-migration")
-    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-bill-status-migration")
-    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus) // moved to rabbitMQ
 
     @NewSpan
     @Topic("unfreeze-credit-consumpation")
