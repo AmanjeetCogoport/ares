@@ -18,6 +18,7 @@ import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject
@@ -114,5 +115,9 @@ class AresMessageConsumer {
     @Queue("sage-jv-migration", prefetch = 1)
     fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
         paymentMigration.migarteJournalVoucher(journalVoucherRecord)
+    }
+    @Queue("send-payment-details-for-autoKnockOff", prefetch = 1)
+    fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
+        settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
 }

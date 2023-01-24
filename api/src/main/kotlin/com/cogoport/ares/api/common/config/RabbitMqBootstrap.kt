@@ -60,5 +60,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("sage-jv-migration", true, false, false, null)
         channel?.queueBind("sage-jv-migration", "ares", "sage.jv.migration", null)
+
+        channel?.queueDeclare("send-payment-details-for-autoKnockOff", true, false, false, null)
+        channel?.queueBind("send-payment-details-for-autoKnockOff", "ares", "send.payment.details.for.autoKnockOff", null)
     }
 }
