@@ -3,12 +3,14 @@ import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
+import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
 import io.micronaut.rabbitmq.annotation.RabbitProperty
 
 @RabbitClient("kuber")
 @RabbitProperty(name = "deliveryMode", value = "2")
+@MessageHeader(name = "x-retry-count", value = "0")
 interface KuberMessagePublisher {
     @Binding("restore.utr")
     fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)

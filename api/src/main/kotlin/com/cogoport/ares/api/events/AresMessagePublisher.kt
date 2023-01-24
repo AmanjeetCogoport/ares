@@ -6,12 +6,14 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
 import io.micronaut.rabbitmq.annotation.RabbitProperty
 
 @RabbitClient("ares")
 @RabbitProperty(name = "deliveryMode", value = "2")
+@MessageHeader(name = "x-retry-count", value = "0")
 interface AresMessagePublisher {
     @Binding("supplier.outstanding")
     fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)

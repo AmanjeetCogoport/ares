@@ -18,6 +18,7 @@ import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject
@@ -44,75 +45,79 @@ class AresMessageConsumer {
     @Inject
     lateinit var accountUtilService: AccountUtilizationService
 
-    @Queue("update-supplier-details", reQueue = true, prefetch = 1)
+    @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
         outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
     }
 
-    @Queue("knockoff-payables", reQueue = true, prefetch = 1)
+    @Queue("knockoff-payables", prefetch = 1)
     fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)
     }
 
-    @Queue("reverse-utr", reQueue = true, prefetch = 1)
+    @Queue("reverse-utr", prefetch = 1)
     fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
         knockoffService.reverseUtr(reverseUtrRequest)
     }
 
-    @Queue("unfreeze-credit-consumption", reQueue = true, prefetch = 1)
+    @Queue("unfreeze-credit-consumption", prefetch = 1)
     fun unfreezeCreditConsumption(request: Settlement) = runBlocking {
         settlementService.sendKnockOffDataToCreditConsumption(request)
     }
 
-    @Queue("receivables-dashboard-data", reQueue = true, prefetch = 1)
+    @Queue("receivables-dashboard-data", prefetch = 1)
     fun listenDashboardData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushDashboardData(openSearchEvent.openSearchRequest)
     }
 
-    @Queue("receivables-outstanding-data", reQueue = true, prefetch = 1)
+    @Queue("receivables-outstanding-data", prefetch = 1)
     fun listenOutstandingData(openSearchEvent: OpenSearchEvent) = runBlocking {
         openSearchService.pushOutstandingData(openSearchEvent.openSearchRequest)
     }
 
-    @Queue("update-utilization-amount", reQueue = true, prefetch = 1)
+    @Queue("update-utilization-amount", prefetch = 1)
     fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
         paymentMigration.updatePayment(payLocUpdateRequest)
     }
 
     /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
-    @Queue("create-account-utilization", reQueue = true, prefetch = 1)
+    @Queue("create-account-utilization", prefetch = 1)
     fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
         accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
     }
 
     /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-    @Queue("update-account-utilization", reQueue = true, prefetch = 1)
+    @Queue("update-account-utilization", prefetch = 1)
     fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
         accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
     }
 
-    @Queue("delete-account-utilization", reQueue = true, prefetch = 1)
+    @Queue("delete-account-utilization", prefetch = 1)
     fun listenDeleteAccountUtilization(deleteInvoiceEvent: DeleteInvoiceEvent) = runBlocking {
         accountUtilService.delete(deleteInvoiceEvent.deleteInvoiceRequest)
     }
 
-    @Queue("update-account-status", reQueue = true, prefetch = 1)
+    @Queue("update-account-status", prefetch = 1)
     fun listenUpdateInvoiceStatus(updateInvoiceStatusEvent: UpdateInvoiceStatusEvent) = runBlocking {
         accountUtilService.updateStatus(updateInvoiceStatusEvent.updateInvoiceStatusRequest)
     }
 
-    @Queue("settlement-migration", reQueue = true, prefetch = 1)
+    @Queue("settlement-migration", prefetch = 1)
     fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
         paymentMigration.migrateSettlements(settlementRecord)
     }
 
-    @Queue("sage-payment-migration", reQueue = true, prefetch = 1)
+    @Queue("sage-payment-migration", prefetch = 1)
     fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
         paymentMigration.migratePayment(paymentRecord)
     }
 
-    @Queue("sage-jv-migration", reQueue = true, prefetch = 1)
+    @Queue("sage-jv-migration", prefetch = 1)
     fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
         paymentMigration.migarteJournalVoucher(journalVoucherRecord)
+    }
+    @Queue("send-payment-details-for-autoKnockOff", prefetch = 1)
+    fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
+        settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
 }

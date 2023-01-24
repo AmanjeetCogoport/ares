@@ -16,6 +16,9 @@ class RabbitMqBootstrap : ChannelInitializer() {
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 
+        channel?.queueDeclare("ares-error-queue", true, false, false, null)
+        channel?.queueBind("ares-error-queue", "error-exchange", "ares.error", null)
+
         channel?.queueDeclare("update-supplier-details", true, false, false, null)
         channel?.queueBind("update-supplier-details", "ares", "supplier.outstanding", null)
 
@@ -57,5 +60,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("sage-jv-migration", true, false, false, null)
         channel?.queueBind("sage-jv-migration", "ares", "sage.jv.migration", null)
+
+        channel?.queueDeclare("send-payment-details-for-autoKnockOff", true, false, false, null)
+        channel?.queueBind("send-payment-details-for-autoKnockOff", "ares", "send.payment.details.for.autoKnockOff", null)
     }
 }
