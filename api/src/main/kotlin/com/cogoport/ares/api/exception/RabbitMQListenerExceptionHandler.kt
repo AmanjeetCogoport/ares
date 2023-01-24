@@ -7,11 +7,10 @@ import io.micronaut.rabbitmq.exception.RabbitListenerException
 import io.micronaut.rabbitmq.exception.RabbitListenerExceptionHandler
 import jakarta.inject.Singleton
 
-
 @Replaces(DefaultRabbitListenerExceptionHandler::class)
 @Singleton
-class RabbitMQListenerExceptionHandler: RabbitListenerExceptionHandler {
-     override fun handle(exception: RabbitListenerException) {
+class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
+    override fun handle(exception: RabbitListenerException) {
         val envelope = exception.messageState?.get()?.envelope
         // Give logic for error exchanges here right now returning from here only
         if (envelope?.exchange == "error-exchange") {
