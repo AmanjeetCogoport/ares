@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
@@ -168,6 +169,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var plutusMessagePublisher: PlutusMessagePublisher
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1947,7 +1951,7 @@ open class SettlementServiceImpl : SettlementService {
         } else {
             settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         }
-        aresKafkaEmitter.emitUpdateBillPaymentStatus(
+        kuberMessagePublisher.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
                 paymentStatus = status,
