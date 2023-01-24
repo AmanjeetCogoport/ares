@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
-import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import io.micronaut.configuration.kafka.annotation.KafkaListener
 import io.micronaut.configuration.kafka.annotation.OffsetReset
 import io.micronaut.configuration.kafka.annotation.OffsetStrategy
@@ -37,16 +37,16 @@ class AresKafkaListener {
 //    private lateinit var outstandingService: OutStandingService
 //
 //    /*For Saving  both Account Payables and Account Receivables bills/invoices amount */
-    @Topic("create-account-utilization")
-    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
-        accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
-    }
+//    @Topic("create-account-utilization")
+//    fun listenCreateAccountUtilization(accountUtilizationEvent: AccountUtilizationEvent) = runBlocking {
+//        accountUtilService.add(accountUtilizationEvent.accUtilizationRequest)
+//    }
 //
 //    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
-//    @Topic("update-account-utilization")
-//    fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
-//        accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
-//    }
+    @Topic("update-account-utilization")
+    fun listenUpdateAccountUtilization(updateInvoiceEvent: UpdateInvoiceEvent) = runBlocking {
+        accountUtilService.update(updateInvoiceEvent.updateInvoiceRequest)
+    }
 //
 //    /*For updating  both Account Payables and Account Receivables bills/invoices amount */
 //    @Topic("update-account-status")
