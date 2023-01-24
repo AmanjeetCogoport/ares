@@ -49,12 +49,12 @@ class AresMessageConsumer {
         outstandingService.updateSupplierDetails(request.orgId.toString(), false, null)
     }
 
-    @Queue("knockoff-payables",  prefetch = 1)
+    @Queue("knockoff-payables", prefetch = 1)
     fun knockoffPayables(knockOffUtilizationEvent: KnockOffUtilizationEvent) = runBlocking {
         knockoffService.uploadBillPayment(knockOffUtilizationEvent.knockOffUtilizationRequest)
     }
 
-    @Queue("reverse-utr",  prefetch = 1)
+    @Queue("reverse-utr", prefetch = 1)
     fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) = runBlocking {
         knockoffService.reverseUtr(reverseUtrRequest)
     }
