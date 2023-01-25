@@ -13,17 +13,17 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 @MessageHeader(name = "x-retry-count", value = "0")
 interface KuberMessagePublisher {
     @Binding("restore.utr")
-    fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
+    suspend fun emitPostRestoreUtr(restoreUtrResponse: RestoreUtrResponse)
 
     @Binding("update.bill.archive")
-    fun emitUpdateBillsToArchive(billId: Long)
+    suspend fun emitUpdateBillsToArchive(billId: Long)
 
     @Binding("payables.bill.status")
     suspend fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
 
     @Binding("update.bill.payment.status")
-    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
+    suspend fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
 
     @Binding("update.bill.status.migration")
-    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    suspend fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
 }
