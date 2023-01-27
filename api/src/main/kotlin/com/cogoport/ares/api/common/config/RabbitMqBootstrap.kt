@@ -16,6 +16,9 @@ class RabbitMqBootstrap : ChannelInitializer() {
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 
+        channel?.queueDeclare("ares-error-queue", true, false, false, null)
+        channel?.queueBind("ares-error-queue", "error-exchange", "ares.error", null)
+
         channel?.queueDeclare("update-supplier-details", true, false, false, null)
         channel?.queueBind("update-supplier-details", "ares", "supplier.outstanding", null)
 
@@ -33,5 +36,32 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("receivables-outstanding-data", true, false, false, null)
         channel?.queueBind("receivables-outstanding-data", "ares", "receivables.outstanding.data", null)
+
+        channel?.queueDeclare("update-utilization-amount", true, false, false, null)
+        channel?.queueBind("update-utilization-amount", "ares", "update.utilization.amount", null)
+
+        channel?.queueDeclare("create-account-utilization", true, false, false, null)
+        channel?.queueBind("create-account-utilization", "ares", "create.account.utilization", null)
+
+        channel?.queueDeclare("update-account-utilization", true, false, false, null)
+        channel?.queueBind("update-account-utilization", "ares", "update.account.utilization", null)
+
+        channel?.queueDeclare("delete-account-utilization", true, false, false, null)
+        channel?.queueBind("delete-account-utilization", "ares", "delete.account.utilization", null)
+
+        channel?.queueDeclare("update-account-status", true, false, false, null)
+        channel?.queueBind("update-account-status", "ares", "update.account.status", null)
+
+        channel?.queueDeclare("settlement-migration", true, false, false, null)
+        channel?.queueBind("settlement-migration", "ares", "settlement.migration", null)
+
+        channel?.queueDeclare("sage-payment-migration", true, false, false, null)
+        channel?.queueBind("sage-payment-migration", "ares", "sage.payment.migration", null)
+
+        channel?.queueDeclare("sage-jv-migration", true, false, false, null)
+        channel?.queueBind("sage-jv-migration", "ares", "sage.jv.migration", null)
+
+        channel?.queueDeclare("send-payment-details-for-autoKnockOff", true, false, false, null)
+        channel?.queueBind("send-payment-details-for-autoKnockOff", "ares", "send.payment.details.for.autoKnockOff", null)
     }
 }

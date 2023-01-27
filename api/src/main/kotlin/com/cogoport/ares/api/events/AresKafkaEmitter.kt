@@ -28,23 +28,23 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("payables-bill-status")
-    fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent)
+    fun emitBillPaymentStatus(payableProduceEvent: PayableKnockOffProduceEvent) // moved to rabbit MQ
 
     @NewSpan
     @Topic("update-invoice-balance")
-    fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent)
+    fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent) // moved to rabbitMQ
 
     @NewSpan
     @Topic("sage-payment-migration")
-    fun emitPaymentMigration(paymentRecord: PaymentRecord)
+    fun emitPaymentMigration(paymentRecord: PaymentRecord) // moved to rabbit mq
 
     @NewSpan
     @Topic("sage-jv-migration")
-    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord) // moved to rabbit mq
 
     @NewSpan
     @Topic("update-bill-payment-status")
-    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest)
+    fun emitUpdateBillPaymentStatus(updatePaymentStatusRequest: UpdatePaymentStatusRequest) // moved to rabbit MQ
 
     @NewSpan
     @Topic("update-bill-archive")
@@ -60,19 +60,19 @@ interface AresKafkaEmitter {
 
     @NewSpan
     @Topic("settlement-migration")
-    fun emitSettlementRecord(settlementRecord: SettlementRecord)
+    fun emitSettlementRecord(settlementRecord: SettlementRecord) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-utilization-amount")
-    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
+    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-invoice-status-migration")
-    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus) // moved to rabbitMQ
 
     @NewSpan
     @Topic("update-bill-status-migration")
-    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus) // moved to rabbitMQ
 
     @NewSpan
     @Topic("unfreeze-credit-consumpation")

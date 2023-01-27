@@ -26,6 +26,10 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 class SageMigrationKafkaListener {
     @Inject
     lateinit var paymentMigration: PaymentMigration
+    @Topic("update-utilization-amount")
+    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
+        paymentMigration.updatePayment(payLocUpdateRequest)
+    }
 
     @Topic("sage-payment-migration")
     fun migrateSagePayments(paymentRecord: PaymentRecord) = runBlocking {
@@ -38,10 +42,5 @@ class SageMigrationKafkaListener {
     @Topic("settlement-migration")
     fun migrateSettlements(settlementRecord: SettlementRecord) = runBlocking {
         paymentMigration.migrateSettlements(settlementRecord)
-    }
-
-    @Topic("update-utilization-amount")
-    fun updateUtilizationAmount(payLocUpdateRequest: PayLocUpdateRequest) = runBlocking {
-        paymentMigration.updatePayment(payLocUpdateRequest)
     }
 }
