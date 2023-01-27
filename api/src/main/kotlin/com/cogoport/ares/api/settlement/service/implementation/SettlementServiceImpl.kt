@@ -8,7 +8,10 @@ import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -131,6 +134,9 @@ open class SettlementServiceImpl : SettlementService {
     lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
     lateinit var settlementServiceHelper: SettlementServiceHelper
 
     @Inject
@@ -160,6 +166,12 @@ open class SettlementServiceImpl : SettlementService {
     @Inject lateinit var railsClient: RailsClient
 
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Inject
+    lateinit var plutusMessagePublisher: PlutusMessagePublisher
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1881,7 +1893,7 @@ open class SettlementServiceImpl : SettlementService {
         if (accountUtilization.accType == AccountType.SINV)
             knockOffDocuments = knockOffListData(accountUtilization)
 
-        aresKafkaEmitter.emitInvoiceBalance(
+        plutusMessagePublisher.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
@@ -1939,7 +1951,7 @@ open class SettlementServiceImpl : SettlementService {
         } else {
             settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
         }
-        aresKafkaEmitter.emitUpdateBillPaymentStatus(
+        kuberMessagePublisher.emitUpdateBillPaymentStatus(
             UpdatePaymentStatusRequest(
                 billId = accountUtilization.documentNo,
                 paymentStatus = status,
@@ -1957,13 +1969,13 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
         try {
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
         } catch (e: Exception) {
             Sentry.captureException(e)
         }
     }
 
-    private fun emitDashboardAndOutstandingEvent(
+    private suspend fun emitDashboardAndOutstandingEvent(
         accUtilizationRequest: AccountUtilization
     ) {
         emitDashboardData(accUtilizationRequest)
@@ -1972,9 +1984,9 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    private fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
+    private suspend fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
         val date: Date = accUtilizationRequest.transactionDate!!
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -1991,8 +2003,8 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
-        aresKafkaEmitter.emitOutstandingData(
+    private suspend fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -2042,7 +2054,7 @@ open class SettlementServiceImpl : SettlementService {
         val settleDoc = settlementRepository.save(settledDoc)
 
         try {
-            aresKafkaEmitter.emitUnfreezeCreditConsumption(settleDoc)
+            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
         }

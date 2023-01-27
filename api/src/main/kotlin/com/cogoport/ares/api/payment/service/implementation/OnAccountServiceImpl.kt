@@ -7,6 +7,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -133,6 +134,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var orgStatsConverter: OrgStatsMapper
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
     lateinit var auditService: AuditService
@@ -285,7 +289,7 @@ open class OnAccountServiceImpl : OnAccountService {
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -319,9 +323,9 @@ open class OnAccountServiceImpl : OnAccountService {
      * to update Dashboard and Receivables outstanding documents on OpenSearch
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
+    private suspend fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -332,7 +336,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
             )
         )
-        aresKafkaEmitter.emitOutstandingData(
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,

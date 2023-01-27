@@ -3,7 +3,10 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -51,6 +54,15 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Inject
+    lateinit var plutusMessagePublisher: PlutusMessagePublisher
 
     @Inject
     lateinit var accountUtilizationConverter: AccountUtilizationMapper
@@ -127,7 +139,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 )
             )
             if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.SREIMB)) {
-                aresKafkaEmitter.emitInvoiceBalance(
+                plutusMessagePublisher.emitInvoiceBalance(
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(
                             invoiceId = accUtilRes.documentNo,
@@ -156,7 +168,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
+                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -195,7 +207,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 try {
                     emitDashboardAndOutstandingEvent(accUtilizationRequest)
                     if (accountUtilization.accMode == AccMode.AP) {
-                        aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
+                        aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
                     }
                 } catch (e: Exception) {
                     logger().error(e.stackTraceToString())
@@ -286,7 +298,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
-                aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
+                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -383,7 +395,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(
+    private suspend fun emitDashboardAndOutstandingEvent(
         accUtilizationRequest: AccUtilizationRequest,
         proformaDate: Date? = null
     ) {
@@ -400,8 +412,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitOutstandingData(accUtilizationRequest: AccUtilizationRequest) {
-        aresKafkaEmitter.emitOutstandingData(
+    private suspend fun emitOutstandingData(accUtilizationRequest: AccUtilizationRequest) {
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -418,9 +430,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
+    private suspend fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
         val date: Date = proformaDate ?: accUtilizationRequest.transactionDate!!
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = accUtilizationRequest.zoneCode,
@@ -446,12 +458,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         throw AresException(AresError.ERR_1205, "accountType")
     }
 
-    private fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
+    private suspend fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
         try {
             if (accUtilizationRequest.accType == AccountType.PINV) {
-                aresKafkaEmitter.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)
+                kuberMessagePublisher.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)
             } else if (accUtilizationRequest.accType == AccountType.SINV) {
-                aresKafkaEmitter.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
+                plutusMessagePublisher.emitUpdateInvoicesToArchive(accUtilizationRequest.documentNo)
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())

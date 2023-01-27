@@ -4,6 +4,8 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
@@ -52,10 +54,16 @@ open class KnockoffServiceImpl : KnockoffService {
     lateinit var paymentRepository: PaymentRepository
 
     @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
     lateinit var payableFileToPaymentMapper: PayableFileToPaymentMapper
 
     @Inject
     lateinit var aresKafkaEmitter: AresKafkaEmitter
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Inject
     lateinit var invoicePayMappingRepo: InvoicePayMappingRepository
@@ -163,7 +171,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
         try {
             emitPaymentStatus(accPayResponse)
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
         } catch (k: KafkaException) {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
@@ -182,9 +190,9 @@ open class KnockoffServiceImpl : KnockoffService {
      * Emits Kafka message on topic <b>payables-bill-status</b>
      * @param : accPayResponseList
      */
-    private fun emitPaymentStatus(accPayResponseList: AccountPayableFileResponse) {
+    private suspend fun emitPaymentStatus(accPayResponseList: AccountPayableFileResponse) {
         var event = com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent(accPayResponseList)
-        aresKafkaEmitter.emitBillPaymentStatus(event)
+        kuberMessagePublisher.emitBillPaymentStatus(event)
     }
 
     private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean, performedBy: String? = null, performedByType: String? = null): Payment {
@@ -416,7 +424,7 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
-        aresKafkaEmitter.emitPostRestoreUtr(
+        kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,
                 paidAmount = amountPaid,
@@ -429,7 +437,7 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
         try {
-            aresKafkaEmitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
         } catch (e: Exception) {
             Sentry.captureException(e)
         }
