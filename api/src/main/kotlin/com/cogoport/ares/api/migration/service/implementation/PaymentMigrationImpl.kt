@@ -3,7 +3,10 @@ package com.cogoport.ares.api.migration.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.events.AresKafkaEmitter
+import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
@@ -78,6 +81,12 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var settlementRepository: SettlementRepository
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
+
+    @Inject lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Inject lateinit var plutusMessagePublisher: PlutusMessagePublisher
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -429,9 +438,9 @@ class PaymentMigrationImpl : PaymentMigration {
      * to update Dashboard and Receivables outstanding documents on OpenSearch
      * @param accUtilizationRequest
      */
-    private fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
+    private suspend fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
-        aresKafkaEmitter.emitDashboardData(
+        aresMessagePublisher.emitDashboardData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,
@@ -442,7 +451,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
         )
-        aresKafkaEmitter.emitOutstandingData(
+        aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
                     zone = zoneCode,
@@ -645,7 +654,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 if (AccountType.SINV.name.equals(response.accType) ||
                     AccountType.SCN.equals(response.accType)
                 ) {
-                    aresKafkaEmitter.emitInvoiceStatus(
+                    plutusMessagePublisher.emitInvoiceStatus(
                         PaidUnpaidStatus(
                             documentValue = payLocUpdateRequest.documentValue,
                             documentNumber = response.documentNo!!,
@@ -662,7 +671,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     } else if (status.equals("PAID")) {
                         status = "FULL"
                     }
-                    aresKafkaEmitter.emitBIllStatus(
+                    kuberMessagePublisher.emitBIllStatus(
                         PaidUnpaidStatus(
                             documentValue = payLocUpdateRequest.documentValue,
                             documentNumber = response.documentNo!!,
