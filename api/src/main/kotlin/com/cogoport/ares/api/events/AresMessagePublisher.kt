@@ -16,26 +16,26 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 @MessageHeader(name = "x-retry-count", value = "0")
 interface AresMessagePublisher {
     @Binding("supplier.outstanding")
-    fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
+    suspend fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
 
     @Binding("unfreeze.credit.consumption")
-    fun emitUnfreezeCreditConsumption(request: Settlement)
+    suspend fun emitUnfreezeCreditConsumption(request: Settlement)
 
     @Binding("receivables.dashboard.data")
     suspend fun emitDashboardData(openSearchEvent: OpenSearchEvent)
 
     @Binding("receivables.outstanding.data")
-    fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
+    suspend fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
 
     @Binding("update.utilization.amount")
-    fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
+    suspend fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
 
     @Binding("settlement.migration")
-    fun emitSettlementRecord(settlementRecord: SettlementRecord)
+    suspend fun emitSettlementRecord(settlementRecord: SettlementRecord)
 
     @Binding("sage.payment.migration")
-    fun emitPaymentMigration(paymentRecord: PaymentRecord)
+    suspend fun emitPaymentMigration(paymentRecord: PaymentRecord)
 
     @Binding("sage.jv.migration")
-    fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+    suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 }

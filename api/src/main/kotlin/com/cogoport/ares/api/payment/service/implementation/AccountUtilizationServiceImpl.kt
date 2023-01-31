@@ -412,7 +412,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
      * Emit message to Kafka topic receivables-dashboard-data
      * @param accUtilizationRequest
      */
-    private fun emitOutstandingData(accUtilizationRequest: AccUtilizationRequest) {
+    private suspend fun emitOutstandingData(accUtilizationRequest: AccUtilizationRequest) {
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
@@ -458,7 +458,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         throw AresException(AresError.ERR_1205, "accountType")
     }
 
-    private fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
+    private suspend fun emitAccUtilizationToDemeter(accUtilizationRequest: AccUtilizationRequest) {
         try {
             if (accUtilizationRequest.accType == AccountType.PINV) {
                 kuberMessagePublisher.emitUpdateBillsToArchive(accUtilizationRequest.documentNo)

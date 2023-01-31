@@ -2003,7 +2003,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
+    private suspend fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(

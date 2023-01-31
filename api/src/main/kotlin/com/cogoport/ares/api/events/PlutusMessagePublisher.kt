@@ -11,11 +11,11 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 @MessageHeader(name = "x-retry-count", value = "0")
 interface PlutusMessagePublisher {
     @Binding("update.invoice.archive")
-    fun emitUpdateInvoicesToArchive(invoiceId: Long)
+    suspend fun emitUpdateInvoicesToArchive(invoiceId: Long)
 
     @Binding("update.invoice.balance")
-    fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent)
+    suspend fun emitInvoiceBalance(invoiceBalanceEvent: UpdateInvoiceBalanceEvent)
 
     @Binding("update.invoice.status.migration")
-    fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus)
+    suspend fun emitInvoiceStatus(paidUnpaidStatus: PaidUnpaidStatus)
 }
