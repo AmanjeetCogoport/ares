@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresException
@@ -34,9 +33,9 @@ import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
 import jakarta.inject.Inject
-import org.apache.kafka.common.KafkaException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
@@ -60,9 +59,6 @@ open class KnockoffServiceImpl : KnockoffService {
     lateinit var payableFileToPaymentMapper: PayableFileToPaymentMapper
 
     @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
-
-    @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Inject
@@ -77,7 +73,7 @@ open class KnockoffServiceImpl : KnockoffService {
     @Inject
     lateinit var auditService: AuditService
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [KafkaException::class])
+    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [RabbitClientException::class])
     override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
 
         /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
@@ -172,7 +168,7 @@ open class KnockoffServiceImpl : KnockoffService {
         try {
             emitPaymentStatus(accPayResponse)
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
-        } catch (k: KafkaException) {
+        } catch (k: RabbitClientException) {
             logger().error(k.stackTraceToString())
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
