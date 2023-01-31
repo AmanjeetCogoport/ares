@@ -59,7 +59,7 @@ cogoport:
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
   exchange_api:
-    url: https://2toku4bxdgi67haevec47ilap40rerwo.lambda-url.ap-south-1.on.aws/
+    url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://2toku4bxdgi67haevec47ilap40rerwo.lambda-url.ap-south-1.on.aws/`}
     version: v1
     auth_token: ${EXCHANGE_API_AUTH_TOKEN}
 
