@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.enums.SignSuffix
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -51,9 +50,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var accUtilRepository: AccountUtilizationRepository
-
-    @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
