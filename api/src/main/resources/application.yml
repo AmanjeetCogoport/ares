@@ -37,10 +37,6 @@ services:
   service: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
 
-kafka:
-  bootstrap:
-    servers: localhost:29092
-
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
