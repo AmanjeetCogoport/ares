@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -129,9 +128,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var plutusClient: PlutusClient
-
-    @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher

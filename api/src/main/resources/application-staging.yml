@@ -30,22 +30,6 @@ r2dbc:
           username: ${DB_USER}
           password: ${DB_PASSWORD}
 
-kafka:
-  health:
-    enabled: false
-  bootstrap:
-    servers: ${KAFKA_SERVERS}
-  security:
-    protocol: SASL_SSL
-  sasl:
-    mechanism: AWS_MSK_IAM
-    jaas:
-      config: software.amazon.msk.auth.iam.IAMLoginModule required;
-    client:
-      callback:
-        handler:
-          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
-
 opensearch:
   host: ${OPENSEARCH_HOST}
   user: ${OPENSEARCH_USER}

@@ -2,7 +2,6 @@ package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -69,8 +68,6 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var migrationLogService: MigrationLogService
 
     @Inject lateinit var cogoClient: AuthClient
-
-    @Inject lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
 
