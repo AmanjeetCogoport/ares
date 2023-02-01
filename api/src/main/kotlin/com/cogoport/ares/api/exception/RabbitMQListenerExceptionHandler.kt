@@ -5,6 +5,7 @@ import io.micronaut.context.annotation.Replaces
 import io.micronaut.rabbitmq.exception.DefaultRabbitListenerExceptionHandler
 import io.micronaut.rabbitmq.exception.RabbitListenerException
 import io.micronaut.rabbitmq.exception.RabbitListenerExceptionHandler
+import io.sentry.Sentry
 import jakarta.inject.Singleton
 
 @Replaces(DefaultRabbitListenerExceptionHandler::class)
@@ -49,5 +50,6 @@ class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
                 exception
             )
         }
+        Sentry.captureException(exception)
     }
 }
