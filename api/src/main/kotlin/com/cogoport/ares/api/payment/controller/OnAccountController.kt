@@ -17,6 +17,7 @@ import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -83,5 +84,13 @@ class OnAccountController {
     @Get("/on-account-payment{?request*}")
     suspend fun onAccountTotalAmount(request: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse> {
         return Response<MutableList<OnAccountTotalAmountResponse>>().ok(onAccountService.onAccountTotalAmountService(request))
+    }
+
+    @Post("/post-to-sage")
+    suspend fun postPaymentToSageUsingPaymentId(id: Long, performedBy: UUID): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            if (onAccountService.postPaymentToSage(id, performedBy)) "Success." else "Failed."
+        )
     }
 }

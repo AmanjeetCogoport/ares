@@ -11,30 +11,30 @@ import jakarta.inject.Singleton
 @Singleton
 class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
     override fun handle(exception: RabbitListenerException) {
-        val envelope = exception.messageState?.get()?.envelope
-        // Give logic for error exchanges here right now returning from here only
-        if (envelope?.exchange == "error-exchange") {
-            handleNormal(exception)
-        }
-        val data = exception.messageState?.get()?.body
-        val channel = exception.messageState?.get()?.channel
-        val properties = exception.messageState?.get()?.properties
-
-        val retryCount = properties?.headers?.get("x-retry-count").toString().toIntOrNull() ?: 0
-        if (retryCount < 3) {
-            properties?.headers?.set("x-retry-count", retryCount + 1)
-            channel?.basicPublish(envelope?.exchange, envelope?.routingKey, properties, data)
-        } else {
-            val messageEnvelope = hashMapOf(
-                "deliveryTag" to envelope?.deliveryTag,
-                "exchange" to envelope?.exchange,
-                "routingKey" to envelope?.routingKey,
-                "redeliver" to envelope?.isRedeliver
-            )
-            properties?.headers?.set("x-info", messageEnvelope)
-            channel?.basicPublish("error-exchange", "${envelope?.exchange}.error", properties, data)
-            handleNormal(exception)
-        }
+//        val envelope = exception.messageState?.get()?.envelope
+//        // Give logic for error exchanges here right now returning from here only
+//        if (envelope?.exchange == "error-exchange") {
+//            handleNormal(exception)
+//        }
+//        val data = exception.messageState?.get()?.body
+//        val channel = exception.messageState?.get()?.channel
+//        val properties = exception.messageState?.get()?.properties
+//
+//        val retryCount = properties?.headers?.get("x-retry-count").toString().toIntOrNull() ?: 0
+//        if (retryCount < 3) {
+//            properties?.headers?.set("x-retry-count", retryCount + 1)
+//            channel?.basicPublish(envelope?.exchange, envelope?.routingKey, properties, data)
+//        } else {
+//            val messageEnvelope = hashMapOf(
+//                "deliveryTag" to envelope?.deliveryTag,
+//                "exchange" to envelope?.exchange,
+//                "routingKey" to envelope?.routingKey,
+//                "redeliver" to envelope?.isRedeliver
+//            )
+//            properties?.headers?.set("x-info", messageEnvelope)
+//            channel?.basicPublish("error-exchange", "${envelope?.exchange}.error", properties, data)
+//            handleNormal(exception)
+//        }
     }
     private fun handleNormal(exception: RabbitListenerException) {
         val messageState = exception.messageState
