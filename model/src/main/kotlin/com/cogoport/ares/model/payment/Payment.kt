@@ -18,136 +18,136 @@ import javax.validation.constraints.Min
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Payment(
-        @JsonProperty("id")
+    @JsonProperty("id")
     var id: Long? = 0,
 
-        @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
+    @JsonProperty("entityType") @field:NotNull(message = "Entity Type is required")
     var entityType: Int? = 0,
 
-        @JsonProperty("fileId")
+    @JsonProperty("fileId")
     var fileId: Long? = null,
 
-        @JsonProperty("orgSerialId")
+    @JsonProperty("orgSerialId")
     var orgSerialId: Long? = null,
 
-        @JsonProperty("sageOrganizationId")
+    @JsonProperty("sageOrganizationId")
     var sageOrganizationId: String? = null,
 
     // Trader partner details id
-        @JsonProperty("customerId")
+    @JsonProperty("customerId")
     var organizationId: UUID?,
 
     // Organization id of customer/service provider
-        @JsonProperty("taggedOrganizationId")
+    @JsonProperty("taggedOrganizationId")
     var taggedOrganizationId: UUID?,
 
-        @JsonProperty("tradePartyMappingId")
+    @JsonProperty("tradePartyMappingId")
     var tradePartyMappingId: UUID?,
 
-        @JsonProperty("customerName")
+    @JsonProperty("customerName")
     var organizationName: String? = "",
 
-        @JsonProperty("accCode")
+    @JsonProperty("accCode")
     var accCode: Int? = 0,
 
-        @JsonProperty("accMode")
+    @JsonProperty("accMode")
     var accMode: AccMode? = AccMode.AR,
 
-        @JsonProperty("signFlag")
+    @JsonProperty("signFlag")
     var signFlag: Short? = 1,
 
-        @JsonProperty("currency") @field:NotNull(message = "Currency  is required")
+    @JsonProperty("currency") @field:NotNull(message = "Currency  is required")
     var currency: String? = "",
 
-        @field:NotNull(message = "Currency amount is required")
+    @field:NotNull(message = "Currency amount is required")
     @JsonProperty("amount")
     var amount: BigDecimal? = 0.toBigDecimal(),
 
-        @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger currency is required")
+    @JsonProperty("ledCurrency") @field:NotNull(message = "Ledger currency is required")
     var ledCurrency: String? = "INR",
 
-        @JsonProperty("ledAmount") @field:NotNull(message = "Ledger amount is required")
+    @JsonProperty("ledAmount") @field:NotNull(message = "Ledger amount is required")
     var ledAmount: BigDecimal? = 0.toBigDecimal(),
 
-        @JsonProperty("paymentMode")
+    @JsonProperty("paymentMode")
     @field:NotNull(message = "Payment mode is required")
     var payMode: PayMode? = null,
 
-        @JsonProperty("remarks")
+    @JsonProperty("remarks")
     var remarks: String? = null,
 
-        @JsonProperty("utr")
+    @JsonProperty("utr")
     var utr: String? = "",
 
-        @JsonProperty("refPaymentId")
+    @JsonProperty("refPaymentId")
     var refPaymentId: String? = null,
 
-        @JsonProperty("refAccountNo")
+    @JsonProperty("refAccountNo")
     var refAccountNo: String?,
 
-        @JsonProperty("transactionDate")
+    @JsonProperty("transactionDate")
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
 
-        @JsonProperty("isPosted")
+    @JsonProperty("isPosted")
     var isPosted: Boolean? = false,
 
-        @JsonProperty("isDeleted")
+    @JsonProperty("isDeleted")
     var isDeleted: Boolean? = false,
 
-        @JsonProperty("createdAt")
+    @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
 
-        @JsonProperty("createdBy")
+    @JsonProperty("createdBy")
     var createdBy: String? = "",
 
-        @JsonProperty("updatedBy")
+    @JsonProperty("updatedBy")
     var updatedBy: String? = "",
 
-        @JsonProperty("updatedAt")
+    @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
 
-        @JsonProperty("bankAccountNumber")
+    @JsonProperty("bankAccountNumber")
     var bankAccountNumber: String? = "",
 
-        @JsonProperty("zone")
+    @JsonProperty("zone")
     var zone: String? = "",
 
-        @JsonProperty("serviceType")
+    @JsonProperty("serviceType")
     var serviceType: ServiceType?,
 
-        @JsonProperty("paymentCode")
+    @JsonProperty("paymentCode")
     var paymentCode: PaymentCode? = PaymentCode.REC,
 
-        @JsonProperty("paymentDate")
+    @JsonProperty("paymentDate")
     var paymentDate: String? = "",
 
-        @JsonProperty("uploadedBy")
+    @JsonProperty("uploadedBy")
     var uploadedBy: String? = "",
 
-        @JsonProperty("bankName")
+    @JsonProperty("bankName")
     var bankName: String? = "",
 
-        @JsonProperty("exchangeRate")
+    @JsonProperty("exchangeRate")
     @Min(value = 1, message = "Minimum value for exchange rate is 1")
     var exchangeRate: BigDecimal? = BigDecimal.ONE,
 
-        @JsonProperty("receiptNumber")
+    @JsonProperty("receiptNumber")
     var paymentNum: Long?,
 
-        @JsonProperty("receiptParam")
+    @JsonProperty("receiptParam")
     var paymentNumValue: String?,
 
-        @JsonProperty("bankId")
+    @JsonProperty("bankId")
     var bankId: UUID?,
 
-        @JsonProperty("performedByUserType")
+    @JsonProperty("performedByUserType")
     val performedByUserType: String? = null,
 
-        @JsonProperty("isSuspense")
+    @JsonProperty("isSuspense")
     val isSuspense: Boolean? = false,
 
-        var paymentDocumentStatus: PaymentDocumentStatus? = null,
+    var paymentDocumentStatus: PaymentDocumentStatus? = null,
 
-        @JsonProperty("tradePartyDocument")
+    @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null
 )

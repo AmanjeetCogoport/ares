@@ -51,11 +51,11 @@ import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
-import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -1211,13 +1211,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
 
-            if (!paymentDetails.paymentNumValue.isNullOrEmpty()) {
-                paymentLineItemDetails.invoiceNumber = paymentDetails.paymentNumValue!!
-            }
+            paymentLineItemDetails.accType = if (paymentDetails.accMode == AccMode.AP) "SPINV" else "ZSINV"
 
             result = SageClient.postPaymentToSage(
                 PaymentRequest
                 (
+                    paymentDetails.paymentNumValue!!,
                     if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
                     paymentDetails.transRefNumber!!,
                     sageOrganization.sageOrganizationId!!,
@@ -1228,7 +1227,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     paymentDetails.entityCode.toString(),
                     (if (paymentDetails.accMode == AccMode.AP) SignSuffix.PAY.sign else SignSuffix.REC.sign).toInt(),
                     paymentDetails.amount,
-                    arrayListOf(paymentLineItemDetails)
+                    paymentLineItemDetails
                 )
             )
 
@@ -1304,9 +1303,8 @@ open class OnAccountServiceImpl : OnAccountService {
     private fun getPaymentLineItem(payment: com.cogoport.ares.api.payment.entity.Payment): PaymentLineItem {
         return PaymentLineItem(
             accMode = if (payment.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
-            accType = "",
+            accType = if (payment.accMode == AccMode.AP) "SPINV" else "ZSINV",
             invoiceNumber = "",
-            invoiceAccountType = if (payment.accMode == AccMode.AP) "SPINV" else "ZSINV",
             currency = payment.currency
         )
     }
