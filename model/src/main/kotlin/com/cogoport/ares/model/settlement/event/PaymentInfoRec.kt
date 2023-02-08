@@ -11,7 +11,7 @@ import java.sql.Timestamp
 @MappedEntity
 class PaymentInfoRec(
     var documentNumber: String? = null,
-    var settlementDate: Date?,
+    var settlementDate: String?,
     var sourceType: SettlementType?,
     var sourceId: Int?
 )

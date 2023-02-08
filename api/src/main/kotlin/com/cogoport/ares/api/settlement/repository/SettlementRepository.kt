@@ -217,7 +217,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
         SELECT
 	p.trans_ref_number as document_number,
-	s.settlement_date,
+	s.settlement_date::VARCHAR,
 	s.source_type,
 	s.source_id
 FROM
@@ -242,7 +242,7 @@ ORDER BY
         """
            SELECT
 	a.document_value as document_number,
-	s.settlement_date::TIMESTAMP,
+	s.settlement_date::VARCHAR,
 	s.source_type,
 	s.source_id
 FROM
