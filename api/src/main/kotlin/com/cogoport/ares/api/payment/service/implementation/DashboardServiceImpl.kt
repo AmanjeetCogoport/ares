@@ -119,21 +119,13 @@ class DashboardServiceImpl : DashboardService {
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        var data = OpenSearchClient().search(
+        openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
+
+        val data = OpenSearchClient().search(
             searchKey = searchKey,
             classType = OverallStatsResponse::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
-
-        if (data?.list.isNullOrEmpty()) {
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
-
-            data = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = OverallStatsResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
-        }
 
         val uniqueCurrencyList = data?.list?.map { it.dashboardCurrency }?.distinct()!!
         val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
