@@ -36,7 +36,7 @@ enum class ServiceType {
 }
 
 enum class ZoneCode {
-    NORTH, SOUTH, EAST, WEST
+    NORTH, SOUTH, EAST, WEST, VIETNAM
 }
 
 enum class AllCurrencyTypes {
