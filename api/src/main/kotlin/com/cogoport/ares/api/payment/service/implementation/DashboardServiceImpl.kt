@@ -123,14 +123,13 @@ class DashboardServiceImpl : DashboardService {
         statsZoneData.map {
             val avgExchangeRate = exchangeRate[it.dashboardCurrency]
 
-            if(avgExchangeRate != null){
+            if (avgExchangeRate != null) {
                 formattedData.totalOutstandingAmount = formattedData.totalOutstandingAmount.plus(it.totalOutstandingAmount?.times(avgExchangeRate)!!).setScale(4, RoundingMode.UP)
                 formattedData.openInvoicesAmount = formattedData.openInvoicesAmount.plus(it.openInvoicesAmount?.times(avgExchangeRate)!!).setScale(4, RoundingMode.UP)
                 formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount?.times(avgExchangeRate)!!).setScale(4, RoundingMode.UP)
                 formattedData.dashboardCurrency = request.dashboardCurrency
                 formattedData.openInvoicesCount = formattedData.openInvoicesCount.plus(it.openInvoicesCount!!)
             }
-
         }
         formattedData.organizationCount = accountUtilizationRepository.getOrganizationCountForOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds)
         return formattedData
@@ -216,10 +215,9 @@ class DashboardServiceImpl : DashboardService {
         val requestExchangeRate = collectionTrendResponse.map { it.dashboardCurrency }.distinct()
         val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
 
-
         collectionResponse.trend?.forEach {
             val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
-            if (avgTrendExchangeRate != null){
+            if (avgTrendExchangeRate != null) {
                 it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate)
                 it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
                 it.dashboardCurrency = request.dashboardCurrency
@@ -262,14 +260,14 @@ class DashboardServiceImpl : DashboardService {
             }
         }
 
-        val monthlyOutstandingData = MonthlyOutstanding (
-                list = monthlyTrendZoneData.map {
-                    OutstandingResponse(
-                            amount = it.amount,
-                            dashboardCurrency = it.dashboardCurrency!!,
-                            duration = it.duration
-                    )
-                }
+        val monthlyOutstandingData = MonthlyOutstanding(
+            list = monthlyTrendZoneData.map {
+                OutstandingResponse(
+                    amount = it.amount,
+                    dashboardCurrency = it.dashboardCurrency!!,
+                    duration = it.duration
+                )
+            }
         )
 
         val newData = getMonthlyOutStandingData(monthlyOutstandingData)
@@ -336,14 +334,14 @@ class DashboardServiceImpl : DashboardService {
 
         val quarterlyOutstandingResponse = quarterlyTrendZoneData.map {
             OutstandingResponse(
-                    amount = it.amount,
-                    duration = it.duration,
-                    dashboardCurrency = it.dashboardCurrency!!
+                amount = it.amount,
+                duration = it.duration,
+                dashboardCurrency = it.dashboardCurrency!!
             )
         }
 
         val quarterlyOutstanding = QuarterlyOutstanding(
-                list = quarterlyOutstandingResponse
+            list = quarterlyOutstandingResponse
         )
 
         val newData = getQuarterlyOutStandingData(quarterlyOutstanding)
@@ -476,7 +474,6 @@ class DashboardServiceImpl : DashboardService {
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
     }
-
 
     override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
         val serviceType: ServiceType? = request.serviceType
@@ -679,6 +676,6 @@ class DashboardServiceImpl : DashboardService {
                 trendData.add(CollectionTrendResponse(it, 0.toBigDecimal(), 0.toBigDecimal(), "INR"))
             }
         }
-        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, null,dashboardCurrency!!)
+        return CollectionResponse(totalAmount, totalCollected, trendData.sortedBy { Month.valueOf(it.duration!!.uppercase()) }, null, dashboardCurrency!!)
     }
 }
