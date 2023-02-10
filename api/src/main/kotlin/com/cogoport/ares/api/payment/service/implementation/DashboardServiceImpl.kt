@@ -224,7 +224,15 @@ class DashboardServiceImpl : DashboardService {
             }
         }
 
-        return collectionResponse
+        val formattedData = getCollectionTrendData(collectionResponse)
+
+        return CollectionResponse(
+            id = null,
+            totalReceivableAmount = collectionResponse.totalReceivableAmount?.setScale(4, RoundingMode.UP),
+            totalCollectedAmount = collectionResponse.totalCollectedAmount?.setScale(4, RoundingMode.UP),
+            trend = formattedData,
+            dashboardCurrency = request.dashboardCurrency
+        )
     }
 
     override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
@@ -276,6 +284,19 @@ class DashboardServiceImpl : DashboardService {
             list = newData,
             id = null
         )
+    }
+
+    private fun getCollectionTrendData(data: CollectionResponse?): List<CollectionTrendResponse>? {
+        val listOfCollectionTrend: List<CollectionTrendResponse>? = data?.trend?.groupBy { it.duration }?.values?.map { it ->
+            return@map CollectionTrendResponse(
+                receivableAmount = it.sumOf { it.receivableAmount }.setScale(4, RoundingMode.UP),
+                collectableAmount = it.sumOf { it.collectableAmount }.setScale(4, RoundingMode.UP),
+                duration = it.first().duration,
+                dashboardCurrency = it.first().dashboardCurrency,
+            )
+        }
+
+        return listOfCollectionTrend
     }
 
     private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): List<OutstandingResponse>? {
