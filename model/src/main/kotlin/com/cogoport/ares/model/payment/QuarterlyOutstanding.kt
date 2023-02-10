@@ -17,5 +17,5 @@ data class QuarterlyOutstanding(
     @JsonProperty("list")
     var list: List<OutstandingResponse>? = null,
     @JsonProperty("id")
-    var id: String
+    var id: String? = null
 )
