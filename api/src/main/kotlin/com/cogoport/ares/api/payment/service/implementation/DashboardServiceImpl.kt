@@ -227,11 +227,11 @@ class DashboardServiceImpl : DashboardService {
         val formattedData = getCollectionTrendData(collectionResponse)
 
         return CollectionResponse(
-                id = null,
-                totalReceivableAmount = collectionResponse.totalReceivableAmount?.setScale(4, RoundingMode.UP),
-                totalCollectedAmount = collectionResponse.totalCollectedAmount?.setScale(4, RoundingMode.UP),
-                trend = formattedData,
-                dashboardCurrency = request.dashboardCurrency
+            id = null,
+            totalReceivableAmount = collectionResponse.totalReceivableAmount?.setScale(4, RoundingMode.UP),
+            totalCollectedAmount = collectionResponse.totalCollectedAmount?.setScale(4, RoundingMode.UP),
+            trend = formattedData,
+            dashboardCurrency = request.dashboardCurrency
         )
     }
 
@@ -289,10 +289,10 @@ class DashboardServiceImpl : DashboardService {
     private fun getCollectionTrendData(data: CollectionResponse?): List<CollectionTrendResponse>? {
         val listOfCollectionTrend: List<CollectionTrendResponse>? = data?.trend?.groupBy { it.duration }?.values?.map { it ->
             return@map CollectionTrendResponse(
-                    receivableAmount = it.sumOf { it.receivableAmount }.setScale(4, RoundingMode.UP),
-                    collectableAmount = it.sumOf { it.collectableAmount }.setScale(4, RoundingMode.UP),
-                    duration = it.first().duration,
-                    dashboardCurrency = it.first().dashboardCurrency,
+                receivableAmount = it.sumOf { it.receivableAmount }.setScale(4, RoundingMode.UP),
+                collectableAmount = it.sumOf { it.collectableAmount }.setScale(4, RoundingMode.UP),
+                duration = it.first().duration,
+                dashboardCurrency = it.first().dashboardCurrency,
             )
         }
 
