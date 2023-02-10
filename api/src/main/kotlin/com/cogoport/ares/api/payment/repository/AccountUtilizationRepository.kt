@@ -1049,7 +1049,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             document_no,
             transaction_date::timestamp AS transaction_date, 
-            coalesce((case when amount_curr != 0 then amount_loc / amount_curr END),1) as exchange_rate,
+            coalesce((case when amount_curr != 0 then amount_loc / amount_curr END),1) as exchange_rate
         FROM account_utilizations
         WHERE acc_type::varchar in (:documentType) 
         AND document_no in (:documentNo)
