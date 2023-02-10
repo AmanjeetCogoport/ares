@@ -244,7 +244,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END) * X.days,0) as value,
+            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales END) * X.days,0) as value,
             X.dashboard_currency as dashboard_currency
             from X
         """
@@ -269,7 +269,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             group by dashboard_currency
         )
         select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END)* X.days,0) as value, dashboard_currency
+        coalesce((X.outstandings / X.total_sales) * X.days,0) as value, dashboard_currency
         from X
         """
     )
@@ -538,7 +538,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             transaction_date,
             au.sign_flag,
             au.acc_mode,
-            coalesce((case when amount_curr != 0 then amount_loc / amount_curr END),1) as exchange_rate,
+            amount_loc/amount_curr as exchange_rate,
             '' as status,
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
@@ -737,7 +737,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 CASE WHEN 
                     (p.exchange_rate is not null) 
                     THEN p.exchange_rate 
-                    ELSE ((case when amount_curr != 0 then amount_loc / amount_curr else 1 END)) 
+                    ELSE (amount_loc / amount_curr)
                     END,
                  1) AS exchange_rate
             FROM account_utilizations au
@@ -844,7 +844,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 CASE WHEN 
                     (p.exchange_rate is not null) 
                 THEN p.exchange_rate 
-                ELSE ((case when amount_curr != 0 then amount_loc / amount_curr else 1 END)) 
+                ELSE (amount_loc / amount_curr)
                 END
                 , 1) AS exchange_rate
             FROM account_utilizations au
@@ -1048,7 +1048,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT 
             document_no,
             transaction_date::timestamp AS transaction_date, 
-            coalesce((case when amount_curr != 0 then amount_loc / amount_curr END),1) as exchange_rate,
+            amount_loc/amount_curr as exchange_rate
         FROM account_utilizations
         WHERE acc_type::varchar in (:documentType) 
         AND document_no in (:documentNo)
