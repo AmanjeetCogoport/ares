@@ -46,7 +46,8 @@ enum class AresError(
     ERR_1519("ERR_1519", "No Jv is present", HttpStatus.BAD_REQUEST),
     ERR_1520("ERR_1520", "JV is already", HttpStatus.NOT_ACCEPTABLE),
     ERR_1521("ERR_1519", "Suspense Account is not available for Account Payable", HttpStatus.BAD_REQUEST),
-    ERR_1522("ERR_1520", "Cannot Post without a customer", HttpStatus.BAD_REQUEST);
+    ERR_1522("ERR_1520", "Cannot Post without a customer", HttpStatus.BAD_REQUEST),
+    ERR_1523("ERR_1523", "Unauthorised", HttpStatus.UNAUTHORIZED);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

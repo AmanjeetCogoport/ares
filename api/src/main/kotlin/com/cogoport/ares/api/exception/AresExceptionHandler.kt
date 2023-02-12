@@ -2,6 +2,7 @@ package com.cogoport.ares.api.exception
 
 import com.cogoport.ares.api.common.models.ErrorResponse
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.brahma.authentication.UnauthorizedException
 import io.micronaut.context.env.Environment
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -52,6 +53,13 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
                         HttpStatus.BAD_REQUEST
                     )
             }
+            is UnauthorizedException -> {
+                errorMessage = ErrorResponse(
+                    AresError.ERR_1523.code,
+                    exception.message,
+                    HttpStatus.UNAUTHORIZED
+                )
+            }
             else -> {
                 sendToSentry(exception, request)
                 errorMessage =
@@ -95,6 +103,8 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
             HttpResponse.serverError(errorMessage)
         else if (httpStatus?.equals(HttpStatus.NOT_FOUND) == true)
             HttpResponse.notFound(errorMessage)
+        else if (httpStatus?.equals(HttpStatus.UNAUTHORIZED) == true)
+            HttpResponse.unauthorized()
         else HttpResponse.serverError(errorMessage)
     }
 
