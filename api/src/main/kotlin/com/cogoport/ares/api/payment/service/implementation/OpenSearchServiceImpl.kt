@@ -218,7 +218,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, collectionId, formatCollectionTrend(collectionData, collectionId, quarter, serviceType, invoiceCurrency))
     }
 
-    private fun updateOverallStats(zone: String?, data: MutableList<OverallStats>, serviceType: ServiceType?, invoiceCurrency: String?) {
+    private suspend fun updateOverallStats(zone: String?, data: MutableList<OverallStats>, serviceType: ServiceType?, invoiceCurrency: String?) {
         val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
         val statsId = AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
 
@@ -429,8 +429,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
-        zoneKey = if ((zone.isNullOrBlank())) "ALL" else zone.uppercase()
-        serviceTypeKey = if (serviceType?.name.equals(null) || (serviceType == ServiceType.NA)) "ALL" else serviceType?.name
+        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
+        serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
         invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
