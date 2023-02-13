@@ -429,7 +429,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         var zoneKey: String? = null
         var serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
-        zoneKey = if ((zone.isNullOrBlank())) "ALL" else zone.uppercase()
+        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
         serviceTypeKey = if (serviceType?.name.equals(null) || (serviceType == ServiceType.NA)) "ALL" else serviceType?.name
         invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
