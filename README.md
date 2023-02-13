@@ -39,5 +39,5 @@ We have to install jdk explicitly to use Intellj build and run functionality.
 
 5. Then Run the application
 ### Voila!!
-The application must have been started on port http://localhost:8080 and kafka UI on http://localhost:9000
+The application must have been started on port http://localhost:8080
 
