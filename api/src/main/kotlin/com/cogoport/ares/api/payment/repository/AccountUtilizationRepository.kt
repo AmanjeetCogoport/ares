@@ -1288,10 +1288,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND 
+            (CASE 
+                  WHEN :deletedAt = false  THEN deleted_at is null 
+             END)
         """
     )
-    suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
+    suspend fun getDataByPaymentNum(paymentNum: Long?, deletedAt: Boolean): PaymentUtilizationResponse
+
+    @NewSpan
+    @Query(
+        """
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
+        """
+    )
+    suspend fun getDataByPaymentNumForTaggedBill(paymentNum: Long?): PaymentUtilizationResponse
 
     @NewSpan
     @Query(
@@ -1432,4 +1443,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getSupplierOrgIds(): List<UUID>
+
+    @NewSpan
+    @Query(
+        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
+           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
+            from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
+            and (:accMode is null or acc_mode=:accMode::account_mode """
+    )
+    suspend fun findRecordForTaggedBill(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 }

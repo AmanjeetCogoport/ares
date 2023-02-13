@@ -2349,7 +2349,7 @@ open class SettlementServiceImpl : SettlementService {
         return settle(checkRequest)
     }
 
-    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.model.settlement.Document> {
+    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.model.settlement.Document> {
         val tradePartyMappingIds = documentEntity
             .filter { document -> document!!.mappingId != null }
             .map { document -> document!!.mappingId.toString() }

@@ -13,7 +13,8 @@ data class RestoreUtrResponse(
     var paidAmount: BigDecimal,
     var paidTds: BigDecimal,
     var paymentStatus: KnockOffStatus,
-    var paymentUploadAuditId: Long,
+    var paymentUploadAuditId: List<Long>,
     var updatedBy: UUID?,
     var performedByType: String?,
+    var settlementIds: List<Long>
 )

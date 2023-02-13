@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
+import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
@@ -187,11 +188,14 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @NewSpan
     @Query(
         """
-          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null
+          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
+          (CASE 
+                  WHEN :deletedAt = false  THEN deleted_at is null 
+             END)
            
         """
     )
-    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
+    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long, deletedAt: Boolean): List<Long>
 
     @NewSpan
     @Query(
@@ -288,4 +292,28 @@ ORDER BY
         """
     )
     suspend fun getSettlementDateBySourceId(documentNo: Long?): Timestamp
+
+    @NewSpan
+    @Query(
+        """
+           SELECT
+                p.trans_ref_number ,source_id, source_type, destination_id, destination_type, s.currency, s.amount, s.settlement_date::TIMESTAMP
+           FROM
+                settlements s
+                 join payments p on s.source_id = p.payment_num WHERE
+                destination_id in (:documentNo)
+                AND destination_type in ('PINV','PREIMB')
+                AND source_type not in ('VTDS') and payment_code = 'PAY'
+                order by p.created_at desc 
+        """
+    )
+    suspend fun getPaymentsCorrespondingDocumentNo(documentNo: List<Long?>): List<TaggedInvoiceSettlementInfo?>
+
+    @NewSpan
+    @Query(
+        """
+          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId
+        """
+    )
+    suspend fun getSettlementByDestinationIdForTaggedBill(destinationId: Long, sourceId: Long): List<Long>
 }

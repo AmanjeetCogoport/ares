@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
@@ -30,4 +31,5 @@ interface OnAccountService {
     suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq)
     suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary
     suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>
+    suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest)
 }

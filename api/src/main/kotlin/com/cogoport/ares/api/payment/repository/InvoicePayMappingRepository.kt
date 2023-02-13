@@ -14,11 +14,14 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
     @NewSpan
     @Query(
         """
-             SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId  AND deleted_at is null
+             SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId  AND
+             (CASE 
+                  WHEN :deletedAt = false  THEN deleted_at is null 
+             END)
              
         """
     )
-    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse
+    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?, deletedAt: Boolean): PaymentMapResponse
 
     @NewSpan
     @Query(
@@ -35,4 +38,13 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
+
+    @NewSpan
+    @Query(
+        """
+             SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId
+             
+        """
+    )
+    suspend fun findByPaymentIdForTaggedBills(documentNo: Long, paymentId: Long?): PaymentMapResponse
 }

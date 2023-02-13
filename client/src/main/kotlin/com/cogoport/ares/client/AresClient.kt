@@ -23,6 +23,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
@@ -174,4 +175,7 @@ interface AresClient {
     suspend fun getInvoiceListForTradeParties(
         @Valid @Body request: InvoiceListRequestForTradeParty
     ): ResponseList<InvoiceListResponse?>
+
+    @Post("/payments/accounts/settle-tagged-invoice-payment")
+    suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
 }
