@@ -189,13 +189,11 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
           SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          (CASE 
-                  WHEN :deletedAt = false  THEN deleted_at is null 
-             END)
-           
+          deleted_at is null 
+              
         """
     )
-    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long, deletedAt: Boolean): List<Long>
+    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
 
     @NewSpan
     @Query(

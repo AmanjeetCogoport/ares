@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -47,14 +48,10 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount
-             FROM payments WHERE trans_ref_number = :transRefNumber and 
-             (CASE 
-                  WHEN :deletedAt = 'false'  THEN deleted_at is null 
-                  ELSE 
-             END)
+             FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null 2
         """
     )
-    suspend fun findByTransRef(transRefNumber: String?, deletedAt: Boolean): List<Payment>
+    suspend fun findByTransRef(transRefNumber: String?): List<Payment>
 
     @NewSpan
     @Query(
@@ -75,12 +72,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-            SELECT id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
-             tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
-             trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
-             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount
-             FROM payments WHERE trans_ref_number = :transRefNumber
+            UPDATE payments SET status = :status,updated_at = NOW() WHERE id = :paymentId
         """
     )
-    suspend fun findByTransRefOfTaggedInvoice(transRefNumber: String?): List<Payment>
+    suspend fun markPaymentStatusDraft(paymentId: Long?, status: DocumentStatus?)
 }

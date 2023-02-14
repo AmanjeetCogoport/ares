@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.model.PaymentMapResponse
+import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -15,13 +16,11 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
     @Query(
         """
              SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId  AND
-             (CASE 
-                  WHEN :deletedAt = false  THEN deleted_at is null 
-             END)
+             deleted_at is null 
              
         """
     )
-    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?, deletedAt: Boolean): PaymentMapResponse
+    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse
 
     @NewSpan
     @Query(
@@ -38,13 +37,11 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
-
     @NewSpan
     @Query(
         """
-             SELECT id,mapping_type,amount,led_amount from payment_invoice_mapping WHERE document_no = :documentNo AND account_mode = 'AP' AND payment_id = :paymentId
-             
+            UPDATE payment_invoice_mapping SET status = :status WHERE id = :id
         """
     )
-    suspend fun findByPaymentIdForTaggedBills(documentNo: Long, paymentId: Long?): PaymentMapResponse
+    suspend fun markPaymentMappingDraft(id: Long?, status: DocumentStatus)
 }

@@ -26,4 +26,7 @@ interface KuberMessagePublisher {
 
     @Binding("update.bill.status.migration")
     suspend fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+
+    @Binding("restore.payment")
+    suspend fun emitRestorePayment(restoreUtrResponse: RestoreUtrResponse)
 }
