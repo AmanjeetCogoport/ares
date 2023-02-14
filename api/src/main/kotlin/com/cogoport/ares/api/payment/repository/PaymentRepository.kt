@@ -48,7 +48,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount
-             FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null 2
+             FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null
         """
     )
     suspend fun findByTransRef(transRefNumber: String?): List<Payment>

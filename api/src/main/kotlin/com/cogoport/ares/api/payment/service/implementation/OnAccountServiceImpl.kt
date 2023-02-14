@@ -1155,7 +1155,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     )
                 )
 
-                val sourceDocument = accountUtilizationRepository.findRecordForTaggedBill(it?.sourceId!!.toLong(), it.sourceType.toString())
+                val sourceDocument = accountUtilizationRepository.findRecord(it?.sourceId!!.toLong(), it.sourceType.toString())
                 val listOfDocuments = mutableListOf<AccountUtilization>()
                 listOfDocuments.add(sourceDocument!!)
                 listOfDocuments.add(destinationDocument)
