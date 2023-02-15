@@ -32,7 +32,8 @@ enum class ServiceType {
     RAIL_DOMESTIC_FREIGHT,
     TRADE_ENGINE,
     SUBSCRIPTION,
-    SUBSCRIPTION_ADDON
+    SUBSCRIPTION_ADDON,
+    TRUCKING
 }
 
 enum class ZoneCode {
