@@ -2,6 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("application-conventions")
+    id("org.sonarqube") version "3.3"
 }
 
 group = "com.cogoport.ares.api"
@@ -109,6 +110,13 @@ dependencies {
 
 tasks.named("optimizedDockerBuildNative") {
     images = ["ghcr.io/cogoport/ares:latest"]
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "Ares")
+        property("sonar.projectName", "Ares")
+    }
 }
 
 tasks.named("jar") {
