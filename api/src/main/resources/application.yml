@@ -36,6 +36,10 @@ r2dbc:
 services:
   service: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
+  auth:
+    alternateRoute: false
+    isAuthDisabled: false
+    microServiceAuthToken: "thisIsRandomAsOfNow"
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
