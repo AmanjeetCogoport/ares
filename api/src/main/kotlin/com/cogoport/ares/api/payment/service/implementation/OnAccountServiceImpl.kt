@@ -56,6 +56,8 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
+import com.cogoport.ares.model.payment.enum.CogoBankAccount
+import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -1147,7 +1149,6 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
-            println(paymentDetails)
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 throw AresException(AresError.ERR_1523, "")
@@ -1159,15 +1160,19 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val organization = railsClient.getListOrganizationTradePartyDetails(paymentDetails.organizationId!!)
 
-            val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+            val sageOrganizationQuery = if (paymentDetails.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
             val resultFromSageOrganizationQuery = com.cogoport.brahma.sage.Client.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
-            val sageOrganizationFromSageId = recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId
+            val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
             val sageOrganization = authClient.getSageOrganization(
                 SageOrganizationRequest(
                     paymentDetails.orgSerialId.toString(),
-                    if (paymentDetails.accMode == AccMode.AP) "service_provider" else "importer_exporter"
+                    if (paymentDetails.accMode == AccMode.AP) {
+                        "service_provider"
+                    } else {
+                        "importer_exporter"
+                    }
                 )
             )
 
@@ -1209,27 +1214,41 @@ open class OnAccountServiceImpl : OnAccountService {
 
             lateinit var result: SageResponse
 
+            if (paymentDetails.cogoAccountNo.isNullOrEmpty()) {
+                logger().info("Bank Account not selected")
+                return false
+            }
+
+            val bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
+//            paymentLineItemDetails.accType = if (paymentDetails.accMode == AccMode.AP) "SPINV" else "ZSINV"
+//            paymentLineItemDetails.invoiceNumber = paymentDetails.paymentNumValue!!
 
-            paymentLineItemDetails.accType = if (paymentDetails.accMode == AccMode.AP) "SPINV" else "ZSINV"
+            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
 
-            result = SageClient.postPaymentToSage(
-                PaymentRequest
-                (
-                    paymentDetails.paymentNumValue!!,
-                    if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
-                    paymentDetails.transRefNumber!!,
-                    sageOrganization.sageOrganizationId!!,
-                    "IND",
-                    if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
-                    paymentDetails.transactionDate!!,
-                    paymentDetails.currency,
-                    paymentDetails.entityCode.toString(),
-                    (if (paymentDetails.accMode == AccMode.AP) SignSuffix.PAY.sign else SignSuffix.REC.sign).toInt(),
-                    paymentDetails.amount,
-                    paymentLineItemDetails
+            if ((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) {
+
+                result = SageClient.postPaymentToSage(
+                    PaymentRequest
+                    (
+                        if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
+                        paymentDetails.paymentNumValue!!,
+                        sageOrganization.sageOrganizationId!!,
+                        "IND",
+                        if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
+                        bankCodeDetails["bankCode"],
+                        paymentDetails.transactionDate!!,
+                        bankCodeDetails["currency"]!!,
+                        bankCodeDetails["entityCode"].toString(),
+                        (if (paymentDetails.accMode == AccMode.AP) SignSuffix.PAY.sign else SignSuffix.REC.sign).toInt(),
+                        paymentDetails.amount,
+                        paymentLineItemDetails
+                    )
                 )
-            )
+            } else {
+                logger().info("Bank Account details does not match")
+                return false
+            }
 
             val processedResponse = XML.toJSONObject(result.response)
             val status = getStatus(processedResponse)
@@ -1303,9 +1322,17 @@ open class OnAccountServiceImpl : OnAccountService {
     private fun getPaymentLineItem(payment: com.cogoport.ares.api.payment.entity.Payment): PaymentLineItem {
         return PaymentLineItem(
             accMode = if (payment.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
-            accType = if (payment.accMode == AccMode.AP) "SPINV" else "ZSINV",
-            invoiceNumber = "",
-            currency = payment.currency
+        )
+    }
+
+    private fun getPaymentGLCode(cogoAccountNo: String): HashMap<String, String> {
+        val bankCode = CogoBankAccount.values().find { it.cogoAccountNo == cogoAccountNo }?.name
+        val currency = PaymentSageGLCodes.valueOf(bankCode!!).currency
+        val entityCode = PaymentSageGLCodes.valueOf(bankCode).entityCode
+        return hashMapOf(
+            "bankCode" to bankCode,
+            "currency" to currency,
+            "entityCode" to entityCode.toString()
         )
     }
 

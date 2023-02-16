@@ -1,4 +1,4 @@
-CREATE TYPE public."payment_document_status" AS ENUM (
+CREATE TYPE PAYMENT_DOCUMENT_STATUS AS ENUM (
  'CREATED',
  'APPROVED',
  'POSTED',
@@ -7,7 +7,7 @@ CREATE TYPE public."payment_document_status" AS ENUM (
 CREATE CAST (varchar AS PAYMENT_DOCUMENT_STATUS) WITH INOUT AS IMPLICIT;
 
 ALTER TABLE payments
-ADD COLUMN payment_document_status payment_document_status;
+ADD COLUMN payment_document_status PAYMENT_DOCUMENT_STATUS NOT NULL DEFAULT 'CREATED';
 
 ALTER TABLE payments
 ADD COLUMN created_by UUID DEFAULT NULL;
