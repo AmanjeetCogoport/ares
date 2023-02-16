@@ -1217,8 +1217,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
-//            paymentLineItemDetails.accType = if (paymentDetails.accMode == AccMode.AP) "SPINV" else "ZSINV"
-//            paymentLineItemDetails.invoiceNumber = paymentDetails.paymentNumValue!!
 
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
 

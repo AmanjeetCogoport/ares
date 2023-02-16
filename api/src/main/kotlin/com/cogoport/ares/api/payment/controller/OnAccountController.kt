@@ -17,6 +17,7 @@ import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -87,10 +88,10 @@ class OnAccountController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postPaymentToSageUsingPaymentId(id: Long, performedBy: UUID): Response<String> {
+    suspend fun postPaymentToSage(id: String, performedBy: UUID): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (onAccountService.postPaymentToSage(id, performedBy)) "Success." else "Failed."
+            if (onAccountService.postPaymentToSage(Hashids.decode(id)[0], performedBy)) "Success." else "Failed."
         )
     }
 }
