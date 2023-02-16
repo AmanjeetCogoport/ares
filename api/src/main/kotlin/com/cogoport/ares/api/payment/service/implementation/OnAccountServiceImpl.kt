@@ -23,8 +23,10 @@ import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
+import com.cogoport.ares.api.payment.model.AutoKnockoffDocumentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
+import com.cogoport.ares.api.payment.model.ReversePaymentRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
@@ -33,7 +35,9 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.implementation.SettlementServiceHelper
 import com.cogoport.ares.api.settlement.service.implementation.SettlementServiceImpl
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
@@ -53,8 +57,6 @@ import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
-import com.cogoport.ares.model.payment.RestoreUtrResponse
-import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -127,6 +129,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var authClient: AuthClient
+
+    @Inject
+    lateinit var documentConverter: DocumentMapper
+
+    @Inject
+    lateinit var settlementServiceHelper: SettlementServiceHelper
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
@@ -656,7 +664,7 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
 
-        if (payment.isPosted != true) {
+        if (!payment.isPosted) {
             payment.isPosted = false
         }
 //        payment.isPosted = false
@@ -1138,137 +1146,104 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class])
     override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) {
-        val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it)[0] }
-        val sourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
-        sourceDocuments.sortedByDescending { it?.amount }
-        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(req.documentNo)[0], AccountType.PINV.name, AccMode.AP.name)
-        sourceDocuments.forEach {
-            if (destinationDocument!!.payCurr != destinationDocument.amountCurr) {
+        val destinationDocument = AutoKnockoffDocumentResponse()
+        val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
+        req.document.documentNo = Hashids.decode(req.document.documentNo)[0].toString()
+        val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it.documentNo)[0] }
+        val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
+        val sourceType = settledSourceDocuments[0]?.sourceType!!.name
+        val sourceAccountUtilization = accountUtilizationRepository.findRecords(
+            settledSourceDocuments.map { it?.sourceId!!.toLong() },
+            sourceType,
+            null
+        )
+        sourceAccountUtilization.forEach { source ->
+            val paymentInfo = settledSourceDocuments.find { it?.sourceId!!.toLong() == source?.documentNo }
+            val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo?.destinationId!!.toLong() }
+            extendedSourceDocument.add(
+                AutoKnockoffDocumentResponse(
+                    accountUtilization = source,
+                    paidTds = documentInfo?.paidTds,
+                    payableTds = documentInfo?.payableTds
+                )
+            )
+        }
+        extendedSourceDocument.sortedByDescending { it?.accountUtilization?.amountCurr!! - it.accountUtilization?.payCurr!! }
+        destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(
+            req.document.documentNo.toLong(),
+            AccountType.PINV.name,
+            AccMode.AP.name
+        )
+        destinationDocument.payableTds = req.document.payableTds
+        destinationDocument.paidTds = req.document.paidTds
+        var balanceSettlingAmount = destinationDocument.accountUtilization?.amountCurr!! - destinationDocument.accountUtilization?.payCurr!!
+        var sourceStartIndex = 0
+        val sourceEndIndex = extendedSourceDocument.size
+        while (balanceSettlingAmount.compareTo(BigDecimal.ZERO) > 0 && sourceStartIndex < sourceEndIndex) {
+            var settledList: List<CheckDocument>?
+            destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(
+                destinationDocument.accountUtilization?.documentNo!!,
+                AccountType.PINV.name,
+                null
+            )
+            val source = extendedSourceDocument[sourceStartIndex]
+            val balancePaymentUtilization = source!!.accountUtilization?.amountCurr!! - source.accountUtilization?.payCurr!!
+            if ((balancePaymentUtilization != BigDecimal.ZERO) && (balancePaymentUtilization >= balanceSettlingAmount)) {
+                settleTaggedDocument(destinationDocument, source, req.createdBy)
+            }
+            if ((balanceSettlingAmount > BigDecimal.ZERO) && (source.accountUtilization?.payCurr!! < source.accountUtilization!!.amountCurr)) {
+                settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
+            } else {
+                val payment =
+                    settledSourceDocuments.find { it?.sourceId!!.toLong() == source.accountUtilization?.documentNo }
                 reversePayment(
-                    ReverseUtrRequest(
-                        documentNo = it?.destinationId!!.toLong(),
-                        transactionRef = it.transRefNumber!!,
-                        updatedBy = req.createdBy,
-                        performedByType = null,
-                        paymentUploadAuditId = req.paymentUploadIds, // payments
-                        knockOffType = "TAGGED BILL SETTLEMENT"
+                    ReversePaymentRequest(
+                        payment?.destinationId!!.toLong(),
+                        payment.transRefNumber!!,
+                        req.createdBy,
+                        null
                     )
                 )
-
-                val sourceDocument = accountUtilizationRepository.findRecord(it?.sourceId!!.toLong(), it.sourceType.toString())
-                val listOfDocuments = mutableListOf<AccountUtilization>()
-                listOfDocuments.add(sourceDocument!!)
-                listOfDocuments.add(destinationDocument)
-                if (listOfDocuments.isNotEmpty()) {
-                    val documentEntity = listOfDocuments.map { it ->
-                        com.cogoport.ares.api.settlement.entity.Document(
-                            id = it.id!!,
-                            documentNo = it.documentNo,
-                            documentValue = it.documentValue!!,
-                            accountType = it.accType.name,
-                            documentAmount = it.amountCurr,
-                            organizationId = it.organizationId!!,
-                            documentType = it.accType.name,
-                            mappingId = it.tradePartyMappingId,
-                            dueDate = it.dueDate,
-                            taxableAmount = it.taxableAmount!!,
-                            afterTdsAmount = it.amountCurr,
-                            settledAmount = it.payCurr,
-                            balanceAmount = (it.amountCurr - it.payCurr),
-                            currency = it.currency,
-                            ledCurrency = it.ledCurrency,
-                            settledTds = 0.toBigDecimal(),
-                            exchangeRate = 1.toBigDecimal(),
-                            signFlag = it.signFlag,
-                            approved = false,
-                            accMode = it.accMode,
-                            documentDate = it.transactionDate!!,
-                            documentLedAmount = it.amountLoc,
-                            documentLedBalance = (it.amountLoc - it.payLoc),
-                            sourceId = it.documentNo,
-                            sourceType = SettlementType.valueOf(it.accType.name),
-                            tdsCurrency = it.currency
-                        )
-                    }
-
-                    val documentModel = settlementServiceImpl.calculatingTds(documentEntity)
-
-                    val checkDocumentData = documentModel.map { it ->
-                        CheckDocument(
-                            id = it.id,
-                            documentNo = it.documentNo,
-                            documentValue = it.documentValue,
-                            accountType = SettlementType.valueOf(it.accountType),
-                            documentAmount = it.documentAmount,
-                            tds = 0.toBigDecimal(),
-                            afterTdsAmount = 0.toBigDecimal(),
-                            balanceAmount = (it.balanceAmount),
-                            accMode = it.accMode,
-                            allocationAmount = it.allocationAmount!!,
-                            currentBalance = it.currentBalance,
-                            balanceAfterAllocation = it.balanceAfterAllocation!!,
-                            ledgerAmount = it.ledgerAmount,
-                            status = it.status.toString(),
-                            currency = it.currency,
-                            ledCurrency = it.ledCurrency,
-                            exchangeRate = it.exchangeRate,
-                            transactionDate = it.transactionDate,
-                            settledTds = it.settledTds!!,
-                            signFlag = it.signFlag,
-                            nostroAmount = it.nostroAmount,
-                            settledAmount = it.settledAmount,
-                            settledAllocation = it.settledAllocation!!,
-                            settledNostro = 0.toBigDecimal()
-                        )
-                    } as MutableList<CheckDocument>
-
-                    val checkRequest = CheckRequest(
-                        stackDetails = checkDocumentData,
-                        createdByUserType = null,
-                        incidentId = null,
-                        incidentMappingId = null,
-                        remark = null,
-                        createdBy = req.createdBy
-                    )
-
-                    val checkDocuments = settlementServiceImpl.settle(checkRequest)
-                }
+                source.accountUtilization = accountUtilizationRepository.findRecord(
+                    source.accountUtilization?.documentNo!!,
+                    source.accountUtilization?.accType!!.name,
+                    null
+                )
+                settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
             }
+            balanceSettlingAmount = settledList?.get(1)?.balanceAmount!!
+            sourceStartIndex++
         }
     }
-    private suspend fun reversePayment(reverseUtrRequest: ReverseUtrRequest) {
-        val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
-        val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
+    private suspend fun reversePayment(reversePaymentRequest: ReversePaymentRequest) {
+        val accountUtilization = accountUtilizationRepository.findRecord(reversePaymentRequest.document, AccountType.PINV.name, AccMode.AP.name)
+        val payments = paymentRepository.findByTransRef(reversePaymentRequest.transferReferNo)
         var tdsPaid = 0.toBigDecimal()
-        var ledTdsPaid = 0.toBigDecimal()
         var amountPaid: BigDecimal = 0.toBigDecimal()
-        var ledTotalAmtPaid: BigDecimal = 0.toBigDecimal()
 
         for (payment in payments) {
-            val paymentInvoiceMappingData = invoicePayMappingRepo.findByPaymentId(reverseUtrRequest.documentNo, payment.id)
+            val paymentInvoiceMappingData = invoicePayMappingRepo.findByPaymentId(accountUtilization!!.documentNo, payment.id)
             paymentRepository.markPaymentStatusDraft(payment.id, DocumentStatus.DRAFT)
 
             if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.BILL) {
                 amountPaid = paymentInvoiceMappingData.amount
-                ledTotalAmtPaid = paymentInvoiceMappingData.ledAmount
             } else if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.TDS) {
                 tdsPaid = paymentInvoiceMappingData.amount
-                ledTdsPaid = paymentInvoiceMappingData.ledAmount
             }
             invoicePayMappingRepo.markPaymentMappingDraft(paymentInvoiceMappingData.id, DocumentStatus.DRAFT)
-            createAudit(AresConstants.PAYMENTS, payment.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-            createAudit("payment_invoice_map", paymentInvoiceMappingData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+            createAudit(AresConstants.PAYMENTS, payment.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+            createAudit("payment_invoice_map", paymentInvoiceMappingData.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         }
 
-        val settlementIds = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, payments[0]?.paymentNum!!)
+        val settlementIds = settlementRepository.getSettlementByDestinationId(accountUtilization!!.documentNo, payments[0].paymentNum!!)
         settlementRepository.deleleSettlement(settlementIds)
 
-        createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0].paymentNum)
-        accountUtilizationRepository.markAccountUtilizationDraft(accountUtilizationPaymentData.id, DocumentStatus.DRAFT)
-        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)
-        var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)
+        accountUtilizationRepository.markAccountUtilizationDraft(accountUtilizationPaymentData.id, DocumentStatus.DRAFT, BigDecimal.ZERO, BigDecimal.ZERO)
+        var leftAmountPayCurr: BigDecimal? = accountUtilization.payCurr.minus(accountUtilizationPaymentData.payCurr)
+        var leftAmountLedgerCurr: BigDecimal? = accountUtilization.payLoc.minus(accountUtilizationPaymentData.payLoc)
 
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
@@ -1287,7 +1262,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 leftAmountPayCurr.compareTo(BigDecimal.ZERO) == 0 -> {
                     KnockOffStatus.UNPAID
                 }
-                leftAmountPayCurr.compareTo(accountUtilization?.amountCurr) == 0 -> {
+                leftAmountPayCurr.compareTo(accountUtilization.amountCurr) == 0 -> {
                     KnockOffStatus.FULL
                 }
                 else -> {
@@ -1295,26 +1270,26 @@ open class OnAccountServiceImpl : OnAccountService {
                 }
             }
         }
-        accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        accountUtilizationRepository.updateAccountUtilization(accountUtilization.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
 
-        kuberMessagePublisher.emitRestorePayment(
-            restoreUtrResponse = RestoreUtrResponse(
-                documentNo = reverseUtrRequest.documentNo,
-                paidAmount = amountPaid,
-                paidTds = tdsPaid,
-                paymentStatus = paymentStatus,
-                paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
-                updatedBy = reverseUtrRequest.updatedBy,
-                performedByType = reverseUtrRequest.performedByType
-            )
-        )
-        try {
-            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
-        } catch (e: Exception) {
-            Sentry.captureException(e)
-        }
+//        try {
+//        kuberMessagePublisher.emitRestorePayment(
+//            restoreUtrResponse = RestoreUtrResponse(
+//                documentNo = reverseUtrRequest.documentNo,
+//                paidAmount = amountPaid,
+//                paidTds = tdsPaid,
+//                paymentStatus = paymentStatus,
+//                paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
+//                updatedBy = reverseUtrRequest.updatedBy,
+//                performedByType = reverseUtrRequest.performedByType
+//            )
+//        )
+//            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
+//        } catch (e: Exception) {
+//            Sentry.captureException(e)
+//        }
     }
 
     private suspend fun createAudit(
@@ -1336,5 +1311,110 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = performedByUserType
             )
         )
+    }
+    private suspend fun settleTaggedDocument(destinationDocument: AutoKnockoffDocumentResponse, sourceDocument: AutoKnockoffDocumentResponse, createdBy: UUID?): List<CheckDocument>? {
+        val listOfDocuments = mutableListOf<AutoKnockoffDocumentResponse>()
+        listOfDocuments.add(sourceDocument)
+        listOfDocuments.add(destinationDocument)
+        var settled: List<CheckDocument>? = null
+        if (listOfDocuments.isNotEmpty()) {
+            val documentEntity = listOfDocuments.map {
+                val doc = it.accountUtilization!!
+                com.cogoport.ares.api.settlement.entity.Document(
+                    id = doc.id!!,
+                    documentNo = doc.documentNo,
+                    documentValue = doc.documentValue!!,
+                    accountType = doc.accType.name,
+                    documentAmount = doc.amountCurr,
+                    organizationId = doc.organizationId!!,
+                    documentType = doc.accType.name,
+                    mappingId = doc.tradePartyMappingId,
+                    dueDate = doc.dueDate,
+                    taxableAmount = doc.taxableAmount!!,
+                    afterTdsAmount = doc.amountCurr,
+                    settledAmount = doc.payCurr,
+                    balanceAmount = (doc.amountCurr - doc.payCurr),
+                    currency = doc.currency,
+                    ledCurrency = doc.ledCurrency,
+                    settledTds = it.paidTds!!,
+                    exchangeRate = 1.toBigDecimal(),
+                    signFlag = doc.signFlag,
+                    approved = false,
+                    accMode = doc.accMode,
+                    documentDate = doc.transactionDate!!,
+                    documentLedAmount = doc.amountLoc,
+                    documentLedBalance = (doc.amountLoc - doc.payLoc),
+                    sourceId = doc.documentNo,
+                    sourceType = SettlementType.valueOf(doc.accType.name),
+                    tdsCurrency = doc.currency,
+                    tds = it.payableTds!!
+                )
+            }
+
+            val documentModel = calculatingTds(documentEntity)
+
+            val checkDocumentData = documentModel.map {
+                CheckDocument(
+                    id = it.id,
+                    documentNo = it.documentNo,
+                    documentValue = it.documentValue,
+                    accountType = SettlementType.valueOf(it.accountType),
+                    documentAmount = it.documentAmount,
+                    tds = 0.toBigDecimal(),
+                    afterTdsAmount = 0.toBigDecimal(),
+                    balanceAmount = (it.balanceAmount),
+                    accMode = it.accMode,
+                    allocationAmount = it.allocationAmount!!,
+                    currentBalance = it.currentBalance,
+                    balanceAfterAllocation = it.balanceAfterAllocation!!,
+                    ledgerAmount = it.ledgerAmount,
+                    status = it.status.toString(),
+                    currency = it.currency,
+                    ledCurrency = it.ledCurrency,
+                    exchangeRate = it.exchangeRate,
+                    transactionDate = it.transactionDate,
+                    settledTds = it.settledTds!!,
+                    signFlag = it.signFlag,
+                    nostroAmount = it.nostroAmount,
+                    settledAmount = it.settledAmount,
+                    settledAllocation = it.settledAllocation!!,
+                    settledNostro = 0.toBigDecimal()
+                )
+            } as MutableList<CheckDocument>
+
+            val checkRequest = CheckRequest(
+                stackDetails = checkDocumentData,
+                createdByUserType = null,
+                incidentId = null,
+                incidentMappingId = null,
+                remark = null,
+                createdBy = createdBy
+            )
+            settled = settlementServiceImpl.settle(checkRequest)
+        }
+        return settled
+    }
+
+    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.model.settlement.Document> {
+        val documentModel = settlementServiceImpl.groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
+        documentModel.forEach {
+            it.documentNo = Hashids.encode(it.documentNo.toLong())
+            it.id = Hashids.encode(it.id.toLong())
+        }
+        for (doc in documentModel) {
+            doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
+            doc.balanceAmount -= doc.tds
+            doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
+            doc.status = settlementServiceHelper.getDocumentStatus(
+                docAmount = doc.documentAmount,
+                balanceAmount = doc.currentBalance,
+                docType = SettlementType.valueOf(doc.accountType)
+            )
+            doc.settledAllocation = BigDecimal.ZERO
+            doc.allocationAmount = doc.balanceAmount
+            doc.balanceAfterAllocation = BigDecimal.ZERO
+        }
+
+        return documentModel
     }
 }

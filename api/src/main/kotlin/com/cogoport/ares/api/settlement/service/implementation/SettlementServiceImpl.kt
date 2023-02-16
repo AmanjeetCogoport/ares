@@ -718,7 +718,7 @@ open class SettlementServiceImpl : SettlementService {
      * @param: documentEntity
      * @return: List
      */
-    private suspend fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
+    suspend fun groupDocumentList(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<com.cogoport.ares.api.settlement.entity.Document?> {
         return documentEntity.groupBy { it!!.id }.map { docList ->
             val settledTds = docList.value.sumOf { doc ->
                 if (doc != null) {

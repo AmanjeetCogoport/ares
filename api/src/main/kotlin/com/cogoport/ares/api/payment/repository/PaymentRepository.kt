@@ -72,7 +72,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE payments SET status = :status,updated_at = NOW() WHERE id = :paymentId
+            UPDATE payments SET status = :status, updated_at = NOW() WHERE id = :paymentId
         """
     )
     suspend fun markPaymentStatusDraft(paymentId: Long?, status: DocumentStatus?)

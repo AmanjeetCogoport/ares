@@ -5,8 +5,7 @@ import java.util.UUID
 
 @Introspected
 data class OnAccountPaymentRequest(
-    val documentNo: String,
-    val taggedDocuments: List<String>,
-    val createdBy: UUID?,
-    val paymentUploadIds: List<Long>
+    var document: DocumentTdsRequest,
+    var taggedDocuments: List<DocumentTdsRequest>,
+    val createdBy: UUID?
 )

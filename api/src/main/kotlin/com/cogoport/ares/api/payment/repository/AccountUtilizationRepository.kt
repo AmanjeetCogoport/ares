@@ -1446,8 +1446,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            UPDATE account_utilizations SET document_status = :status WHERE id = :id
+            UPDATE account_utilizations SET document_status = :status, pay_curr = :payCurr, pay_loc = :payLoc WHERE id = :id
         """
     )
-    suspend fun markAccountUtilizationDraft(id: Long, status: DocumentStatus)
+    suspend fun markAccountUtilizationDraft(id: Long, status: DocumentStatus, payCurr: BigDecimal, payLoc: BigDecimal)
+
+    @NewSpan
+    @Query(
+        """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
+           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
+            from account_utilizations 
+            where document_no in (:documentNo) and (:accType is null or acc_type= :accType::account_type) 
+            and (:accMode is null or acc_mode=:accMode::account_mode)
+             and account_utilizations.deleted_at is null"""
+    )
+    suspend fun findRecords(documentNo: List<Long>, accType: String? = null, accMode: String? = null): List<AccountUtilization?>
 }

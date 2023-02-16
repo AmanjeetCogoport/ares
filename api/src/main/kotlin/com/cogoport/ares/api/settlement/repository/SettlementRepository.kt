@@ -295,7 +295,7 @@ ORDER BY
     @Query(
         """
            SELECT
-                p.trans_ref_number ,source_id, source_type, destination_id, destination_type, s.currency, s.amount, s.settlement_date::TIMESTAMP
+                p.trans_ref_number,source_id, source_type, destination_id, destination_type, s.currency, s.amount, s.settlement_date::TIMESTAMP
            FROM
                 settlements s
                  join payments p on s.source_id = p.payment_num WHERE
