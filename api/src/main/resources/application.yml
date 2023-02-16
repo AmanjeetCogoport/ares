@@ -37,9 +37,9 @@ services:
   service: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
-    alternateRoute: false
-    isAuthDisabled: false
-    microServiceAuthToken: "thisIsRandomAsOfNow"
+    alternateRoute: true
+    authDisabled: true
+    microserviceAuthToken: "thisIsRandomAsOfNow"
 
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss

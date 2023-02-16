@@ -30,6 +30,13 @@ r2dbc:
           username: ${DB_USER}
           password: ${DB_PASSWORD}
 
+services:
+  namespace: ${DNS_NAMESPACE:cogoport.stage}
+  auth:
+    alternateRoute: false
+    authDisabled: false
+    microserviceAuthToken: "thisIsRandomAsOfNow"
+
 opensearch:
   host: ${OPENSEARCH_HOST}
   user: ${OPENSEARCH_USER}

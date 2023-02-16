@@ -32,14 +32,8 @@ class Bootstrap {
     @Value("\${cogoport.api_url}")
     private lateinit var cogoUrl: String
 
-    @Value("\${services.auth.alternateRoute}")
-    private var alternateRoute: Boolean = false
-
-    @Value("\${services.auth.isAuthDisabled}")
-    private var isAuthDisabled: Boolean = false
-
-    @Value("\${services.auth.microServiceAuthToken}")
-    private lateinit var microserviceAuthToken: String
+    @Inject
+    private lateinit var authConfig: AuthConfig
 
     @EventListener
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
@@ -93,11 +87,11 @@ class Bootstrap {
         Authentication.configure(
             AuthConfiguration(
                 namespace = namespace,
-                alternateRoute = alternateRoute,
+                alternateRoute = authConfig.alternateRoute!!,
                 cogoUrl = cogoUrl,
-                isAuthDisabled = isAuthDisabled,
+                isAuthDisabled = authConfig.authDisabled!!,
                 serviceDiscoveryClient = serviceDiscoveryClient,
-                microserviceAuthToken = microserviceAuthToken
+                microserviceAuthToken = authConfig.microserviceAuthToken!!
             )
         )
     }

@@ -11,7 +11,7 @@ import org.reactivestreams.Publisher
 @Filter(serviceId = ["loki", "plutus", "ares", "heimdall", "hades", "demeter"])
 class HttpRequestFilter : HttpClientFilter {
 
-    @Value("\${services.auth.microServiceAuthToken}")
+    @Value("\${services.auth.microserviceAuthToken}")
     private lateinit var microserviceAuthToken: String
 
     override fun doFilter(request: MutableHttpRequest<*>?, chain: ClientFilterChain?): Publisher<out HttpResponse<*>>? {
