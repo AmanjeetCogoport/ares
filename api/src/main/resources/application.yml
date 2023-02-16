@@ -37,8 +37,8 @@ services:
   service: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
-    alternateRoute: true
-    authDisabled: true
+    alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
+    authDisabled: ${AUTH_DISABLED:true}
     microserviceAuthToken: "thisIsRandomAsOfNow"
 
 jackson:

@@ -8,7 +8,7 @@ import io.micronaut.http.filter.ClientFilterChain
 import io.micronaut.http.filter.HttpClientFilter
 import org.reactivestreams.Publisher
 
-@Filter(serviceId = ["loki", "plutus", "ares", "heimdall", "hades", "demeter"])
+@Filter(serviceId = ["loki", "plutus", "kuber", "heimdall", "hades", "demeter"])
 class HttpRequestFilter : HttpClientFilter {
 
     @Value("\${services.auth.microserviceAuthToken}")
