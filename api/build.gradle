@@ -2,10 +2,11 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("application-conventions")
+    id("org.sonarqube") version "3.3"
 }
 
 group = "com.cogoport.ares.api"
-version = "0.1.1"
+version = "1.0.0"
 
 repositories {
     maven {
@@ -37,7 +38,6 @@ dependencies {
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("io.micronaut:micronaut-jackson-databind")
     implementation("jakarta.annotation:jakarta.annotation-api")
-    implementation("io.micronaut.kafka:micronaut-kafka")
     implementation("io.micronaut.rabbitmq:micronaut-rabbitmq:3.4.0")
     implementation("io.micronaut:micronaut-validation")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
@@ -111,6 +111,13 @@ dependencies {
 
 tasks.named("optimizedDockerBuildNative") {
     images = ["ghcr.io/cogoport/ares:latest"]
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "Ares")
+        property("sonar.projectName", "Ares")
+    }
 }
 
 tasks.named("jar") {

@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.migration.service.implementation
 
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -16,9 +15,6 @@ import jakarta.inject.Singleton
 class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
-
-    @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject
     lateinit var paymentMigration: PaymentMigration

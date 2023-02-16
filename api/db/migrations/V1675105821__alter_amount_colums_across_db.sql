@@ -1,0 +1,16 @@
+ALTER TABLE account_utilizations ALTER COLUMN amount_curr TYPE DECIMAL(18, 4);
+ALTER TABLE account_utilizations ALTER COLUMN amount_loc TYPE DECIMAL(18, 4);
+ALTER TABLE account_utilizations ALTER COLUMN pay_curr TYPE DECIMAL(18, 4);
+ALTER TABLE account_utilizations ALTER COLUMN pay_loc TYPE DECIMAL(18, 4);
+ALTER TABLE account_utilizations ALTER COLUMN taxable_amount TYPE DECIMAL(18, 4);
+ALTER TABLE payment_invoice_mapping ALTER COLUMN amount TYPE DECIMAL(18, 4);
+ALTER TABLE payment_invoice_mapping ALTER COLUMN led_amount TYPE DECIMAL(18, 4);
+ALTER TABLE payments ALTER COLUMN amount TYPE DECIMAL(18, 4);
+ALTER TABLE payments ALTER COLUMN led_amount TYPE DECIMAL(18, 4);
+ALTER TABLE payments ALTER COLUMN exchange_rate TYPE DECIMAL(20, 6);
+ALTER TABLE payments ALTER COLUMN bank_pay_amount TYPE DECIMAL(18, 4);
+ALTER TABLE settlements ALTER COLUMN amount TYPE DECIMAL(18, 4);
+ALTER TABLE settlements ALTER COLUMN led_amount TYPE DECIMAL(18, 4);
+ALTER TABLE suspense_accounts ALTER COLUMN amount TYPE DECIMAL(18, 4);
+ALTER TABLE suspense_accounts ALTER COLUMN exchange_rate TYPE DECIMAL(20, 6);
+ALTER TABLE suspense_accounts ALTER COLUMN ledger_amount TYPE DECIMAL(18, 4);

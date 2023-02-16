@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
-import com.cogoport.ares.api.events.AresKafkaEmitter
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
@@ -146,9 +145,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
-
-    @Inject
-    lateinit var aresKafkaEmitter: AresKafkaEmitter
 
     @Inject
     lateinit var accountUtilizationMapper: AccountUtilizationMapper

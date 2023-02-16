@@ -30,32 +30,20 @@ r2dbc:
           username: ${DB_USER}
           password: ${DB_PASSWORD}
 
-kafka:
-  health:
-    enabled: false
-  bootstrap:
-    servers: ${KAFKA_SERVERS}
-  security:
-    protocol: SASL_SSL
-  sasl:
-    mechanism: AWS_MSK_IAM
-    jaas:
-      config: software.amazon.msk.auth.iam.IAMLoginModule required;
-    client:
-      callback:
-        handler:
-          class: software.amazon.msk.auth.iam.IAMClientCallbackHandler
-
 opensearch:
   host: ${OPENSEARCH_HOST}
   user: ${OPENSEARCH_USER}
   pass: ${OPENSEARCH_PASS}
 
 cogoport:
-  api_url: https://api-mustangs5.dev.cogoport.io
+  api_url: ${COGOPORT_API_URL:https://api-mustangs4.dev.cogoport.io}
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
+  exchange_api:
+    url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://2toku4bxdgi67haevec47ilap40rerwo.lambda-url.ap-south-1.on.aws/`}
+    version: v1
+    auth_token: ${EXCHANGE_API_AUTH_TOKEN}
 
 sage:
   soapUrl: http://13.126.196.22:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
