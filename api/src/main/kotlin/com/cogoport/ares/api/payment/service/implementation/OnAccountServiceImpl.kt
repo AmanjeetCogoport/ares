@@ -1270,7 +1270,7 @@ open class OnAccountServiceImpl : OnAccountService {
                         paymentDetails.transactionDate!!,
                         currency,
                         entityCode,
-                        (if (paymentDetails.accMode == AccMode.AP) SignSuffix.PAY.sign else SignSuffix.REC.sign).toInt(),
+                        if (paymentDetails.accMode == AccMode.AP) 1 else 2,
                         paymentDetails.amount,
                         paymentLineItemDetails
                     )
