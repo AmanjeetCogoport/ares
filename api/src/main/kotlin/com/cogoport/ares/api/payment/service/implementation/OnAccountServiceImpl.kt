@@ -1230,33 +1230,34 @@ open class OnAccountServiceImpl : OnAccountService {
             }
 
             lateinit var result: SageResponse
+            val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
 
-            if (paymentDetails.cogoAccountNo.isNullOrEmpty()) {
+            val bankCode: String
+            val entityCode: String
+            val currency: String
+            var bankCodeDetails = hashMapOf<String, String>()
+
+            if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
                 logger().info("Bank Account not selected")
                 return false
             }
 
-            val bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
-            val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
-
-            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
-
-            var bankCode: String
-            var entityCode: String
-            var currency: String
-
-            if (paymentDetails.payMode == PayMode.RAZORPAY) {
-                bankCode = PaymentSageGLCodes.RAZO.name
-                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
-                currency = PaymentSageGLCodes.RAZO.currency
-            } else {
-                bankCode = bankCodeDetails["bankCode"]!!
-                entityCode = bankCodeDetails["entityCode"].toString()
-                currency = bankCodeDetails["currency"]!!
+            when (paymentDetails.payMode) {
+                PayMode.RAZORPAY -> {
+                    bankCode = PaymentSageGLCodes.RAZO.name
+                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    currency = PaymentSageGLCodes.RAZO.currency
+                }
+                else -> {
+                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                    bankCode = bankCodeDetails["bankCode"]!!
+                    entityCode = bankCodeDetails["entityCode"].toString()
+                    currency = bankCodeDetails["currency"]!!
+                }
             }
 
-            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"]) || paymentDetails.payMode == PayMode.RAZORPAY)) {
-
+            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
+            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
                 result = SageClient.postPaymentToSage(
                     PaymentRequest
                     (
