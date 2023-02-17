@@ -95,6 +95,7 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -1154,10 +1155,30 @@ open class OnAccountServiceImpl : OnAccountService {
                 throw AresException(AresError.ERR_1524, "")
             }
 
+            val paymentOnSage = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
+            val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
+            val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery).get("recordset") as ArrayList<*>
+            if (records.size != 0) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment number is already present on sage",
+                        false
+                    )
+                )
+                return false
+            }
+
             val organization = railsClient.getListOrganizationTradePartyDetails(paymentDetails.organizationId!!)
 
             val sageOrganizationQuery = if (paymentDetails.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
-            val resultFromSageOrganizationQuery = com.cogoport.brahma.sage.Client.sqlQuery(sageOrganizationQuery)
+            val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 

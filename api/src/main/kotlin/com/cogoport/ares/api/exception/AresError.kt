@@ -48,7 +48,8 @@ enum class AresError(
     ERR_1521("ERR_1521", "Suspense Account is not available for Account Payable", HttpStatus.BAD_REQUEST),
     ERR_1522("ERR_1522", "Cannot Post without a customer", HttpStatus.BAD_REQUEST),
     ERR_1523("ERR_1523", "Payment already posted", HttpStatus.BAD_REQUEST),
-    ERR_1524("ERR_1524", "Payment is not approved", HttpStatus.BAD_REQUEST);
+    ERR_1524("ERR_1524", "Payment is not approved", HttpStatus.BAD_REQUEST),
+    ERR_1525("ERR_1525", "Payment entry already exist on sage", HttpStatus.NOT_ACCEPTABLE);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
