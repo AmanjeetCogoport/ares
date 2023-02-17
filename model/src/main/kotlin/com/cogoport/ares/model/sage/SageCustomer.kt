@@ -6,5 +6,7 @@ import io.micronaut.core.annotation.Introspected
 @Introspected
 data class SageCustomer(
     @JsonProperty("BPCNUM_0")
-    val sageOrganizationId: String
+    val sageOrganizationId: String? = null,
+    @JsonProperty("BPSNUM_0")
+    val sageSupplierId: String? = null
 )
