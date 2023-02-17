@@ -1241,7 +1241,21 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
 
-            if ((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) {
+            var bankCode: String
+            var entityCode: String
+            var currency: String
+
+            if (paymentDetails.payMode == PayMode.RAZORPAY) {
+                bankCode = PaymentSageGLCodes.RAZO.name
+                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                currency = PaymentSageGLCodes.RAZO.currency
+            } else {
+                bankCode = bankCodeDetails["bankCode"]!!
+                entityCode = bankCodeDetails["entityCode"].toString()
+                currency = bankCodeDetails["currency"]!!
+            }
+
+            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"]) || paymentDetails.payMode == PayMode.RAZORPAY)) {
 
                 result = SageClient.postPaymentToSage(
                     PaymentRequest
@@ -1251,10 +1265,10 @@ open class OnAccountServiceImpl : OnAccountService {
                         sageOrganization.sageOrganizationId!!,
                         "IND",
                         if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
-                        bankCodeDetails["bankCode"],
+                        bankCode,
                         paymentDetails.transactionDate!!,
-                        bankCodeDetails["currency"]!!,
-                        bankCodeDetails["entityCode"].toString(),
+                        currency,
+                        entityCode,
                         (if (paymentDetails.accMode == AccMode.AP) SignSuffix.PAY.sign else SignSuffix.REC.sign).toInt(),
                         paymentDetails.amount,
                         paymentLineItemDetails
