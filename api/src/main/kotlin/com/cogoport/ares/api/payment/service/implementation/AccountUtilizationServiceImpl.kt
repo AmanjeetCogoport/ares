@@ -495,7 +495,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     extraUtilizationAmountLoc = 0.toBigDecimal()
                 }
 
-                accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+                accUtilRepository.updateAccountUtilization(payment.id!!, payment.documentStatus!!, toUpdatePayCurr, toUpdateLedCurr)
             }
         }
     }
@@ -526,7 +526,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     extraUtilizationAmountLoc = 0.toBigDecimal()
                 }
 
-                accUtilRepository.updateAccountUtilization(payment.id!!, toUpdatePayCurr, toUpdateLedCurr)
+                accUtilRepository.updateAccountUtilization(payment.id!!, payment.documentStatus!!, toUpdatePayCurr, toUpdateLedCurr)
             }
         }
     }

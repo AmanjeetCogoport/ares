@@ -1284,7 +1284,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """UPDATE account_utilizations SET 
               pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id =:id AND deleted_at is null"""
     )
-    suspend fun updateAccountUtilization(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+    suspend fun updateAccountUtilization(id: Long, status: DocumentStatus, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
     @NewSpan
     @Query(
@@ -1446,10 +1446,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            UPDATE account_utilizations SET document_status = :status, pay_curr = :payCurr, pay_loc = :payLoc WHERE id = :id
+            UPDATE account_utilizations SET pay_curr = :payCurr, pay_loc = :payLoc WHERE id = :id
         """
     )
-    suspend fun markAccountUtilizationDraft(id: Long, status: DocumentStatus, payCurr: BigDecimal, payLoc: BigDecimal)
+    suspend fun markAccountUtilizationDraft(id: Long, payCurr: BigDecimal, payLoc: BigDecimal)
 
     @NewSpan
     @Query(

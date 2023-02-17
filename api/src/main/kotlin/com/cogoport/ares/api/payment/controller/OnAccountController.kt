@@ -10,7 +10,6 @@ import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
-import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
@@ -84,10 +83,5 @@ class OnAccountController {
     @Get("/on-account-payment{?request*}")
     suspend fun onAccountTotalAmount(request: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse> {
         return Response<MutableList<OnAccountTotalAmountResponse>>().ok(onAccountService.onAccountTotalAmountService(request))
-    }
-
-    @Post("/settle-tagged-invoice-payment")
-    suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest) {
-        return onAccountService.settleOnAccountInvoicePayment(req)
     }
 }
