@@ -27,6 +27,7 @@ import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -100,6 +101,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
         val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
+        paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         val savedPaymentRecord = savePayment(
             paymentEntity, isTDSEntry = false, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
         )

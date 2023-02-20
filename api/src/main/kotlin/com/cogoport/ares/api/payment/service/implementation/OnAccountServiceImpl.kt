@@ -1081,7 +1081,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentDate = paymentDate,
                 uploadedBy = uploadedByName?.get(0)?.userName,
                 tradePartyMappingId = serialIdDetails?.mappingId,
-                taggedOrganizationId = serialIdDetails?.organizationId
+                taggedOrganizationId = serialIdDetails?.organizationId,
+                paymentDocumentStatus = PaymentDocumentStatus.CREATED
+
             )
 
             if (hasErrors) {
