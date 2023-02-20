@@ -1,0 +1,33 @@
+name: SonarQube
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up JDK 17 and Cache Gradle
+        uses: actions/setup-java@master
+        with:
+          java-version: 17
+          distribution: 'adopt'
+          cache: gradle
+      - name: Cache SonarQube packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Build and analyze
+        env:
+          GH_USER: cogoport-dev
+          GITHUB_USERNAME: $GH_USER
+          GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: ./gradlew build -x test sonar --info

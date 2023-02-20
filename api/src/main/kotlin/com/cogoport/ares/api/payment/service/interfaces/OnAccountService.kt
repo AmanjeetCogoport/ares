@@ -30,4 +30,5 @@ interface OnAccountService {
     suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq)
     suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary
     suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>
+    suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean
 }

@@ -55,7 +55,7 @@ class AresExceptionHandler(private var environment: Environment) : ExceptionHand
             }
             is UnauthorizedException -> {
                 errorMessage = ErrorResponse(
-                    AresError.ERR_1523.code,
+                    AresError.ERR_1526.code,
                     exception.message,
                     HttpStatus.UNAUTHORIZED
                 )

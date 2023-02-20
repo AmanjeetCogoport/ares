@@ -23,6 +23,7 @@ class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
 
         val retryCount = properties?.headers?.get("x-retry-count").toString().toIntOrNull() ?: 0
         if (retryCount < 3) {
+            logger().info("Here in retry handler -> $envelope -> ${exception.listener} -> ${exception.stackTraceToString()}")
             properties?.headers?.set("x-retry-count", retryCount + 1)
             channel?.basicPublish(envelope?.exchange, envelope?.routingKey, properties, data)
         } else {
