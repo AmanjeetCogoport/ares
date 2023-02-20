@@ -147,7 +147,7 @@ data class Payment(
     val isSuspense: Boolean? = false,
 
     @JsonProperty("paymentDocumentStatus")
-    var paymentDocumentStatus: PaymentDocumentStatus? = null,
+    var paymentDocumentStatus: PaymentDocumentStatus,
 
     @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null
