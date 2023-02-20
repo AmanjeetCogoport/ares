@@ -35,7 +35,7 @@ services:
   auth:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:false}
     authDisabled: ${AUTH_DISABLED:false}
-    microserviceAuthToken: "thisIsRandomAsOfNow"
+    microserviceAuthToken: c3ad6b5c-a100-46e3-8728-8e2bf83f7de0
 
 opensearch:
   host: ${OPENSEARCH_HOST}
