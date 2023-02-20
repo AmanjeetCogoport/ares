@@ -3,6 +3,7 @@ package com.cogoport.ares.model.payment.response
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -131,5 +132,8 @@ data class PaymentResponse(
     var isSuspense: Boolean? = false,
 
     @JsonProperty("tradePartyDocument")
-    val tradePartyDocument: String? = null
+    val tradePartyDocument: String? = null,
+
+    @JsonProperty("paymentDocumentStatus")
+    var paymentDocumentStatus: PaymentDocumentStatus? = null
 )
