@@ -395,7 +395,6 @@ open class OnAccountServiceImpl : OnAccountService {
             val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
             val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
 
-
             if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
             val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
             updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
@@ -671,7 +670,6 @@ open class OnAccountServiceImpl : OnAccountService {
             payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
             payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
         }
-
 
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
