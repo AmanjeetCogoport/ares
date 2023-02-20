@@ -16,6 +16,7 @@ class RabbitMqBootstrap : ChannelInitializer() {
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 
+        channel?.exchangeDeclare("error-exchange", "topic", true)
         channel?.queueDeclare("ares-error-queue", true, false, false, null)
         channel?.queueBind("ares-error-queue", "error-exchange", "ares.error", null)
 
