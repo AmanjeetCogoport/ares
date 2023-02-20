@@ -207,6 +207,7 @@ open class KnockoffServiceImpl : KnockoffService {
         }
         paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
+        paymentEntity.paymentDocumentStatus = paymentEntity.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
         val paymentObj = paymentRepository.save(paymentEntity)
         auditService.createAudit(
             AuditRequest(

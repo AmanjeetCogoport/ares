@@ -257,7 +257,7 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.paymentDocumentStatus = PaymentDocumentStatus.CREATED
 
         setPaymentEntity(payment)
-
+        payment.paymentDocumentStatus = payment.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
         val savedPayment = paymentRepository.save(payment)
         auditService.createAudit(
             AuditRequest(
