@@ -253,11 +253,21 @@ open class OnAccountServiceImpl : OnAccountService {
 //        setTradePartyOrganizations(receivableRequest)
         setTradePartyInfo(receivableRequest)
 
+        when (receivableRequest.isPosted ?: false) {
+            true -> {
+                receivableRequest.isPosted = true
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            }
+            false -> {
+                receivableRequest.isPosted = false
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.CREATED
+            }
+        }
+
         val payment = paymentConverter.convertToEntity(receivableRequest)
-        payment.paymentDocumentStatus = PaymentDocumentStatus.CREATED
 
         setPaymentEntity(payment)
-        payment.paymentDocumentStatus = payment.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
+
         val savedPayment = paymentRepository.save(payment)
         auditService.createAudit(
             AuditRequest(
@@ -384,6 +394,7 @@ open class OnAccountServiceImpl : OnAccountService {
         return if (receivableRequest.isSuspense == false) {
             val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
             val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+
             if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
             val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
             updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
@@ -424,6 +435,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.isPosted != null && receivableRequest.isPosted == true && receivableRequest.isSuspense == false) {
             paymentEntity.isPosted = true
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
+            paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -663,10 +675,6 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
 
-        if (payment.isPosted != true) {
-            payment.isPosted = false
-        }
-//        payment.isPosted = false
         payment.isDeleted = false
     }
 
