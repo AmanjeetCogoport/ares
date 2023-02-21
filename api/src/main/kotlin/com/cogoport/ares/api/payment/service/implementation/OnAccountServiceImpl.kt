@@ -1156,7 +1156,8 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
-            paymentDetails.updatedBy = performedBy
+            val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
+            openSearchPaymentModel.updatedBy = performedBy.toString()
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 throw AresException(AresError.ERR_1523, "")
@@ -1206,8 +1207,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (sageOrganization.sageOrganizationId.isNullOrEmpty()) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1226,8 +1227,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (sageOrganization.sageOrganizationId != sageOrganizationFromSageId) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1254,8 +1255,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1307,8 +1308,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
             } else {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1330,8 +1331,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (status == 1) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1348,8 +1349,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 return true
             } else {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                paymentDetails.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), paymentDetails, true)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
