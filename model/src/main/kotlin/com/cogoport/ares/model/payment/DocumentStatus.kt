@@ -4,6 +4,5 @@ enum class DocumentStatus(val dbValue: String) {
     PROFORMA("PROFORMA"),
     FINAL("FINAL"),
     CANCELLED("CANCELLED"),
-    DELETED("DELETED"),
-    DRAFT("DRAFT")
+    DELETED("DELETED")
 }

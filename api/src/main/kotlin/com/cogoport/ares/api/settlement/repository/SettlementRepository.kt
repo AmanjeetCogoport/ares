@@ -43,7 +43,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.supporting_doc_url
             FROM settlements s
-            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType
+            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_draft = false
         """
     )
     suspend fun findByDestIdAndDestType(destId: Long, destType: SettlementType): List<Settlement?>
@@ -69,7 +69,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.supporting_doc_url
             FROM settlements s
-            where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType)
+            where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_draft = false
         """
     )
     suspend fun findBySourceIdAndSourceType(sourceId: Long, sourceType: List<SettlementType>): List<Settlement?>
@@ -140,7 +140,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             FROM settlements 
             WHERE source_id = :sourceId 
             AND source_type = :sourceType::SETTLEMENT_TYPE
-            AND deleted_at is null
+            AND deleted_at is null and is_draft = false
         """
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long
@@ -152,7 +152,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE destination_id = :destinationId 
             AND destination_type = :destinationType::SETTLEMENT_TYPE
             AND source_type = :sourceType::SETTLEMENT_TYPE
-            AND deleted_at is null
+            AND deleted_at is null and is_draft = false
         """
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
@@ -171,8 +171,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE 
                 au.document_value ILIKE :query || '%'
                 AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
-                AND s.deleted_at is null
-                AND au.deleted_at is null
+                AND s.deleted_at is null and s.is_draft = false
+                AND au.deleted_at is null and au.is_draft = false
         """
     )
     suspend fun getPaymentIds(query: String): List<Long>
@@ -180,7 +180,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
+            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id)  and is_draft = false
         """
     )
     suspend fun deleleSettlement(id: List<Long>)
@@ -189,7 +189,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
           SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null 
+          deleted_at is null and is_draft = false
               
         """
     )
@@ -301,7 +301,7 @@ ORDER BY
                  join payments p on s.source_id = p.payment_num WHERE
                 destination_id in (:documentNo)
                 AND destination_type in ('PINV','PREIMB')
-                AND source_type not in ('VTDS') and payment_code = 'PAY'
+                AND source_type not in ('VTDS') and payment_code = 'PAY' and s.is_draft = false
                 order by p.created_at desc 
         """
     )
@@ -310,8 +310,8 @@ ORDER BY
     @NewSpan
     @Query(
         """
-          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId
+            UPDATE settlements SET is_draft = true WHERE id in (:id) and is_draft = false
         """
     )
-    suspend fun getSettlementByDestinationIdForTaggedBill(destinationId: Long, sourceId: Long): List<Long>
+    suspend fun markSettlementIsDraftTrue(id: List<Long>)
 }

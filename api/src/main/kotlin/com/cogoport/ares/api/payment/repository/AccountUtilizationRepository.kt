@@ -1463,4 +1463,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              and account_utilizations.deleted_at is null"""
     )
     suspend fun findRecords(documentNo: List<Long>, accType: String? = null, accMode: String? = null): List<AccountUtilization?>
+
+    @NewSpan
+    @Query(
+        """UPDATE account_utilizations SET 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
+    )
+    suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 }

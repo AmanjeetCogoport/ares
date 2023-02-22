@@ -147,15 +147,15 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
             } else if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.TDS) {
                 tdsPaid = paymentInvoiceMappingData.amount
             }
-            createAudit(AresConstants.PAYMENTS, payment.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
-            createAudit("payment_invoice_map", paymentInvoiceMappingData.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+            createAudit(AresConstants.PAYMENTS, payment.id, "TAGGED", null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+            createAudit("payment_invoice_map", paymentInvoiceMappingData.id, "TAGGED", null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         }
 
         val settlementIds = settlementRepository.getSettlementByDestinationId(accountUtilization!!.documentNo, payments[0].paymentNum!!)
-        settlementRepository.deleleSettlement(settlementIds) // TODO("Don't Delete The Settlement, Mark it as Draft, LEFT all the table same")
+        settlementRepository.markSettlementIsDraftTrue(settlementIds) // TODO("Don't Delete The Settlement, Mark it as Draft, LEFT all the table same")
 
-        createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
-        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+        createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0].paymentNum)
         accountUtilizationRepository.markAccountUtilizationDraft(accountUtilizationPaymentData.id, BigDecimal.ZERO, BigDecimal.ZERO) // TODO("nothing")
         var leftAmountPayCurr: BigDecimal? = accountUtilization.payCurr.minus(accountUtilizationPaymentData.payCurr)
@@ -186,11 +186,11 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
                 }
             }
         }
-        accountUtilizationRepository.updateAccountUtilization(
+        accountUtilizationRepository.updateAccountUtilizations(
             accountUtilization.id!!,
-            DocumentStatus.DRAFT, leftAmountPayCurr!!, leftAmountLedgerCurr!!
+            true, leftAmountPayCurr!!, leftAmountLedgerCurr!!
         )
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
 
 //        try {
