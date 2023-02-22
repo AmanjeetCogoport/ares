@@ -1158,9 +1158,9 @@ open class OnAccountServiceImpl : OnAccountService {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
 
             val uploadedByName = authClient.getUsers(
-                    GetUserRequest(
-                            id = arrayListOf(paymentDetails.createdBy.toString())
-                    )
+                GetUserRequest(
+                    id = arrayListOf(paymentDetails.createdBy.toString())
+                )
             )
 
             val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
