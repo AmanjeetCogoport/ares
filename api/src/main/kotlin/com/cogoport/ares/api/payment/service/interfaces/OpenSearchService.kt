@@ -22,5 +22,5 @@ interface OpenSearchService {
 
     suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
 
-    suspend fun pushPaymentData(): Boolean
+    suspend fun paymentDocumentStatusMigration(): Boolean
 }

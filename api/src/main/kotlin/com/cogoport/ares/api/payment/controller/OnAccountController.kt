@@ -98,8 +98,8 @@ class OnAccountController {
         )
     }
 
-    @Get("/open-search/add-payment-data")
-    suspend fun pushPaymentData(): Boolean {
-        return openSearchService.pushPaymentData()
+    @Get("/open-search/payment-document-status")
+    suspend fun paymentDocumentStatusMigration(): Boolean {
+        return openSearchService.paymentDocumentStatusMigration()
     }
 }

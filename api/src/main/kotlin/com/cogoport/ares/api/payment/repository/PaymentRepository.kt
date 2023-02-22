@@ -88,7 +88,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
             SELECT 
                 payment_document_status, 
-                array_agg(id) AS payment_ids,
+                array_agg(id) AS payment_ids
             FROM 
                 payments
             GROUP BY 

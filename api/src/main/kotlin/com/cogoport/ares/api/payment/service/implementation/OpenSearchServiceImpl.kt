@@ -27,6 +27,7 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CollectionResponse
@@ -447,30 +448,38 @@ class OpenSearchServiceImpl : OpenSearchService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun pushPaymentData(): Boolean {
+    override suspend fun paymentDocumentStatusMigration(): Boolean {
         val pdsRecords = paymentRepository.getPaymentDocumentStatusWiseIds()
-        pdsRecords.forEach {
-            it.paymentIds
+        val paymentDocumentStatus = PaymentDocumentStatus.CREATED
+        val listOfIds = listOf<Long>(50623,50654,50655,50804,50902,51249,51277,54888,54889,54890,76809)
+//        pdsRecords.forEach {
+//            listOfIds
+//                    .chunked(5000)
+//                    .forEach { batch ->
+//                        bulkUpdate(it.paymentDocumentStatus, batch)
+//                    }
+//        }
+        listOfIds
                     .chunked(5000)
                     .forEach { batch ->
-                        bulkUpdate(it.paymentDocumentStatus, batch)
+                        bulkUpdate(paymentDocumentStatus, batch)
                     }
-        }
+
         return true
     }
 
-    private suspend fun bulkUpdate(countryCode: String, billIds: List<String>) {
+    private fun bulkUpdate(paymentDocumentStatus: PaymentDocumentStatus, ids: List<Long>) {
         Client.updateByQuery { s ->
             s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX).script { s ->
-                s.inline { i -> i.source("ctx._source[\"paymentDocume\"] = ${countryCode.toDoubleQuoted()}").lang("painless") }
+                s.inline { i -> i.source("ctx._source[\"paymentDocumentStatus\"] = ${paymentDocumentStatus.name}").lang("painless") }
             }.query { q ->
                 q.bool { b ->
                     b.must { s ->
                         s.terms { v ->
-                            v.field("billId").terms(
+                            v.field("id").terms(
                                     TermsQueryField.of { a ->
                                         a.value(
-                                                billIds.map {
+                                                ids.map {
                                                     FieldValue.of(it)
                                                 }
                                         )
@@ -478,7 +487,6 @@ class OpenSearchServiceImpl : OpenSearchService {
                             )
                         }
                     }
-                    b.mustMatchBool("migrated", false)
                     b
                 }
             }.refresh(true)
