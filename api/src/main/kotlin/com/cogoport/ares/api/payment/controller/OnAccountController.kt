@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
@@ -36,6 +37,9 @@ class OnAccountController {
 
     @Inject
     lateinit var onAccountService: OnAccountService
+
+    @Inject
+    lateinit var openSearchService: OpenSearchService
 
     @Get("{?request*}")
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
@@ -92,5 +96,10 @@ class OnAccountController {
             HttpStatus.OK.name,
             if (onAccountService.postPaymentToSage(id, performedBy)) "Success." else "Failed."
         )
+    }
+
+    @Get("/open-search/add-payment-data")
+    suspend fun pushPaymentData(): Boolean {
+        return openSearchService.pushPaymentData()
     }
 }
