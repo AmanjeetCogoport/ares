@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -17,8 +18,10 @@ import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
@@ -35,6 +38,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -66,6 +70,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
+
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
 
     /**
      * @param: OpenSearchRequest
@@ -433,5 +440,68 @@ class OpenSearchServiceImpl : OpenSearchService {
         serviceTypeKey = if (serviceType?.name.equals(null) || (serviceType == ServiceType.NA)) "ALL" else serviceType?.name
         invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
+    }
+
+    override suspend fun generateArDashboardData (){
+        val currMonth = AresConstants.CURR_MONTH
+        val currYear = AresConstants.CURR_YEAR
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+
+        val salesFunnelKey = AresConstants.SALES_FUNNEL_PREFIX + months[currMonth-1] + AresConstants.KEY_DELIMITER + currYear
+        generatingSalesFunnelData(currMonth,currYear, salesFunnelKey)
+    }
+
+    override suspend fun generatingSalesFunnelData (monthKey: Int, year: Int, searchKey: String) {
+        val monthKeyIndex = when (monthKey < 10) {
+            true -> "0$monthKey"
+            else -> monthKey.toString()
+        }
+
+        val startDate = "$year-$monthKeyIndex-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val convertedDate = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val convertedDateLength = convertedDate.month.length(convertedDate.isLeapYear)
+
+        val endDate =
+            "$year-$monthKeyIndex-${convertedDateLength}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val salesFunnelResponse = SalesFunnelResponse()
+
+        val data = unifiedDBRepo.getFunnelData(startDate, endDate)
+
+        salesFunnelResponse.draftInvoicesCount = data?.size
+        salesFunnelResponse.financeAcceptedInvoiceCount = data?.count { it.status?.name != "DRAFT" }
+        salesFunnelResponse.irnGeneratedInvoicesCount =
+            data?.count { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }
+        salesFunnelResponse.settledInvoicesCount = data?.count { it.paymentStatus == "PAID" }
+        salesFunnelResponse.draftToFinanceAcceptedPercentage =
+            salesFunnelResponse.financeAcceptedInvoiceCount?.times(100)
+                ?.div(salesFunnelResponse.draftInvoicesCount!!)
+        salesFunnelResponse.financeToIrnPercentage = salesFunnelResponse.irnGeneratedInvoicesCount?.times(100)
+            ?.div(salesFunnelResponse.financeAcceptedInvoiceCount!!)
+        salesFunnelResponse.settledPercentage = salesFunnelResponse.settledInvoicesCount?.times(100)
+            ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
+
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, salesFunnelResponse)
+    }
+
+    override suspend fun generateInvoiceTimeline(startDate: String, endDate: String) {
+        val data = unifiedDBRepo.getFunnelData(startDate, endDate)
+
+        var financeAcceptedInvoices = data?.filter {it.status?.name != "DRAFT"}
+
+        var financeAcceptedInvoicesHourCount = 0
+
+        financeAcceptedInvoices?.map {
+            var eventData = unifiedDBRepo.getInvoiceEvents(it.id!!)
+
+            eventData?.filter { listOf("CREATED", "FINANCE_ACCEPTED").contains(it.eventName) }
+
+//            eventData?.filter { it.eventName == "IRN_GENERATED" }?.first()?.createdAt?.time - eventData?.filter { it.eventName == "FINANCE_ACCEPTED" }
+
+//            financeAcceptedInvoicesHourCount = (eventData?.filter { it.eventName == "FINANCE_ACCEPTED" }?.first()?.createdAt) - eventData?.filter { it.eventName == "CREATED" }?.first()?.createdAt
+        }
+
+        logger().info(data.toString())
     }
 }

@@ -30,6 +30,8 @@ object AresConstants {
     const val OVERALL_STATS_PREFIX = "OVERALL_STATS_"
     const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
     const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
+    const val SALES_FUNNEL_PREFIX = "SALES_FUNNEL_"
+    const val INVOICE_TIME_LINE_PROFIX = "INVOICE_TIMELINE_"
 
     const val ZONE = "zone"
     const val QUARTER = "quarter"
@@ -76,6 +78,8 @@ object AresConstants {
     const val INVOICE = "INVOICE"
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
+
+    const val UNIFIED = "dms"
 
     const val LIMIT = 10000
 }

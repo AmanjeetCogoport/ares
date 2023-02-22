@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -47,4 +49,8 @@ interface DashboardService {
     suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<OverallStatsForTradeParty?>
 
     suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?>
+
+    suspend fun getSalesFunnel (month: String?): SalesFunnelResponse?
+
+    suspend fun getInvoiceTimeline (startDate: String? , endDate: String?): InvoiceTimeLineResponse?
 }

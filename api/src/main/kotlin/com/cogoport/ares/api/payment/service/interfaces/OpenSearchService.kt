@@ -21,4 +21,10 @@ interface OpenSearchService {
     suspend fun generateDailySalesOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String, defaultersOrgIds: List<UUID>?)
 
     suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
+
+    suspend fun generatingSalesFunnelData (monthKey: Int, year: Int, searchKey: String)
+
+    suspend fun generateArDashboardData ()
+
+    suspend fun generateInvoiceTimeline(startDate :String, endDate: String)
 }

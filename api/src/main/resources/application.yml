@@ -32,6 +32,11 @@ r2dbc:
       username: postgres
       password: A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5
       dialect: POSTGRES
+    dms:
+      url: r2dbc:postgresql://${DB_HOST:`52.66.190.93`}:${DB_PORT:6432}/${DB_NAME:dms}?preparedStatementCacheQueries=0
+      username: readuser_unifieddb
+      password: 72fe0630c542cc9ac415bf12a6002149
+      dialect: POSTGRES
 
 services:
   service: https://api.stage.cogoport.io

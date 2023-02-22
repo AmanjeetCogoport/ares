@@ -1,14 +1,19 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -57,9 +62,7 @@ import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.UUID
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import java.util.*
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -78,6 +81,7 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
+
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -759,4 +763,74 @@ class DashboardServiceImpl : DashboardService {
         responseList.pageNo = request.pageIndex
         return responseList
     }
+
+    override suspend fun getSalesFunnel(month: String?): SalesFunnelResponse? {
+        val year = AresModelConstants.CURR_YEAR
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+
+        val monthKey = when (!month.isNullOrEmpty()){
+            true -> months.indexOf(month) + 1
+            else -> AresModelConstants.CURR_MONTH
+        }
+
+        val searchKey = AresConstants.SALES_FUNNEL_PREFIX + months[monthKey - 1] + AresConstants.KEY_DELIMITER + year
+
+        var openSearchData = OpenSearchClient().search(
+            searchKey = searchKey,
+            classType = SalesFunnelResponse::class.java,
+            index = AresConstants.SALES_DASHBOARD_INDEX
+        )
+
+        if (openSearchData == null) {
+            openSearchService.generatingSalesFunnelData(monthKey, year, searchKey)
+            openSearchData = OpenSearchClient().search(
+                searchKey = searchKey,
+                classType = SalesFunnelResponse::class.java,
+                index = AresConstants.SALES_DASHBOARD_INDEX
+            )
+        }
+
+        return openSearchData
+    }
+
+    override suspend fun getInvoiceTimeline(startDate: String? , endDate: String?): InvoiceTimeLineResponse? {
+        val updatedStartDate = when (!startDate.isNullOrEmpty()){
+            true -> startDate
+            else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-01"
+        }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val updatedEndDate = when (!endDate.isNullOrEmpty()){
+            true -> endDate
+            else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
+        }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val searchKey  = AresConstants.INVOICE_TIME_LINE_PROFIX + startDate + AresConstants.KEY_DELIMITER + endDate
+
+        val opensearchData = OpenSearchClient().search(
+            searchKey = searchKey,
+            classType = InvoiceTimeLineResponse::class.java,
+            index = AresConstants.SALES_DASHBOARD_INDEX
+        )
+
+        if (opensearchData == null){
+            openSearchService.generateInvoiceTimeline( updatedStartDate, updatedEndDate)
+
+//            opensearchData = OpenSearchClient().search(
+//                searchKey = searchKey,
+//                classType = InvoiceTimeLineResponse::class.java,
+//                index = AresConstants.SALES_DASHBOARD_INDEX
+//            )
+        }
+
+        return opensearchData
+
+    }
+
+    private fun generateMonthKeyIndex (month: Int): String{
+        return when (month < 10 ){
+            true -> "0${month}"
+            else -> month.toString()
+        }
+    }
+
 }

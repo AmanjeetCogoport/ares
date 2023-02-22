@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
@@ -139,4 +141,12 @@ class DashboardController {
 
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
+
+    @Get("/sales-funnel")
+    suspend fun getSalesFunnel (@QueryValue("month") month: String? = null): SalesFunnelResponse? { return dashboardService.getSalesFunnel(month)}
+
+    @Get("/invoice-timeline")
+    suspend fun getInvoiceTimeline (@QueryValue ("startDate") startDate: String? = null,@QueryValue ("endDate") endDate: String? = null): InvoiceTimeLineResponse? {
+        return dashboardService.getInvoiceTimeline(startDate,endDate)
+    }
 }
