@@ -1156,8 +1156,17 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
+
+            val uploadedByName = authClient.getUsers(
+                GetUserRequest(
+                    id = arrayListOf(paymentDetails.createdBy.toString())
+                )
+            )
+
             val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
             openSearchPaymentModel.updatedBy = performedBy.toString()
+            openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)!!.userName
+            openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 throw AresException(AresError.ERR_1523, "")
