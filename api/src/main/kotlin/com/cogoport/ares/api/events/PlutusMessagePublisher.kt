@@ -6,7 +6,7 @@ import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
 import io.micronaut.rabbitmq.annotation.RabbitProperty
 
-@RabbitClient("Plutus")
+@RabbitClient("plutus")
 @RabbitProperty(name = "deliveryMode", value = "2")
 @MessageHeader(name = "x-retry-count", value = "0")
 interface PlutusMessagePublisher {

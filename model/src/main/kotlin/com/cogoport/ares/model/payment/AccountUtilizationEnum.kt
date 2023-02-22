@@ -30,13 +30,14 @@ enum class ServiceType {
     EXPENSE,
     AIR_FREIGHT_LOCAL,
     RAIL_DOMESTIC_FREIGHT,
-    TRADE_ENGINE,
+    PREMIUM_SERVICES,
     SUBSCRIPTION,
-    SUBSCRIPTION_ADDON
+    SUBSCRIPTION_ADDON,
+    TRUCKING
 }
 
 enum class ZoneCode {
-    NORTH, SOUTH, EAST, WEST
+    NORTH, SOUTH, EAST, WEST, VIETNAM
 }
 
 enum class AllCurrencyTypes {

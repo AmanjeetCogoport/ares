@@ -45,5 +45,6 @@ data class AccountUtilization(
     var transactionDate: Date?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var isDraft: Boolean? = false
 )

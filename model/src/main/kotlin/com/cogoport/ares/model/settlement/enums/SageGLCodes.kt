@@ -5,5 +5,7 @@ enum class SageGLCodes(val value: String) {
     ROFF("900001"),
     WOFF("660102"),
     EXCH("612100"),
-    ICJV("592000")
+    ICJV("592000"),
+    PREIMB("321002"),
+    SREIMB("223002")
 }

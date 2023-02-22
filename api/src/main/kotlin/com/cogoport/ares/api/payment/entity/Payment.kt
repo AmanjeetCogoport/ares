@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.entity
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -47,5 +48,8 @@ data class Payment(
     var exchangeRate: BigDecimal?,
     var bankId: UUID?,
     var bankPayAmount: BigDecimal?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var paymentDocumentStatus: PaymentDocumentStatus?,
+    var createdBy: UUID? = null,
+    var updatedBy: UUID? = null
 )

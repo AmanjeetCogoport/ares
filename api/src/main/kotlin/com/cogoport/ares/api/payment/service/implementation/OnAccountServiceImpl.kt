@@ -3,11 +3,11 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.Validations
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.events.AresMessagePublisher
-import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -27,17 +27,14 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
-import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
-import com.cogoport.ares.api.settlement.mapper.DocumentMapper
-import com.cogoport.ares.api.settlement.repository.SettlementRepository
-import com.cogoport.ares.api.settlement.service.implementation.SettlementServiceHelper
-import com.cogoport.ares.api.settlement.service.implementation.SettlementServiceImpl
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
@@ -53,10 +50,13 @@ import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
+import com.cogoport.ares.model.payment.enum.CogoBankAccount
+import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -76,7 +76,10 @@ import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.PaymentResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.JVSageAccount
+import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.brahma.excel.ExcelSheetBuilder
 import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
@@ -85,11 +88,20 @@ import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
+import com.cogoport.brahma.sage.SageException
+import com.cogoport.brahma.sage.model.request.PaymentLineItem
+import com.cogoport.brahma.sage.model.request.PaymentRequest
+import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.plutus.model.invoice.GetUserRequest
+import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.json.JSONObject
+import org.json.XML
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
@@ -110,6 +122,7 @@ import java.time.temporal.IsoFields
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
+import com.cogoport.brahma.sage.Client as SageClient
 
 @Singleton
 open class OnAccountServiceImpl : OnAccountService {
@@ -123,16 +136,10 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var authClient: AuthClient
 
     @Inject
-    lateinit var documentConverter: DocumentMapper
-
-    @Inject
-    lateinit var settlementServiceHelper: SettlementServiceHelper
+    lateinit var railsClient: RailsClient
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
-
-    @Inject
-    lateinit var settlementRepository: SettlementRepository
 
     @Inject
     lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
@@ -147,13 +154,7 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var orgStatsConverter: OrgStatsMapper
 
     @Inject
-    lateinit var settlementServiceImpl: SettlementServiceImpl
-
-    @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
-
-    @Inject
-    lateinit var invoicePayMappingRepo: InvoicePayMappingRepository
 
     @Inject
     lateinit var auditService: AuditService
@@ -169,10 +170,14 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var settlementService: SettlementService
 
-    @Inject lateinit var kuberMessagePublisher: KuberMessagePublisher
-
     @Inject
     lateinit var suspenseAccountRepo: SuspenseAccountRepo
+
+    @Inject
+    lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Value("\${sage.databaseName}")
+    var sageDatabase: String? = null
 
     /**
      * Fetch Account Collection payments from DB.
@@ -248,7 +253,19 @@ open class OnAccountServiceImpl : OnAccountService {
 //        setTradePartyOrganizations(receivableRequest)
         setTradePartyInfo(receivableRequest)
 
+        when (receivableRequest.isPosted ?: false) {
+            true -> {
+                receivableRequest.isPosted = true
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            }
+            false -> {
+                receivableRequest.isPosted = false
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.CREATED
+            }
+        }
+
         val payment = paymentConverter.convertToEntity(receivableRequest)
+
         setPaymentEntity(payment)
 
         val savedPayment = paymentRepository.save(payment)
@@ -377,6 +394,7 @@ open class OnAccountServiceImpl : OnAccountService {
         return if (receivableRequest.isSuspense == false) {
             val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
             val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+
             if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
             val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
             updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
@@ -417,6 +435,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.isPosted != null && receivableRequest.isPosted == true && receivableRequest.isSuspense == false) {
             paymentEntity.isPosted = true
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
+            paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -1074,7 +1093,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentDate = paymentDate,
                 uploadedBy = uploadedByName?.get(0)?.userName,
                 tradePartyMappingId = serialIdDetails?.mappingId,
-                taggedOrganizationId = serialIdDetails?.organizationId
+                taggedOrganizationId = serialIdDetails?.organizationId,
+                paymentDocumentStatus = PaymentDocumentStatus.CREATED
+
             )
 
             if (hasErrors) {
@@ -1134,5 +1155,278 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
             ).data(paymentResponseList).build()
         return file
+    }
+
+    override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
+        try {
+            val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
+            val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
+            openSearchPaymentModel.updatedBy = performedBy.toString()
+
+            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
+                throw AresException(AresError.ERR_1523, "")
+            }
+
+            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
+                throw AresException(AresError.ERR_1524, "")
+            }
+
+            val paymentOnSage = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
+            val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
+            val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery).get("recordset") as ArrayList<*>
+            if (records.size != 0) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment number is already present on sage",
+                        false
+                    )
+                )
+                return false
+            }
+
+            val organization = railsClient.getListOrganizationTradePartyDetails(paymentDetails.organizationId!!)
+
+            val sageOrganizationQuery = if (paymentDetails.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+            val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
+            val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+
+            val sageOrganization = authClient.getSageOrganization(
+                SageOrganizationRequest(
+                    paymentDetails.orgSerialId.toString(),
+                    if (paymentDetails.accMode == AccMode.AP) {
+                        "service_provider"
+                    } else {
+                        "importer_exporter"
+                    }
+                )
+            )
+
+            if (sageOrganization.sageOrganizationId.isNullOrEmpty()) {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "Sage organization not present",
+                        false
+                    )
+                )
+                return false
+            }
+
+            if (sageOrganization.sageOrganizationId != sageOrganizationFromSageId) {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "sage serial organization id different in sage db and cogoport db",
+                        false
+                    )
+                )
+                return false
+            }
+
+            lateinit var result: SageResponse
+            val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
+
+            val bankCode: String
+            val entityCode: String
+            val currency: String
+            var bankCodeDetails = hashMapOf<String, String>()
+
+            if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "Cogo bank account number is null",
+                        false
+                    )
+                )
+                return false
+            }
+
+            when (paymentDetails.payMode) {
+                PayMode.RAZORPAY -> {
+                    bankCode = PaymentSageGLCodes.RAZO.name
+                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    currency = PaymentSageGLCodes.RAZO.currency
+                }
+                else -> {
+                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                    bankCode = bankCodeDetails["bankCode"]!!
+                    entityCode = bankCodeDetails["entityCode"].toString()
+                    currency = bankCodeDetails["currency"]!!
+                }
+            }
+
+            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
+            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
+                result = SageClient.postPaymentToSage(
+                    PaymentRequest
+                    (
+                        if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
+                        paymentDetails.paymentNumValue!!,
+                        sageOrganization.sageOrganizationId!!,
+                        "IND",
+                        if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
+                        bankCode,
+                        paymentDetails.transactionDate!!,
+                        currency,
+                        entityCode,
+                        if (paymentDetails.accMode == AccMode.AP) 1 else 2,
+                        paymentDetails.amount,
+                        paymentLineItemDetails
+                    )
+                )
+            } else {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "Bank Account details does not match",
+                        false
+                    )
+                )
+                return false
+            }
+
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getStatus(processedResponse)
+
+            if (status == 1) {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "200",
+                        result.requestString,
+                        result.response,
+                        true
+                    )
+                )
+                return true
+            } else {
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        result.requestString,
+                        result.response,
+                        false
+                    )
+                )
+            }
+        } catch (exception: SageException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostPaymentToSage",
+                    "Payment",
+                    paymentId,
+                    "PAYMENT",
+                    "500",
+                    exception.data.trim(),
+                    exception.context,
+                    false
+                )
+            )
+            throw exception
+        } catch (e: Exception) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostPaymentToSage",
+                    "Payment",
+                    paymentId,
+                    "PAYMENT",
+                    "500",
+                    "",
+                    e.toString(),
+                    false
+                )
+            )
+            throw e
+        }
+        return false
+    }
+
+    private fun getPaymentLineItem(payment: com.cogoport.ares.api.payment.entity.Payment): PaymentLineItem {
+        return PaymentLineItem(
+            accMode = if (payment.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
+        )
+    }
+
+    private fun getPaymentGLCode(cogoAccountNo: String): HashMap<String, String> {
+        val bankCode = CogoBankAccount.values().find { it.cogoAccountNo == cogoAccountNo }?.name
+        val currency = PaymentSageGLCodes.valueOf(bankCode!!).currency
+        val entityCode = PaymentSageGLCodes.valueOf(bankCode).entityCode
+        return hashMapOf(
+            "bankCode" to bankCode,
+            "currency" to currency,
+            "entityCode" to entityCode.toString()
+        )
+    }
+
+    private fun getStatus(processedResponse: JSONObject?): Int? {
+        val status = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("status")
+            ?.get("content")
+        return status as Int?
     }
 }

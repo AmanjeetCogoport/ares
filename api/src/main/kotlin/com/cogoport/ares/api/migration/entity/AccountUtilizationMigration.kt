@@ -44,6 +44,7 @@ data class AccountUtilizationMigration(
     var transactionDate: Date?,
     var createdAt: Timestamp?,
     var updatedAt: Timestamp?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var isDraft: Boolean? = false
 
 )

@@ -27,6 +27,7 @@ import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.PaymentInvoiceMappingType
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -100,6 +101,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /*CREATE A NEW RECORD FOR THE PAYMENT TO VENDOR*/
         val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
+        paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         val savedPaymentRecord = savePayment(
             paymentEntity, isTDSEntry = false, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
         )
@@ -161,7 +163,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
 
-        if (leftAmount <= 0.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 0.toBigDecimal())
+        if (leftAmount <= 1.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 1.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
         var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
@@ -205,6 +207,7 @@ open class KnockoffServiceImpl : KnockoffService {
         }
         paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
+        paymentEntity.paymentDocumentStatus = paymentEntity.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
         val paymentObj = paymentRepository.save(paymentEntity)
         auditService.createAudit(
             AuditRequest(

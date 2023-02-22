@@ -25,6 +25,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
@@ -287,7 +288,7 @@ class CpSettlementServiceImpl : CpSettlementService {
         // 2% tds on taxable amount only if tds is not deducted already
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-
+        payment.paymentDocumentStatus = payment.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
         val paymentObj = paymentRepository.save(payment)
         auditService.createAudit(
             AuditRequest(
