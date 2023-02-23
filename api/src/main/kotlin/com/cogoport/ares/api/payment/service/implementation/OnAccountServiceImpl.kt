@@ -253,8 +253,18 @@ open class OnAccountServiceImpl : OnAccountService {
 //        setTradePartyOrganizations(receivableRequest)
         setTradePartyInfo(receivableRequest)
 
+        when (receivableRequest.isPosted ?: false) {
+            true -> {
+                receivableRequest.isPosted = true
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            }
+            false -> {
+                receivableRequest.isPosted = false
+                receivableRequest.paymentDocumentStatus = PaymentDocumentStatus.CREATED
+            }
+        }
+
         val payment = paymentConverter.convertToEntity(receivableRequest)
-        payment.paymentDocumentStatus = PaymentDocumentStatus.CREATED
 
         setPaymentEntity(payment)
         payment.paymentDocumentStatus = payment.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
@@ -384,6 +394,7 @@ open class OnAccountServiceImpl : OnAccountService {
         return if (receivableRequest.isSuspense == false) {
             val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
             val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+
             if (payment.isPosted) throw AresException(AresError.ERR_1010, "")
             val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
             updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
@@ -424,6 +435,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.isPosted != null && receivableRequest.isPosted == true && receivableRequest.isSuspense == false) {
             paymentEntity.isPosted = true
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
+            paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -663,10 +675,6 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
 
-        if (payment.isPosted != true) {
-            payment.isPosted = false
-        }
-//        payment.isPosted = false
         payment.isDeleted = false
     }
 
@@ -1149,6 +1157,17 @@ open class OnAccountServiceImpl : OnAccountService {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
 
+            val uploadedByName = authClient.getUsers(
+                GetUserRequest(
+                    id = arrayListOf(paymentDetails.createdBy.toString())
+                )
+            )
+
+            val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
+            openSearchPaymentModel.updatedBy = performedBy.toString()
+            openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)!!.userName
+            openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
+
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 throw AresException(AresError.ERR_1523, "")
             }
@@ -1197,6 +1216,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (sageOrganization.sageOrganizationId.isNullOrEmpty()) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1215,6 +1236,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (sageOrganization.sageOrganizationId != sageOrganizationFromSageId) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1240,7 +1263,22 @@ open class OnAccountServiceImpl : OnAccountService {
             var bankCodeDetails = hashMapOf<String, String>()
 
             if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
-                logger().info("Bank Account not selected")
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "Cogo bank account number is null",
+                        false
+                    )
+                )
                 return false
             }
 
@@ -1278,7 +1316,22 @@ open class OnAccountServiceImpl : OnAccountService {
                     )
                 )
             } else {
-                logger().info("Bank Account details does not match")
+                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        sageOrganization.toString(),
+                        "Bank Account details does not match",
+                        false
+                    )
+                )
                 return false
             }
 
@@ -1287,6 +1340,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (status == 1) {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1303,6 +1358,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 return true
             } else {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,

@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.common.config
 
+import com.cogoport.brahma.authentication.Authentication
+import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import io.micronaut.http.annotation.Filter
@@ -13,6 +15,9 @@ import java.util.UUID
 
 @Filter("/**")
 class RequestIdMdcFilter : HttpServerFilter {
+
+    @Value("\${environment}")
+    private lateinit var environment: String
 
     companion object {
         const val TRACE_ID_MDC_KEY = "traceId"
@@ -34,7 +39,6 @@ class RequestIdMdcFilter : HttpServerFilter {
 
         MDC.put(TRACE_ID_MDC_KEY, traceIdHeader)
 
-        // TODO: Find a way to clear the MDC after the chain returns
-        return chain.proceed(request)
+        return Authentication.authenticate(request, chain, environment)
     }
 }
