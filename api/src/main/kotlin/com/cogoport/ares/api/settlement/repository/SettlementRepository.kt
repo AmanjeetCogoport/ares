@@ -294,18 +294,26 @@ ORDER BY
     @NewSpan
     @Query(
         """
-           SELECT
-                p.trans_ref_number,source_id, source_type, destination_id, destination_type, s.currency, s.amount, s.settlement_date::TIMESTAMP
-           FROM
+            SELECT
+                p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
+                s.settlement_date::TIMESTAMP
+            FROM
                 settlements s
-                 join payments p on s.source_id = p.payment_num WHERE
-                destination_id in (:documentNo)
-                AND destination_type in ('PINV','PREIMB')
-                AND source_type not in ('VTDS') and payment_code = 'PAY' and s.is_draft = false
-                order by p.created_at desc 
+                LEFT JOIN payments p ON p.payment_num = s.source_id
+            WHERE
+                S.destination_id = 120151
+                And(p.acc_mode = 'AP'
+                    OR p.acc_mode IS NULL)
+                AND s.destination_type in('PINV', 'PREIMB')
+                AND s.source_type NOT in('VTDS')
+                and(payment_code = 'PAY'
+                    OR s.source_type = 'PCN') and s.is_draft = false
+            ORDER BY
+                s.created_at DESC
+
         """
     )
-    suspend fun getPaymentsCorrespondingDocumentNo(documentNo: List<Long?>): List<TaggedInvoiceSettlementInfo?>
+    suspend fun getPaymentsCorrespondingDocumentNo(documentNo: List<Long?>): MutableList<TaggedInvoiceSettlementInfo?>
 
     @NewSpan
     @Query(

@@ -4,7 +4,7 @@ import java.util.UUID
 
 data class ReversePaymentRequest(
     val document: Long,
-    val transferReferNo: String,
+    val source: Long,
     val updatedBy: UUID?,
     val performedByType: String?
 )

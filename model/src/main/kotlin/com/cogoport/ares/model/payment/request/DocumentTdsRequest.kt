@@ -6,6 +6,7 @@ import java.math.BigDecimal
 @Introspected
 data class DocumentTdsRequest(
     var documentNo: String,
-    var paidTds: BigDecimal,
-    var payableTds: BigDecimal
+    val paidTds: BigDecimal,
+    val payableTds: BigDecimal,
+    val exchangeRate: BigDecimal
 )
