@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -81,4 +82,18 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             """
     )
     suspend fun updatePaymentDocumentStatus(id: Long, paymentDocumentStatus: PaymentDocumentStatus, performedBy: UUID)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+                payment_document_status, 
+                array_agg(id) AS payment_ids
+            FROM 
+                payments
+            GROUP BY 
+                payment_document_status
+        """
+    )
+    suspend fun getPaymentDocumentStatusWiseIds(): List<PaymentDocumentStatusForPayments>
 }
