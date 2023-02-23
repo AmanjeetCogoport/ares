@@ -484,9 +484,4 @@ class OpenSearchServiceImpl : OpenSearchService {
             s
         }
     }
-
-    private fun addPaymentRecordsToOpenSearch(payment: Payment) {
-        val openSearchPaymentModelRecords = paymentConverter.convertToModel(payment)
-        Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, payment.id.toString(), openSearchPaymentModelRecords, true)
-    }
 }
