@@ -7,6 +7,6 @@ import io.micronaut.data.annotation.MappedEntity
 @Introspected
 @MappedEntity
 data class PaymentDocumentStatusForPayments(
-        var paymentDocumentStatus: PaymentDocumentStatus,
-        var paymentIds: List<Long>
+    var paymentDocumentStatus: PaymentDocumentStatus,
+    var paymentIds: List<Long>
 )

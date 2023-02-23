@@ -450,21 +450,12 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     override suspend fun paymentDocumentStatusMigration(): Boolean {
         val pdsRecords = paymentRepository.getPaymentDocumentStatusWiseIds()
-        val paymentDocumentStatus = PaymentDocumentStatus.CREATED
-        val listOfIds = listOf<Long>(50623,50654,50655,50804,50902,51249,51277,54888,54889,54890,76809)
-//        pdsRecords.forEach {
-//            listOfIds
-//                    .chunked(5000)
-//                    .forEach { batch ->
-//                        bulkUpdate(it.paymentDocumentStatus, batch)
-//                    }
-//        }
-        listOfIds
-                    .chunked(5000)
-                    .forEach { batch ->
-                        bulkUpdate(paymentDocumentStatus, batch)
-                    }
-
+        pdsRecords.forEach {
+            it.paymentIds.chunked(5000)
+                .forEach { batch ->
+                    bulkUpdate(it.paymentDocumentStatus, batch)
+                }
+        }
         return true
     }
 
@@ -477,13 +468,13 @@ class OpenSearchServiceImpl : OpenSearchService {
                     b.must { s ->
                         s.terms { v ->
                             v.field("id").terms(
-                                    TermsQueryField.of { a ->
-                                        a.value(
-                                                ids.map {
-                                                    FieldValue.of(it)
-                                                }
-                                        )
-                                    }
+                                TermsQueryField.of { a ->
+                                    a.value(
+                                        ids.map {
+                                            FieldValue.of(it)
+                                        }
+                                    )
+                                }
                             )
                         }
                     }
