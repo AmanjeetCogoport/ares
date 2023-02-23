@@ -448,7 +448,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun paymentDocumentStatusMigration(): Boolean {
+    override suspend fun paymentDocumentStatusMigration() {
         val pdsRecords = paymentRepository.getPaymentDocumentStatusWiseIds()
         pdsRecords.forEach {
             it.paymentIds.chunked(5000)
@@ -456,7 +456,6 @@ class OpenSearchServiceImpl : OpenSearchService {
                     bulkUpdate(it.paymentDocumentStatus, batch)
                 }
         }
-        return true
     }
 
     private fun bulkUpdate(paymentDocumentStatus: PaymentDocumentStatus, ids: List<Long>) {

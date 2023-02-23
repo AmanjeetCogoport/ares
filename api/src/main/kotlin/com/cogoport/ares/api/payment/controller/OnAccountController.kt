@@ -99,7 +99,7 @@ class OnAccountController {
     }
 
     @Get("/open-search/payment-document-status")
-    suspend fun paymentDocumentStatusMigration(): Boolean {
-        return openSearchService.paymentDocumentStatusMigration()
+    suspend fun paymentDocumentStatusMigration() {
+        openSearchService.paymentDocumentStatusMigration()
     }
 }
