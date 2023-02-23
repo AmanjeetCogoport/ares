@@ -462,7 +462,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     private fun bulkUpdate(paymentDocumentStatus: PaymentDocumentStatus, ids: List<Long>) {
         Client.updateByQuery { s ->
             s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX).script { s ->
-                s.inline { i -> i.source("ctx._source[\"paymentDocumentStatus\"] = ${paymentDocumentStatus.name}").lang("painless") }
+                s.inline { i -> i.source("ctx._source[\"paymentDocumentStatus\"] = \"${paymentDocumentStatus.name}\"").lang("painless") }
             }.query { q ->
                 q.bool { b ->
                     b.must { s ->
