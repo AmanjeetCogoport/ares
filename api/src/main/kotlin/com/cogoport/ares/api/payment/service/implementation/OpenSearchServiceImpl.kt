@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -488,20 +489,21 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun generateInvoiceTimeline(startDate: String, endDate: String) {
         val data = unifiedDBRepo.getFunnelData(startDate, endDate)
 
-        var financeAcceptedInvoices = data?.filter {it.status?.name != "DRAFT"}
+        var mapOfData = mapOf("finance_accepted" to data?.filter {it.status?.name != "DRAFT"}, "irn_generated" to data?.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }, "settled" to  data?.filter { it.paymentStatus == "PAID" })
+        var invoiceTimeLineResp = InvoiceTimeLineResponse()
 
-        var financeAcceptedInvoicesHourCount = 0
-
-        financeAcceptedInvoices?.map {
-            var eventData = unifiedDBRepo.getInvoiceEvents(it.id!!)
-
-            eventData?.filter { listOf("CREATED", "FINANCE_ACCEPTED").contains(it.eventName) }
-
-//            eventData?.filter { it.eventName == "IRN_GENERATED" }?.first()?.createdAt?.time - eventData?.filter { it.eventName == "FINANCE_ACCEPTED" }
-
-//            financeAcceptedInvoicesHourCount = (eventData?.filter { it.eventName == "FINANCE_ACCEPTED" }?.first()?.createdAt) - eventData?.filter { it.eventName == "CREATED" }?.first()?.createdAt
+        mapOfData.entries.map { (k,v) ->
+            v?.map {invoice->
+                var eventData = unifiedDBRepo.getInvoiceEvents(invoice.id!!)
+                invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.plus(eventData?.first { it.eventName == "FINANCE_ACCEPTED" }?.createdAt?.time?.minus(
+                    eventData.first { it.eventName == "CREATED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+                invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(eventData?.first { it.eventName == "IRN_GENERATED" }?.createdAt?.time?.minus(
+                    eventData.first { it.eventName == "FINANCE_ACCEPTED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+                invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled = invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.plus(eventData?.first { it.eventName == "SETTLED" }?.createdAt?.time?.minus(
+                    eventData.first { it.eventName == "IRN_GENERATED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+            }
         }
 
-        logger().info(data.toString())
+        logger().info(invoiceTimeLineResp.toString())
     }
 }
