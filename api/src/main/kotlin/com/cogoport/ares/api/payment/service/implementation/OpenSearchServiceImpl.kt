@@ -9,7 +9,6 @@ import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OverallStats
-import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.mapper.CollectionTrendMapper
 import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
