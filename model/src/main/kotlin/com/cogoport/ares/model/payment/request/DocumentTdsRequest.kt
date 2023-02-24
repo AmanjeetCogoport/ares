@@ -8,5 +8,7 @@ data class DocumentTdsRequest(
     var documentNo: String,
     val paidTds: BigDecimal,
     val payableTds: BigDecimal,
+    val transactionNo: String? = null,
+    val transferType: String? = null,
     val exchangeRate: BigDecimal
 )
