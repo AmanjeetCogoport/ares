@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.SettlementType
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -28,5 +29,8 @@ data class Settlement(
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
     var supportingDocUrl: String? = null,
-    var isDraft: Boolean? = false
+    var isDraft: Boolean? = false,
+    var unUtilizedAmount: BigDecimal = BigDecimal.ZERO,
+    @JsonProperty("tagged_settlement_id")
+    var taggedSettlementId: String? = null
 )

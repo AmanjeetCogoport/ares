@@ -2,13 +2,14 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.AutoKnockoffDocumentResponse
-import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.payment.model.ReversePaymentRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
@@ -19,6 +20,8 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.SQLException
@@ -51,94 +54,112 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) {
         val destinationDocument = AutoKnockoffDocumentResponse()
+        val settledTaggedPreviousIds = arrayListOf<Long?>()
         val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
+        val extendedTaggedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
         req.document.documentNo = Hashids.decode(req.document.documentNo)[0].toString()
         val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it.documentNo)[0] }
-        // TODO("only have to use amount of pcn or pay which is settled")
-        val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
-        val sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
-        val sourceAccountUtilization = accountUtilizationRepository.findRecords(
-            settledSourceDocuments.map { it?.sourceId!!.toLong() },
-            sourceType,
-            null
-        )
-        sourceAccountUtilization.forEach { source ->
-            val paymentInfo = settledSourceDocuments.find { it?.sourceId!!.toLong() == source?.documentNo }
-            val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo?.destinationId!!.toLong() }
-            val isSettled = paymentInfo?.transRefNumber != documentInfo?.transactionNo && paymentInfo?.sourceType == SettlementType.PAY
-            extendedSourceDocument.add(
-                AutoKnockoffDocumentResponse(
-                    accountUtilization = source,
-                    paidTds = documentInfo?.paidTds,
-                    payableTds = documentInfo?.payableTds,
-                    exchangeRate = documentInfo?.exchangeRate!!,
-                    isSettled = isSettled,
-                    amount = paymentInfo?.amount!!
-                )
-            )
-        }
-        extendedSourceDocument.sortedByDescending { it?.accountUtilization?.amountCurr!! - it.accountUtilization?.payCurr!! }
         destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(
             req.document.documentNo.toLong(),
             AccountType.PINV.name,
             AccMode.AP.name
         )
+        if (destinationDocument.accountUtilization == null) {
+            throw AresException(AresError.ERR_1503, "")
+        }
         destinationDocument.payableTds = req.document.payableTds
         destinationDocument.paidTds = req.document.paidTds
         destinationDocument.exchangeRate = req.document.exchangeRate
+
+        // TODO("only have to use amount of pcn or pay which is settled")
+        val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
+        settledSourceDocuments.forEach { it1 ->
+            val exchangeRate = req.taggedDocuments.find { it2 -> Hashids.decode(it2.documentNo)[0] == it1?.destinationId!!.toLong() }!!.exchangeRate
+            reversePayment(
+                ReversePaymentRequest(
+                    it1!!.destinationId.toLong(),
+                    it1.sourceId.toLong(),
+                    exchangeRate,
+                    req.createdBy,
+                    null
+                )
+            )
+        }
+        var sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
+        val sourceAccountUtilization = accountUtilizationRepository.findRecords(
+            settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null
+        )
+
+        sourceAccountUtilization.forEach { source ->
+            val paymentInfo = settledSourceDocuments.find { it?.sourceId!!.toLong() == source?.documentNo }
+            val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo?.destinationId!!.toLong() }
+            val isSettled = !(paymentInfo?.transRefNumber == documentInfo?.transactionNo && paymentInfo?.sourceType == SettlementType.PAY)
+            val taggedSettledIds = ObjectMapper().readValue(paymentInfo?.utilizedAmount, object : TypeReference<MutableList<Long?>>() {})
+            settledTaggedPreviousIds.addAll(ArrayList(taggedSettledIds))
+            extendedSourceDocument.add(
+                AutoKnockoffDocumentResponse(
+                    accountUtilization = source,
+                    settlementId = paymentInfo?.settlementId,
+                    paidTds = documentInfo?.paidTds,
+                    payableTds = documentInfo?.payableTds,
+                    exchangeRate = documentInfo?.exchangeRate!!,
+                    isSettled = isSettled,
+                    amount = paymentInfo?.amount!!,
+                    taggedSettledIds = taggedSettledIds
+                )
+            )
+        }
+        extendedSourceDocument.sortedByDescending { it?.accountUtilization?.amountCurr!! - it.accountUtilization?.payCurr!! }
+        val distinctTaggedIds = settledTaggedPreviousIds.distinct()
+        var previousSettlements = listOf<Settlement>()
+        if (distinctTaggedIds.isNotEmpty()) {
+            previousSettlements = settlementRepository.findByIdIn(distinctTaggedIds as List<Long>)
+            previousSettlements = previousSettlements.filter { it.unUtilizedAmount >= BigDecimal.ZERO }
+        }
+        sourceType = previousSettlements.map { it.sourceType.toString() }.distinct()
+        val taggedAccountUtilization = accountUtilizationRepository.findRecords(
+            previousSettlements.map { it.sourceId!!.toLong() }, sourceType, null
+        )
+        previousSettlements.sortedByDescending { it.unUtilizedAmount }
+
+        taggedAccountUtilization.forEach { source ->
+            extendedTaggedSourceDocument.add(
+                AutoKnockoffDocumentResponse(
+                    accountUtilization = source
+                )
+            )
+        }
+
         var balanceSettlingAmount = destinationDocument.accountUtilization?.amountCurr!!.minus(destinationDocument.accountUtilization?.payCurr!!)
         var sourceStartIndex = 0
+        var taggedSourceStartIndex = 0
+        val taggedSourceEndIndex = previousSettlements.size
         val sourceEndIndex = extendedSourceDocument.size
-        while (req.settledAmount + req.settledTds >= BigDecimal.ZERO && balanceSettlingAmount > BigDecimal.ZERO && sourceStartIndex < sourceEndIndex) {
-            var settledList: List<CheckDocument>?
-            val source = extendedSourceDocument[sourceStartIndex]
-            var balancePaymentUtilization = BigDecimal.ZERO
-            if (!source?.isSettled!!) {
-                balancePaymentUtilization = source.accountUtilization?.amountCurr!! - source.accountUtilization?.payCurr!!
-            }
-
-            if ((balancePaymentUtilization > BigDecimal.ZERO)) {
-                settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
-                destinationDocument.accountUtilization!!.payCurr += settledList?.get(1)?.settledAmount!!
-                destinationDocument.accountUtilization!!.payLoc += settledList[1].settledAmount!! * settledList[1].exchangeRate
-            } else {
-                val payment = settledSourceDocuments.find { it?.sourceId!!.toLong() == source.accountUtilization?.documentNo }
-                val reversePaymentAmount = if (payment?.amount!! >= req.settledAmount && balanceSettlingAmount >= req.settledAmount) req.settledAmount else if (payment.amount < req.settledAmount && balanceSettlingAmount >= payment.amount) payment.amount else balanceSettlingAmount
-                val availablePayment = reversePayment(
-                    ReversePaymentRequest(
-                        payment.destinationId.toLong(),
-                        payment.sourceId.toLong(),
-                        reversePaymentAmount,
-                        source.exchangeRate,
-                        req.createdBy,
-                        null
-                    )
-                )
-                source.accountUtilization!!.payCurr = availablePayment.payCurr
-                source.accountUtilization!!.payLoc = availablePayment.payLoc
-                source.amount = reversePaymentAmount
-                settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
-                destinationDocument.accountUtilization!!.payCurr += (settledList?.get(1)?.settledAllocation!! + settledList[1].settledAmount!!)
-                destinationDocument.accountUtilization!!.payLoc += (settledList[1].settledAllocation + settledList[1].settledAmount!!) * settledList[1].exchangeRate
-            }
-            balanceSettlingAmount = (settledList[1].settledAllocation + settledList[1].settledAmount!!) // TODO(wrong balanceAmount)
+        while (req.settledAmount + req.settledTds >= BigDecimal.ZERO && balanceSettlingAmount > BigDecimal.ZERO && (sourceStartIndex < sourceEndIndex || taggedSourceStartIndex < taggedSourceEndIndex)) {
+            val source = if (sourceStartIndex < sourceEndIndex) extendedSourceDocument[sourceStartIndex] else extendedTaggedSourceDocument[taggedSourceEndIndex]
+            source?.amount = minOf(source?.amount!!, req.settledAmount, balanceSettlingAmount)
+            val settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
+            destinationDocument.accountUtilization!!.payCurr += source.amount
+            destinationDocument.accountUtilization!!.payLoc += (source.amount * settledList!![1].exchangeRate)
+            destinationDocument.payableTds = destinationDocument.payableTds!! - settledList[1].settledTds
+            destinationDocument.payableTds = destinationDocument.paidTds!! + settledList[1].settledTds
+            source.paidTds = source.paidTds!! - settledList[1].settledTds
+            settlementRepository.updateTaggedSettlement(source.settlementId!!, source.amount)
+            balanceSettlingAmount = destinationDocument.accountUtilization!!.amountCurr - destinationDocument.accountUtilization!!.payCurr // TODO(wrong balanceAmount)
             req.settledAmount -= settledList[1].settledAllocation
             req.settledTds -= settledList[1].settledTds // TODO(wrong settledTds)
-            sourceStartIndex++
+            if (sourceStartIndex < sourceEndIndex) sourceStartIndex++ else taggedSourceStartIndex++
         }
     }
-    private suspend fun reversePayment(reversePaymentRequest: ReversePaymentRequest): PaymentUtilizationResponse {
+    private suspend fun reversePayment(reversePaymentRequest: ReversePaymentRequest) {
         val accountUtilization = accountUtilizationRepository.findRecord(reversePaymentRequest.document, AccountType.PINV.name, AccMode.AP.name)
         val settlements = settlementRepository.getSettlementDetailsByDestinationId(accountUtilization!!.documentNo, reversePaymentRequest.source)
         val amount = settlements.sumOf { it.amount!! }
         val settlementIds = settlements.map { it.id!! }
-        settlementRepository.markSettlementIsDraftTrue(settlementIds)
-// TODO(which amount have to pass in 141, 142; amount or reversePaymentRequest.amount)
+        settlementRepository.markSettlementIsDraftTrue(settlementIds, amount)
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(reversePaymentRequest.source)
-        accountUtilizationRepository.markPaymentUnutilized(accountUtilizationPaymentData.id, reversePaymentRequest.amount, reversePaymentRequest.amount * reversePaymentRequest.exchangeRate) // TODO("nothing")
+        accountUtilizationRepository.markPaymentUnutilized(accountUtilizationPaymentData.id, amount, amount * reversePaymentRequest.exchangeRate)
         accountUtilizationRepository.updateAccountUtilizations(accountUtilization.id!!, true)
-        accountUtilizationPaymentData.payCurr -= amount
-        accountUtilizationPaymentData.payLoc -= (amount * reversePaymentRequest.exchangeRate)
         createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
@@ -149,28 +170,6 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
 //        } catch (e: Exception) {
 //            Sentry.captureException(e)
 //        }
-        return accountUtilizationPaymentData
-    }
-
-    private suspend fun createAudit(
-        objectType: String,
-        objectId: Long?,
-        actionName: String,
-        data: Any?,
-        performedBy: String,
-        performedByUserType: String?
-
-    ) {
-        auditService.createAudit(
-            AuditRequest(
-                objectType = objectType,
-                objectId = objectId,
-                actionName = actionName,
-                data = data,
-                performedBy = performedBy,
-                performedByUserType = performedByUserType
-            )
-        )
     }
     private suspend fun settleTaggedDocument(destinationDocument: AutoKnockoffDocumentResponse, sourceDocument: AutoKnockoffDocumentResponse, createdBy: UUID?): List<CheckDocument>? {
         val listOfDocuments = mutableListOf<AutoKnockoffDocumentResponse>()
@@ -279,5 +278,26 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         documentModel[0].allocationAmount = settlingAmount
         documentModel[0].balanceAfterAllocation = documentModel[0].balanceAmount - settlingAmount
         return documentModel
+    }
+
+    private suspend fun createAudit(
+        objectType: String,
+        objectId: Long?,
+        actionName: String,
+        data: Any?,
+        performedBy: String,
+        performedByUserType: String?
+
+    ) {
+        auditService.createAudit(
+            AuditRequest(
+                objectType = objectType,
+                objectId = objectId,
+                actionName = actionName,
+                data = data,
+                performedBy = performedBy,
+                performedByUserType = performedByUserType
+            )
+        )
     }
 }

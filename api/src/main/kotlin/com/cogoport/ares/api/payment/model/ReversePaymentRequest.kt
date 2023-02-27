@@ -6,7 +6,6 @@ import java.util.UUID
 data class ReversePaymentRequest(
     val document: Long,
     val source: Long,
-    val amount: BigDecimal,
     val exchangeRate: BigDecimal,
     val updatedBy: UUID?,
     val performedByType: String?

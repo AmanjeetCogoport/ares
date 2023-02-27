@@ -11,6 +11,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.math.BigDecimal
 import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -41,6 +42,9 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
+            s.un_utilized_amount,
+            s.tagged_settlement_id,
+            s.is_draft,
             s.supporting_doc_url
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_draft = false
@@ -295,8 +299,8 @@ ORDER BY
     @Query(
         """
             SELECT
-                p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP
+               s.id as settlement_id, p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
+                s.settlement_date::TIMESTAMP, utilized_amount
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
@@ -316,19 +320,36 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET is_draft = true WHERE id in (:id) and is_draft = false
+            UPDATE settlements SET is_draft = true, un_utilized_amount = :amount WHERE id in (:id) and is_draft = false
         """
     )
-    suspend fun markSettlementIsDraftTrue(id: List<Long>)
+    suspend fun markSettlementIsDraftTrue(id: List<Long>, amount: BigDecimal)
 
     @NewSpan
     @Query(
         """
-          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,
+          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount, un_utilized_amount, tagged_settlement_id,
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
           deleted_at is null and is_draft = false    
         """
     )
     suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): List<Settlement>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE settlements utilized_amount = unUtilisedAmount WHERE source_id = :sourceId and destination_id = :destinationId and is_draft = false
+             and destination_type = 'PINV' and source_type in ('PAY', 'PCN')
+        """
+    )
+    suspend fun updateTaggedSettlementAmount(sourceId: Long, destinationId: Long, unUtilisedAmount: String)
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE settlements un_utilized_amount = un_utilized_amount - :unUtilisedAmount WHERE id = id
+        """
+    )
+    suspend fun updateTaggedSettlement(id: Long, unUtilisedAmount: BigDecimal)
 }
