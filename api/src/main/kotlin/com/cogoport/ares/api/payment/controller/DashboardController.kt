@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -44,6 +45,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.sql.Date
 import javax.validation.Valid
 
 @Validated
@@ -148,5 +150,10 @@ class DashboardController {
     @Get("/invoice-timeline")
     suspend fun getInvoiceTimeline (@QueryValue ("startDate") startDate: String? = null,@QueryValue ("endDate") endDate: String? = null): InvoiceTimeLineResponse? {
         return dashboardService.getInvoiceTimeline(startDate,endDate)
+    }
+
+    @Get("/outstanding")
+    suspend fun getOutstanding (@QueryValue("date") date: Date? = null ): OutstandingOpensearchResponse? {
+        return dashboardService.getOutstanding(date)
     }
 }

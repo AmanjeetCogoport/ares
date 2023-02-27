@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
@@ -13,6 +14,7 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -56,8 +58,10 @@ import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.sql.Date
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
@@ -81,6 +85,9 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
+
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
 
 
     private fun validateInput(zone: String?, role: String?) {
@@ -806,24 +813,44 @@ class DashboardServiceImpl : DashboardService {
 
         val searchKey  = AresConstants.INVOICE_TIME_LINE_PROFIX + startDate + AresConstants.KEY_DELIMITER + endDate
 
-        val opensearchData = OpenSearchClient().search(
+        var opensearchData = OpenSearchClient().search(
             searchKey = searchKey,
             classType = InvoiceTimeLineResponse::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
         if (opensearchData == null){
-            openSearchService.generateInvoiceTimeline( updatedStartDate, updatedEndDate)
+            openSearchService.generateInvoiceTimeline( updatedStartDate, updatedEndDate, searchKey)
 
-//            opensearchData = OpenSearchClient().search(
-//                searchKey = searchKey,
-//                classType = InvoiceTimeLineResponse::class.java,
-//                index = AresConstants.SALES_DASHBOARD_INDEX
-//            )
+            opensearchData = OpenSearchClient().search(
+                searchKey = searchKey,
+                classType = InvoiceTimeLineResponse::class.java,
+                index = AresConstants.SALES_DASHBOARD_INDEX
+            )
         }
-
         return opensearchData
+    }
 
+    override suspend fun getOutstanding(date: Date?): OutstandingOpensearchResponse? {
+        val asOnDate = date ?: Date.from(Instant.now())
+        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER
+
+        var opensearchData = OpenSearchClient().search(
+            searchKey = searchKey,
+            classType = OutstandingOpensearchResponse::class.java,
+            index = AresConstants.SALES_DASHBOARD_INDEX
+        )
+
+        if (opensearchData == null){
+            openSearchService.generateOutstandingData( asOnDate,  searchKey)
+
+            opensearchData = OpenSearchClient().search(
+                searchKey = searchKey,
+                classType = OutstandingOpensearchResponse::class.java,
+                index = AresConstants.SALES_DASHBOARD_INDEX
+            )
+        }
+        return opensearchData
     }
 
     private fun generateMonthKeyIndex (month: Int): String{

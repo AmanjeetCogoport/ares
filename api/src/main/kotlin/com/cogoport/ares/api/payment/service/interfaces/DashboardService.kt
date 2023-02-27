@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -29,6 +30,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import java.sql.Date
 
 interface DashboardService {
 
@@ -53,4 +55,6 @@ interface DashboardService {
     suspend fun getSalesFunnel (month: String?): SalesFunnelResponse?
 
     suspend fun getInvoiceTimeline (startDate: String? , endDate: String?): InvoiceTimeLineResponse?
+
+    suspend fun getOutstanding (date: Date?): OutstandingOpensearchResponse?
 }

@@ -9,5 +9,6 @@ data class OverallStats(
     var openInvoicesCount: Int?,
     var openInvoicesAmount: BigDecimal?,
     var openOnAccountPaymentAmount: BigDecimal?,
-    var dashboardCurrency: String
+    var dashboardCurrency: String,
+    var customersCount: Int? = 0
 )

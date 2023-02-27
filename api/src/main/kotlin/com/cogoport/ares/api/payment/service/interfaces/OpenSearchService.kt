@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.interfaces
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.model.payment.ServiceType
+import java.util.Date
 import java.util.UUID
 
 interface OpenSearchService {
@@ -26,5 +27,9 @@ interface OpenSearchService {
 
     suspend fun generateArDashboardData ()
 
-    suspend fun generateInvoiceTimeline(startDate :String, endDate: String)
+    suspend fun generateInvoiceTimeline(startDate :String, endDate: String, searchKey: String)
+
+    suspend fun generateOutstandingData (date: Date, searchKey: String)
+
+    suspend fun getKamOrManagerWiseOutstandong ()
 }

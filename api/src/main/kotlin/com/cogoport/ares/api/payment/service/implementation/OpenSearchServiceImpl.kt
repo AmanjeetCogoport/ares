@@ -2,7 +2,11 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
+import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
+import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
+import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
+import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -22,6 +26,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -39,11 +44,13 @@ import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.util.*
+import kotlin.collections.HashMap
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -450,6 +457,16 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val salesFunnelKey = AresConstants.SALES_FUNNEL_PREFIX + months[currMonth-1] + AresConstants.KEY_DELIMITER + currYear
         generatingSalesFunnelData(currMonth,currYear, salesFunnelKey)
+
+        val startDate = AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val endDate = "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(startDate).month.length(LocalDate.parse(startDate).isLeapYear)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val invoiceTimeLineKey = AresConstants.INVOICE_TIME_LINE_PROFIX + startDate + AresConstants.KEY_DELIMITER + endDate
+        generateInvoiceTimeline(startDate!!, endDate, invoiceTimeLineKey)
+
+        val currentDate = java.util.Date.from(Instant.now())
+        val outstandingIndexKey  = AresConstants.OUTSTANDING_PREFIX + currentDate + AresConstants.KEY_DELIMITER
+        generateOutstandingData(currentDate, outstandingIndexKey)
+
     }
 
     override suspend fun generatingSalesFunnelData (monthKey: Int, year: Int, searchKey: String) {
@@ -486,24 +503,95 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, salesFunnelResponse)
     }
 
-    override suspend fun generateInvoiceTimeline(startDate: String, endDate: String) {
+    override suspend fun generateInvoiceTimeline(startDate: String, endDate: String, searchKey: String) {
         val data = unifiedDBRepo.getFunnelData(startDate, endDate)
 
-        var mapOfData = mapOf("finance_accepted" to data?.filter {it.status?.name != "DRAFT"}, "irn_generated" to data?.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }, "settled" to  data?.filter { it.paymentStatus == "PAID" })
-        var invoiceTimeLineResp = InvoiceTimeLineResponse()
+        val mapOfData = mapOf("finance_accepted" to data?.filter {it.status?.name != "DRAFT"}, "irn_generated" to data?.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }, "settled" to  data?.filter { it.paymentStatus == "PAID" })
+        val invoiceTimeLineResp = InvoiceTimeLineResponse()
 
         mapOfData.entries.map { (k,v) ->
             v?.map {invoice->
-                var eventData = unifiedDBRepo.getInvoiceEvents(invoice.id!!)
-                invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.plus(eventData?.first { it.eventName == "FINANCE_ACCEPTED" }?.createdAt?.time?.minus(
-                    eventData.first { it.eventName == "CREATED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
-                invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(eventData?.first { it.eventName == "IRN_GENERATED" }?.createdAt?.time?.minus(
-                    eventData.first { it.eventName == "FINANCE_ACCEPTED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
-                invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled = invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.plus(eventData?.first { it.eventName == "SETTLED" }?.createdAt?.time?.minus(
-                    eventData.first { it.eventName == "IRN_GENERATED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+                val eventData = unifiedDBRepo.getInvoiceEvents(invoice.id!!)
+                when (k) {
+                    "finance_accepted" -> invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.plus(eventData?.first { it.eventName == "FINANCE_ACCEPTED" }?.createdAt?.time?.minus(
+                        eventData.first { it.eventName == "CREATED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+                    "irn_generated" -> invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(eventData?.first { it.eventName == "IRN_GENERATED" }?.createdAt?.time?.minus(
+                        eventData.first { it.eventName == "FINANCE_ACCEPTED" }.createdAt.time)?.div(1000)?.div(60)?.div(60)!!)
+                    "settled" -> if (eventData?.first { it.eventName == "SETTLED" } != null)  {
+                        invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.plus(eventData.first { it.eventName == "SETTLED" }.createdAt.time.minus(
+                            eventData.first { it.eventName == "IRN_GENERATED" }.createdAt.time).div(1000).div(60).div(60))
+                    } else {
+                        invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled = 0L
+                    }
+                    else -> {}
+                }
             }
         }
 
-        logger().info(invoiceTimeLineResp.toString())
+        invoiceTimeLineResp.draftInvoicesCount = data?.size
+        invoiceTimeLineResp.financeAcceptedInvoiceCount = mapOfData["finance_accepted"]?.size
+        invoiceTimeLineResp.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
+        invoiceTimeLineResp.settledInvoicesCount = mapOfData["settled"]?.size
+
+        if (invoiceTimeLineResp.financeAcceptedInvoiceCount!! != 0){
+            invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.div(invoiceTimeLineResp.financeAcceptedInvoiceCount!!)
+        }
+
+        if (invoiceTimeLineResp.irnGeneratedInvoicesCount!! != 0){
+            invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTimeLineResp.irnGeneratedInvoicesCount!!)
+        }
+        if (invoiceTimeLineResp.settledInvoicesCount !=0 ){
+            invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.div(invoiceTimeLineResp.settledInvoicesCount!!)
+        }
+
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, invoiceTimeLineResp)
+    }
+
+    override suspend fun generateOutstandingData(date: Date, searchKey: String) {
+        val data = unifiedDBRepo.getOutstandingData(date)
+
+        val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
+
+        data?.groupBy { it.groupedServices }?.filter { it.key != null }?.entries?.map {(k,v) ->
+            mapData[k]?.totalOutstanding = v.sumOf { it.openInvoiceAmount }
+            mapData[k]?.openInvoiceAmount = v.sumOf { it.openInvoiceAmount }
+            mapData[k]?.onAccountPayment = BigDecimal.ZERO
+            mapData[k]?.currency = v.first().currency
+            mapData[k]?.tradeType= v.map { item ->
+                TradeAndServiceLevelOutstanding(
+                    key = "${item.serviceType}_${item.tradeType}",
+                    name = "${item.serviceType} ${item.tradeType}".uppercase(),
+                    totalOutstanding = item.openInvoiceAmount,
+                    openInvoiceAmount = item.openInvoiceAmount,
+                    onAccountPayment = BigDecimal.ZERO,
+                    currency = item.currency
+                )
+            }
+        }
+
+        val outstandingOpensearchResponse = OutstandingOpensearchResponse(
+            overallStats = OverallStats(
+                totalOutstandingAmount = data?.sumOf { it.openInvoiceAmount },
+                openInvoicesAmount = data?.sumOf { it.openInvoiceAmount },
+                openOnAccountPaymentAmount = BigDecimal.ZERO,
+                customersCount = data?.sumOf { it.customersCount!! },
+                dashboardCurrency = data?.first()?.currency!!,
+                openInvoicesCount = data.sumOf { it.openInvoicesCount!! }
+            ),
+            outstandingServiceWise = mapData
+        )
+
+        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, outstandingOpensearchResponse)
+    }
+
+    override suspend fun getKamOrManagerWiseOutstandong() {
+        TODO("Not yet implemented")
+    }
+
+    private fun generateMonthKeyIndex (month: Int): String{
+        return when (month < 10 ){
+            true -> "0${month}"
+            else -> month.toString()
+        }
     }
 }
