@@ -300,14 +300,14 @@ ORDER BY
         """
             SELECT
                s.id as settlement_id, p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, utilized_amount
+                s.settlement_date::TIMESTAMP, un_utilized_amount, tagged_settlement_id
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
             WHERE
                 s.destination_id in (:documentNo)
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
-                AND s.destination_type in('PINV', 'PREIMB')
+                AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
                 AND s.source_type NOT in('VTDS')
                 and (p.payment_code = 'PAY'  OR s.source_type = 'PCN') and s.is_draft = false
             ORDER BY
@@ -339,16 +339,17 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements utilized_amount = unUtilisedAmount WHERE source_id = :sourceId and destination_id = :destinationId and is_draft = false
-             and destination_type = 'PINV' and source_type in ('PAY', 'PCN')
+            UPDATE settlements set tagged_settlement_id = jsonb_set(tagged_settlement_id,'{taggedIds}',jsonb_build_array(:taggedSettlementIds)) 
+            WHERE source_id = :sourceId and destination_id = :destinationId 
+            and is_draft = false and destination_type = 'PINV' and source_type in ('PAY', 'PCN')
         """
     )
-    suspend fun updateTaggedSettlementAmount(sourceId: Long, destinationId: Long, unUtilisedAmount: String)
+    suspend fun updateTaggedSettlementAmount(sourceId: Long, destinationId: Long, taggedSettlementIds: List<Long?>)
 
     @NewSpan
     @Query(
         """
-            UPDATE settlements un_utilized_amount = un_utilized_amount - :unUtilisedAmount WHERE id = id
+            UPDATE settlements set un_utilized_amount = un_utilized_amount - :unUtilisedAmount WHERE id = :id
         """
     )
     suspend fun updateTaggedSettlement(id: Long, unUtilisedAmount: BigDecimal)

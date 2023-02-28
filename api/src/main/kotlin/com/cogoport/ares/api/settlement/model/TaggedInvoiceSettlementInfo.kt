@@ -22,6 +22,7 @@ data class TaggedInvoiceSettlementInfo(
     val transRefNumber: String?,
     val settlementDate: Timestamp?,
     @field: TypeDef(type = DataType.JSON)
-    @JsonProperty("utilized_amount")
-    var utilizedAmount: String
+    @JsonProperty("tagged_settlement_id")
+    var taggedSettlementId: String?,
+    val unUtilizedAmount: BigDecimal
 )

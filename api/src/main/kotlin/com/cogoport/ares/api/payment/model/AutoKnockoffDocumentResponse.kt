@@ -13,5 +13,6 @@ data class AutoKnockoffDocumentResponse(
     var exchangeRate: BigDecimal = BigDecimal.ONE,
     val isSettled: Boolean? = false,
     var amount: BigDecimal = BigDecimal.ZERO,
-    var taggedSettledIds: MutableList<Long?> = mutableListOf()
+    var tdsAmount: BigDecimal = BigDecimal.ZERO,
+    var taggedSettledIds: MutableList<Long?>? = mutableListOf()
 )

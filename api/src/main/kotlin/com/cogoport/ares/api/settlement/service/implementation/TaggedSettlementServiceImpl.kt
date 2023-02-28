@@ -20,8 +20,8 @@ import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.brahma.hashids.Hashids
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.SQLException
@@ -71,19 +71,20 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         destinationDocument.paidTds = req.document.paidTds
         destinationDocument.exchangeRate = req.document.exchangeRate
 
-        // TODO("only have to use amount of pcn or pay which is settled")
         val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
         settledSourceDocuments.forEach { it1 ->
             val exchangeRate = req.taggedDocuments.find { it2 -> Hashids.decode(it2.documentNo)[0] == it1?.destinationId!!.toLong() }!!.exchangeRate
-            reversePayment(
-                ReversePaymentRequest(
-                    it1!!.destinationId.toLong(),
-                    it1.sourceId.toLong(),
-                    exchangeRate,
-                    req.createdBy,
-                    null
+            if (listOf(SettlementType.PCN, SettlementType.PAY, SettlementType.PREIMB).contains(it1?.destinationType)) {
+                reversePayment(
+                    ReversePaymentRequest(
+                        it1!!.destinationId.toLong(),
+                        it1.sourceId.toLong(),
+                        exchangeRate,
+                        req.createdBy,
+                        null
+                    )
                 )
-            )
+            }
         }
         var sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
         val sourceAccountUtilization = accountUtilizationRepository.findRecords(
@@ -91,21 +92,26 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         )
 
         sourceAccountUtilization.forEach { source ->
-            val paymentInfo = settledSourceDocuments.find { it?.sourceId!!.toLong() == source?.documentNo }
-            val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo?.destinationId!!.toLong() }
-            val isSettled = !(paymentInfo?.transRefNumber == documentInfo?.transactionNo && paymentInfo?.sourceType == SettlementType.PAY)
-            val taggedSettledIds = ObjectMapper().readValue(paymentInfo?.utilizedAmount, object : TypeReference<MutableList<Long?>>() {})
-            settledTaggedPreviousIds.addAll(ArrayList(taggedSettledIds))
+            val paymentInfo = settledSourceDocuments.filter { it?.sourceId!!.toLong() == source?.documentNo }
+            paymentInfo.sortedBy { it?.destinationType }
+            val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo[0]?.destinationId!!.toLong() }
+            val isSettled = !(paymentInfo[0]?.transRefNumber == documentInfo?.transactionNo && paymentInfo[0]?.sourceType == SettlementType.PAY)
+
+            val taggedSettledIds = if (!paymentInfo[0]?.taggedSettlementId.isNullOrEmpty()) ObjectMapper().readValue<HashMap<String?, ArrayList<Long?>>?>(paymentInfo[0]?.taggedSettlementId!!) else hashMapOf("taggedIds" to arrayListOf())
+            if (!taggedSettledIds.isNullOrEmpty()) {
+                settledTaggedPreviousIds.addAll(ArrayList(taggedSettledIds["taggedIds"]))
+            }
             extendedSourceDocument.add(
                 AutoKnockoffDocumentResponse(
                     accountUtilization = source,
-                    settlementId = paymentInfo?.settlementId,
+                    settlementId = paymentInfo[0]?.settlementId,
                     paidTds = documentInfo?.paidTds,
                     payableTds = documentInfo?.payableTds,
                     exchangeRate = documentInfo?.exchangeRate!!,
                     isSettled = isSettled,
-                    amount = paymentInfo?.amount!!,
-                    taggedSettledIds = taggedSettledIds
+                    amount = paymentInfo[0]?.amount!!,
+                    tdsAmount = paymentInfo[1]?.amount!!,
+                    taggedSettledIds = taggedSettledIds?.get("taggedIds")
                 )
             )
         }
@@ -115,19 +121,21 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         if (distinctTaggedIds.isNotEmpty()) {
             previousSettlements = settlementRepository.findByIdIn(distinctTaggedIds as List<Long>)
             previousSettlements = previousSettlements.filter { it.unUtilizedAmount >= BigDecimal.ZERO }
-        }
-        sourceType = previousSettlements.map { it.sourceType.toString() }.distinct()
-        val taggedAccountUtilization = accountUtilizationRepository.findRecords(
-            previousSettlements.map { it.sourceId!!.toLong() }, sourceType, null
-        )
-        previousSettlements.sortedByDescending { it.unUtilizedAmount }
-
-        taggedAccountUtilization.forEach { source ->
-            extendedTaggedSourceDocument.add(
-                AutoKnockoffDocumentResponse(
-                    accountUtilization = source
-                )
+            sourceType = previousSettlements.map { it.sourceType.toString() }.distinct()
+            val taggedAccountUtilization = accountUtilizationRepository.findRecords(
+                previousSettlements.map { it.sourceId!!.toLong() }, sourceType, null
             )
+            previousSettlements.sortedByDescending { it.unUtilizedAmount }
+
+            taggedAccountUtilization.forEach { source ->
+                val amount = previousSettlements.find { source?.documentNo == it.sourceId }?.amount
+                extendedTaggedSourceDocument.add(
+                    AutoKnockoffDocumentResponse(
+                        accountUtilization = source,
+                        amount = amount!! // TODO(add tds amount)
+                    )
+                )
+            }
         }
 
         var balanceSettlingAmount = destinationDocument.accountUtilization?.amountCurr!!.minus(destinationDocument.accountUtilization?.payCurr!!)
@@ -137,17 +145,28 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         val sourceEndIndex = extendedSourceDocument.size
         while (req.settledAmount + req.settledTds >= BigDecimal.ZERO && balanceSettlingAmount > BigDecimal.ZERO && (sourceStartIndex < sourceEndIndex || taggedSourceStartIndex < taggedSourceEndIndex)) {
             val source = if (sourceStartIndex < sourceEndIndex) extendedSourceDocument[sourceStartIndex] else extendedTaggedSourceDocument[taggedSourceEndIndex]
-            source?.amount = minOf(source?.amount!!, req.settledAmount, balanceSettlingAmount)
+            source?.amount = minOf(source?.amount!!, req.settledAmount, (balanceSettlingAmount - req.document.payableTds)) // TODO(add tds entry amount too)
             val settledList = settleTaggedDocument(destinationDocument, source, req.createdBy)
-            destinationDocument.accountUtilization!!.payCurr += source.amount
-            destinationDocument.accountUtilization!!.payLoc += (source.amount * settledList!![1].exchangeRate)
-            destinationDocument.payableTds = destinationDocument.payableTds!! - settledList[1].settledTds
-            destinationDocument.payableTds = destinationDocument.paidTds!! + settledList[1].settledTds
-            source.paidTds = source.paidTds!! - settledList[1].settledTds
+
+            if (source.taggedSettledIds.isNullOrEmpty()) {
+                source.taggedSettledIds = mutableListOf(source.settlementId)
+            } else {
+                source.taggedSettledIds?.add(source.settlementId)
+            }
+            val settlement = settlementRepository.getSettlementDetailsByDestinationId(destinationDocument.accountUtilization!!.documentNo, source.accountUtilization?.documentNo!!)
+            settlement.sortedBy { it.destinationType }
+            val amountPaid = settlement[0].amount!!
+            val tdsAmount = settlement?.get(1).amount ?: BigDecimal.ZERO
+            val totalAmountPaid = amountPaid + tdsAmount
             settlementRepository.updateTaggedSettlement(source.settlementId!!, source.amount)
-            balanceSettlingAmount = destinationDocument.accountUtilization!!.amountCurr - destinationDocument.accountUtilization!!.payCurr // TODO(wrong balanceAmount)
-            req.settledAmount -= settledList[1].settledAllocation
-            req.settledTds -= settledList[1].settledTds // TODO(wrong settledTds)
+            settlementRepository.updateTaggedSettlementAmount(source.accountUtilization?.documentNo!!, destinationDocument.accountUtilization!!.documentNo, ArrayList(source.taggedSettledIds))
+            destinationDocument.accountUtilization!!.payCurr += totalAmountPaid
+            destinationDocument.accountUtilization!!.payLoc += (totalAmountPaid * settledList!![1].exchangeRate)
+            destinationDocument.payableTds = destinationDocument.payableTds!! - tdsAmount
+            destinationDocument.paidTds = destinationDocument.paidTds!! + tdsAmount
+            balanceSettlingAmount = destinationDocument.accountUtilization!!.amountCurr - destinationDocument.accountUtilization!!.payCurr
+            req.settledAmount -= amountPaid
+            req.settledTds -= tdsAmount
             if (sourceStartIndex < sourceEndIndex) sourceStartIndex++ else taggedSourceStartIndex++
         }
     }
@@ -219,8 +238,8 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
                     documentValue = it.documentValue,
                     accountType = SettlementType.valueOf(it.accountType),
                     documentAmount = it.documentAmount,
-                    tds = 0.toBigDecimal(),
-                    afterTdsAmount = 0.toBigDecimal(),
+                    tds = it.tds,
+                    afterTdsAmount = it.afterTdsAmount,
                     balanceAmount = (it.balanceAmount),
                     accMode = it.accMode,
                     allocationAmount = it.allocationAmount!!,

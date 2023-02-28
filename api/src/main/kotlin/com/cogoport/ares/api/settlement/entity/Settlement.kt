@@ -1,10 +1,11 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.SettlementType
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.MappedProperty
+import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.Date
@@ -31,6 +32,6 @@ data class Settlement(
     var supportingDocUrl: String? = null,
     var isDraft: Boolean? = false,
     var unUtilizedAmount: BigDecimal = BigDecimal.ZERO,
-    @JsonProperty("tagged_settlement_id")
-    var taggedSettlementId: String? = null
+    @MappedProperty(type = DataType.JSON)
+    var taggedSettlementId: Any? = null
 )

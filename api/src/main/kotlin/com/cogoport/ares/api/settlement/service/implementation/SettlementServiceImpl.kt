@@ -85,6 +85,7 @@ import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
 import com.cogoport.plutus.model.invoice.TransactionDocuments
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -2028,6 +2029,7 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
+        val taggedSettledIds = hashMapOf<String, MutableList<Long?>>("taggedIds" to mutableListOf())
         val settledDoc =
             Settlement(
                 null,
@@ -2045,7 +2047,10 @@ open class SettlementServiceImpl : SettlementService {
                 Timestamp.from(Instant.now()),
                 createdBy,
                 Timestamp.from(Instant.now()),
-                supportingDocUrl
+                supportingDocUrl,
+                false,
+                BigDecimal.ZERO,
+                ObjectMapper().writeValueAsString(taggedSettledIds)
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
