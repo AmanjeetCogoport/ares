@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
+import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
@@ -11,6 +13,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
+import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
@@ -36,6 +39,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import io.micronaut.data.annotation.Query
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -63,8 +67,8 @@ class DashboardController {
     }
 
     @Get("/daily-sales-outstanding{?request*}")
-    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding? {
-        return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
+    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesAndQuarterlyOutstanding? {
+        return Response<DailySalesAndQuarterlyOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
     }
 
     @Get("/collection-trend{?request*}")
@@ -152,8 +156,18 @@ class DashboardController {
         return dashboardService.getInvoiceTimeline(startDate,endDate)
     }
 
-    @Get("/outstanding")
-    suspend fun getOutstanding (@QueryValue("date") date: Date? = null ): OutstandingOpensearchResponse? {
-        return dashboardService.getOutstanding(date)
+    @Get("/daily-sales-statistics")
+    suspend fun getDailySalesStatistics (
+        @QueryValue ("month") month: String? = null,
+        @QueryValue ("year") year: Int? = null,
+        @QueryValue ("asOnDate") asOnDate: String? = null,
+        @QueryValue("documentType") documentType: String? = "INVOICE",
+    ): DailyStatsResponse {
+        return dashboardService.getDailySalesStatistics( month, year, asOnDate, documentType)
     }
+
+//    @Get("/outstanding")
+//    suspend fun getOutstanding (@QueryValue("date") date: Date? = null ): OutstandingOpensearchResponse? {
+//        return dashboardService.getOutstanding(date)
+//    }
 }

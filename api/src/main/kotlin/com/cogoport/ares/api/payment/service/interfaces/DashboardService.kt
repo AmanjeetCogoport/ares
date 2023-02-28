@@ -1,11 +1,13 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
+import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
@@ -30,7 +32,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import java.sql.Date
+import java.util.Date
 
 interface DashboardService {
 
@@ -38,7 +40,7 @@ interface DashboardService {
     suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse?
     suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding?
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
-    suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
+    suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesAndQuarterlyOutstanding?
     suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>
     suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>>
     suspend fun deleteIndex(index: String)
@@ -56,5 +58,7 @@ interface DashboardService {
 
     suspend fun getInvoiceTimeline (startDate: String? , endDate: String?): InvoiceTimeLineResponse?
 
-    suspend fun getOutstanding (date: Date?): OutstandingOpensearchResponse?
+    suspend fun getDailySalesStatistics (month: String?, year:Int?, asOnDate: String?, documentType: String?): DailyStatsResponse
+
+//    suspend fun getOutstanding (date: Date?): OutstandingOpensearchResponse?
 }

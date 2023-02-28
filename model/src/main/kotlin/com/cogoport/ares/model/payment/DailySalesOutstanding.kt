@@ -14,16 +14,8 @@ import java.math.BigDecimal
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DailySalesOutstanding(
-    @JsonProperty("averageDsoForTheMonth")
-    val averageDsoForTheMonth: BigDecimal,
-    @JsonProperty("averageDsoLast3Months")
-    val averageDsoLast3Months: BigDecimal,
     @JsonProperty("dsoResponse")
     val dsoResponse: List<DsoResponse>,
-    @JsonProperty("dpoResponse")
-    val dpoResponse: List<DpoResponse>,
-    @JsonProperty("serviceType")
-    val serviceType: String?,
     @JsonProperty("dashboardCurrency")
     val dashboardCurrency: String
 )

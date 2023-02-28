@@ -149,7 +149,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         monthlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
-                it.dashboardCurrency = invoiceCurrency
+                it.dashboardCurrency = invoiceCurrency!!
             }
         }
         updateMonthlyTrend(zone, monthlyTrendZoneData, serviceType, invoiceCurrency)
@@ -161,7 +161,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val quarterlyTrendZoneData = accountUtilizationRepository.generateQuarterlyOutstanding(zone, serviceType, invoiceCurrency, defaultersOrgIds)
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
-                it.dashboardCurrency = invoiceCurrency
+                it.dashboardCurrency = invoiceCurrency!!
             }
         }
         updateQuarterlyTrend(zone, quarterlyTrendZoneData, serviceType, invoiceCurrency)

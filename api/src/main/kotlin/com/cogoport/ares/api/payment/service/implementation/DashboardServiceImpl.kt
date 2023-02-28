@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
@@ -8,6 +9,7 @@ import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
@@ -19,6 +21,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
+import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
@@ -67,6 +70,7 @@ import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.*
+import javax.print.DocFlavor.STRING
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -433,132 +437,70 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
+    override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesAndQuarterlyOutstanding {
         validateInput(request.zone, request.role)
         val dsoList = mutableListOf<DsoResponse>()
-        val dpoList = mutableListOf<DpoResponse>()
-        var dashboardCurrency: String? = null
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
-        for (q in sortQuarterList) {
-            val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
-            var salesResponse = clientResponse(salesResponseKey)
+        val dailySalesAndQuarterlyOutstanding = DailySalesAndQuarterlyOutstanding()
 
-            val quarter = q.split("_")[0][1].toString().toInt()
-            val year = q.split("_")[1].toInt()
-            val monthList = getMonthFromQuarter(quarter)
+        when (request.key){
+            "DAILY" -> {
+                val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
+                for (q in sortQuarterList) {
+                    val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
+                    var salesResponse = clientResponse(salesResponseKey)
 
-            if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
-                monthList.forEach {
-                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
-                }
-                salesResponse = clientResponse(salesResponseKey)
-            }
+                    val quarter = q.split("_")[0][1].toString().toInt()
+                    val year = q.split("_")[1].toInt()
+                    val monthList = getMonthFromQuarter(quarter)
 
-            val dso = mutableListOf<DsoResponse>()
-            for (hts in salesResponse?.hits()?.hits()!!) {
-                val data = hts.source()
-                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
-                val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
-                data?.list?.map {
-                    dsoResponse.month = it.month.toString()
-                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
-                }
-                dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
-                dso.add(dsoResponse)
-            }
+                    if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
+                        monthList.forEach {
+                            val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                            openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
+                        }
+                        salesResponse = clientResponse(salesResponseKey)
+                    }
 
-            val monthListDso = dso.map {
-                when (it.month.toInt() < 10) {
-                    true -> "0${it.month}"
-                    false -> it.month
-                }
-            }
-            getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
-                if (!monthListDso.contains(it)) {
-                    dso.add(DsoResponse(it, 0.toBigDecimal()))
-                }
-            }
-            dso.sortedBy { it.month }.forEach { dsoList.add(it) }
+                    val dso = mutableListOf<DsoResponse>()
+                    for (hts in salesResponse?.hits()?.hits()!!) {
+                        val data = hts.source()
+                        val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
+                        val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
+                        data?.list?.map {
+                            dsoResponse.month = it.month.toString()
+                            dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
+                        }
+                        dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
+                        dso.add(dsoResponse)
+                    }
 
-            val payablesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_PAYABLES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
-            var payablesResponse = clientResponse(payablesResponseKey)
+                    val monthListDso = dso.map {
+                        when (it.month.toInt() < 10) {
+                            true -> "0${it.month}"
+                            false -> it.month
+                        }
+                    }
+                    getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
+                        if (!monthListDso.contains(it)) {
+                            dso.add(DsoResponse(it, 0.toBigDecimal()))
+                        }
+                    }
+                    dso.sortedBy { it.month }.forEach { dsoList.add(it) }
+                }
 
-            if (payablesResponse!!.hits().hits().isNullOrEmpty()) {
-                monthList.forEach {
-                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailyPayableOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency)
+                val dsoResponseData = dsoList.map {
+                    DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
                 }
-                payablesResponse = clientResponse(payablesResponseKey)
-            }
 
-            val dpo = mutableListOf<DpoResponse>()
-            for (hts in payablesResponse?.hits()?.hits()!!) {
-                val data = hts.source()
-                val dpoResponse = DpoResponse(month = "", dpoForTheMonth = 0.toBigDecimal())
-                val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
-                data?.list?.map {
-                    dpoResponse.month = it.month.toString()
-                    dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.plus(it.value)
-                }
-                dpoResponse.dpoForTheMonth = dpoResponse.dpoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
-                dpo.add(dpoResponse)
+                dailySalesAndQuarterlyOutstanding.DAILY = dsoResponseData
             }
-
-            val monthListDpo = dpo.map {
-                when (it.month.toInt() < 10) {
-                    true -> "0${it.month}"
-                    false -> it.month
-                }
+            "QUARTERLY" -> {
+                dailySalesAndQuarterlyOutstanding.QUARTERLY = getQuarterlyOutstanding(QuarterlyOutstandingRequest()).list
             }
-            getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
-                if (!monthListDpo.contains(it)) {
-                    dpo.add(DpoResponse(it, 0.toBigDecimal()))
-                }
-            }
-            dpo.sortedBy { it.month }.forEach { dpoList.add(it) }
         }
-
-        val currentKey = searchKeyDailyOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
-
-        var currResponse = clientResponse(currentKey)
-
-        var averageDso = 0.toFloat()
-        var currentDso = 0.toFloat()
-
-        if (currResponse?.hits()?.hits().isNullOrEmpty()) {
-            val date = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            openSearchService.generateDailySalesOutstanding(request.zone, AresConstants.CURR_QUARTER, AresConstants.CURR_YEAR, request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
-            currResponse = clientResponse(currentKey)
-        }
-
-        for (hts in currResponse?.hits()?.hits()!!) {
-            val data = hts.source()
-            val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
-            data?.list?.map {
-                averageDso = averageDso.plus(it.value.toFloat())
-                if (it.month == AresConstants.CURR_MONTH) {
-                    currentDso = currentDso.plus(it.value.toFloat())
-                }
-            }
-
-            averageDso = averageDso.toBigDecimal().div(uniqueCurrencyListSize?.toBigDecimal()!!).toFloat()
-            currentDso = currentDso.toBigDecimal().div(uniqueCurrencyListSize.toBigDecimal()).toFloat()
-        }
-
-        val dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
-        }
-
-        val dpoResponseData = dpoList.map {
-            DpoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dpoForTheMonth)
-        }
-
-        val avgDsoAmount = averageDso.div(3.toFloat()).toBigDecimal()
-
-        return DailySalesOutstanding(currentDso.toBigDecimal(), avgDsoAmount, dsoResponseData, dpoResponseData, request.serviceType?.name, request.dashboardCurrency)
+        return dailySalesAndQuarterlyOutstanding
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -831,26 +773,128 @@ class DashboardServiceImpl : DashboardService {
         return opensearchData
     }
 
-    override suspend fun getOutstanding(date: Date?): OutstandingOpensearchResponse? {
-        val asOnDate = date ?: Date.from(Instant.now())
-        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER
+//    override suspend fun getOutstanding(date: Date?): OutstandingOpensearchResponse? {
+//        val asOnDate = date ?: Date.from(Instant.now())
+//        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER
+//
+//        var opensearchData = OpenSearchClient().search(
+//            searchKey = searchKey,
+//            classType = OutstandingOpensearchResponse::class.java,
+//            index = AresConstants.SALES_DASHBOARD_INDEX
+//        )
+//
+//        if (opensearchData == null){
+//            openSearchService.generateOutstandingData( asOnDate,  searchKey)
+//
+//            opensearchData = OpenSearchClient().search(
+//                searchKey = searchKey,
+//                classType = OutstandingOpensearchResponse::class.java,
+//                index = AresConstants.SALES_DASHBOARD_INDEX
+//            )
+//        }
+//        return opensearchData
+//    }
 
-        var opensearchData = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = OutstandingOpensearchResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
+    override suspend fun getDailySalesStatistics(
+        month: String?,
+        year: Int?,
+        asOnDate: String?,
+        documentType: String?,
+    ): DailyStatsResponse {
+        val defaultersOrgIds = getDefaultersOrgIds()
+
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+
+        val dailyStasResponse = DailyStatsResponse(
+            arrayListOf(),
+            arrayListOf(),
+            arrayListOf(),
+            null
         )
 
-        if (opensearchData == null){
-            openSearchService.generateOutstandingData( asOnDate,  searchKey)
+        val mapData = mutableMapOf(
+            "salesInvoiceResponse" to mutableListOf<Outstanding>(),
+            "creditNoteResponse" to mutableListOf<Outstanding>(),
+            "onAccountPaymentResponse" to mutableListOf<Outstanding>()
+        )
 
-            opensearchData = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = OutstandingOpensearchResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
+
+        if (year != null) {
+            val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+            mapData["salesInvoiceResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
+                endDate,
+                "SINV",
+                defaultersOrgIds
+            )!!
+            mapData["creditNoteResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
+                endDate,
+                "SCN",
+                defaultersOrgIds
+            )!!
+            mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
+                endDate,
+                "REC",
+                defaultersOrgIds
+            )!!
         }
-        return opensearchData
+
+        if (month != null) {
+            val endDate = when (year != null) {
+                true -> "$year-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            }
+            mapData["salesInvoiceResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
+                endDate,
+                "SINV",
+                defaultersOrgIds
+            )!!
+            mapData["creditNoteResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
+                endDate,
+                "SCN",
+                defaultersOrgIds
+            )!!
+            mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
+                endDate,
+                "REC",
+                defaultersOrgIds
+            )!!
+
+        }
+
+        if (asOnDate != null) {
+            generatingDailySales(mapData, asOnDate, defaultersOrgIds)
+        } else {
+            generatingDailySales(mapData, AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), defaultersOrgIds)
+        }
+
+        mapData.map {(k,v) ->
+            val uniqueCurrencyList: List<String> = v.map { it.dashboardCurrency!! }
+
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
+
+            v.groupBy { it -> it.duration }.entries.map {(key,value) ->
+                val outStanding = Outstanding(
+                    amount = 0.toBigDecimal(),
+                    duration = key,
+                    dashboardCurrency = "INR"
+                )
+
+                value.map{ item ->
+                    outStanding.amount = outStanding.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
+                }
+
+                when (k) {
+                    "salesInvoiceResponse" -> dailyStasResponse.salesInvoiceResponse.add(outStanding)
+                    "creditNoteResponse" -> dailyStasResponse.creditNoteResponse?.add(outStanding)
+                    "onAccountPaymentResponse" -> dailyStasResponse.onAccountPaymentResponse?.add(outStanding)
+                    else -> {}
+                }
+            }
+        }
+
+        return dailyStasResponse
+
     }
 
     private fun generateMonthKeyIndex (month: Int): String{
@@ -860,4 +904,23 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
+    private suspend fun generatingDailySales (mapData: MutableMap<String, MutableList<Outstanding>>, asOnDate: String, defaultersOrgIds: List<UUID>? ): MutableMap<String, MutableList<Outstanding>> {
+        mapData["salesInvoiceResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
+            asOnDate,
+            "SINV",
+            defaultersOrgIds
+        )!!
+        mapData["creditNoteResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
+            asOnDate,
+            "SCN",
+            defaultersOrgIds
+        )!!
+        mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
+            asOnDate,
+            "REC",
+            defaultersOrgIds
+        )!!
+
+        return mapData
+    }
 }

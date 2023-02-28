@@ -15,5 +15,6 @@ data class DsoRequest(
     @QueryValue(AresModelConstants.QUARTER_YEAR) val quarterYear: List<String> = listOf("Q" + AresModelConstants.CURR_QUARTER + "_" + AresModelConstants.CURR_YEAR),
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?,
-    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String = "INR"
+    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String = "INR",
+    @QueryValue("key") val key: String? = "DAILY"
 )
