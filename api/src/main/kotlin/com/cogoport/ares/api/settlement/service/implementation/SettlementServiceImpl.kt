@@ -961,7 +961,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun check(request: CheckRequest): CheckResponse {
-        val stack = runSettlement(request, false)
+        val stack = runSettlement(request, performDbOperation = false, isAutoKnockOff = false)
         val canSettle = if (request.throughIncident) true else getCanSettleFlag(stack)
         return CheckResponse(
             stackDetails = stack,
@@ -989,7 +989,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun settle(request: CheckRequest): List<CheckDocument> {
+    override suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
         // If request is coming through incident management check
         return if (request.throughIncident) {
             // Validate Request
@@ -1003,7 +1003,7 @@ open class SettlementServiceImpl : SettlementService {
             )
 
             // Perform Settlement
-            val response = runSettlement(request, true)
+            val response = runSettlement(request, true, isAutoKnockOff)
 
             // Update status of incident at incident management
             hadesClient.updateIncident(
@@ -1019,7 +1019,7 @@ open class SettlementServiceImpl : SettlementService {
             // return response
             response
         } else {
-            runSettlement(request, true)
+            runSettlement(request, true, isAutoKnockOff)
         }
     }
 
@@ -1224,7 +1224,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun editSettlement(request: CheckRequest): List<CheckDocument> {
         val sourceDoc = getSourceDocFromStack(request.stackDetails!!) ?: throw AresException(AresError.ERR_1501, "")
         deleteSettlement(sourceDoc.documentNo, sourceDoc.accountType, request.createdBy!!, request.createdByUserType)
-        return runSettlement(request, true)
+        return runSettlement(request, true, false)
     }
 
     /**
@@ -1402,7 +1402,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private suspend fun runSettlement(
         request: CheckRequest,
-        performDbOperation: Boolean
+        performDbOperation: Boolean,
+        isAutoKnockOff: Boolean
     ): List<CheckDocument> {
         val settledTdsCopy = storeSettledTds(request)
         sanitizeInput(request)
@@ -1476,7 +1477,7 @@ open class SettlementServiceImpl : SettlementService {
         if (source.any { it.hasPayrun } || dest.any { it.hasPayrun }) {
             AresException(AresError.ERR_1512, "")
         }
-        val settledList = settleDocuments(request, source, dest, performDbOperation)
+        val settledList = settleDocuments(request, source, dest, performDbOperation, isAutoKnockOff)
         settledList.forEach {
             it.id = Hashids.encode(it.id.toLong())
             it.documentNo = Hashids.encode(it.documentNo.toLong())
@@ -1492,7 +1493,8 @@ open class SettlementServiceImpl : SettlementService {
         request: CheckRequest,
         source: MutableList<CheckDocument>,
         dest: MutableList<CheckDocument>,
-        performDbOperation: Boolean
+        performDbOperation: Boolean,
+        isAutoKnockOff: Boolean
     ): MutableList<CheckDocument> {
         val response = mutableListOf<CheckDocument>()
         for (payment in source) {
@@ -1507,7 +1509,8 @@ open class SettlementServiceImpl : SettlementService {
                             availableAmount,
                             payment,
                             source,
-                            performDbOperation
+                            performDbOperation,
+                            isAutoKnockOff
                         )
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
@@ -1547,7 +1550,8 @@ open class SettlementServiceImpl : SettlementService {
         availableAmount: BigDecimal,
         payment: CheckDocument,
         source: MutableList<CheckDocument>,
-        performDbOperation: Boolean
+        performDbOperation: Boolean,
+        isAutoKnockOff: Boolean
     ): BigDecimal {
         var amount = availableAmount
         val toSettleAmount = invoice.allocationAmount - invoice.settledAllocation
@@ -1579,7 +1583,8 @@ open class SettlementServiceImpl : SettlementService {
                         rate,
                         ledgerRate,
                         true,
-                        performDbOperation
+                        performDbOperation,
+                        isAutoKnockOff
                     )
             } else if (amount < toSettleAmount) {
                 if (payment != source.last()) updateDoc = false
@@ -1593,7 +1598,8 @@ open class SettlementServiceImpl : SettlementService {
                         rate,
                         ledgerRate,
                         updateDoc,
-                        performDbOperation
+                        performDbOperation,
+                        isAutoKnockOff
                     )
             }
         }
@@ -1609,7 +1615,8 @@ open class SettlementServiceImpl : SettlementService {
         exchangeRate: BigDecimal,
         ledgerRate: BigDecimal,
         updateDoc: Boolean,
-        performDbOperation: Boolean
+        performDbOperation: Boolean,
+        isAutoKnockOff: Boolean
     ): BigDecimal {
         val amount = availableAmount - toSettleAmount
         invoice.settledAllocation += toSettleAmount
@@ -1629,7 +1636,8 @@ open class SettlementServiceImpl : SettlementService {
                 exchangeRate,
                 ledgerRate,
                 payment,
-                invoice
+                invoice,
+                isAutoKnockOff
             )
         return getExchangeValue(amount, exchangeRate, true)
     }
@@ -1640,7 +1648,8 @@ open class SettlementServiceImpl : SettlementService {
         exchangeRate: BigDecimal,
         ledgerRate: BigDecimal,
         payment: CheckDocument,
-        invoice: CheckDocument
+        invoice: CheckDocument,
+        isAutoKnockOff: Boolean
     ) {
         val jvList = settlementServiceHelper.getJvList(SettlementType::class.java)
 
@@ -1769,8 +1778,8 @@ open class SettlementServiceImpl : SettlementService {
             else BigDecimal.ZERO
         val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
-        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType) // Update Payment
-        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType) // Update Invoice
+        updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
+        updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
     }
 
     private suspend fun createTdsRecord(
@@ -1815,7 +1824,8 @@ open class SettlementServiceImpl : SettlementService {
         utilizedAmount: BigDecimal,
         paidTds: BigDecimal,
         updatedBy: UUID,
-        updatedByUserType: String?
+        updatedByUserType: String?,
+        isAutoKnockOff: Boolean
     ) {
         val paymentUtilization =
             accountUtilizationRepository.findRecord(
@@ -1844,7 +1854,7 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType)
+            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType, true)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
         } catch (e: Exception) {
@@ -1860,7 +1870,8 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID,
-        performedByUserType: String?
+        performedByUserType: String?,
+        isAutoKnockOff: Boolean = false
     ) {
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
@@ -1925,7 +1936,8 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID?,
-        performedByUserType: String?
+        performedByUserType: String?,
+        isAutoKnockOff: Boolean = false
     ) {
         val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"
@@ -1957,7 +1969,8 @@ open class SettlementServiceImpl : SettlementService {
                 paidTds = paidTds,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType,
-                tranferMode = if (paymentInfo?.payMode == "CHQ") "CHEQUE" else paymentInfo?.payMode,
+                isAutoKnockOff = isAutoKnockOff,
+                transferMode = if (paymentInfo?.payMode == "CHQ") "CHEQUE" else paymentInfo?.payMode,
                 transactionRef = paymentInfo?.transRefNumber,
                 cogoBankId = paymentInfo?.bankId.toString(),
                 cogoBankName = paymentInfo?.bankName,

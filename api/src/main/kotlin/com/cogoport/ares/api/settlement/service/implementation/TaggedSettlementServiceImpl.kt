@@ -314,7 +314,7 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
                 remark = null,
                 createdBy = createdBy
             )
-            settled = settlementServiceImpl.settle(checkRequest)
+            settled = settlementServiceImpl.settle(checkRequest, true)
         }
         return settled
     }
