@@ -24,6 +24,9 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     suspend fun findByIdIn(ids: List<Long>): List<Settlement>
 
     @NewSpan
+    suspend fun updateAll(entities: Iterable<Settlement>): List<Settlement>
+
+    @NewSpan
     @Query(
         """
             SELECT 
@@ -300,16 +303,16 @@ ORDER BY
         """
             SELECT
                s.id as settlement_id, p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, un_utilized_amount, tagged_settlement_id
+                s.settlement_date::TIMESTAMP, un_utilized_amount, tagged_settlement_id, s.is_draft
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
             WHERE
                 s.destination_id in (:documentNo)
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
-                AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
-                AND s.source_type NOT in('VTDS')
-                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN') and s.is_draft = false
+                AND s.destination_type in('PINV', 'PREIMB')
+                AND s.destination_type NOT in('VTDS')
+                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
             ORDER BY
                 s.created_at DESC
 
@@ -320,10 +323,10 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET is_draft = true, un_utilized_amount = :amount WHERE id in (:id) and is_draft = false
+            UPDATE settlements SET is_draft = true, un_utilized_amount = :amount WHERE id = :id and is_draft = false
         """
     )
-    suspend fun markSettlementIsDraftTrue(id: List<Long>, amount: BigDecimal)
+    suspend fun markSettlementIsDraftTrue(id: Long, amount: BigDecimal)
 
     @NewSpan
     @Query(
@@ -340,11 +343,10 @@ ORDER BY
     @Query(
         """
             UPDATE settlements set tagged_settlement_id = jsonb_set(tagged_settlement_id,'{taggedIds}',jsonb_build_array(:taggedSettlementIds)) 
-            WHERE source_id = :sourceId and destination_id = :destinationId 
-            and is_draft = false and destination_type = 'PINV' and source_type in ('PAY', 'PCN')
+            WHERE id in (:ids)
         """
     )
-    suspend fun updateTaggedSettlementAmount(sourceId: Long, destinationId: Long, taggedSettlementIds: List<Long?>)
+    suspend fun updateTaggedSettlementAmount(ids: List<Long>, taggedSettlementIds: List<Long?>)
 
     @NewSpan
     @Query(
@@ -353,4 +355,33 @@ ORDER BY
         """
     )
     suspend fun updateTaggedSettlement(id: Long, unUtilisedAmount: BigDecimal)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            s.id,
+            s.source_id,
+            s.source_type,
+            s.destination_id,
+            s.destination_type, 
+            s.currency,
+            s.amount,
+            s.led_currency,
+            s.led_amount,
+            s.sign_flag,
+            s.settlement_date,
+            s.created_at,
+            s.created_by,
+            s.updated_at,
+            s.updated_by,
+            s.supporting_doc_url,
+            is_draft,
+            un_utilized_amount,
+            tagged_settlement_id
+            FROM settlements s
+            where source_id = :sourceId and destination_id = :destinationId and deleted_at is null and source_type::varchar in (:sourceType)
+        """
+    )
+    suspend fun findBySourceId(sourceId: Long, destinationId: Long, sourceType: SettlementType): Settlement?
 }

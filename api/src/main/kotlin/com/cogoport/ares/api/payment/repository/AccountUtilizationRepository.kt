@@ -1462,7 +1462,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft
             from account_utilizations 
             where document_no in (:documentNo) and acc_type::varchar in (:accType) 
-            and (:accMode is null or acc_mode=:accMode::account_mode) and is_draft = false
+            and (:accMode is null or acc_mode=:accMode::account_mode)
              and account_utilizations.deleted_at is null"""
     )
     suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): List<AccountUtilization?>

@@ -33,5 +33,5 @@ data class Settlement(
     var isDraft: Boolean? = false,
     var unUtilizedAmount: BigDecimal = BigDecimal.ZERO,
     @MappedProperty(type = DataType.JSON)
-    var taggedSettlementId: Any? = null
+    var taggedSettlementId: String? = null
 )

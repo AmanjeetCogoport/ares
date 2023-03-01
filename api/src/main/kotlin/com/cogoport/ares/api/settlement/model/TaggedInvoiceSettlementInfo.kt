@@ -24,5 +24,6 @@ data class TaggedInvoiceSettlementInfo(
     @field: TypeDef(type = DataType.JSON)
     @JsonProperty("tagged_settlement_id")
     var taggedSettlementId: String?,
-    val unUtilizedAmount: BigDecimal
+    val unUtilizedAmount: BigDecimal,
+    val isDraft: Boolean
 )
