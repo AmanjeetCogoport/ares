@@ -13,6 +13,7 @@ object AresModelConstants {
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
     const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val COMPANY_TYPE = "companyType"
     const val YEAR = "year"
     const val PAGE = "page"
     const val PAGE_LIMIT = "pageLimit"
@@ -38,6 +39,7 @@ object AresModelConstants {
     const val TYPE = "type"
     const val FLAG = "flag"
     const val IS_SUSPENSE = "isSuspense"
+    const val COGO_ENTITY_CODE = "cogoEntityCode"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000

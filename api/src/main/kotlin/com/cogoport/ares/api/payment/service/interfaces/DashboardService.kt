@@ -1,9 +1,9 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
-import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
+import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -60,4 +60,6 @@ interface DashboardService {
     suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?): HashMap<String, ArrayList<Outstanding>>
 
     suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse?
+
+    suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 }

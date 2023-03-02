@@ -6,8 +6,9 @@ import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesInvoiceResponse
 import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.Audit
+import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
+import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -138,7 +139,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -154,7 +155,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -169,7 +170,74 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
 
+    @NewSpan
+    @Query(
+        """
+            select
+                COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
+                SUM(COALESCE(open_invoice_amount,0)) open_invoice_amount,
+                (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount
+                -- ,array_agg(distinct so.registration_number) registration_numbers
+                from snapshot_organization_outstandings so
+                left join (
+                  with a as(
+                    select
+                      unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, organization_id
+                    from organization_stakeholders os
+                    left join (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
+                    where status='active'
+                    AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
+                  ) select
+                      array_agg(distinct
+                        case when stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
+                        then u.name else rm_u.name end
+                  ) kam_owners, organization_id
+                  from a
+                  inner join users u on u.id = a.stakeholder_id
+                  inner join users rm_u on rm_u.id = a.stakeholder_rm_id
+                  where (
+                        stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
+                        or stakeholder_rm_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
+                    )
+                  group by organization_id
+                ) os on os.organization_id = so.organization_id
+                left join outstanding_account_taggings oat on oat.registration_number = so.registration_number and oat.status='active'
+                where
+                so.registration_number IS NOT NULL
+                AND TRIM(so.registration_number) != ''
+                AND is_precovid = 'NO'
+                group by kam_owners
+                order by total_outstanding_amount desc
+                limit 10
+        """
+    )
+    fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 
+    @NewSpan
+    @Query(
+        """
+            select coalesce(case when due_date >= now()::date then 'Not Due'
+            when (due_days) between 1 and 30 then '1-30'
+            when (due_days) between 31 and 60 then '31-60'
+            when (due_days) between 61 and 90 then '61-90'
+            when (due_days) between 91 and 180 then '91-180'
+            when (due_days) between 181 and 365 then '181-365'
+            when (due_days) > 365 then '>365' 
+            end, 'Unknown') as ageing_duration, 
+            sum(open_invoice_amount) as amount,
+            open_invoice_currency as dashboard_currency
+            from temp_outstanding_invoices toi
+            inner join organizations o on o.registration_number = toi.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            where due_date is not null and  (:companyType is null or los.segment =:companyType)
+            and (:serviceType is null or shipment_service_type = :serviceType)
+            and (:cogoEntityCode is null or o.cogo_entity_id =:cogoEntityCode)
+            AND ((:defaultersOrgIds) IS NULL OR o.id NOT IN (:defaultersOrgIds))
+            group by ageing_duration, dashboard_currency
+            order by ageing_duration
+        """
+    )
+    fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: String?, cogoEntityCode: UUID?): List<OverallAgeingStats>
 }

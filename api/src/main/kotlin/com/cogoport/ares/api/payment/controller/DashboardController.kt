@@ -1,10 +1,10 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
+import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
@@ -83,7 +83,7 @@ class DashboardController {
         return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(request))
     }
 
-    @Get("outstanding-by-age{?request*}")
+    @Get("/outstanding-by-age{?request*}")
     suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
         return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
     }
@@ -172,5 +172,10 @@ class DashboardController {
     @Get("/ar-dashboard")
     suspend fun generateArDashboardData() {
         return pushToClientService.generateArDashboardData()
+    }
+
+    @Get("/kam-wise-outstanding")
+    suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
+        return dashboardService.getKamWiseOutstanding()
     }
 }

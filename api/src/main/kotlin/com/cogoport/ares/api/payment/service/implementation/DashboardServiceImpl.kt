@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
@@ -10,6 +9,7 @@ import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -177,18 +177,17 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
-        validateInput(request.zone, request.role)
         val defaultersOrgIds = getDefaultersOrgIds()
-        val outstandingResponse = accountUtilizationRepository.getAgeingBucket(request.zone, request.serviceType, request.invoiceCurrency, defaultersOrgIds)
+        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType, request.cogoEntityCode)
 
-        val durationKey = listOf("1-30", "31-60", "61-90", ">90", "Not Due")
+        val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
 
         if (outstandingResponse.isEmpty()) {
             return durationKey.map {
                 OverallAgeingStatsResponse(
                     ageingDuration = it,
                     amount = 0.toBigDecimal(),
-                    dashboardCurrency = request.dashboardCurrency
+                    dashboardCurrency = "INR"
                 )
             }
         }
@@ -198,13 +197,13 @@ class DashboardServiceImpl : DashboardService {
 
         val uniqueCurrencyList: List<String> = outstandingResponse.map { it.dashboardCurrency!! }
 
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
 
         outstandingResponse.map { response ->
-            if (response.dashboardCurrency != request.dashboardCurrency) {
+            if (response.dashboardCurrency != "INR") {
                 val avgExchangeRate = exchangeRate[response.dashboardCurrency]
                 response.amount = response.amount.times(avgExchangeRate!!).setScale(4, RoundingMode.UP)
-                response.dashboardCurrency = request.dashboardCurrency
+                response.dashboardCurrency = "INR"
             }
             data.add(overallAgeingConverter.convertToModel(response))
         }
@@ -225,7 +224,7 @@ class DashboardServiceImpl : DashboardService {
                     OverallAgeingStatsResponse(
                         it,
                         0.toBigDecimal(),
-                        request.dashboardCurrency
+                        "INR"
                     )
                 )
             }
@@ -853,16 +852,16 @@ class DashboardServiceImpl : DashboardService {
         year: Int?,
         asOnDate: String?,
         documentType: String?
-    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>>{
+    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>> {
         val defaultersOrgIds = getDefaultersOrgIds()
 
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        var outstandingData =  mutableListOf<Outstanding>()
+        var outstandingData = mutableListOf<Outstanding>()
 
         var hashMap = hashMapOf<String, ArrayList<Outstanding>>()
 
-        var accTypeDocStatusMapping =  mapOf(
+        var accTypeDocStatusMapping = mapOf(
             "SALES_INVOICE" to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
             "CREDIT_NOTE" to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
             "ON_ACCOUNT_PAYMENT" to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
@@ -870,17 +869,16 @@ class DashboardServiceImpl : DashboardService {
 
         if (year != null) {
             var endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
                 unifiedDBRepo.generateYearlySalesOutstanding(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
                     accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
                 )!!
-            }else{
+            } else {
                 unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate)!!
             }
-
         }
 
         if (month != null) {
@@ -888,35 +886,34 @@ class DashboardServiceImpl : DashboardService {
                 true -> "$year-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             }
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
                 unifiedDBRepo.generateMonthlyOutstanding(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
                     accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
                 )!!
-            }else{
+            } else {
                 unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate)!!
             }
-
         }
 
-        if (asOnDate != null){
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+        if (asOnDate != null) {
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
                 unifiedDBRepo.generateDailySalesOutstanding(
                     asOnDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
                     accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
                 )!!
-            }else {
+            } else {
                 unifiedDBRepo.generateDailyShipmentCreatedAt(asOnDate)!!
             }
         }
 
-        if(asOnDate == null && year == null && month == null) {
+        if (asOnDate == null && year == null && month == null) {
             val endDate = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
                 unifiedDBRepo.generateDailySalesOutstanding(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
@@ -945,14 +942,18 @@ class DashboardServiceImpl : DashboardService {
                 outStanding.count = outStanding.count?.plus(item.count!!)
             }
 
-            if (hashMap.keys.contains(documentType)){
+            if (hashMap.keys.contains(documentType)) {
                 hashMap[documentType]?.add(outStanding)
-            }else {
+            } else {
                 hashMap[documentType!!] = arrayListOf(outStanding)
             }
         }
-
         return hashMap
+    }
+
+    override suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
+        var kamWiseData = unifiedDBRepo.getKamWiseOutstanding()
+        return kamWiseData
     }
 
     private fun generateMonthKeyIndex(month: Int): String {
@@ -960,28 +961,5 @@ class DashboardServiceImpl : DashboardService {
             true -> "0$month"
             else -> month.toString()
         }
-    }
-
-    private suspend fun generatingDailySales(mapData: MutableMap<String, MutableList<Outstanding>>, asOnDate: String, defaultersOrgIds: List<UUID>?): MutableMap<String, MutableList<Outstanding>> {
-        mapData["salesInvoiceResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
-            asOnDate,
-            "SINV",
-            defaultersOrgIds,
-            listOf("FINAL", "PROFORMA")
-        )!!
-        mapData["creditNoteResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
-            asOnDate,
-            "SCN",
-            defaultersOrgIds,
-            listOf("FINAL", "PROFORMA")
-        )!!
-        mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
-            asOnDate,
-            "REC",
-            defaultersOrgIds,
-            listOf("FINAL")
-        )!!
-
-        return mapData
     }
 }
