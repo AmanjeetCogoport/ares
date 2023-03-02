@@ -761,16 +761,16 @@ open class OnAccountServiceImpl : OnAccountService {
         if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         val payableStats = accountUtilizationRepository.getOrgStatsForCoeFinance(orgId) ?: throw AresException(AresError.ERR_1005, "")
         val tradePartyOutstandingList = cogoBackLowLevelClient.getTradePartyOutstanding(orgId.toString(), "get_trade_party_outstanding")
-        var receivables: BigDecimal? = null
-        var receivablesCurrency: String? = null
+        var totalOutstandingAmount: BigDecimal? = null
+        var outstandingCurrency: String? = null
         if (tradePartyOutstandingList?.list?.size != 0) {
-            receivables = tradePartyOutstandingList?.list?.get(0)?.totalOutstanding?.invoiceLedAmount
-            receivablesCurrency = tradePartyOutstandingList?.list?.get(0)?.currency
+            totalOutstandingAmount = tradePartyOutstandingList?.list?.get(0)?.totalOutstanding?.invoiceLedAmount
+            outstandingCurrency = tradePartyOutstandingList?.list?.get(0)?.currency
         }
         val orgStatsResponse = OrgStatsResponseForCoeFinance(
             organizationId = orgId.toString(),
-            receivables = receivables,
-            receivablesCurrency = receivablesCurrency,
+            receivables = totalOutstandingAmount,
+            receivablesCurrency = outstandingCurrency,
             payablesCurrency = payableStats.ledgerCurrency,
             payables = payableStats.payables?.abs()
         )

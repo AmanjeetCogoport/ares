@@ -1046,7 +1046,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 CASE WHEN acc_type in ('PINV','PDN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables
             FROM account_utilizations
             WHERE 
-                acc_type in ('PDN','SCN','REC','PINV','PCN','SINV','PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                acc_type in ('PDN', 'PINV')
                 AND organization_id = :orgId
                 AND deleted_at is null
             GROUP BY  acc_type
