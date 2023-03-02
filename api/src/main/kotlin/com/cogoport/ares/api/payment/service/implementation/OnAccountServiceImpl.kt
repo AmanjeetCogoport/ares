@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.Validations
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
@@ -41,20 +42,7 @@ import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocumentSearchType
-import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.MappingIdDetailRequest
-import com.cogoport.ares.model.payment.OrgStatsResponse
-import com.cogoport.ares.model.payment.PayMode
-import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.PaymentCode
-import com.cogoport.ares.model.payment.PaymentDocumentStatus
-import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.TradePartyDetailRequest
-import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
-import com.cogoport.ares.model.payment.ValidateTradePartyRequest
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
@@ -121,6 +109,7 @@ import java.time.ZoneId
 import java.time.temporal.IsoFields
 import java.util.UUID
 import javax.transaction.Transactional
+import kotlin.math.abs
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
 
@@ -175,6 +164,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
+
+    @Inject
+    lateinit var cogoBackLowLevelClient: CogoBackLowLevelClient
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -749,6 +741,26 @@ open class OnAccountServiceImpl : OnAccountService {
         if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         val response = accountUtilizationRepository.getOrgStats(orgId) ?: throw AresException(AresError.ERR_1005, "")
         return orgStatsConverter.convertToModel(response)
+    }
+
+    override suspend fun getOrgStatsForCoeFinance(orgId: UUID?): OrgStatsResponseForCoeFinance {
+        if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
+        val payableStats = accountUtilizationRepository.getOrgStatsForCoeFinance(orgId) ?: throw AresException(AresError.ERR_1005, "")
+        val tradePartyOutstandingList = cogoBackLowLevelClient.getTradePartyOutstanding(orgId.toString(), "get_trade_party_outstanding")
+        var receivables: BigDecimal? = null
+        var receivablesCurrency: String? = null
+        if (tradePartyOutstandingList?.list?.size != 0) {
+            receivables = tradePartyOutstandingList?.list?.get(0)?.totalOutstanding?.invoiceLedAmount
+            receivablesCurrency = tradePartyOutstandingList?.list?.get(0)?.currency
+        }
+        val orgStatsResponse = OrgStatsResponseForCoeFinance(
+            organizationId = orgId.toString(),
+            receivables = receivables,
+            receivablesCurrency = receivablesCurrency,
+            payablesCurrency = payableStats.ledgerCurrency,
+            payables = payableStats.payables?.abs()
+        )
+        return orgStatsResponse
     }
 
     private suspend fun setTradePartyInfo(receivableRequest: Payment) {

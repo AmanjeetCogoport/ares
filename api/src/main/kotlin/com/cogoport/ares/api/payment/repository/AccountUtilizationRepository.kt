@@ -1034,6 +1034,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
+        """
+        SELECT 
+            :orgId as organization_id,
+            MAX(ledger_currency) as ledger_currency,
+            SUM(COALESCE(open_payables,0)) as payables,
+            null as receivables
+        FROM (
+            SELECT
+                MAX(led_currency) as ledger_currency,
+                CASE WHEN acc_type in ('PINV','PDN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables
+            FROM account_utilizations
+            WHERE 
+                acc_type in ('PDN','SCN','REC','PINV','PCN','SINV','PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                AND organization_id = :orgId
+                AND deleted_at is null
+            GROUP BY  acc_type
+        ) A
+    """
+    )
+    suspend fun getOrgStatsForCoeFinance(orgId: UUID): OrgStatsResponse?
+
+    @NewSpan
+    @Query(
         """             
             SELECT organization_id, acc_type, acc_mode, SUM(amount_curr - pay_curr) as payment_value 
             FROM account_utilizations 

@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
+import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -26,6 +27,7 @@ interface OnAccountService {
     suspend fun createBulkPayments(bulkPayment: MutableList<Payment>): BulkPaymentResponse
     suspend fun getOrganizationAccountUtlization(request: LedgerSummaryRequest): List<AccountUtilizationResponse?>
     suspend fun getOrgStats(orgId: UUID?): OrgStatsResponse
+    suspend fun getOrgStatsForCoeFinance(orgId: UUID?): OrgStatsResponseForCoeFinance
     suspend fun getDataAccUtilization(request: PushAccountUtilizationRequest): List<AccountUtilization>
     suspend fun deleteConsolidatedInvoices(req: DeleteConsolidatedInvoicesReq)
     suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary

@@ -6,6 +6,7 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
+import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -74,6 +75,11 @@ class OnAccountController {
     @Get("/org-stats")
     suspend fun getOrgStats(@QueryValue(AresConstants.ORG_ID) orgId: UUID?): OrgStatsResponse {
         return Response<OrgStatsResponse>().ok(onAccountService.getOrgStats(orgId))
+    }
+
+    @Get("/org-stats-for-coe-finance")
+    suspend fun getOrgStatsForCoeFinance(@QueryValue(AresConstants.ORG_ID) orgId: UUID?): OrgStatsResponseForCoeFinance {
+        return Response<OrgStatsResponseForCoeFinance>().ok(onAccountService.getOrgStatsForCoeFinance(orgId))
     }
 
     @Delete("/consolidated")
