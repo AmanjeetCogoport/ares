@@ -1854,7 +1854,7 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType, true)
+            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType, isAutoKnockOff)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
             emitDashboardAndOutstandingEvent(paymentUtilization)
         } catch (e: Exception) {
@@ -1874,7 +1874,7 @@ open class SettlementServiceImpl : SettlementService {
         isAutoKnockOff: Boolean = false
     ) {
         when (accountUtilization.accType) {
-            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType)
+            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
                 journalVoucherService.updateJournalVoucherStatus(
@@ -1937,7 +1937,7 @@ open class SettlementServiceImpl : SettlementService {
         paidTds: BigDecimal,
         performedBy: UUID?,
         performedByUserType: String?,
-        isAutoKnockOff: Boolean = false
+        isAutoKnockOff: Boolean
     ) {
         val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"

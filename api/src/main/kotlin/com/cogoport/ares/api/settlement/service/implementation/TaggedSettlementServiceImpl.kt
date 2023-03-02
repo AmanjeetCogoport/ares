@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
@@ -50,6 +51,9 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
 
     @Inject
     private lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    private lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) {
@@ -131,7 +135,7 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
             previousSettlements.sortedByDescending { it.unUtilizedAmount }
             taggedAccountUtilization.forEach { source ->
                 val document = previousSettlements.find { source?.documentNo == it.sourceId }
-                val taggedSettledIds = if (document?.taggedSettlementId != null) ObjectMapper().readValue<HashMap<String?, ArrayList<Long?>>?>(document.taggedSettlementId!!) else hashMapOf("taggedIds" to arrayListOf<Long?>())
+                val taggedSettledIds = if (document?.taggedSettlementId != null) ObjectMapper().readValue<HashMap<String?, ArrayList<Long?>>?>(document.taggedSettlementId!!) else hashMapOf("taggedIds" to arrayListOf())
                 val tdsEntry = settlementRepository.findBySourceId(document?.sourceId!!, document.destinationId, SettlementType.VTDS)
                 extendedTaggedSourceDocument.add(
                     AutoKnockoffDocumentResponse(
@@ -190,7 +194,7 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         }
         var balanceAmount = balanceSettlingAmount
         var settlement = settlementRepository.getSettlementDetailsByDestinationId(destinationDocument.accountUtilization!!.documentNo, sourceDocument.accountUtilization?.documentNo!!)
-        if (!settlement.isNullOrEmpty()) {
+        if (settlement.isNotEmpty()) {
             settlement = settlement.sortedBy { it.sourceType }
             val amountPaid = settlement[0].amount!!
             val tdsAmount = if (settlement.size == 2) settlement[1].amount else BigDecimal.ZERO
@@ -200,7 +204,7 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
             if (sourceDocument.tdsSettlementId != null) {
                 settlementRepository.updateTaggedSettlement(sourceDocument.tdsSettlementId!!, sourceDocument.paidTds!!)
             }
-            settlementRepository.updateTaggedSettlementAmount(settlement.map { it.id!! }, ArrayList(sourceDocument.taggedSettledIds),)
+            settlementRepository.updateTaggedSettlementAmount(settlement.map { it.id!! }, ArrayList(sourceDocument.taggedSettledIds))
             destinationDocument.accountUtilization!!.payCurr += totalAmountPaid
             destinationDocument.accountUtilization!!.payLoc += (totalAmountPaid * settledList!![1].exchangeRate)
             destinationDocument.payableTds = destinationDocument.payableTds!! - tdsAmount
@@ -231,6 +235,7 @@ class TaggedSettlementServiceImpl : TaggedSettlementService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
 
 //        try {
+//            kuber
 //            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
 //        } catch (e: Exception) {
 //            Sentry.captureException(e)
