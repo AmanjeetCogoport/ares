@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.DailyStatsResponse
+import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
@@ -21,7 +22,6 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
-import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
@@ -43,7 +43,6 @@ import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
-import com.cogoport.ares.model.payment.response.DpoResponse
 import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
@@ -56,6 +55,8 @@ import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -64,13 +65,11 @@ import java.math.RoundingMode
 import java.sql.Date
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.*
-import javax.print.DocFlavor.STRING
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -437,70 +436,63 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesAndQuarterlyOutstanding {
+    override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
         validateInput(request.zone, request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val dailySalesAndQuarterlyOutstanding = DailySalesAndQuarterlyOutstanding()
+        val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
+        for (q in sortQuarterList) {
+            val salesResponseKey = searchKeyDailyOutstanding(
+                request.zone,
+                q.split("_")[0][1].toString().toInt(),
+                q.split("_")[1].toInt(),
+                AresConstants.DAILY_SALES_OUTSTANDING_PREFIX,
+                request.serviceType,
+                request.invoiceCurrency
+            )
+            var salesResponse = clientResponse(salesResponseKey)
 
-        when (request.key){
-            "DAILY" -> {
-                val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
-                for (q in sortQuarterList) {
-                    val salesResponseKey = searchKeyDailyOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), AresConstants.DAILY_SALES_OUTSTANDING_PREFIX, request.serviceType, request.invoiceCurrency)
-                    var salesResponse = clientResponse(salesResponseKey)
+            val quarter = q.split("_")[0][1].toString().toInt()
+            val year = q.split("_")[1].toInt()
+            val monthList = getMonthFromQuarter(quarter)
 
-                    val quarter = q.split("_")[0][1].toString().toInt()
-                    val year = q.split("_")[1].toInt()
-                    val monthList = getMonthFromQuarter(quarter)
-
-                    if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
-                        monthList.forEach {
-                            val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                            openSearchService.generateDailySalesOutstanding(request.zone, q.split("_")[0][1].toString().toInt(), q.split("_")[1].toInt(), request.serviceType, request.invoiceCurrency, date, request.dashboardCurrency, defaultersOrgIds)
-                        }
-                        salesResponse = clientResponse(salesResponseKey)
-                    }
-
-                    val dso = mutableListOf<DsoResponse>()
-                    for (hts in salesResponse?.hits()?.hits()!!) {
-                        val data = hts.source()
-                        val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
-                        val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
-                        data?.list?.map {
-                            dsoResponse.month = it.month.toString()
-                            dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
-                        }
-                        dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
-                        dso.add(dsoResponse)
-                    }
-
-                    val monthListDso = dso.map {
-                        when (it.month.toInt() < 10) {
-                            true -> "0${it.month}"
-                            false -> it.month
-                        }
-                    }
-                    getMonthFromQuarter(q.split("_")[0][1].toString().toInt()).forEach {
-                        if (!monthListDso.contains(it)) {
-                            dso.add(DsoResponse(it, 0.toBigDecimal()))
-                        }
-                    }
-                    dso.sortedBy { it.month }.forEach { dsoList.add(it) }
+            if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
+                monthList.forEach {
+                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    openSearchService.generateDailySalesOutstanding(
+                        request.zone,
+                        q.split("_")[0][1].toString().toInt(),
+                        q.split("_")[1].toInt(),
+                        request.serviceType,
+                        request.invoiceCurrency,
+                        date,
+                        request.dashboardCurrency,
+                        defaultersOrgIds
+                    )
                 }
-
-                val dsoResponseData = dsoList.map {
-                    DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
-                }
-
-                dailySalesAndQuarterlyOutstanding.DAILY = dsoResponseData
+                salesResponse = clientResponse(salesResponseKey)
             }
-            "QUARTERLY" -> {
-                dailySalesAndQuarterlyOutstanding.QUARTERLY = getQuarterlyOutstanding(QuarterlyOutstandingRequest()).list
+
+            val dso = mutableListOf<DsoResponse>()
+            for (hts in salesResponse?.hits()?.hits()!!) {
+                val data = hts.source()
+                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
+                val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
+                data?.list?.map {
+                    dsoResponse.month = it.month.toString()
+                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
+                }
+                dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
+                dso.add(dsoResponse)
             }
         }
-        return dailySalesAndQuarterlyOutstanding
+
+        val dsoResponseData = dsoList.map {
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
+        }
+
+        return DailySalesOutstanding(dsoResponse =  dsoResponseData)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -753,47 +745,111 @@ class DashboardServiceImpl : DashboardService {
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
         }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val searchKey  = AresConstants.INVOICE_TIME_LINE_PROFIX + startDate + AresConstants.KEY_DELIMITER + endDate
+        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate)
 
-        var opensearchData = OpenSearchClient().search(
+        val objectMapper = ObjectMapper()
+
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
+        val mapOfData = mapOf("finance_accepted" to data.filter {it.status != "DRAFT"}, "irn_generated" to data.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status) }, "settled" to  data.filter { it.paymentStatus == "PAID" })
+
+        val invoiceTimeLineResp = InvoiceTimeLineResponse()
+
+        mapOfData.entries.map { (k,v) ->
+            v.map { invoice ->
+                val eventData = objectMapper.readValue(invoice.events, Array<InvoiceEventResponse>::class.java)
+                logger().info(invoice.id.toString())
+                when (k) {
+                    "finance_accepted" -> {
+                        val createdAtEventDate = eventData.first { it.eventName == "CREATED" }.occurredAt.time
+                        var financeAcceptedEventDate = 0L
+                        if (eventData.map {it.eventName}.contains("FINANCE_ACCEPTED")){
+                            financeAcceptedEventDate = eventData.first { it.eventName == "FINANCE_ACCEPTED" }.occurredAt.time
+                        }
+                        if (financeAcceptedEventDate != 0L) {
+                            invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.plus(financeAcceptedEventDate.minus(createdAtEventDate))?.div(1000)?.div(60)?.div(60)
+                        }else {}
+                    }
+                    "irn_generated" -> {
+                        var financeAcceptedEventDate = 0L
+                        var irnGeneratedEventDate = 0L
+                        if (eventData.map {it.eventName}.contains("FINANCE_ACCEPTED")){
+                            financeAcceptedEventDate = eventData.first { it.eventName == "FINANCE_ACCEPTED" }.occurredAt.time
+                        }
+                        if (eventData.map {it.eventName}.contains("IRN_GENERATED")){
+                            irnGeneratedEventDate =eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
+                        }
+
+                        if (irnGeneratedEventDate != 0L){
+                            invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate).div(1000).div(60).div(60))
+                        }else {}
+
+                    }
+                    "settled" -> {
+                        var irnGeneratedEventDate = 0L
+                        var settlementEventDate = 0L
+                        if (eventData.map {it.eventName}.contains("IRN_GENERATED")){
+                            irnGeneratedEventDate = eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
+                        }
+                        if (eventData.map {it.eventName}.contains("SETTLEMENT")) {
+                            settlementEventDate =
+                                eventData.first { it.eventName == "SETTLEMENT" }.occurredAt.time
+                        }
+
+                        if (settlementEventDate != 0L) {
+                            invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.plus(
+                                settlementEventDate.minus(
+                                    irnGeneratedEventDate
+                                ).div(1000).div(60).div(60)
+                            )
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        invoiceTimeLineResp.draftInvoicesCount = data.size
+        invoiceTimeLineResp.financeAcceptedInvoiceCount = mapOfData["finance_accepted"]?.size
+        invoiceTimeLineResp.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
+        invoiceTimeLineResp.settledInvoicesCount = mapOfData["settled"]?.size
+
+        if (invoiceTimeLineResp.financeAcceptedInvoiceCount!! != 0){
+            invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.div(invoiceTimeLineResp.financeAcceptedInvoiceCount!!)
+        }
+
+        if (invoiceTimeLineResp.irnGeneratedInvoicesCount!! != 0){
+            invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTimeLineResp.irnGeneratedInvoicesCount!!)
+        }
+        if (invoiceTimeLineResp.settledInvoicesCount !=0 ){
+            invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.div(invoiceTimeLineResp.settledInvoicesCount!!)
+        }
+
+        return invoiceTimeLineResp
+    }
+
+    override suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse? {
+        val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate
+
+        var openSearchData = OpenSearchClient().search(
             searchKey = searchKey,
-            classType = InvoiceTimeLineResponse::class.java,
+            classType = OutstandingOpensearchResponse::class.java,
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (opensearchData == null){
-            openSearchService.generateInvoiceTimeline( updatedStartDate, updatedEndDate, searchKey)
+        if (openSearchData == null){
+            openSearchService.generateOutstandingData( asOnDate,  searchKey)
 
-            opensearchData = OpenSearchClient().search(
+            openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
-                classType = InvoiceTimeLineResponse::class.java,
+                classType = OutstandingOpensearchResponse::class.java,
                 index = AresConstants.SALES_DASHBOARD_INDEX
             )
         }
-        return opensearchData
+        return openSearchData
     }
-
-//    override suspend fun getOutstanding(date: Date?): OutstandingOpensearchResponse? {
-//        val asOnDate = date ?: Date.from(Instant.now())
-//        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER
-//
-//        var opensearchData = OpenSearchClient().search(
-//            searchKey = searchKey,
-//            classType = OutstandingOpensearchResponse::class.java,
-//            index = AresConstants.SALES_DASHBOARD_INDEX
-//        )
-//
-//        if (opensearchData == null){
-//            openSearchService.generateOutstandingData( asOnDate,  searchKey)
-//
-//            opensearchData = OpenSearchClient().search(
-//                searchKey = searchKey,
-//                classType = OutstandingOpensearchResponse::class.java,
-//                index = AresConstants.SALES_DASHBOARD_INDEX
-//            )
-//        }
-//        return opensearchData
-//    }
 
     override suspend fun getDailySalesStatistics(
         month: String?,
@@ -869,7 +925,7 @@ class DashboardServiceImpl : DashboardService {
         }
 
         mapData.map {(k,v) ->
-            val uniqueCurrencyList: List<String> = v.map { it.dashboardCurrency!! }
+            val uniqueCurrencyList: List<String> = v.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }
 
             val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
 

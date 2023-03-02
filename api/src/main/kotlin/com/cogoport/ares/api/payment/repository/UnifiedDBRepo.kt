@@ -4,14 +4,14 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesInvoiceResponse
+import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.entity.Outstanding
-import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
-import io.micronaut.http.annotation.QueryValue
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.util.*
@@ -23,7 +23,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select id, status, payment_status from plutus.invoices where created_at::varchar < :endDate and created_at::varchar > :startDate
+            select id, status, payment_status from plutus.invoices where created_at::varchar < :endDate and created_at::varchar > :startDate and status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED')
         """
     )
     fun getFunnelData (startDate:String, endDate: String): List<SalesInvoiceResponse>?
@@ -31,7 +31,23 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select id,invoice_id, event_name, created_at, updated_at, occurred_at  from plutus.invoice_events where invoice_id = :invoiceId
+            select
+                i.id as id,
+                i.status as status,
+                i.payment_status as payment_status,
+                json_agg(json_build_object('id',ie.id,'invoice_id' , ie.invoice_id, 'event_name', ie.event_name, 'occurred_at',ie.occurred_at))::text as events
+                from plutus.invoices i inner join plutus.invoice_events ie on i.id = ie.invoice_id where i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
+                and status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and migrated = false
+                group by i.id
+        """
+    )
+    fun getInvoices(startDate: String, endDate: String): List<SalesInvoiceTimelineResponse>
+
+
+    @NewSpan
+    @Query(
+        """
+            select id,invoice_id, event_name, occurred_at  from plutus.invoice_events where invoice_id = :invoiceId
         """
     )
     fun getInvoiceEvents (invoiceId: Long): List<InvoiceEventResponse>?
@@ -50,11 +66,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                     WHEN shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface' END as grouped_services
             from temp_outstanding_invoices tod 
             inner join loki.jobs lj on lj.job_number = tod.job_number
-            where registration_number is not null and open_invoice_amount > 0 and shipment_service_type is not null and invoice_date < :asOnDate  and  lj.job_details  ->> 'tradeType' != '' and tod.shipment_service_type !=''
+            where registration_number is not null and open_invoice_amount > 0 and
+             shipment_service_type is not null and invoice_date::varchar < :asOnDate  and  lj.job_details  ->> 'tradeType' != '' and tod.shipment_service_type !=''
             group by shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
-    fun getOutstandingData (asOnDate: Date): List<OutstandingDocument>?
+    fun getOutstandingData (asOnDate: String?): List<OutstandingDocument>?
 
     @NewSpan
     @Query(
@@ -86,10 +103,10 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         ),
         y as (
             select date_trunc('day',transaction_date) as day,
-            sum(case when :accType in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when :accType in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
+            sum(case when acc_type in ('SINV','SCN') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
             currency as dashboard_currency
             from ares.account_utilizations
-            where acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '4 day'::interval) and deleted_at is null
+            where acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '4 day'::interval) and deleted_at is null and (:accType is null or acc_type = :accType)
             group by date_trunc('day',transaction_date), dashboard_currency
         )
         select x.day duration, coalesce(y.amount, 0::double precision) as amount, 
@@ -120,6 +137,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     )
     suspend fun generateYearlySalesOutstanding( asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
-
-    
+    @NewSpan
+    @Query(
+        """
+           select * from plutus.audits where  object_id =:invoiceId and action_name::varchar = :actionName and (:status is null or data ->> 'status' = :status)
+        """
+    )
+    suspend fun getPlutusAuditData (invoiceId: Long, actionName: String, status: String?): List<Audit>
 }

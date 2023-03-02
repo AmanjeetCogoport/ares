@@ -15,7 +15,5 @@ import java.math.BigDecimal
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class DailySalesOutstanding(
     @JsonProperty("dsoResponse")
-    val dsoResponse: List<DsoResponse>,
-    @JsonProperty("dashboardCurrency")
-    val dashboardCurrency: String
+    val dsoResponse: List<DsoResponse>
 )

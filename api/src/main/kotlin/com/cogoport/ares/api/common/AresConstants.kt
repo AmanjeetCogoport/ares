@@ -31,7 +31,6 @@ object AresConstants {
     const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
     const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
     const val SALES_FUNNEL_PREFIX = "SALES_FUNNEL_"
-    const val INVOICE_TIME_LINE_PROFIX = "INVOICE_TIMELINE_"
     const val OUTSTANDING_PREFIX = "OUTSTANDING_"
 
     const val ZONE = "zone"

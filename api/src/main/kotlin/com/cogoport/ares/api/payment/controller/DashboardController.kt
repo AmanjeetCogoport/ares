@@ -166,8 +166,13 @@ class DashboardController {
         return dashboardService.getDailySalesStatistics( month, year, asOnDate, documentType)
     }
 
-//    @Get("/outstanding")
-//    suspend fun getOutstanding (@QueryValue("date") date: Date? = null ): OutstandingOpensearchResponse? {
-//        return dashboardService.getOutstanding(date)
-//    }
+    @Get("/outstanding")
+    suspend fun getOutstanding (@QueryValue("date") date: String? = null ): OutstandingOpensearchResponse? {
+        return dashboardService.getOutstanding(date)
+    }
+
+    @Get("/ar-dashboard")
+    suspend fun generateArDashboardData (){
+        return pushToClientService.generateArDashboardData()
+    }
 }

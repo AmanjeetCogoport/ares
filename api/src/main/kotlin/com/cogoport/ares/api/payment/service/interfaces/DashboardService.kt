@@ -60,5 +60,5 @@ interface DashboardService {
 
     suspend fun getDailySalesStatistics (month: String?, year:Int?, asOnDate: String?, documentType: String?): DailyStatsResponse
 
-//    suspend fun getOutstanding (date: Date?): OutstandingOpensearchResponse?
+    suspend fun getOutstanding (date: String?): OutstandingOpensearchResponse?
 }

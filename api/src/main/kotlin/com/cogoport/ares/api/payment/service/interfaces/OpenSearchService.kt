@@ -27,9 +27,7 @@ interface OpenSearchService {
 
     suspend fun generateArDashboardData ()
 
-    suspend fun generateInvoiceTimeline(startDate :String, endDate: String, searchKey: String)
-
-    suspend fun generateOutstandingData (date: Date, searchKey: String)
+    suspend fun generateOutstandingData (date: String?, searchKey: String)
 
     suspend fun getKamOrManagerWiseOutstandong ()
 }
