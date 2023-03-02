@@ -852,99 +852,107 @@ class DashboardServiceImpl : DashboardService {
         month: String?,
         year: Int?,
         asOnDate: String?,
-        documentType: String?,
-    ): DailyStatsResponse {
+        documentType: String?
+    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>>{
         val defaultersOrgIds = getDefaultersOrgIds()
 
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val dailyStasResponse = DailyStatsResponse(
-            arrayListOf(),
-            arrayListOf(),
-            arrayListOf(),
-            null
-        )
+        var outstandingData =  mutableListOf<Outstanding>()
 
-        val mapData = mutableMapOf(
-            "salesInvoiceResponse" to mutableListOf<Outstanding>(),
-            "creditNoteResponse" to mutableListOf<Outstanding>(),
-            "onAccountPaymentResponse" to mutableListOf<Outstanding>()
+        var hashMap = hashMapOf<String, ArrayList<Outstanding>>()
+
+        var accTypeDocStatusMapping =  mapOf(
+            "SALES_INVOICE" to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
+            "CREDIT_NOTE" to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
+            "ON_ACCOUNT_PAYMENT" to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
         )
 
         if (year != null) {
-            val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            var endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+                unifiedDBRepo.generateYearlySalesOutstanding(
+                    endDate,
+                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    defaultersOrgIds,
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
+                )!!
+            }else{
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate)!!
+            }
 
-            mapData["salesInvoiceResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
-                endDate,
-                "SINV",
-                defaultersOrgIds
-            )!!
-            mapData["creditNoteResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
-                endDate,
-                "SCN",
-                defaultersOrgIds
-            )!!
-            mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateYearlySalesOutstanding(
-                endDate,
-                "REC",
-                defaultersOrgIds
-            )!!
         }
 
         if (month != null) {
-            val endDate = when (year != null) {
+            var endDate = when (year != null) {
                 true -> "$year-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             }
-            mapData["salesInvoiceResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
-                endDate,
-                "SINV",
-                defaultersOrgIds
-            )!!
-            mapData["creditNoteResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
-                endDate,
-                "SCN",
-                defaultersOrgIds
-            )!!
-            mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateMonthlyOutstanding(
-                endDate,
-                "REC",
-                defaultersOrgIds
-            )!!
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+                unifiedDBRepo.generateMonthlyOutstanding(
+                    endDate,
+                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    defaultersOrgIds,
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
+                )!!
+            }else{
+                unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate)!!
+            }
+
         }
 
-        if (asOnDate != null) {
-            generatingDailySales(mapData, asOnDate, defaultersOrgIds)
-        } else {
-            generatingDailySales(mapData, AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), defaultersOrgIds)
-        }
-
-        mapData.map { (k, v) ->
-            val uniqueCurrencyList: List<String> = v.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }
-
-            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
-
-            v.groupBy { it -> it.duration }.entries.map { (key, value) ->
-                val outStanding = Outstanding(
-                    amount = 0.toBigDecimal(),
-                    duration = key,
-                    dashboardCurrency = "INR"
-                )
-
-                value.map { item ->
-                    outStanding.amount = outStanding.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
-                }
-
-                when (k) {
-                    "salesInvoiceResponse" -> dailyStasResponse.salesInvoiceResponse.add(outStanding)
-                    "creditNoteResponse" -> dailyStasResponse.creditNoteResponse?.add(outStanding)
-                    "onAccountPaymentResponse" -> dailyStasResponse.onAccountPaymentResponse?.add(outStanding)
-                    else -> {}
-                }
+        if (asOnDate != null){
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+                unifiedDBRepo.generateDailySalesOutstanding(
+                    asOnDate,
+                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    defaultersOrgIds,
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                )!!
+            }else {
+                unifiedDBRepo.generateDailyShipmentCreatedAt(asOnDate)!!
             }
         }
 
-        return dailyStasResponse
+        if(asOnDate == null && year == null && month == null) {
+            val endDate = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE","ON_ACCOUNT_PAYMENT")){
+                unifiedDBRepo.generateDailySalesOutstanding(
+                    endDate,
+                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    defaultersOrgIds,
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                )!!
+            } else {
+                unifiedDBRepo.generateDailyShipmentCreatedAt(endDate)!!
+            }
+        }
+
+        val uniqueCurrencyList: List<String> = outstandingData.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
+
+        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
+
+        outstandingData.groupBy { it -> it.duration }.entries.map { (key, value) ->
+            val outStanding = Outstanding(
+                amount = 0.toBigDecimal(),
+                duration = key,
+                dashboardCurrency = "INR",
+                count = 0L
+            )
+
+            value.map { item ->
+                outStanding.amount = outStanding.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
+                outStanding.count = outStanding.count?.plus(item.count!!)
+            }
+
+            if (hashMap.keys.contains(documentType)){
+                hashMap[documentType]?.add(outStanding)
+            }else {
+                hashMap[documentType!!] = arrayListOf(outStanding)
+            }
+        }
+
+        return hashMap
     }
 
     private fun generateMonthKeyIndex(month: Int): String {
@@ -958,17 +966,20 @@ class DashboardServiceImpl : DashboardService {
         mapData["salesInvoiceResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
             asOnDate,
             "SINV",
-            defaultersOrgIds
+            defaultersOrgIds,
+            listOf("FINAL", "PROFORMA")
         )!!
         mapData["creditNoteResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
             asOnDate,
             "SCN",
-            defaultersOrgIds
+            defaultersOrgIds,
+            listOf("FINAL", "PROFORMA")
         )!!
         mapData["onAccountPaymentResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
             asOnDate,
             "REC",
-            defaultersOrgIds
+            defaultersOrgIds,
+            listOf("FINAL")
         )!!
 
         return mapData

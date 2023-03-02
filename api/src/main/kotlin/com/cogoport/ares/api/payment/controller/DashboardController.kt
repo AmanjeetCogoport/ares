@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
+import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -12,7 +13,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
-import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
+import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
@@ -63,8 +64,8 @@ class DashboardController {
     }
 
     @Get("/daily-sales-outstanding{?request*}")
-    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesAndQuarterlyOutstanding? {
-        return Response<DailySalesAndQuarterlyOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
+    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding? {
+        return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
     }
 
     @Get("/collection-trend{?request*}")
@@ -157,8 +158,9 @@ class DashboardController {
         @QueryValue("month") month: String? = null,
         @QueryValue("year") year: Int? = null,
         @QueryValue("asOnDate") asOnDate: String? = null,
-        @QueryValue("documentType") documentType: String? = "INVOICE",
-    ): DailyStatsResponse {
+        @QueryValue("documentType") documentType: String? = "SALES_INVOICE",
+
+    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>> {
         return dashboardService.getDailySalesStatistics(month, year, asOnDate, documentType)
     }
 

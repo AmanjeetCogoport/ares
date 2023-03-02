@@ -66,7 +66,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             from temp_outstanding_invoices tod 
             inner join loki.jobs lj on lj.job_number = tod.job_number
             where registration_number is not null and open_invoice_amount > 0 and
-             shipment_service_type is not null and invoice_date::varchar < :asOnDate  and  lj.job_details  ->> 'tradeType' != '' and tod.shipment_service_type !=''
+            shipment_service_type is not null and invoice_date::varchar < :asOnDate  and  lj.job_details  ->> 'tradeType' != '' and tod.shipment_service_type !=''
             group by shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
@@ -75,72 +75,101 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-        with x as (
-	        select to_char(generate_series(:date - '4 month'::interval, :date, '1 month'), 'Mon') as month
-        ),
-        y as (
-            select to_char(date_trunc('month',transaction_date),'Mon') as month,
-            sum(case when :accType in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when :accType in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
-            currency as dashboard_currency
-            from ares.account_utilizations
-            where acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by date_trunc('month',transaction_date), dashboard_currency
-        )
-        select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
-        y.dashboard_currency
-        from x left join y on y.month = x.month
+        select 
+        to_char(date_trunc('month',transaction_date),'Mon') as duration,
+        coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
+        currency as dashboard_currency,
+        COUNT(id) as count
+        from ares.account_utilizations
+        where acc_mode = 'AR' and document_status in (:docStatus)  and date_trunc('month', transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) and deleted_at is null and (:accType is null or  acc_type = :accType)
+        and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        group by date_trunc('month',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateMonthlyOutstanding(date: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateMonthlyOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
         """
-            with x as (
-	        select generate_series(:asOnDate::date  - '3 day'::interval,:asOnDate::date , '1 DAY') as day
-        ),
-        y as (
-            select date_trunc('day',transaction_date) as day,
-            sum(case when acc_type in ('SINV','SCN') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
-            currency as dashboard_currency
+            select date_trunc('day',transaction_date) as duration,
+            coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
+            currency as dashboard_currency,
+            COUNT(id) as count
             from ares.account_utilizations
-            where acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '4 day'::interval) and deleted_at is null and (:accType is null or acc_type = :accType)
+            where acc_mode = 'AR' and document_status in (:docStatus) and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval) and deleted_at is null and (:accType is null or acc_type = :accType)
+            and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             group by date_trunc('day',transaction_date), dashboard_currency
-        )
-        select x.day duration, coalesce(y.amount, 0::double precision) as amount, 
-        y.dashboard_currency
-        from x left join y on y.day = x.day
         """
     )
-    suspend fun generateDailySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateDailySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
         """
-            with x as (
-	        select generate_series(:asOnDate::date  - '3 Year'::interval,:asOnDate::date , '1 YEAR') as year
-        ),
-        y as (
-            select date_trunc('year',transaction_date) as year,
-            sum(case when :accType in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when :accType in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
-            currency as dashboard_currency
-            from ares.account_utilizations
-            where acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and date_trunc('day', transaction_date) >= date_trunc('year', :asOnDate:: date - '4 year'::interval) and deleted_at is null
-            group by date_trunc('year',transaction_date), dashboard_currency
-        )
-        select x.year duration, coalesce(y.amount, 0::double precision) as amount, 
-        y.dashboard_currency
-        from x left join y on y.year = x.year
+        select 
+        date_trunc('year',transaction_date) as duration,
+        coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
+        currency as dashboard_currency,
+        count(id) as count
+        from ares.account_utilizations
+        where 
+            acc_mode = 'AR' 
+            and 
+            document_status in (:docStatus)  and 
+            date_trunc('year', transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval) 
+            and deleted_at is null and 
+            (:accType is null or acc_type = :accType)
+            and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        group by date_trunc('year',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateYearlySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateYearlySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
         """
-           select * from plutus.audits where  object_id =:invoiceId and action_name::varchar = :actionName and (:status is null or data ->> 'status' = :status)
+            select date_trunc('day',lj.created_at) as duration,
+            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            count(distinct(lj.id)) as count,
+            pinv.currency as dashboard_currency
+            from loki.jobs lj
+            inner join plutus.invoices pinv on lj.id = pinv.job_id
+            where date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
+            group by date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun getPlutusAuditData(invoiceId: Long, actionName: String, status: String?): List<Audit>
+    suspend fun generateDailyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+
+    @NewSpan
+    @Query(
+        """
+            select 
+            to_char(date_trunc('month',lj.created_at),'Mon') as duration,
+            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            count(distinct(lj.id)) as count,
+            pinv.currency as dashboard_currency
+            from loki.jobs lj
+            inner join plutus.invoices pinv on lj.id = pinv.job_id
+            where date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
+            group by date_trunc('month',lj.created_at),dashboard_currency
+        """
+    )
+    suspend fun generateMonthlyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+
+    @NewSpan
+    @Query(
+        """
+            select date_trunc('year',lj.created_at) as duration,
+            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            count(distinct(lj.id)) as count,
+            pinv.currency as dashboard_currency
+            from loki.jobs lj
+            inner join plutus.invoices pinv on lj.id = pinv.job_id
+            where date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+            group by date_trunc('year',lj.created_at), dashboard_currency
+        """
+    )
+    suspend fun generateYearlyShipmentCreatedAt (asOnDate: String?): MutableList<Outstanding>?
+
+
 }
