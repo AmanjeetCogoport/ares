@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesInvoiceResponse
 import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
@@ -56,7 +57,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             select 
                 count(*) as open_invoices_count, 
-                sum(open_invoice_amount) as open_invoice_amount,
+                sum(CASE when invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount,
                 open_invoice_currency as currency, 
                 count(distinct(registration_number)) as customers_count,
                 shipment_service_type as service_type,
