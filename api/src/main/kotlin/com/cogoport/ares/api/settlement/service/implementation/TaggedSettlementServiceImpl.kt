@@ -24,12 +24,14 @@ import com.cogoport.brahma.hashids.Hashids
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.util.UUID
 import javax.transaction.Transactional
 
-class TaggedSettlementServiceImpl : TaggedSettlementService {
+@Singleton
+open class TaggedSettlementServiceImpl : TaggedSettlementService {
 
     @Inject
     private lateinit var settlementRepository: SettlementRepository
