@@ -1,10 +1,8 @@
 package com.cogoport.ares.api.common.models
 
-
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
-
 
 @Introspected
 @MappedEntity

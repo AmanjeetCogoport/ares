@@ -8,7 +8,6 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
-import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
@@ -32,7 +31,6 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import java.util.Date
 
 interface DashboardService {
 
@@ -54,11 +52,11 @@ interface DashboardService {
 
     suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?>
 
-    suspend fun getSalesFunnel (month: String?): SalesFunnelResponse?
+    suspend fun getSalesFunnel(month: String?): SalesFunnelResponse?
 
-    suspend fun getInvoiceTimeline (startDate: String? , endDate: String?): InvoiceTimeLineResponse?
+    suspend fun getInvoiceTimeline(startDate: String?, endDate: String?): InvoiceTimeLineResponse?
 
-    suspend fun getDailySalesStatistics (month: String?, year:Int?, asOnDate: String?, documentType: String?): DailyStatsResponse
+    suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?): DailyStatsResponse
 
-    suspend fun getOutstanding (date: String?): OutstandingOpensearchResponse?
+    suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse?
 }

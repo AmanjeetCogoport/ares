@@ -1,11 +1,9 @@
 package com.cogoport.ares.api.exception
 
-import com.cogoport.ares.api.utils.logger
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.rabbitmq.exception.DefaultRabbitListenerExceptionHandler
 import io.micronaut.rabbitmq.exception.RabbitListenerException
 import io.micronaut.rabbitmq.exception.RabbitListenerExceptionHandler
-import io.sentry.Sentry
 import jakarta.inject.Singleton
 
 @Replaces(DefaultRabbitListenerExceptionHandler::class)

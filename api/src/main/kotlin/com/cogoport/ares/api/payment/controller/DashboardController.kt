@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.payment.controller
 
-import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.DailyStatsResponse
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
@@ -14,7 +13,6 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesAndQuarterlyOutstanding
-import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
@@ -39,7 +37,6 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import io.micronaut.data.annotation.Query
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -49,7 +46,6 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
-import java.sql.Date
 import javax.validation.Valid
 
 @Validated
@@ -149,30 +145,30 @@ class DashboardController {
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
     @Get("/sales-funnel")
-    suspend fun getSalesFunnel (@QueryValue("month") month: String? = null): SalesFunnelResponse? { return dashboardService.getSalesFunnel(month)}
+    suspend fun getSalesFunnel(@QueryValue("month") month: String? = null): SalesFunnelResponse? { return dashboardService.getSalesFunnel(month) }
 
     @Get("/invoice-timeline")
-    suspend fun getInvoiceTimeline (@QueryValue ("startDate") startDate: String? = null,@QueryValue ("endDate") endDate: String? = null): InvoiceTimeLineResponse? {
-        return dashboardService.getInvoiceTimeline(startDate,endDate)
+    suspend fun getInvoiceTimeline(@QueryValue("startDate") startDate: String? = null, @QueryValue("endDate") endDate: String? = null): InvoiceTimeLineResponse? {
+        return dashboardService.getInvoiceTimeline(startDate, endDate)
     }
 
     @Get("/daily-sales-statistics")
-    suspend fun getDailySalesStatistics (
-        @QueryValue ("month") month: String? = null,
-        @QueryValue ("year") year: Int? = null,
-        @QueryValue ("asOnDate") asOnDate: String? = null,
+    suspend fun getDailySalesStatistics(
+        @QueryValue("month") month: String? = null,
+        @QueryValue("year") year: Int? = null,
+        @QueryValue("asOnDate") asOnDate: String? = null,
         @QueryValue("documentType") documentType: String? = "INVOICE",
     ): DailyStatsResponse {
-        return dashboardService.getDailySalesStatistics( month, year, asOnDate, documentType)
+        return dashboardService.getDailySalesStatistics(month, year, asOnDate, documentType)
     }
 
     @Get("/outstanding")
-    suspend fun getOutstanding (@QueryValue("date") date: String? = null ): OutstandingOpensearchResponse? {
+    suspend fun getOutstanding(@QueryValue("date") date: String? = null): OutstandingOpensearchResponse? {
         return dashboardService.getOutstanding(date)
     }
 
     @Get("/ar-dashboard")
-    suspend fun generateArDashboardData (){
+    suspend fun generateArDashboardData() {
         return pushToClientService.generateArDashboardData()
     }
 }

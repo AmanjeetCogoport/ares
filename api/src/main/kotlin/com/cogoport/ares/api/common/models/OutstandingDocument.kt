@@ -10,7 +10,7 @@ data class OutstandingDocument(
     var openInvoicesCount: Int? = 0,
     var openInvoiceAmount: BigDecimal = BigDecimal.ZERO,
     var currency: String?,
-    var customersCount: Int? =0,
+    var customersCount: Int? = 0,
     var serviceType: String?,
     var groupedServices: String?,
     var tradeType: String?

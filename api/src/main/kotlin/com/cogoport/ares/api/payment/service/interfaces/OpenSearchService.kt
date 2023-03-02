@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.service.interfaces
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.model.payment.ServiceType
-import java.util.Date
 import java.util.UUID
 
 interface OpenSearchService {
@@ -23,11 +22,11 @@ interface OpenSearchService {
 
     suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
 
-    suspend fun generatingSalesFunnelData (monthKey: Int, year: Int, searchKey: String)
+    suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String)
 
-    suspend fun generateArDashboardData ()
+    suspend fun generateArDashboardData()
 
-    suspend fun generateOutstandingData (date: String?, searchKey: String)
+    suspend fun generateOutstandingData(date: String?, searchKey: String)
 
-    suspend fun getKamOrManagerWiseOutstandong ()
+    suspend fun getKamOrManagerWiseOutstandong()
 }

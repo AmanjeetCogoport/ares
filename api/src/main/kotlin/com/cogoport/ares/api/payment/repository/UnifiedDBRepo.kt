@@ -14,7 +14,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
-import java.util.*
+import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
 @R2dbcRepository(value = AresConstants.UNIFIED, dialect = Dialect.POSTGRES)
@@ -26,7 +26,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             select id, status, payment_status from plutus.invoices where created_at::varchar < :endDate and created_at::varchar > :startDate and status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED')
         """
     )
-    fun getFunnelData (startDate:String, endDate: String): List<SalesInvoiceResponse>?
+    fun getFunnelData(startDate: String, endDate: String): List<SalesInvoiceResponse>?
 
     @NewSpan
     @Query(
@@ -43,14 +43,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     )
     fun getInvoices(startDate: String, endDate: String): List<SalesInvoiceTimelineResponse>
 
-
     @NewSpan
     @Query(
         """
             select id,invoice_id, event_name, occurred_at  from plutus.invoice_events where invoice_id = :invoiceId
         """
     )
-    fun getInvoiceEvents (invoiceId: Long): List<InvoiceEventResponse>?
+    fun getInvoiceEvents(invoiceId: Long): List<InvoiceEventResponse>?
     @NewSpan
     @Query(
         """
@@ -71,7 +70,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
-    fun getOutstandingData (asOnDate: String?): List<OutstandingDocument>?
+    fun getOutstandingData(asOnDate: String?): List<OutstandingDocument>?
 
     @NewSpan
     @Query(
@@ -93,7 +92,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         from x left join y on y.month = x.month
         """
     )
-    suspend fun generateMonthlyOutstanding( date: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateMonthlyOutstanding(date: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -114,7 +113,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         from x left join y on y.day = x.day
         """
     )
-    suspend fun generateDailySalesOutstanding( asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateDailySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -135,7 +134,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         from x left join y on y.year = x.year
         """
     )
-    suspend fun generateYearlySalesOutstanding( asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
+    suspend fun generateYearlySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -143,5 +142,5 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
            select * from plutus.audits where  object_id =:invoiceId and action_name::varchar = :actionName and (:status is null or data ->> 'status' = :status)
         """
     )
-    suspend fun getPlutusAuditData (invoiceId: Long, actionName: String, status: String?): List<Audit>
+    suspend fun getPlutusAuditData(invoiceId: Long, actionName: String, status: String?): List<Audit>
 }

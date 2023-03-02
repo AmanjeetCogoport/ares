@@ -4,5 +4,5 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class SalesFunnelnvoiceResponse(
-    var id:Long
+    var id: Long
 )

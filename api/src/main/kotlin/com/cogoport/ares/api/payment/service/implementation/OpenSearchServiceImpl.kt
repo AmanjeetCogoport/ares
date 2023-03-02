@@ -1,18 +1,13 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.InvoiceEventResponse
-import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
-import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
-import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
 import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
-import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -30,7 +25,6 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
-import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
@@ -44,23 +38,14 @@ import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponseData
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
-import com.cogoport.plutus.model.invoice.enums.InvoiceStatus
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import io.micronaut.asm.TypeReference
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
-import java.text.SimpleDateFormat
-import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import java.util.UUID
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -460,7 +445,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun generateArDashboardData () {
+    override suspend fun generateArDashboardData() {
         val currMonth = AresConstants.CURR_MONTH
         val currYear = AresConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
@@ -469,12 +454,11 @@ class OpenSearchServiceImpl : OpenSearchService {
 //        generatingSalesFunnelData(currMonth,currYear, salesFunnelKey)
 
         val currentDate = AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val outstandingIndexKey  = AresConstants.OUTSTANDING_PREFIX + currentDate
+        val outstandingIndexKey = AresConstants.OUTSTANDING_PREFIX + currentDate
         generateOutstandingData(currentDate, outstandingIndexKey)
-
     }
 
-    override suspend fun generatingSalesFunnelData (monthKey: Int, year: Int, searchKey: String) {
+    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String) {
         val monthKeyIndex = when (monthKey < 10) {
             true -> "0$monthKey"
             else -> monthKey.toString()
@@ -486,13 +470,13 @@ class OpenSearchServiceImpl : OpenSearchService {
         val convertedDateLength = convertedDate.month.length(convertedDate.isLeapYear)
 
         val endDate =
-            "$year-$monthKeyIndex-${convertedDateLength}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            "$year-$monthKeyIndex-$convertedDateLength".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
         val salesFunnelResponse = SalesFunnelResponse()
 
         val data = unifiedDBRepo.getFunnelData(startDate, endDate)
 
-        if (data?.size !=0) {
+        if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
             salesFunnelResponse.financeAcceptedInvoiceCount = data?.count { it.status?.name != "DRAFT" }
             salesFunnelResponse.irnGeneratedInvoicesCount =
@@ -503,11 +487,11 @@ class OpenSearchServiceImpl : OpenSearchService {
                 salesFunnelResponse.financeAcceptedInvoiceCount?.times(100)
                     ?.div(salesFunnelResponse.draftInvoicesCount!!)
 
-            if (salesFunnelResponse.financeAcceptedInvoiceCount!! != 0){
+            if (salesFunnelResponse.financeAcceptedInvoiceCount!! != 0) {
                 salesFunnelResponse.financeToIrnPercentage = salesFunnelResponse.irnGeneratedInvoicesCount?.times(100)
                     ?.div(salesFunnelResponse.financeAcceptedInvoiceCount!!)
             }
-            if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0){
+            if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0) {
                 salesFunnelResponse.settledPercentage = salesFunnelResponse.settledInvoicesCount?.times(100)
                     ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
             }
@@ -521,15 +505,15 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
-        data?.map {it.tradeType = it.tradeType?.uppercase()}
-        data?.map {it.serviceType = it.serviceType?.uppercase()}
+        data?.map { it.tradeType = it.tradeType?.uppercase() }
+        data?.map { it.serviceType = it.serviceType?.uppercase() }
 
-        data?.groupBy { it.groupedServices }?.filter { it.key != null }?.entries?.map {(k,v) ->
+        data?.groupBy { it.groupedServices }?.filter { it.key != null }?.entries?.map { (k, v) ->
             mapData[k.toString()] = ServiceLevelOutstanding(
                 totalOutstanding = v.sumOf { it.openInvoiceAmount },
                 openInvoiceAmount = v.sumOf { it.openInvoiceAmount },
                 currency = v.first().currency,
-                tradeType= v.map { item ->
+                tradeType = v.map { item ->
                     TradeAndServiceLevelOutstanding(
                         key = "${item.serviceType}_${item.tradeType}",
                         name = "${item.serviceType} ${item.tradeType}",
@@ -559,9 +543,9 @@ class OpenSearchServiceImpl : OpenSearchService {
         TODO("Not yet implemented")
     }
 
-    private fun generateMonthKeyIndex (month: Int): String{
-        return when (month < 10 ){
-            true -> "0${month}"
+    private fun generateMonthKeyIndex(month: Int): String {
+        return when (month < 10) {
+            true -> "0$month"
             else -> month.toString()
         }
     }

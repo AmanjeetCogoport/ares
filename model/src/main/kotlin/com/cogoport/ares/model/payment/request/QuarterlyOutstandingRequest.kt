@@ -11,7 +11,7 @@ import io.micronaut.http.annotation.QueryValue
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class QuarterlyOutstandingRequest(
-    @QueryValue(AresModelConstants.ZONE) val zone: String?= null,
+    @QueryValue(AresModelConstants.ZONE) val zone: String? = null,
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType? = null,
     @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String? = null,

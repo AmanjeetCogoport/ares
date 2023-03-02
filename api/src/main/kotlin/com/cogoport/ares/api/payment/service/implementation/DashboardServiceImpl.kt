@@ -62,14 +62,13 @@ import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.sql.Date
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -91,7 +90,6 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
-
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -492,7 +490,7 @@ class DashboardServiceImpl : DashboardService {
             DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
         }
 
-        return DailySalesOutstanding(dsoResponse =  dsoResponseData)
+        return DailySalesOutstanding(dsoResponse = dsoResponseData)
     }
 
     private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
@@ -709,7 +707,7 @@ class DashboardServiceImpl : DashboardService {
         val year = AresModelConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val monthKey = when (!month.isNullOrEmpty()){
+        val monthKey = when (!month.isNullOrEmpty()) {
             true -> months.indexOf(month) + 1
             else -> AresModelConstants.CURR_MONTH
         }
@@ -734,13 +732,13 @@ class DashboardServiceImpl : DashboardService {
         return openSearchData
     }
 
-    override suspend fun getInvoiceTimeline(startDate: String? , endDate: String?): InvoiceTimeLineResponse? {
-        val updatedStartDate = when (!startDate.isNullOrEmpty()){
+    override suspend fun getInvoiceTimeline(startDate: String?, endDate: String?): InvoiceTimeLineResponse? {
+        val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-01"
         }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val updatedEndDate = when (!endDate.isNullOrEmpty()){
+        val updatedEndDate = when (!endDate.isNullOrEmpty()) {
             true -> endDate
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
         }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -751,11 +749,11 @@ class DashboardServiceImpl : DashboardService {
 
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-        val mapOfData = mapOf("finance_accepted" to data.filter {it.status != "DRAFT"}, "irn_generated" to data.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status) }, "settled" to  data.filter { it.paymentStatus == "PAID" })
+        val mapOfData = mapOf("finance_accepted" to data.filter { it.status != "DRAFT" }, "irn_generated" to data.filter { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status) }, "settled" to data.filter { it.paymentStatus == "PAID" })
 
         val invoiceTimeLineResp = InvoiceTimeLineResponse()
 
-        mapOfData.entries.map { (k,v) ->
+        mapOfData.entries.map { (k, v) ->
             v.map { invoice ->
                 val eventData = objectMapper.readValue(invoice.events, Array<InvoiceEventResponse>::class.java)
                 logger().info(invoice.id.toString())
@@ -763,35 +761,34 @@ class DashboardServiceImpl : DashboardService {
                     "finance_accepted" -> {
                         val createdAtEventDate = eventData.first { it.eventName == "CREATED" }.occurredAt.time
                         var financeAcceptedEventDate = 0L
-                        if (eventData.map {it.eventName}.contains("FINANCE_ACCEPTED")){
+                        if (eventData.map { it.eventName }.contains("FINANCE_ACCEPTED")) {
                             financeAcceptedEventDate = eventData.first { it.eventName == "FINANCE_ACCEPTED" }.occurredAt.time
                         }
                         if (financeAcceptedEventDate != 0L) {
                             invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.plus(financeAcceptedEventDate.minus(createdAtEventDate))?.div(1000)?.div(60)?.div(60)
-                        }else {}
+                        } else {}
                     }
                     "irn_generated" -> {
                         var financeAcceptedEventDate = 0L
                         var irnGeneratedEventDate = 0L
-                        if (eventData.map {it.eventName}.contains("FINANCE_ACCEPTED")){
+                        if (eventData.map { it.eventName }.contains("FINANCE_ACCEPTED")) {
                             financeAcceptedEventDate = eventData.first { it.eventName == "FINANCE_ACCEPTED" }.occurredAt.time
                         }
-                        if (eventData.map {it.eventName}.contains("IRN_GENERATED")){
-                            irnGeneratedEventDate =eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
+                        if (eventData.map { it.eventName }.contains("IRN_GENERATED")) {
+                            irnGeneratedEventDate = eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
                         }
 
-                        if (irnGeneratedEventDate != 0L){
+                        if (irnGeneratedEventDate != 0L) {
                             invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate).div(1000).div(60).div(60))
-                        }else {}
-
+                        } else {}
                     }
                     "settled" -> {
                         var irnGeneratedEventDate = 0L
                         var settlementEventDate = 0L
-                        if (eventData.map {it.eventName}.contains("IRN_GENERATED")){
+                        if (eventData.map { it.eventName }.contains("IRN_GENERATED")) {
                             irnGeneratedEventDate = eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
                         }
-                        if (eventData.map {it.eventName}.contains("SETTLEMENT")) {
+                        if (eventData.map { it.eventName }.contains("SETTLEMENT")) {
                             settlementEventDate =
                                 eventData.first { it.eventName == "SETTLEMENT" }.occurredAt.time
                         }
@@ -814,14 +811,14 @@ class DashboardServiceImpl : DashboardService {
         invoiceTimeLineResp.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
         invoiceTimeLineResp.settledInvoicesCount = mapOfData["settled"]?.size
 
-        if (invoiceTimeLineResp.financeAcceptedInvoiceCount!! != 0){
+        if (invoiceTimeLineResp.financeAcceptedInvoiceCount!! != 0) {
             invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted = invoiceTimeLineResp.tatHoursFromDraftToFinanceAccepted?.div(invoiceTimeLineResp.financeAcceptedInvoiceCount!!)
         }
 
-        if (invoiceTimeLineResp.irnGeneratedInvoicesCount!! != 0){
+        if (invoiceTimeLineResp.irnGeneratedInvoicesCount!! != 0) {
             invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTimeLineResp.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTimeLineResp.irnGeneratedInvoicesCount!!)
         }
-        if (invoiceTimeLineResp.settledInvoicesCount !=0 ){
+        if (invoiceTimeLineResp.settledInvoicesCount != 0) {
             invoiceTimeLineResp.tatHoursFromIrnGeneratedToSettled?.div(invoiceTimeLineResp.settledInvoicesCount!!)
         }
 
@@ -831,7 +828,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse? {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val searchKey  = AresConstants.OUTSTANDING_PREFIX + asOnDate
+        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate
 
         var openSearchData = OpenSearchClient().search(
             searchKey = searchKey,
@@ -839,8 +836,8 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (openSearchData == null){
-            openSearchService.generateOutstandingData( asOnDate,  searchKey)
+        if (openSearchData == null) {
+            openSearchService.generateOutstandingData(asOnDate, searchKey)
 
             openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -873,7 +870,6 @@ class DashboardServiceImpl : DashboardService {
             "creditNoteResponse" to mutableListOf<Outstanding>(),
             "onAccountPaymentResponse" to mutableListOf<Outstanding>()
         )
-
 
         if (year != null) {
             val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -915,7 +911,6 @@ class DashboardServiceImpl : DashboardService {
                 "REC",
                 defaultersOrgIds
             )!!
-
         }
 
         if (asOnDate != null) {
@@ -924,19 +919,19 @@ class DashboardServiceImpl : DashboardService {
             generatingDailySales(mapData, AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), defaultersOrgIds)
         }
 
-        mapData.map {(k,v) ->
+        mapData.map { (k, v) ->
             val uniqueCurrencyList: List<String> = v.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }
 
             val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
 
-            v.groupBy { it -> it.duration }.entries.map {(key,value) ->
+            v.groupBy { it -> it.duration }.entries.map { (key, value) ->
                 val outStanding = Outstanding(
                     amount = 0.toBigDecimal(),
                     duration = key,
                     dashboardCurrency = "INR"
                 )
 
-                value.map{ item ->
+                value.map { item ->
                     outStanding.amount = outStanding.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
                 }
 
@@ -950,17 +945,16 @@ class DashboardServiceImpl : DashboardService {
         }
 
         return dailyStasResponse
-
     }
 
-    private fun generateMonthKeyIndex (month: Int): String{
-        return when (month < 10 ){
-            true -> "0${month}"
+    private fun generateMonthKeyIndex(month: Int): String {
+        return when (month < 10) {
+            true -> "0$month"
             else -> month.toString()
         }
     }
 
-    private suspend fun generatingDailySales (mapData: MutableMap<String, MutableList<Outstanding>>, asOnDate: String, defaultersOrgIds: List<UUID>? ): MutableMap<String, MutableList<Outstanding>> {
+    private suspend fun generatingDailySales(mapData: MutableMap<String, MutableList<Outstanding>>, asOnDate: String, defaultersOrgIds: List<UUID>?): MutableMap<String, MutableList<Outstanding>> {
         mapData["salesInvoiceResponse"] = unifiedDBRepo.generateDailySalesOutstanding(
             asOnDate,
             "SINV",
