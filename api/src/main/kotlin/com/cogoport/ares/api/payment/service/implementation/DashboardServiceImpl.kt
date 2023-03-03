@@ -721,7 +721,7 @@ class DashboardServiceImpl : DashboardService {
         return responseList
     }
 
-    override suspend fun getSalesFunnel(month: String?): SalesFunnelResponse? {
+    override suspend fun getSalesFunnel(month: String?, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): SalesFunnelResponse? {
         val year = AresModelConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
@@ -729,8 +729,20 @@ class DashboardServiceImpl : DashboardService {
             true -> months.indexOf(month) + 1
             else -> AresModelConstants.CURR_MONTH
         }
+        val cogoEntityKey = when ( cogoEntityId == null) {
+            true -> "ALL"
+            else -> cogoEntityId.toString()
+        }
+        val companyTypeKey = when (!companyType.isNullOrEmpty()) {
+            true -> companyType.uppercase()
+            else -> "ALL"
+        }
+        val serviceTypeKey = when (serviceType == null || serviceType == ServiceType.NA) {
+            true -> "ALL"
+            else -> serviceType
+        }
 
-        val searchKey = AresConstants.SALES_FUNNEL_PREFIX + months[monthKey - 1] + AresConstants.KEY_DELIMITER + year
+        val searchKey = AresConstants.SALES_FUNNEL_PREFIX + months[monthKey - 1] + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + serviceTypeKey
 
         var openSearchData = OpenSearchClient().search(
             searchKey = searchKey,
@@ -739,7 +751,7 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (openSearchData == null) {
-            openSearchService.generatingSalesFunnelData(monthKey, year, searchKey)
+            openSearchService.generatingSalesFunnelData(monthKey, year, searchKey,serviceType,cogoEntityId, companyType)
             openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
                 classType = SalesFunnelResponse::class.java,
@@ -750,7 +762,7 @@ class DashboardServiceImpl : DashboardService {
         return openSearchData
     }
 
-    override suspend fun getInvoiceTimeline(startDate: String?, endDate: String?): InvoiceTimeLineResponse? {
+    override suspend fun getInvoiceTimeline(startDate: String?, endDate: String?,cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): InvoiceTimeLineResponse? {
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-01"
@@ -761,7 +773,7 @@ class DashboardServiceImpl : DashboardService {
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
         }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate)
+        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate, cogoEntityId, companyType, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 
@@ -870,7 +882,10 @@ class DashboardServiceImpl : DashboardService {
         month: String?,
         year: Int?,
         asOnDate: String?,
-        documentType: String?
+        documentType: String?,
+        companyType: String?,
+        cogoEntityId: UUID?,
+        serviceType: ServiceType?
     ): HashMap<String, ArrayList<DailySalesStats>> {
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -893,10 +908,13 @@ class DashboardServiceImpl : DashboardService {
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    cogoEntityId,
+                    companyType,
+                    serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate)!!
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
             }
         }
 
@@ -910,10 +928,13 @@ class DashboardServiceImpl : DashboardService {
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>
+                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    cogoEntityId,
+                    companyType,
+                    serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate)!!
+                unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate,cogoEntityId, companyType, serviceType?.name?.lowercase())!!
             }
         }
 
@@ -924,9 +945,12 @@ class DashboardServiceImpl : DashboardService {
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
                     accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    cogoEntityId,
+                    companyType,
+                    serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateDailyShipmentCreatedAt(asOnDate)!!
+                unifiedDBRepo.generateDailyShipmentCreatedAt(asOnDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
             }
         }
 
@@ -938,9 +962,12 @@ class DashboardServiceImpl : DashboardService {
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
                     accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    cogoEntityId,
+                    companyType,
+                    serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateDailyShipmentCreatedAt(endDate)!!
+                unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType,serviceType?.name?.lowercase())!!
             }
         }
 

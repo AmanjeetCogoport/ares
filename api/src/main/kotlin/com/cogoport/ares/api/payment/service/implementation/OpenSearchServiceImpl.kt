@@ -458,7 +458,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         generateOutstandingData(currentDate, outstandingIndexKey)
     }
 
-    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String) {
+    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?) {
         val monthKeyIndex = when (monthKey < 10) {
             true -> "0$monthKey"
             else -> monthKey.toString()
@@ -474,7 +474,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(startDate, endDate)
+        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size

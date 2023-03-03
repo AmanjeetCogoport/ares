@@ -15,6 +15,7 @@ import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
@@ -33,6 +34,9 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 interface DashboardService {
 
@@ -54,11 +58,11 @@ interface DashboardService {
 
     suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?>
 
-    suspend fun getSalesFunnel(month: String?): SalesFunnelResponse?
+    suspend fun getSalesFunnel(month: String?, cogoEntityId: UUID?,companyType: String?, serviceType: ServiceType?): SalesFunnelResponse?
 
-    suspend fun getInvoiceTimeline(startDate: String?, endDate: String?): InvoiceTimeLineResponse?
+    suspend fun getInvoiceTimeline(startDate: String?, endDate: String?,cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType? ): InvoiceTimeLineResponse?
 
-    suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?): HashMap<String, ArrayList<DailySalesStats>>
+    suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?, companyType: String?, cogoEntityId: UUID?, serviceType: ServiceType?): HashMap<String, ArrayList<DailySalesStats>>
 
     suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse?
 

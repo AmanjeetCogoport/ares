@@ -20,6 +20,7 @@ import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
@@ -48,7 +49,10 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.util.*
 import javax.validation.Valid
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 @Validated
 @Controller("/dashboard")
@@ -147,11 +151,25 @@ class DashboardController {
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
     @Get("/sales-funnel")
-    suspend fun getSalesFunnel(@QueryValue("month") month: String? = null): SalesFunnelResponse? { return dashboardService.getSalesFunnel(month) }
+    suspend fun getSalesFunnel(
+        @QueryValue("month") month: String? = null,
+        @QueryValue("cogoEntityId") cogoEntityId: UUID? = null,
+        @QueryValue("companyType") companyType: String? = null,
+        @QueryValue("serviceType") serviceType: ServiceType? = null,
+
+        ): SalesFunnelResponse? {
+        return dashboardService.getSalesFunnel(month, cogoEntityId, companyType, serviceType)
+    }
 
     @Get("/invoice-timeline")
-    suspend fun getInvoiceTimeline(@QueryValue("startDate") startDate: String? = null, @QueryValue("endDate") endDate: String? = null): InvoiceTimeLineResponse? {
-        return dashboardService.getInvoiceTimeline(startDate, endDate)
+    suspend fun getInvoiceTimeline(
+        @QueryValue("startDate") startDate: String? = null,
+        @QueryValue("endDate") endDate: String? = null,
+        @QueryValue("cogoEntityId") cogoEntityId: UUID? = null,
+        @QueryValue("companyType") companyType: String? = null,
+        @QueryValue("serviceType") serviceType: ServiceType? = null,
+    ): InvoiceTimeLineResponse? {
+        return dashboardService.getInvoiceTimeline(startDate, endDate, cogoEntityId, companyType, serviceType)
     }
 
     @Get("/daily-sales-statistics")
@@ -160,8 +178,11 @@ class DashboardController {
         @QueryValue("year") year: Int? = null,
         @QueryValue("asOnDate") asOnDate: String? = null,
         @QueryValue("documentType") documentType: String? = "SALES_INVOICE",
-    ): HashMap<String, ArrayList<DailySalesStats>> {
-        return dashboardService.getDailySalesStatistics(month, year, asOnDate, documentType)
+        @QueryValue("companyType") companyType: String? = null,
+        @QueryValue("cogoEntityId") cogoEntityId: UUID? = null,
+        @QueryValue("serviceType") serviceType: ServiceType? = null,
+        ): HashMap<String, ArrayList<DailySalesStats>> {
+        return dashboardService.getDailySalesStatistics(month, year, asOnDate, documentType, companyType, cogoEntityId,serviceType)
     }
 
     @Get("/outstanding")

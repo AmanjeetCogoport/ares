@@ -28,10 +28,24 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select id, status, payment_status from plutus.invoices where created_at::varchar < :endDate and created_at::varchar > :startDate and status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED')
+            select 
+            pinv.id, 
+            pinv.status, 
+            pinv.payment_status
+            from 
+            plutus.invoices pinv
+            inner join plutus.addresses pa on pa.invoice_id = pinv.id
+            inner join loki.jobs lj on lj.id = pinv.job_id
+            left join organizations o on o.registration_number = pa.registration_number
+            left join lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+            where created_at::varchar < :endDate and created_at::varchar > :startDate 
+            AND status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:companyType is null or los.segment = :companyType)
+            AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
         """
     )
-    fun getFunnelData(startDate: String, endDate: String): List<SalesInvoiceResponse>?
+    fun getFunnelData(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceResponse>?
 
     @NewSpan
     @Query(
@@ -41,20 +55,21 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 i.status as status,
                 i.payment_status as payment_status,
                 json_agg(json_build_object('id',ie.id,'invoice_id' , ie.invoice_id, 'event_name', ie.event_name, 'occurred_at',ie.occurred_at))::text as events
-                from plutus.invoices i inner join plutus.invoice_events ie on i.id = ie.invoice_id where i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
-                and status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and migrated = false
+                from plutus.invoices i 
+                inner join plutus.invoice_events ie on i.id = ie.invoice_id 
+                inner join loki.jobs lj on lj.id = pinv.job_id
+                inner join plutus.addresses pa on pa.invoice_id = i.id
+                left join organizations o on o.registration_number = pa.registration_number
+                left join lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+                where i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
+                and i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
+                AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+                AND (:companyType is null or los.segment = :companyType)
+                AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
                 group by i.id
         """
     )
-    fun getInvoices(startDate: String, endDate: String): List<SalesInvoiceTimelineResponse>
-
-    @NewSpan
-    @Query(
-        """
-            select id,invoice_id, event_name, occurred_at  from plutus.invoice_events where invoice_id = :invoiceId
-        """
-    )
-    fun getInvoiceEvents(invoiceId: Long): List<InvoiceEventResponse>?
+    fun getInvoices(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceTimelineResponse>
     @NewSpan
     @Query(
         """
@@ -86,12 +101,18 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         currency as dashboard_currency,
         COUNT(id) as count
         from ares.account_utilizations
+        inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
+        inner join organizations o on o.registration_number = otpd.registration_number
+        inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         where acc_mode = 'AR' and document_status in (:docStatus)  and date_trunc('month', transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) and deleted_at is null and (:accType is null or  acc_type = :accType)
         and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
+        AND (:companyType is null or los.segment = :companyType)
+        AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         group by date_trunc('month',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -101,12 +122,18 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             currency as dashboard_currency,
             COUNT(id) as count
             from ares.account_utilizations
+            inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
+            inner join organizations o on o.registration_number = otpd.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             where acc_mode = 'AR' and document_status in (:docStatus) and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval) and deleted_at is null and (:accType is null or acc_type = :accType)
             and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
+            AND (:companyType is null or los.segment = :companyType)
+            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
             group by date_trunc('day',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
+    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -116,7 +143,10 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
         currency as dashboard_currency,
         count(id) as count
-        from ares.account_utilizations
+        from ares.account_utilizations aau
+        inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
+        inner join organizations o on o.registration_number = otpd.registration_number
+        inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         where 
             acc_mode = 'AR' 
             and 
@@ -125,10 +155,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             and deleted_at is null and 
             (:accType is null or acc_type = :accType)
             and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
+            AND (:companyType is null or los.segment = :companyType)
+            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         group by date_trunc('year',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
+    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -139,11 +172,17 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             pinv.currency as dashboard_currency
             from loki.jobs lj
             inner join plutus.invoices pinv on lj.id = pinv.job_id
+            inner join plutus.addresses pa on pa.invoice_id = pinv.id
+            inner join organizations o on o.registration_number = pa.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             where date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
+            and (:companyType is null or los.segment = :companyType)
+            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             group by date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -155,11 +194,17 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             pinv.currency as dashboard_currency
             from loki.jobs lj
             inner join plutus.invoices pinv on lj.id = pinv.job_id
+            inner join plutus.addresses pa on pa.invoice_id = pinv.id
+            inner join organizations o on o.registration_number = pa.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             where date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
+            and (:companyType is null or los.segment = :companyType)
+            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             group by date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -170,11 +215,17 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             pinv.currency as dashboard_currency
             from loki.jobs lj
             inner join plutus.invoices pinv on lj.id = pinv.job_id
+            inner join plutus.addresses pa on pa.invoice_id = pinv.id
+            inner join organizations o on o.registration_number = pa.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             where date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+            and (:companyType is null or los.segment = :companyType)
+            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             group by date_trunc('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(

@@ -22,7 +22,7 @@ interface OpenSearchService {
 
     suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
 
-    suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String)
+    suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?)
 
     suspend fun generateArDashboardData()
 
