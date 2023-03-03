@@ -197,32 +197,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
-    @NewSpan
-    @Query(
-        """
-            with x as (
-                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
-            ),
-            y as (
-                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-                sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
-                currency as dashboard_currency
-                from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
-                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-                group by date_trunc('quarter',transaction_date), dashboard_currency
-            )
-            select case when x.quarter = 1 then 'Jan - Mar'
-            when x.quarter = 2 then 'Apr - Jun'
-            when x.quarter = 3 then 'Jul - Sep'
-            when x.quarter = 4 then 'Oct - Dec' end as duration,
-            coalesce(y.total_outstanding_amount, 0) as amount,
-            y.dashboard_currency as dashboard_currency
-            from x
-            left join y on x.quarter = y.quarter
-        """
-    )
-    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(

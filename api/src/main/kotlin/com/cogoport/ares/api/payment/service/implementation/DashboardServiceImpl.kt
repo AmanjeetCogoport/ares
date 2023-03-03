@@ -387,20 +387,22 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
-        val zone = request.zone
         val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
+        val cogoEntityId = request.cogoEntityId
+        val companyType = request.companyType
 
-        validateInput(zone, request.role)
+        validatingRoleAndEntityCode(cogoEntityId, request.role)
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
+        val serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
+        val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
+        val companyTypeKey = companyType?.uppercase() ?: "ALL"
 
         val searchKey =
-            AresConstants.QUARTERLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
+            AresConstants.QUARTERLY_TREND_PREFIX + cogoEntityKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -409,7 +411,7 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data == null) {
-            openSearchService.generateQuarterlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
+            openSearchService.generateQuarterlyOutstanding( quarter, year, serviceType, defaultersOrgIds, cogoEntityId, companyType)
             data = OpenSearchClient().search(
                 searchKey = searchKey,
                 classType = QuarterlyOutstanding::class.java,
@@ -421,14 +423,14 @@ class DashboardServiceImpl : DashboardService {
 
         var exchangeRate = HashMap<String, BigDecimal>()
         if (uniqueCurrencyList.isNotEmpty()) {
-            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
+            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
         }
 
         data.list?.forEach { outstandingRes ->
-            if (outstandingRes.dashboardCurrency != request.dashboardCurrency) {
+            if (outstandingRes.dashboardCurrency != "INR") {
                 val avgExchangeRate = exchangeRate[outstandingRes.dashboardCurrency]
                 outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
-                outstandingRes.dashboardCurrency = request.dashboardCurrency!!
+                outstandingRes.dashboardCurrency = "INR"
             }
         }
 
@@ -454,7 +456,8 @@ class DashboardServiceImpl : DashboardService {
                 q.split("_")[1].toInt(),
                 AresConstants.DAILY_SALES_OUTSTANDING_PREFIX,
                 request.serviceType,
-                request.cogoEntityId
+                request.cogoEntityId,
+                request.companyType
             )
             var salesResponse = clientResponse(salesResponseKey)
 
@@ -471,7 +474,8 @@ class DashboardServiceImpl : DashboardService {
                         request.serviceType,
                         date,
                         defaultersOrgIds,
-                        request.cogoEntityId
+                        request.cogoEntityId,
+                        request.companyType
                     )
                 }
                 salesResponse = clientResponse(salesResponseKey)
@@ -506,8 +510,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding( quarter: Int, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, cogoEntityId)
+    private fun searchKeyDailyOutstanding( quarter: Int, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, cogoEntityId, companyType)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -520,15 +524,20 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?): MutableList<String> {
         val serviceTypeKey = when (serviceType == null){
             true -> "ALL"
             false -> serviceType
         }
         val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
+
+        val companyTypeKey = when (companyType == null){
+            true -> "ALL"
+            false -> companyType.uppercase()
+        }
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
+            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER + companyTypeKey+ AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }

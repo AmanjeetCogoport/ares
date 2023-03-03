@@ -14,4 +14,5 @@ data class DsoRequest(
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue(AresModelConstants.COGO_ENTITY_ID) val cogoEntityId: UUID? =  null,
+    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: String? = null
 )

@@ -259,10 +259,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             else date_part('days', now()::date) end as days,
             currency as dashboard_currency
             from ares.account_utilizations aau
-            inner join organizations o on aau.organization_id = o.cogo_entity_id
+            inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
+            inner join organizations o on o.registration_number = otpd.registration_number
+            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             where (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
-            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
+            AND (:companyType is null or los.segment = :companyType)
             group by dashboard_currency
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
@@ -272,5 +275,37 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?): MutableList<DailyOutstanding>
+    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<DailyOutstanding>
+
+    @NewSpan
+    @Query(
+        """
+            with x as (
+                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
+            ),
+            y as (
+                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
+                sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
+                currency as dashboard_currency
+                from ares.account_utilizations aau
+                inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
+                inner join organizations o on o.registration_number = otpd.registration_number
+                inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+                where acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
+                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+                AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
+                AND (:companyType is null or los.segment = :companyType)
+                group by date_trunc('quarter',transaction_date), dashboard_currency
+            )
+            select case when x.quarter = 1 then 'Jan - Mar'
+            when x.quarter = 2 then 'Apr - Jun'
+            when x.quarter = 3 then 'Jul - Sep'
+            when x.quarter = 4 then 'Oct - Dec' end as duration,
+            coalesce(y.total_outstanding_amount, 0) as amount,
+            y.dashboard_currency as dashboard_currency
+            from x
+            left join y on x.quarter = y.quarter
+        """
+    )
+    suspend fun generateQuarterlyOutstanding(serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<Outstanding>?
 }
