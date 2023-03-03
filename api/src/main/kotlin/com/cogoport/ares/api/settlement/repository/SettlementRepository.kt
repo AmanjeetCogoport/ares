@@ -346,7 +346,7 @@ ORDER BY
             WHERE id in (:ids)
         """
     )
-    suspend fun updateTaggedSettlementAmount(ids: List<Long>, taggedSettlementIds: List<Long?>)
+    suspend fun updateTaggedSettlementIds(ids: List<Long>, taggedSettlementIds: List<Long?>)
 
     @NewSpan
     @Query(

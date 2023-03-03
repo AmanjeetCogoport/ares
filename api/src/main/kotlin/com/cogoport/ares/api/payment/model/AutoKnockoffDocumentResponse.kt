@@ -11,7 +11,6 @@ data class AutoKnockoffDocumentResponse(
     var paidTds: BigDecimal? = null,
     var payableTds: BigDecimal? = null,
     var exchangeRate: BigDecimal = BigDecimal.ONE,
-    val isSettled: Boolean? = false,
     var amount: BigDecimal = BigDecimal.ZERO,
     var tdsAmount: BigDecimal = BigDecimal.ZERO,
     var tdsSettlementId: Long? = null,
