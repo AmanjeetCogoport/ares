@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
+import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -159,8 +160,7 @@ class DashboardController {
         @QueryValue("year") year: Int? = null,
         @QueryValue("asOnDate") asOnDate: String? = null,
         @QueryValue("documentType") documentType: String? = "SALES_INVOICE",
-
-    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>> {
+    ): HashMap<String, ArrayList<DailySalesStats>> {
         return dashboardService.getDailySalesStatistics(month, year, asOnDate, documentType)
     }
 

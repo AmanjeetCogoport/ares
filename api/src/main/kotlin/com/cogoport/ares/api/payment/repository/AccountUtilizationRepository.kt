@@ -230,33 +230,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         with X as (
             select 
             extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
-            case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by dashboard_currency
-            )
-            select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
-            coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END) * X.days,0) as value,
-            X.dashboard_currency as dashboard_currency
-            from X
-        """
-    )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<DailyOutstanding>
-
-    @NewSpan
-    @Query(
-        """
-        with X as (
-            select 
-            extract(month from date_trunc('month',(:date)::date)) as month,
             sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
             abs(sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
@@ -1031,6 +1004,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT 
+            :orgId as organization_id,
+            MAX(ledger_currency) as ledger_currency,
+            SUM(COALESCE(open_payables,0)) as payables,
+            null as receivables
+        FROM (
+            SELECT
+                MAX(led_currency) as ledger_currency,
+                CASE WHEN acc_type in ('PINV','PDN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables
+            FROM account_utilizations
+            WHERE 
+                acc_type in ('PDN', 'PINV')
+                AND organization_id = :orgId
+                AND deleted_at is null
+            GROUP BY  acc_type
+        ) A
+    """
+    )
+    suspend fun getOrgStatsForCoeFinance(orgId: UUID): OrgStatsResponse?
 
     @NewSpan
     @Query(

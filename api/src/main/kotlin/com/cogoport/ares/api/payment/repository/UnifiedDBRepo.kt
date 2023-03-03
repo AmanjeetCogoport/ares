@@ -7,9 +7,12 @@ import com.cogoport.ares.api.common.models.SalesInvoiceResponse
 import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Audit
+import com.cogoport.ares.api.payment.entity.DailyOutstanding
+import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
+import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -88,7 +91,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         group by date_trunc('month',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateMonthlyOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
+    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -103,7 +106,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('day',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateDailySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
+    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -125,7 +128,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         group by date_trunc('year',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateYearlySalesOutstanding(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<Outstanding>?
+    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -140,7 +143,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -156,7 +159,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -171,7 +174,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by date_trunc('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?): MutableList<Outstanding>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -241,4 +244,33 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
     )
     fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: String?, cogoEntityCode: UUID?): List<OverallAgeingStats>
+
+    @NewSpan
+    @Query(
+        """
+        with X as (
+            select 
+            extract(month from date_trunc('month',(:date)::date)) as month,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
+            abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
+            case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
+            else date_part('days', now()::date) end as days,
+            currency as dashboard_currency
+            from ares.account_utilizations aau
+            inner join organizations o on aau.organization_id = o.cogo_entity_id
+            where (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            group by dashboard_currency
+            )
+            select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
+            coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
+            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END) * X.days,0) as value,
+            X.dashboard_currency as dashboard_currency
+            from X
+        """
+    )
+    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?): MutableList<DailyOutstanding>
 }

@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
@@ -94,6 +95,12 @@ class DashboardServiceImpl : DashboardService {
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
             throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        }
+    }
+
+    private fun validatingRoleAndEntityCode(cogoEntityId: UUID?, role: String?) {
+        if (AresConstants.ROLE_ZONE_HEAD == role && cogoEntityId == null) {
+            throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
         }
     }
 
@@ -434,19 +441,20 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
-        validateInput(request.zone, request.role)
+        validatingRoleAndEntityCode(request.cogoEntityId, request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val sortQuarterList = request.quarterYear.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
+        val quarterYearList = (1..4).toList().map {"Q" + it + "_" + AresModelConstants.CURR_YEAR}
+
+        val sortQuarterList = quarterYearList.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
         for (q in sortQuarterList) {
             val salesResponseKey = searchKeyDailyOutstanding(
-                request.zone,
                 q.split("_")[0][1].toString().toInt(),
                 q.split("_")[1].toInt(),
                 AresConstants.DAILY_SALES_OUTSTANDING_PREFIX,
                 request.serviceType,
-                request.invoiceCurrency
+                request.cogoEntityId
             )
             var salesResponse = clientResponse(salesResponseKey)
 
@@ -458,14 +466,12 @@ class DashboardServiceImpl : DashboardService {
                 monthList.forEach {
                     val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                     openSearchService.generateDailySalesOutstanding(
-                        request.zone,
                         q.split("_")[0][1].toString().toInt(),
                         q.split("_")[1].toInt(),
                         request.serviceType,
-                        request.invoiceCurrency,
                         date,
-                        request.dashboardCurrency,
-                        defaultersOrgIds
+                        defaultersOrgIds,
+                        request.cogoEntityId
                     )
                 }
                 salesResponse = clientResponse(salesResponseKey)
@@ -481,7 +487,7 @@ class DashboardServiceImpl : DashboardService {
                     dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
                 }
                 dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
-                dso.add(dsoResponse)
+                dsoList.add(dsoResponse)
             }
         }
 
@@ -500,8 +506,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding(zone: String?, quarter: Int, year: Int, index: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), zone, year, index, serviceType, invoiceCurrency)
+    private fun searchKeyDailyOutstanding( quarter: Int, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, cogoEntityId)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -514,11 +520,15 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, zone: String?, year: Int, index: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?): MutableList<String> {
+        val serviceTypeKey = when (serviceType == null){
+            true -> "ALL"
+            false -> serviceType
+        }
+        val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-            val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
-            keyList.add(index + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"] + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
+            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER +  item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
@@ -852,25 +862,25 @@ class DashboardServiceImpl : DashboardService {
         year: Int?,
         asOnDate: String?,
         documentType: String?
-    ): kotlin.collections.HashMap<String, ArrayList<Outstanding>> {
+    ): HashMap<String, ArrayList<DailySalesStats>> {
         val defaultersOrgIds = getDefaultersOrgIds()
 
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        var outstandingData = mutableListOf<Outstanding>()
+        var dailySalesStats = mutableListOf<DailySalesStats>()
 
-        var hashMap = hashMapOf<String, ArrayList<Outstanding>>()
+        val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
-        var accTypeDocStatusMapping = mapOf(
+        val accTypeDocStatusMapping = mapOf(
             "SALES_INVOICE" to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
             "CREDIT_NOTE" to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
             "ON_ACCOUNT_PAYMENT" to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
         )
 
         if (year != null) {
-            var endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
-                unifiedDBRepo.generateYearlySalesOutstanding(
+            val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            dailySalesStats = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
+                unifiedDBRepo.generateYearlySalesStats(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
@@ -882,12 +892,12 @@ class DashboardServiceImpl : DashboardService {
         }
 
         if (month != null) {
-            var endDate = when (year != null) {
+            val endDate = when (year != null) {
                 true -> "$year-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             }
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
-                unifiedDBRepo.generateMonthlyOutstanding(
+            dailySalesStats = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
+                unifiedDBRepo.generateMonthlySalesStats(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
@@ -899,8 +909,8 @@ class DashboardServiceImpl : DashboardService {
         }
 
         if (asOnDate != null) {
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
-                unifiedDBRepo.generateDailySalesOutstanding(
+            dailySalesStats = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
+                unifiedDBRepo.generateDailySalesStats(
                     asOnDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
@@ -913,8 +923,8 @@ class DashboardServiceImpl : DashboardService {
 
         if (asOnDate == null && year == null && month == null) {
             val endDate = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            outstandingData = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
-                unifiedDBRepo.generateDailySalesOutstanding(
+            dailySalesStats = if (documentType in listOf("SALES_INVOICE", "CREDIT_NOTE", "ON_ACCOUNT_PAYMENT")) {
+                unifiedDBRepo.generateDailySalesStats(
                     endDate,
                     accTypeDocStatusMapping[documentType]?.get("accType").toString(),
                     defaultersOrgIds,
@@ -925,12 +935,12 @@ class DashboardServiceImpl : DashboardService {
             }
         }
 
-        val uniqueCurrencyList: List<String> = outstandingData.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
+        val uniqueCurrencyList: List<String> = dailySalesStats.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
 
         val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
 
-        outstandingData.groupBy { it -> it.duration }.entries.map { (key, value) ->
-            val outStanding = Outstanding(
+        dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
+            val dailySalesStats = DailySalesStats(
                 amount = 0.toBigDecimal(),
                 duration = key,
                 dashboardCurrency = "INR",
@@ -938,22 +948,21 @@ class DashboardServiceImpl : DashboardService {
             )
 
             value.map { item ->
-                outStanding.amount = outStanding.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
-                outStanding.count = outStanding.count?.plus(item.count!!)
+                dailySalesStats.amount = dailySalesStats.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
+                dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
             }
 
             if (hashMap.keys.contains(documentType)) {
-                hashMap[documentType]?.add(outStanding)
+                hashMap[documentType]?.add(dailySalesStats)
             } else {
-                hashMap[documentType!!] = arrayListOf(outStanding)
+                hashMap[documentType!!] = arrayListOf(dailySalesStats)
             }
         }
         return hashMap
     }
 
     override suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
-        var kamWiseData = unifiedDBRepo.getKamWiseOutstanding()
-        return kamWiseData
+        return unifiedDBRepo.getKamWiseOutstanding()
     }
 
     private fun generateMonthKeyIndex(month: Int): String {

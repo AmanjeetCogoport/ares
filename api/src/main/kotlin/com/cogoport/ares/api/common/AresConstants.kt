@@ -46,6 +46,7 @@ object AresConstants {
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
     const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val COGO_ENTITY_ID = "cogoEntityId"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 

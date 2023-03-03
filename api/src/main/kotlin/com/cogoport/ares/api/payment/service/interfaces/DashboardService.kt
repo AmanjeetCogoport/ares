@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.interfaces
 import com.cogoport.ares.api.common.models.InvoiceTimeLineResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
+import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.model.common.ResponseList
@@ -57,7 +58,7 @@ interface DashboardService {
 
     suspend fun getInvoiceTimeline(startDate: String?, endDate: String?): InvoiceTimeLineResponse?
 
-    suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?): HashMap<String, ArrayList<Outstanding>>
+    suspend fun getDailySalesStatistics(month: String?, year: Int?, asOnDate: String?, documentType: String?): HashMap<String, ArrayList<DailySalesStats>>
 
     suspend fun getOutstanding(date: String?): OutstandingOpensearchResponse?
 

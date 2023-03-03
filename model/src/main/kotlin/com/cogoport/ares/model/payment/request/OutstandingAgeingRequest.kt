@@ -14,5 +14,5 @@ import java.util.UUID
 data class OutstandingAgeingRequest(
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: String?,
-    @QueryValue(AresModelConstants.COGO_ENTITY_CODE) val cogoEntityCode: UUID?
+    @QueryValue(AresModelConstants.COGO_ENTITY_ID)val cogoEntityCode: UUID?
 )

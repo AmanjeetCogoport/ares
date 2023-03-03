@@ -39,7 +39,7 @@ object AresModelConstants {
     const val TYPE = "type"
     const val FLAG = "flag"
     const val IS_SUSPENSE = "isSuspense"
-    const val COGO_ENTITY_CODE = "cogoEntityCode"
+    const val COGO_ENTITY_ID = "cogoEntityId"
 
     const val AR_ACCOUNT_CODE = 223000
     const val AP_ACCOUNT_CODE = 321000
