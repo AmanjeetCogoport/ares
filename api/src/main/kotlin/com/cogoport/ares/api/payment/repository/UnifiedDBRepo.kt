@@ -1,17 +1,16 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesInvoiceResponse
 import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -28,52 +27,62 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select 
+            SELECT 
             pinv.id, 
             pinv.status, 
             pinv.payment_status
-            from 
+            FROM 
             plutus.invoices pinv
-            inner join plutus.addresses pa on pa.invoice_id = pinv.id
-            inner join loki.jobs lj on lj.id = pinv.job_id
-            left join organizations o on o.registration_number = pa.registration_number
-            left join lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
-            where created_at::varchar < :endDate and created_at::varchar > :startDate 
+            INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
+            INNER JOIN loki.jobs lj on lj.id = pinv.job_id
+            LEFT JOIN organizations o on o.registration_number = pa.registration_number
+            LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+            WHERE created_at::varchar < :endDate and created_at::varchar > :startDate 
             AND status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType)
+            AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            AND (migrated = false)
+            AND (pa.organization_type = 'SELLER')
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
         """
     )
-    fun getFunnelData(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceResponse>?
+    fun getFunnelData(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): List<SalesInvoiceResponse>?
 
     @NewSpan
     @Query(
         """
-            select
+            SELECT
                 i.id as id,
                 i.status as status,
                 i.payment_status as payment_status,
-                json_agg(json_build_object('id',ie.id,'invoice_id' , ie.invoice_id, 'event_name', ie.event_name, 'occurred_at',ie.occurred_at))::text as events
-                from plutus.invoices i 
-                inner join plutus.invoice_events ie on i.id = ie.invoice_id 
-                inner join loki.jobs lj on lj.id = pinv.job_id
-                inner join plutus.addresses pa on pa.invoice_id = i.id
-                left join organizations o on o.registration_number = pa.registration_number
-                left join lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
-                where i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
+                json_agg(
+                    json_build_object(
+                    'id',ie.id,
+                    'invoice_id' , ie.invoice_id, 
+                    'event_name', ie.event_name, 
+                    'occurred_at',ie.occurred_at
+                    )
+                )::text as events
+                FROM plutus.invoices i 
+                INNER JOIN plutus.invoice_events ie on i.id = ie.invoice_id 
+                INNER JOIN loki.jobs lj on lj.id = pinv.job_id
+                INNER JOIN plutus.addresses pa on pa.invoice_id = i.id
+                LEFT JOIN organizations o on o.registration_number = pa.registration_number
+                LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+                WHERE i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
                 and i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
-                AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
-                AND (:companyType is null or los.segment = :companyType)
+                AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+                AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
                 AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-                group by i.id
+                AND (pa.organization_type = 'SELLER')
+                GROUP BY i.id
         """
     )
-    fun getInvoices(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceTimelineResponse>
+    fun getInvoices(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): List<SalesInvoiceTimelineResponse>
     @NewSpan
     @Query(
         """
-            select 
+            SELECT 
                 count(*) as open_invoices_count, 
                 sum(CASE when invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount,
                 open_invoice_currency as currency, 
@@ -83,187 +92,209 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 CASE WHEN shipment_service_type in ('fcl_freight', 'lcl_freight','fcl_customs','lcl_customs','fcl_freight_local')  THEN 'ocean'
                      WHEN shipment_service_type in ('air_customs', 'air_freight', 'domestic_air_freight')   THEN 'air'
                     WHEN shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface' END as grouped_services
-            from temp_outstanding_invoices tod 
-            inner join loki.jobs lj on lj.job_number = tod.job_number
-            where registration_number is not null and open_invoice_amount > 0 and
-            shipment_service_type is not null and invoice_date::varchar < :asOnDate  and  lj.job_details  ->> 'tradeType' != '' and tod.shipment_service_type !=''
-            group by shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
+            FROM temp_outstanding_invoices tod 
+            INNER JOIN loki.jobs lj on lj.job_number = tod.job_number
+            INNER JOIN organizations o on o.registration_number = tod.registration_number
+            WHERE 
+            registration_number is not null 
+            AND open_invoice_amount > 0 
+            AND shipment_service_type is not null 
+            AND invoice_date::varchar < :asOnDate  
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+//            AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
+            AND  lj.job_details  ->> 'tradeType' != '' AND tod.shipment_service_type !=''
+            GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
-    fun getOutstandingData(asOnDate: String?): List<OutstandingDocument>?
+    fun getOutstandingData(asOnDate: String?, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
 
     @NewSpan
     @Query(
         """
-        select 
+        SELECT 
         to_char(date_trunc('month',transaction_date),'Mon') as duration,
         coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
         currency as dashboard_currency,
         COUNT(id) as count
         from ares.account_utilizations
-        inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
-        inner join organizations o on o.registration_number = otpd.registration_number
-        inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-        where acc_mode = 'AR' and document_status in (:docStatus)  and date_trunc('month', transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) and deleted_at is null and (:accType is null or  acc_type = :accType)
-        and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+        INNER JOIN organizations o on o.registration_number = otpd.registration_number
+        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+        WHERE acc_mode = 'AR' 
+        AND document_status in (:docStatus)  
+        AND date_trunc('month', transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) 
+        AND deleted_at is null 
+        AND (:accType is null or  acc_type = :accType)
+        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
         AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-        AND (:companyType is null or los.segment = :companyType)
+        AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
         AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-        group by date_trunc('month',transaction_date), dashboard_currency
+        GROUP BY date_trunc('month',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            select date_trunc('day',transaction_date) as duration,
+            SELECT date_trunc('day',transaction_date) as duration,
             coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
             currency as dashboard_currency,
             COUNT(id) as count
             from ares.account_utilizations
-            inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
-            inner join organizations o on o.registration_number = otpd.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where acc_mode = 'AR' and document_status in (:docStatus) and date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval) and deleted_at is null and (:accType is null or acc_type = :accType)
-            and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+            INNER JOIN organizations o on o.registration_number = otpd.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE acc_mode = 'AR' 
+            AND document_status in (:docStatus) 
+            AND date_trunc('day', transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval) 
+            AND deleted_at is null 
+            AND (:accType is null or acc_type = :accType)
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType)
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-            group by date_trunc('day',transaction_date), dashboard_currency
+            GROUP BY date_trunc('day',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-        select 
+        SELECT 
         date_trunc('year',transaction_date) as duration,
         coalesce(sum(sign_flag*(amount_curr)) ,0) as amount,
         currency as dashboard_currency,
         count(id) as count
         from ares.account_utilizations aau
-        inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
-        inner join organizations o on o.registration_number = otpd.registration_number
-        inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-        where 
+        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+        INNER JOIN organizations o on o.registration_number = otpd.registration_number
+        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+        WHERE 
             acc_mode = 'AR' 
-            and 
-            document_status in (:docStatus)  and 
-            date_trunc('year', transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval) 
-            and deleted_at is null and 
-            (:accType is null or acc_type = :accType)
-            and ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND 
+            document_status in (:docStatus)  
+            AND date_trunc('year', transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval) 
+            AND deleted_at is null 
+            AND (:accType is null or acc_type = :accType)
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType)
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-        group by date_trunc('year',transaction_date), dashboard_currency
+        GROUP BY date_trunc('year',transaction_date), dashboard_currency
         """
     )
-    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
-
+    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
     @NewSpan
     @Query(
         """
-            select date_trunc('day',lj.created_at) as duration,
+            SELECT 
+            date_trunc('day',lj.created_at) as duration,
             coalesce(sum((pinv.grand_total)) ,0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             from loki.jobs lj
-            inner join plutus.invoices pinv on lj.id = pinv.job_id
-            inner join plutus.addresses pa on pa.invoice_id = pinv.id
-            inner join organizations o on o.registration_number = pa.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
-            and (:companyType is null or los.segment = :companyType)
-            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
+            INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
+            INNER JOIN organizations o on o.registration_number = pa.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            group by date_trunc('day',lj.created_at),dashboard_currency
+            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'SELLER')
+            GROUP BY date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            select 
+            SELECT 
             to_char(date_trunc('month',lj.created_at),'Mon') as duration,
             coalesce(sum((pinv.grand_total)) ,0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
-            from loki.jobs lj
-            inner join plutus.invoices pinv on lj.id = pinv.job_id
-            inner join plutus.addresses pa on pa.invoice_id = pinv.id
-            inner join organizations o on o.registration_number = pa.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
-            and (:companyType is null or los.segment = :companyType)
-            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            FROM loki.jobs lj
+            INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
+            INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
+            INNER JOIN organizations o on o.registration_number = pa.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE 
+            date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            group by date_trunc('month',lj.created_at),dashboard_currency
+            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'SELLER')
+            GROUP BY date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            select date_trunc('year',lj.created_at) as duration,
+            SELECT date_trunc('year',lj.created_at) as duration,
             coalesce(sum((pinv.grand_total)) ,0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             from loki.jobs lj
-            inner join plutus.invoices pinv on lj.id = pinv.job_id
-            inner join plutus.addresses pa on pa.invoice_id = pinv.id
-            inner join organizations o on o.registration_number = pa.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
-            and (:companyType is null or los.segment = :companyType)
-            and (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
+            INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
+            INNER JOIN organizations o on o.registration_number = pa.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            group by date_trunc('year',lj.created_at), dashboard_currency
+            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'SELLER')
+            GROUP BY date_trunc('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            select
+            SELECT
                 COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
                 SUM(COALESCE(open_invoice_amount,0)) open_invoice_amount,
                 (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount
                 -- ,array_agg(distinct so.registration_number) registration_numbers
                 from snapshot_organization_outstandings so
-                left join (
+                LEFT JOIN (
                   with a as(
-                    select
+                    SELECT
                       unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, organization_id
                     from organization_stakeholders os
-                    left join (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
-                    where status='active'
+                    LEFT JOIN (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
+                    WHERE status='active'
                     AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
-                  ) select
+                  ) SELECT
                       array_agg(distinct
                         case when stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
                         then u.name else rm_u.name end
                   ) kam_owners, organization_id
                   from a
-                  inner join users u on u.id = a.stakeholder_id
-                  inner join users rm_u on rm_u.id = a.stakeholder_rm_id
-                  where (
+                  INNER JOIN users u on u.id = a.stakeholder_id
+                  INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
+                  WHERE (
                         stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
                         or stakeholder_rm_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
                     )
-                  group by organization_id
+                  GROUP BY organization_id
                 ) os on os.organization_id = so.organization_id
-                left join outstanding_account_taggings oat on oat.registration_number = so.registration_number and oat.status='active'
-                where
+                LEFT JOIN outstanding_account_taggings oat on oat.registration_number = so.registration_number and oat.status='active'
+                WHERE
                 so.registration_number IS NOT NULL
                 AND TRIM(so.registration_number) != ''
                 AND is_precovid = 'NO'
-                group by kam_owners
+                GROUP BY kam_owners
                 order by total_outstanding_amount desc
                 limit 10
         """
@@ -273,90 +304,95 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select coalesce(case when due_date >= now()::date then 'Not Due'
-            when (due_days) between 1 and 30 then '1-30'
-            when (due_days) between 31 and 60 then '31-60'
-            when (due_days) between 61 and 90 then '61-90'
-            when (due_days) between 91 and 180 then '91-180'
-            when (due_days) between 181 and 365 then '181-365'
-            when (due_days) > 365 then '>365' 
-            end, 'Unknown') as ageing_duration, 
+            SELECT 
+            coalesce(
+                case 
+                WHEN due_date >= now()::date then 'Not Due'
+                WHEN (due_days) between 1 AND 30 then '1-30'
+                WHEN (due_days) between 31 AND 60 then '31-60'
+                WHEN (due_days) between 61 AND 90 then '61-90'
+                WHEN (due_days) between 91 AND 180 then '91-180'
+                WHEN (due_days) between 181 AND 365 then '181-365'
+                WHEN (due_days) > 365 then '>365' 
+                end, 'Unknown'
+            ) as ageing_duration, 
             sum(open_invoice_amount) as amount,
             open_invoice_currency as dashboard_currency
             from temp_outstanding_invoices toi
-            inner join organizations o on o.registration_number = toi.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where due_date is not null and  (:companyType is null or los.segment =:companyType)
-            and (:serviceType is null or shipment_service_type = :serviceType)
-            and (:cogoEntityCode is null or o.cogo_entity_id =:cogoEntityCode)
+            INNER JOIN organizations o on o.registration_number = toi.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE due_date is not null 
+            AND  (:companyType is null or los.segment =:companyType::varchar OR los.id is null)
+            AND (:serviceType is null or shipment_service_type = :serviceType)
+            AND (:cogoEntityId is null or o.cogo_entity_id =:cogoEntityId)
             AND ((:defaultersOrgIds) IS NULL OR o.id NOT IN (:defaultersOrgIds))
-            group by ageing_duration, dashboard_currency
-            order by ageing_duration
+            GROUP BY ageing_duration, dashboard_currency
+            ORDER BY ageing_duration
         """
     )
-    fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: String?, cogoEntityCode: UUID?): List<OverallAgeingStats>
+    fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: CompanyType?, cogoEntityId: UUID?): List<OverallAgeingStats>
 
     @NewSpan
     @Query(
         """
         with X as (
-            select 
+            SELECT 
             extract(month from date_trunc('month',(:date)::date)) as month,
             sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
             abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
             sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
+            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') AND transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', now()::date) end as days,
             currency as dashboard_currency
             from ares.account_utilizations aau
-            inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
-            inner join organizations o on o.registration_number = otpd.registration_number
-            inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            where (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
+            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+            INNER JOIN organizations o on o.registration_number = otpd.registration_number
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE (:serviceType is null or service_type::varchar = :serviceType) AND document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType)
-            group by dashboard_currency
+            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            GROUP BY dashboard_currency
             )
-            select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
+            SELECT X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
             coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
             coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END) * X.days,0) as value,
             X.dashboard_currency as dashboard_currency
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<DailyOutstanding>
+    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<DailyOutstanding>
 
     @NewSpan
     @Query(
         """
             with x as (
-                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
+                SELECT extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
             ),
             y as (
-                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
+                SELECT to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
                 sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
                 currency as dashboard_currency
                 from ares.account_utilizations aau
-                inner join organization_trade_party_details otpd on aau.organization_id = otpd.id
-                inner join organizations o on o.registration_number = otpd.registration_number
-                inner join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-                where acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
+                INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+                INNER JOIN organizations o on o.registration_number = otpd.registration_number
+                LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+                WHERE acc_mode = 'AR' AND (:serviceType is null or service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
                 AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-                AND (:companyType is null or los.segment = :companyType)
-                group by date_trunc('quarter',transaction_date), dashboard_currency
+                AND (:companyType is null or los.segment = :companyType::varchar or los.id is null)
+                GROUP BY date_trunc('quarter',transaction_date), dashboard_currency
             )
-            select case when x.quarter = 1 then 'Jan - Mar'
+            SELECT case when x.quarter = 1 then 'Jan - Mar'
             when x.quarter = 2 then 'Apr - Jun'
             when x.quarter = 3 then 'Jul - Sep'
             when x.quarter = 4 then 'Oct - Dec' end as duration,
             coalesce(y.total_outstanding_amount, 0) as amount,
             y.dashboard_currency as dashboard_currency
             from x
-            left join y on x.quarter = y.quarter
+            LEFT JOIN y on x.quarter = y.quarter
         """
     )
-    suspend fun generateQuarterlyOutstanding(serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<Outstanding>?
+    suspend fun generateQuarterlyOutstanding(serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<Outstanding>?
 }

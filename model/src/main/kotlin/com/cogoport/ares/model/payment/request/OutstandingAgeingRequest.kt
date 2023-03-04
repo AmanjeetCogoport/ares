@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment.request
 
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.ServiceType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
@@ -13,6 +14,6 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class OutstandingAgeingRequest(
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
-    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: String?,
+    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType?,
     @QueryValue(AresModelConstants.COGO_ENTITY_ID)val cogoEntityCode: UUID?
 )

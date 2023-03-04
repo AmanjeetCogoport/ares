@@ -197,7 +197,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
 
-
     @NewSpan
     @Query(
         """

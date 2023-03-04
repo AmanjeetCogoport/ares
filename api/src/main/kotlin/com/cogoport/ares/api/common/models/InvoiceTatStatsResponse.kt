@@ -3,7 +3,7 @@ package com.cogoport.ares.api.common.models
 import io.micronaut.core.annotation.Introspected
 
 @Introspected
-data class InvoiceTimeLineResponse(
+data class InvoiceTatStatsResponse(
     var draftInvoicesCount: Int? = 0,
     var financeAcceptedInvoiceCount: Int? = 0,
     var irnGeneratedInvoicesCount: Int? = 0,

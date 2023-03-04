@@ -24,8 +24,8 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
@@ -122,7 +122,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         /** Daily Sales Outstanding */
         logger().info("Updating Daily Outstanding Outstanding document")
-        generateDailySalesOutstanding( quarter, year, serviceType, date, defaultersOrgIds, null, null)
+        generateDailySalesOutstanding(quarter, year, serviceType, date, defaultersOrgIds, null, null)
     }
 
     override suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?) {
@@ -152,17 +152,17 @@ class OpenSearchServiceImpl : OpenSearchService {
         updateMonthlyTrend(null, monthlyTrendAllData, null, null)
     }
 
-    override suspend fun generateQuarterlyOutstanding( quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?) {
-        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding( serviceType, defaultersOrgIds, cogoEntityId, companyType)
+    override suspend fun generateQuarterlyOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
+        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, cogoEntityId, companyType)
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = "INR"
             }
         }
-        updateQuarterlyTrend( quarterlyTrendZoneData, serviceType, cogoEntityId, companyType)
+        updateQuarterlyTrend(quarterlyTrendZoneData, serviceType, cogoEntityId, companyType)
     }
 
-    override suspend fun generateDailySalesOutstanding( quarter: Int, year: Int, serviceType: ServiceType?, date: String, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?) {
+    override suspend fun generateDailySalesOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, date: String, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
         logger().info("Updating Daily Sales Outstanding document")
         val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(date, serviceType, defaultersOrgIds, cogoEntityId, companyType)
         dailySalesZoneServiceTypeData.map {
@@ -171,7 +171,7 @@ class OpenSearchServiceImpl : OpenSearchService {
             }
         }
 
-        updateDailySalesOutstanding( year, dailySalesZoneServiceTypeData, serviceType, date, cogoEntityId, companyType)
+        updateDailySalesOutstanding(year, dailySalesZoneServiceTypeData, serviceType, date, cogoEntityId, companyType)
     }
     /**
      * This updates the data for Daily Payables Outstanding graph on OpenSearch on receipt of new Bill
@@ -254,17 +254,17 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, monthlyTrendId, MonthlyOutstanding(monthlyTrend, monthlyTrendId))
     }
 
-    private fun updateQuarterlyTrend(data: MutableList<Outstanding>?, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?) {
+    private fun updateQuarterlyTrend(data: MutableList<Outstanding>?, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: CompanyType?) {
         if (data.isNullOrEmpty()) return
         val serviceTypeKey = if (serviceType?.name.equals(null) || (serviceType == ServiceType.NA)) "ALL" else serviceType?.name
         val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
-        val companyTypeKey = companyType?.uppercase() ?: "ALL"
-        val quarterlyTrendId= AresConstants.QUARTERLY_TREND_PREFIX + cogoEntityKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
+        val companyTypeKey = companyType?.name ?: "ALL"
+        val quarterlyTrendId = AresConstants.QUARTERLY_TREND_PREFIX + cogoEntityKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
         val quarterlyTrend = data.map { outstandingConverter.convertToModel(it) }
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, quarterlyTrendId, QuarterlyOutstanding(quarterlyTrend, quarterlyTrendId))
     }
 
-    private fun updateDailySalesOutstanding( year: Int, data: List<DailyOutstanding>, serviceType: ServiceType?, date: String?, cogoEntityId: UUID?, companyType: String?) {
+    private fun updateDailySalesOutstanding(year: Int, data: List<DailyOutstanding>, serviceType: ServiceType?, date: String?, cogoEntityId: UUID?, companyType: CompanyType?) {
         val month = date?.substring(5, 7)
         val dsoResponse = when (data.isEmpty()) {
             true -> listOf(
@@ -291,8 +291,8 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val serviceTypeKey = if (serviceType?.name.equals(null) || (serviceType == ServiceType.NA)) "ALL" else serviceType?.name
         val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
-        val companyTypeKey = companyType?.uppercase()?:"ALL"
-        val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey +  AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + month + AresConstants.KEY_DELIMITER + year
+        val companyTypeKey = companyType?.name ?: "ALL"
+        val dailySalesId = AresConstants.DAILY_SALES_OUTSTANDING_PREFIX + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + month + AresConstants.KEY_DELIMITER + year
 
         val formattedData = DailyOutstandingResponse(
             list = dsoResponse,
@@ -437,7 +437,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     private fun generatingOpenSearchKey(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): Map<String, String?> {
         var zoneKey: String? = null
-        var serviceTypeKey: String? = null
+        val serviceTypeKey: String? = null
         var invoiceCurrencyKey: String? = null
         zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
 
@@ -453,12 +453,12 @@ class OpenSearchServiceImpl : OpenSearchService {
 //        val salesFunnelKey = AresConstants.SALES_FUNNEL_PREFIX + months[currMonth-1] + AresConstants.KEY_DELIMITER + currYear
 //        generatingSalesFunnelData(currMonth,currYear, salesFunnelKey)
 
-        val currentDate = AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val outstandingIndexKey = AresConstants.OUTSTANDING_PREFIX + currentDate
-        generateOutstandingData(currentDate, outstandingIndexKey)
+//        val currentDate = AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+//        val outstandingIndexKey = AresConstants.OUTSTANDING_PREFIX + currentDate
+//        generateOutstandingData(currentDate, outstandingIndexKey, COG)
     }
 
-    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: String?) {
+    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: CompanyType?) {
         val monthKeyIndex = when (monthKey < 10) {
             true -> "0$monthKey"
             else -> monthKey.toString()
@@ -467,10 +467,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         val startDate = "$year-$monthKeyIndex-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
         val convertedDate = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val convertedDateLength = convertedDate.month.length(convertedDate.isLeapYear)
+        val durationOfMonth = convertedDate.month.length(convertedDate.isLeapYear)
 
         val endDate =
-            "$year-$monthKeyIndex-$convertedDateLength".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            "$year-$monthKeyIndex-$durationOfMonth".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
         val salesFunnelResponse = SalesFunnelResponse()
 
@@ -500,8 +500,8 @@ class OpenSearchServiceImpl : OpenSearchService {
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, salesFunnelResponse)
     }
 
-    override suspend fun generateOutstandingData(date: String?, searchKey: String) {
-        val data = unifiedDBRepo.getOutstandingData(date)
+    override suspend fun generateOutstandingData(date: String?, searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
+        val data = unifiedDBRepo.getOutstandingData(date, cogoEntityId, defaultersOrgIds)
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
@@ -537,16 +537,5 @@ class OpenSearchServiceImpl : OpenSearchService {
         )
 
         OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, outstandingOpenSearchResponse)
-    }
-
-    override suspend fun getKamOrManagerWiseOutstandong() {
-        TODO("Not yet implemented")
-    }
-
-    private fun generateMonthKeyIndex(month: Int): String {
-        return when (month < 10) {
-            true -> "0$month"
-            else -> month.toString()
-        }
     }
 }
