@@ -791,7 +791,6 @@ class DashboardServiceImpl : DashboardService {
         mapOfData.entries.map { (k, v) ->
             v.map { invoice ->
                 val eventData = objectMapper.readValue(invoice.events, Array<InvoiceEventResponse>::class.java)
-                logger().info(invoice.id.toString())
                 when (k) {
                     "finance_accepted" -> {
                         val createdAtEventDate = eventData.first { it.eventName == "CREATED" }.occurredAt.time
@@ -902,19 +901,17 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
-        val accTypeDocStatusMapping = mapOf(
-            DocumentType.SALES_INVOICE to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
-            DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
-            DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
-        )
+        val accType = getAccTypeAnDocStatus(documentType)?.get("accType").toString()
+        val docStatus = getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>
+
 
         if (asOnDate != null) {
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateDailySalesStats(
                     asOnDate,
-                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    accType,
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    docStatus,
                     cogoEntityId,
                     companyType,
                     serviceType
@@ -930,9 +927,9 @@ class DashboardServiceImpl : DashboardService {
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateMonthlySalesStats(
                     endDate,
-                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    accType,
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    docStatus,
                     cogoEntityId,
                     companyType,
                     serviceType
@@ -947,9 +944,9 @@ class DashboardServiceImpl : DashboardService {
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateYearlySalesStats(
                     endDate,
-                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    accType,
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    docStatus,
                     cogoEntityId,
                     companyType,
                     serviceType
@@ -964,9 +961,9 @@ class DashboardServiceImpl : DashboardService {
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateDailySalesStats(
                     endDate,
-                    accTypeDocStatusMapping[documentType]?.get("accType").toString(),
+                    accType,
                     defaultersOrgIds,
-                    accTypeDocStatusMapping[documentType]?.get("docStatus") as List<String>,
+                    docStatus,
                     cogoEntityId,
                     companyType,
                     serviceType
@@ -1011,5 +1008,72 @@ class DashboardServiceImpl : DashboardService {
             true -> "0$month"
             else -> month.toString()
         }
+    }
+
+    override suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
+        val serviceType = req.serviceType
+        val companyType = req.companyType
+        val cogoEntityId = req.cogoEntityId
+        val dashboardCurrency = req.dashboardCurrency ?: "INR"
+        val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val documentType = req.documentType ?: DocumentType.SALES_INVOICE
+
+        val accType = getAccTypeAnDocStatus(documentType)?.get("accType").toString()
+        val docStatus = getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>
+
+        val defaultersOrgIds = getDefaultersOrgIds()
+
+        val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
+
+        val dailySalesStats = if (req.documentType != DocumentType.SHIPMENT_CREATED) {
+            unifiedDBRepo.generateLineGraphViewDailyStats(
+                asOnDate,
+                accType,
+                defaultersOrgIds,
+                docStatus,
+                cogoEntityId,
+                companyType?.value,
+                serviceType
+            )!!
+        } else {
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, req.cogoEntityId, req.companyType, req.serviceType?.name?.lowercase())!!
+        }
+
+        if (dailySalesStats.size > 0){
+            val uniqueCurrencyList: List<String> = dailySalesStats.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
+
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
+
+            dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
+                val dailySalesStats = DailySalesStats(
+                    amount = 0.toBigDecimal(),
+                    duration = key,
+                    dashboardCurrency = dashboardCurrency,
+                    count = 0L
+                )
+
+                value.map { item ->
+                    dailySalesStats.amount = dailySalesStats.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
+                    dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                }
+
+                if (hashMap.keys.contains(documentType.name)) {
+                    hashMap[documentType.name]?.add(dailySalesStats)
+                } else {
+                    hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                }
+            }
+        }
+
+        return hashMap
+    }
+
+    private fun getAccTypeAnDocStatus (documentType: DocumentType): Map<String, Any>? {
+        val accTypeDocStatusMapping = mapOf (
+            DocumentType.SALES_INVOICE to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
+            DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
+            DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
+        )
+        return accTypeDocStatusMapping[documentType]
     }
 }

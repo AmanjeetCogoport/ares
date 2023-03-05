@@ -68,4 +68,6 @@ interface DashboardService {
     suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse?
 
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
+
+    suspend fun getLineGraphViewDailyStats (req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 }

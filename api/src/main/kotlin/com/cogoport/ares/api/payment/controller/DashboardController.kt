@@ -187,4 +187,10 @@ class DashboardController {
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
         return dashboardService.getKamWiseOutstanding()
     }
+
+    @Get("/line-graph-view{?req*}")
+    suspend fun getLineGraphViewDailyStats (@Valid req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
+        return dashboardService.getLineGraphViewDailyStats(req)
+    }
+
 }
