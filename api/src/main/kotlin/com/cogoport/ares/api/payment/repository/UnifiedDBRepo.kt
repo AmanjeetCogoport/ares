@@ -37,10 +37,10 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN loki.jobs lj on lj.id = pinv.job_id
             LEFT JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
-            WHERE created_at::varchar < :endDate and created_at::varchar > :startDate 
-            AND status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
+            WHERE pinv.created_at::varchar < :endDate and pinv.created_at::varchar > :startDate 
+            AND pinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
-            AND (migrated = false)
+            AND (pinv.migrated = false)
             AND (pa.organization_type = 'SELLER')
             AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
@@ -84,24 +84,23 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
                 count(*) as open_invoices_count, 
-                sum(CASE when invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount,
-                open_invoice_currency as currency, 
-                count(distinct(registration_number)) as customers_count,
+                sum(CASE when tod.invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount,
+                tod.open_invoice_currency as currency, 
+                count(distinct(tod.registration_number)) as customers_count,
                 shipment_service_type as service_type,
                 lj.job_details  ->> 'tradeType' as trade_type,
-                CASE WHEN shipment_service_type in ('fcl_freight', 'lcl_freight','fcl_customs','lcl_customs','fcl_freight_local')  THEN 'ocean'
-                     WHEN shipment_service_type in ('air_customs', 'air_freight', 'domestic_air_freight')   THEN 'air'
-                    WHEN shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface' END as grouped_services
+                CASE WHEN tod.shipment_service_type in ('fcl_freight', 'lcl_freight','fcl_customs','lcl_customs','fcl_freight_local')  THEN 'ocean'
+                     WHEN tod.shipment_service_type in ('air_customs', 'air_freight', 'domestic_air_freight')   THEN 'air'
+                    WHEN tod.shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface' END as grouped_services
             FROM temp_outstanding_invoices tod 
             INNER JOIN loki.jobs lj on lj.job_number = tod.job_number
             INNER JOIN organizations o on o.registration_number = tod.registration_number
             WHERE 
-            registration_number is not null 
-            AND open_invoice_amount > 0 
-            AND shipment_service_type is not null 
-            AND invoice_date::varchar < :asOnDate  
+            tod.registration_number is not null 
+            AND tod.open_invoice_amount > 0 
+            AND tod.shipment_service_type is not null 
+            AND tod.invoice_date::varchar < :asOnDate  
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
-//            AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
             AND  lj.job_details  ->> 'tradeType' != '' AND tod.shipment_service_type !=''
             GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
