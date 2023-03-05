@@ -15,5 +15,8 @@ data class OverallStats(
     @JsonProperty("dashboardCurrency")
     var dashboardCurrency: String,
     @JsonProperty("customersCount")
-    var customersCount: Int? = 0
+    var customersCount: Int? = 0,
+    @JsonProperty("openInvoiceAmountForPast7DaysPercentage")
+    var openInvoiceAmountForPast7DaysPercentage: Long? = 0,
+
 )

@@ -800,7 +800,8 @@ class DashboardServiceImpl : DashboardService {
                             financeAcceptedEventDate = eventData.first { it.eventName == "FINANCE_ACCEPTED" }.occurredAt.time
                         }
                         if (financeAcceptedEventDate != 0L) {
-                            invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.plus(financeAcceptedEventDate.minus(createdAtEventDate))?.div(1000)?.div(60)?.div(60)
+                            invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.plus(financeAcceptedEventDate.minus(createdAtEventDate))
+                            invoiceTatStatsResponse.financeAcceptedInvoiceEventCount = invoiceTatStatsResponse.financeAcceptedInvoiceEventCount?.plus(1)
                         } else {}
                     }
                     "irn_generated" -> {
@@ -814,7 +815,8 @@ class DashboardServiceImpl : DashboardService {
                         }
 
                         if (irnGeneratedEventDate != 0L) {
-                            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate).div(1000).div(60).div(60))
+                            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate))
+                            invoiceTatStatsResponse.irnGeneratedInvoiceEventCount = invoiceTatStatsResponse.irnGeneratedInvoiceEventCount?.plus(1)
                         } else {}
                     }
                     "settled" -> {
@@ -823,17 +825,18 @@ class DashboardServiceImpl : DashboardService {
                         if (eventData.map { it.eventName }.contains("IRN_GENERATED")) {
                             irnGeneratedEventDate = eventData.first { it.eventName == "IRN_GENERATED" }.occurredAt.time
                         }
-                        if (eventData.map { it.eventName }.contains("SETTLEMENT")) {
+                        if (eventData.map { it.eventName }.contains("PAID")) {
                             settlementEventDate =
-                                eventData.first { it.eventName == "SETTLEMENT" }.occurredAt.time
+                                eventData.first { it.eventName == "PAID" }.occurredAt.time
                         }
 
                         if (settlementEventDate != 0L) {
                             invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.plus(
                                 settlementEventDate.minus(
                                     irnGeneratedEventDate
-                                ).div(1000).div(60).div(60)
+                                )
                             )
+                            invoiceTatStatsResponse.settledInvoiceEventCount = invoiceTatStatsResponse.settledInvoiceEventCount?.plus(1)
                         }
                     }
                     else -> {}
@@ -846,15 +849,19 @@ class DashboardServiceImpl : DashboardService {
         invoiceTatStatsResponse.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
         invoiceTatStatsResponse.settledInvoicesCount = mapOfData["settled"]?.size
 
-        if (invoiceTatStatsResponse.financeAcceptedInvoiceCount!! != 0) {
-            invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(invoiceTatStatsResponse.financeAcceptedInvoiceCount!!)
+        invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled = invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(1000)?.div(60)?.div(60)
+
+        if (invoiceTatStatsResponse.financeAcceptedInvoiceEventCount != 0) {
+            invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(invoiceTatStatsResponse.financeAcceptedInvoiceEventCount!!)
         }
 
-        if (invoiceTatStatsResponse.irnGeneratedInvoicesCount!! != 0) {
-            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTatStatsResponse.irnGeneratedInvoicesCount!!)
+        if (invoiceTatStatsResponse.irnGeneratedInvoiceEventCount != 0) {
+            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTatStatsResponse.irnGeneratedInvoiceEventCount!!)
         }
-        if (invoiceTatStatsResponse.settledInvoicesCount != 0) {
-            invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(invoiceTatStatsResponse.settledInvoicesCount!!)
+        if (invoiceTatStatsResponse.settledInvoiceEventCount != 0) {
+            invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(invoiceTatStatsResponse.settledInvoiceEventCount!!)
         }
 
         return invoiceTatStatsResponse
@@ -904,40 +911,6 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
-        if (asOnDate != null) {
-            dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
-                unifiedDBRepo.generateDailySalesStats(
-                    asOnDate,
-                    getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                    defaultersOrgIds,
-                    getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                    cogoEntityId,
-                    companyType,
-                    serviceType
-                )!!
-            } else {
-                unifiedDBRepo.generateDailyShipmentCreatedAt(asOnDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
-            }
-        }
-
-        if (month != null) {
-            val endDate = "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-            dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
-                unifiedDBRepo.generateMonthlySalesStats(
-                    endDate,
-                    getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                    defaultersOrgIds,
-                    getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                    cogoEntityId,
-                    companyType,
-                    serviceType
-                )!!
-            } else {
-                unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
-            }
-        }
-
         if (year != null) {
             val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
@@ -953,22 +926,38 @@ class DashboardServiceImpl : DashboardService {
             } else {
                 unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
             }
-        }
+        } else {
+            if (month != null) {
+                val endDate = "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        if (asOnDate == null && year == null && month == null) {
-            val endDate = AresConstants.CURR_DATE.toString().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
-                unifiedDBRepo.generateDailySalesStats(
-                    endDate,
-                    getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                    defaultersOrgIds,
-                    getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                    cogoEntityId,
-                    companyType,
-                    serviceType
-                )!!
+                dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
+                    unifiedDBRepo.generateMonthlySalesStats(
+                        endDate,
+                        getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
+                        defaultersOrgIds,
+                        getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
+                        cogoEntityId,
+                        companyType,
+                        serviceType
+                    )!!
+                } else {
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                }
             } else {
-                unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${AresConstants.CURR_MONTH}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
+                    unifiedDBRepo.generateDailySalesStats(
+                        endDate,
+                        getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
+                        defaultersOrgIds,
+                        getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
+                        cogoEntityId,
+                        companyType,
+                        serviceType
+                    )!!
+                } else {
+                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                }
             }
         }
 
@@ -1037,7 +1026,7 @@ class DashboardServiceImpl : DashboardService {
             unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, req.cogoEntityId, req.companyType, req.serviceType?.name?.lowercase())!!
         }
 
-        if (dailySalesStats.size > 0){
+        if (dailySalesStats.size > 0) {
             val uniqueCurrencyList: List<String> = dailySalesStats.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
 
             val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
@@ -1066,8 +1055,8 @@ class DashboardServiceImpl : DashboardService {
         return hashMap
     }
 
-    private fun getAccTypeAnDocStatus (documentType: DocumentType): Map<String, Any>? {
-        val accTypeDocStatusMapping = mapOf (
+    private fun getAccTypeAnDocStatus(documentType: DocumentType): Map<String, Any>? {
+        val accTypeDocStatusMapping = mapOf(
             DocumentType.SALES_INVOICE to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
             DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
             DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))

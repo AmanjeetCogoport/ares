@@ -6,8 +6,6 @@ import java.math.BigDecimal
 
 @Introspected
 data class ServiceLevelOutstanding(
-    @JsonProperty("totalOutstanding")
-    var totalOutstanding: BigDecimal?,
     @JsonProperty("openInvoiceAmount")
     var openInvoiceAmount: BigDecimal?,
     @JsonProperty("currency")

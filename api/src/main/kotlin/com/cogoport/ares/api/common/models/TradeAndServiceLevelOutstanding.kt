@@ -10,10 +10,8 @@ data class TradeAndServiceLevelOutstanding(
     var name: String?,
     @JsonProperty("key")
     var key: String?,
-    @JsonProperty("totalOutstanding")
-    val totalOutstanding: BigDecimal = BigDecimal.ZERO,
     @JsonProperty("openInvoiceAmount")
-    val openInvoiceAmount: BigDecimal = BigDecimal.ZERO,
+    var openInvoiceAmount: BigDecimal = BigDecimal.ZERO,
     @JsonProperty("currency")
     var currency: String?
 )

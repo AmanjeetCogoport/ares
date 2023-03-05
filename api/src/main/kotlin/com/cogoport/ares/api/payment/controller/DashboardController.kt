@@ -173,7 +173,7 @@ class DashboardController {
     @Get("/outstanding")
     suspend fun getOutstanding(
         @QueryValue("date") date: String? = null,
-        @QueryValue("cogoEntityId") cogoEntityId: UUID? = null
+        @QueryValue("cogoEntityId") cogoEntityId: UUID?
     ): OutstandingOpensearchResponse? {
         return dashboardService.getOutstanding(date, cogoEntityId)
     }
@@ -189,8 +189,7 @@ class DashboardController {
     }
 
     @Get("/line-graph-view{?req*}")
-    suspend fun getLineGraphViewDailyStats (@Valid req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
+    suspend fun getLineGraphViewDailyStats(@Valid req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
         return dashboardService.getLineGraphViewDailyStats(req)
     }
-
 }

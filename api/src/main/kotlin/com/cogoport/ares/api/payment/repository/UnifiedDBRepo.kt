@@ -18,6 +18,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
+import java.math.BigDecimal
 import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
@@ -65,7 +66,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 )::text as events
                 FROM plutus.invoices i 
                 INNER JOIN plutus.invoice_events ie on i.id = ie.invoice_id 
-                INNER JOIN loki.jobs lj on lj.id = pinv.job_id
+                INNER JOIN loki.jobs lj on lj.id = i.job_id
                 INNER JOIN plutus.addresses pa on pa.invoice_id = i.id
                 LEFT JOIN organizations o on o.registration_number = pa.registration_number
                 LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
@@ -91,21 +92,37 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 lj.job_details  ->> 'tradeType' as trade_type,
                 CASE WHEN tod.shipment_service_type in ('fcl_freight', 'lcl_freight','fcl_customs','lcl_customs','fcl_freight_local')  THEN 'ocean'
                      WHEN tod.shipment_service_type in ('air_customs', 'air_freight', 'domestic_air_freight')   THEN 'air'
-                    WHEN tod.shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface' END as grouped_services
+                     WHEN tod.shipment_service_type in ('trailer_freight', 'haulage_freight', 'trucking', 'ltl_freight', 'ftl_freight') THEN 'surface'
+                     ELSE 'others'
+                END as grouped_services
             FROM temp_outstanding_invoices tod 
             INNER JOIN loki.jobs lj on lj.job_number = tod.job_number
             INNER JOIN organizations o on o.registration_number = tod.registration_number
             WHERE 
             tod.registration_number is not null 
             AND tod.open_invoice_amount > 0 
-            AND tod.shipment_service_type is not null 
             AND tod.invoice_date::varchar < :asOnDate  
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
-            AND  lj.job_details  ->> 'tradeType' != '' AND tod.shipment_service_type !=''
             GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
     fun getOutstandingData(asOnDate: String?, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
+
+    @Query(
+        """
+            SELECT 
+            sum(CASE when tod.invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount 
+            from temp_outstanding_invoices tod 
+            INNER JOIN organizations o on o.registration_number = tod.registration_number
+            where 
+            date_trunc('day', tod.invoice_date) > date_trunc('day', :asOnDate:: date - '7 day'::interval)
+            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND tod.open_invoice_amount > 0
+            AND tod.registration_number is not null
+        """
+    )
+
+    fun getOutstandingAmountForPastSevenDays(asOnDate: String?, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
@@ -199,10 +216,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
+            and date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
             AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'SELLER')
             GROUP BY date_trunc('day',lj.created_at),dashboard_currency
         """
@@ -224,10 +242,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE 
             date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
+            and date_trunc('month', lj.created_at) <= date_trunc('month', :asOnDate:: date)
             AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'SELLER')
             GROUP BY date_trunc('month',lj.created_at),dashboard_currency
         """
@@ -247,10 +266,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+            and date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
             AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'SELLER')
             GROUP BY date_trunc('year',lj.created_at), dashboard_currency
         """

@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
@@ -41,6 +42,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
@@ -505,37 +507,66 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
-        data?.map { it.tradeType = it.tradeType?.uppercase() }
-        data?.map { it.serviceType = it.serviceType?.uppercase() }
+        if (!data.isNullOrEmpty()) {
+            data.map { it.tradeType = it.tradeType?.uppercase() }
+            data.map { it.serviceType = it.serviceType?.uppercase() }
 
-        data?.groupBy { it.groupedServices }?.filter { it.key != null }?.entries?.map { (k, v) ->
-            mapData[k.toString()] = ServiceLevelOutstanding(
-                totalOutstanding = v.sumOf { it.openInvoiceAmount },
-                openInvoiceAmount = v.sumOf { it.openInvoiceAmount },
-                currency = v.first().currency,
-                tradeType = v.map { item ->
-                    TradeAndServiceLevelOutstanding(
-                        key = "${item.serviceType}_${item.tradeType}",
-                        name = "${item.serviceType} ${item.tradeType}",
-                        totalOutstanding = item.openInvoiceAmount,
-                        openInvoiceAmount = item.openInvoiceAmount,
+            data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
+                mapData[k.toString()] = ServiceLevelOutstanding(
+                    openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                    currency = v.first().currency,
+                    tradeType = getTradeAndServiceWiseData(v)
+                )
+            }
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(date, cogoEntityId, defaultersOrgIds)
+
+            val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
+                overallStats = OverallStats(
+                    totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                    openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                    customersCount = data.sumOf { it.customersCount!! },
+                    dashboardCurrency = data.first().currency!!,
+                    openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
+                    openInvoiceAmountForPast7DaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong()
+                ),
+                outstandingServiceWise = mapData
+            )
+
+            OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, outstandingOpenSearchResponse)
+        }
+    }
+
+    private fun getTradeAndServiceWiseData(value: List<OutstandingDocument>): List<TradeAndServiceLevelOutstanding> {
+        val updatedList = mutableListOf<TradeAndServiceLevelOutstanding>()
+        value.map { item ->
+            if (item.serviceType == null || item.tradeType == null) {
+                var document = updatedList.filter { it.key == "others" }
+                if (document.isNotEmpty()) {
+                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
+                } else {
+                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
+                        key = "others",
+                        name = "others",
+                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
                         currency = item.currency
                     )
+                    updatedList.add(tradeAndServiceWiseDocument)
                 }
-            )
+            } else {
+                var document = updatedList.filter { it.key == "${item.serviceType}_${item.tradeType}" }
+                if (document.isNotEmpty()) {
+                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
+                } else {
+                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
+                        key = "${item.serviceType}_${item.tradeType}",
+                        name = "${item.serviceType} ${item.tradeType}",
+                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
+                        currency = item.currency
+                    )
+                    updatedList.add(tradeAndServiceWiseDocument)
+                }
+            }
         }
-
-        val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
-            overallStats = OverallStats(
-                totalOutstandingAmount = data?.sumOf { it.openInvoiceAmount },
-                openInvoicesAmount = data?.sumOf { it.openInvoiceAmount },
-                customersCount = data?.sumOf { it.customersCount!! },
-                dashboardCurrency = data?.first()?.currency!!,
-                openInvoicesCount = data.sumOf { it.openInvoicesCount!! }
-            ),
-            outstandingServiceWise = mapData
-        )
-
-        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, outstandingOpenSearchResponse)
+        return updatedList
     }
 }

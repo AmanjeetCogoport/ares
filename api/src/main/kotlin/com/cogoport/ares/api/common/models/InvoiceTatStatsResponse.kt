@@ -11,4 +11,7 @@ data class InvoiceTatStatsResponse(
     var tatHoursFromDraftToFinanceAccepted: Long? = 0,
     var tatHoursFromFinanceAcceptedToIrnGenerated: Long? = 0,
     var tatHoursFromIrnGeneratedToSettled: Long? = 0,
+    var financeAcceptedInvoiceEventCount: Int? = 0,
+    var irnGeneratedInvoiceEventCount: Int? = 0,
+    var settledInvoiceEventCount: Int? = 0,
 )

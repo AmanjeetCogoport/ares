@@ -69,5 +69,5 @@ interface DashboardService {
 
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 
-    suspend fun getLineGraphViewDailyStats (req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
+    suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 }
