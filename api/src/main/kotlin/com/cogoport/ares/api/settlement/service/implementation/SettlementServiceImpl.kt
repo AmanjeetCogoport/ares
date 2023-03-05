@@ -247,7 +247,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.query,
                 paymentIds,
                 request.sortBy,
-                request.sortType
+                request.sortType,
+                request.entityCode
             )
 
         val totalRecords =
@@ -257,7 +258,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.startDate,
                 request.endDate,
                 request.query,
-                paymentIds
+                paymentIds,
+                request.entityCode
             )
 
         val historyDocuments = mutableListOf<HistoryDocument>()

@@ -19,6 +19,7 @@ data class JvListRequest(
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
+    @QueryValue("entityCode") var entityCode: Int?,
     @QueryValue("sortBy") val sortBy: String? = "createdAt",
     @QueryValue("sortType") val sortType: String? = "Desc"
 )

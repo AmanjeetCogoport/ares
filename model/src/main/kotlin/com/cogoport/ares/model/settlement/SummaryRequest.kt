@@ -12,7 +12,7 @@ import javax.validation.constraints.NotNull
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SummaryRequest(
     @field:NotNull(message = "entityCode cannot be null")
-    val entityCode: Int?,
+    var entityCode: Int?,
     @QueryValue(AresModelConstants.IMPORTER_EXPORTER_ID) val importerExporterId: UUID? = null,
     @QueryValue(AresModelConstants.SERVICE_PROVIDER_ID) val serviceProviderId: UUID? = null,
     val startDate: Timestamp? = null,
