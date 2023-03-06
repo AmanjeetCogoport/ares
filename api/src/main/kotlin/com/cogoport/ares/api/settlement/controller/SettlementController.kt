@@ -88,6 +88,7 @@ class SettlementController {
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
     }
 
+    @Auth
     @Get("/history{?request*}")
     suspend fun getHistory(@Valid request: SettlementHistoryRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<HistoryDocument?> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
