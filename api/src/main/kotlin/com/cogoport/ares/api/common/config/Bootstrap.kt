@@ -91,7 +91,8 @@ class Bootstrap {
                 cogoUrl = cogoUrl,
                 isAuthDisabled = authConfig.authDisabled!!,
                 serviceDiscoveryClient = serviceDiscoveryClient,
-                microserviceAuthToken = authConfig.microserviceAuthToken!!
+                microserviceAuthToken = authConfig.microserviceAuthToken!!,
+                whiteListedPaths = null
             )
         )
     }
