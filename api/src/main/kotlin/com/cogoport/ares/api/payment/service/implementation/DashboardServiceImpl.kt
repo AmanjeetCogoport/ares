@@ -101,9 +101,9 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun validatingRoleAndEntityCode( role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role ) {
-            throw AresException(AresError.ERR_1003,"")
+    private fun validatingRoleAndEntityCode(role: String?) {
+        if (AresConstants.ROLE_ZONE_HEAD == role) {
+            throw AresException(AresError.ERR_1003, "")
         }
     }
 
@@ -396,7 +396,7 @@ class DashboardServiceImpl : DashboardService {
         val cogoEntityId = request.cogoEntityId
         val companyType = request.companyType
 
-        validatingRoleAndEntityCode( request.role)
+        validatingRoleAndEntityCode(request.role)
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -446,10 +446,9 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
-        validatingRoleAndEntityCode( request.role)
+        validatingRoleAndEntityCode(request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
-
 
         val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
 
@@ -892,8 +891,8 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (openSearchData == null && (asOnDate == AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))) ) {
-            openSearchService.generateOutstandingData( searchKey, cogoEntityId, defaultersOrgIds)
+        if (openSearchData == null && (asOnDate == AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
+            openSearchService.generateOutstandingData(searchKey, cogoEntityId, defaultersOrgIds)
 
             openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -914,9 +913,9 @@ class DashboardServiceImpl : DashboardService {
         val cogoEntityId = req.cogoEntityId
         val dashboardCurrency = req.dashboardCurrency ?: "INR"
 
-        val entityCode = if (cogoEntityId != null){
+        val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }else {
+        } else {
             null
         }
 
@@ -1027,8 +1026,8 @@ class DashboardServiceImpl : DashboardService {
 
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }else {
-             null
+        } else {
+            null
         }
 
         val defaultersOrgIds = getDefaultersOrgIds()

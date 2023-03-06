@@ -68,7 +68,6 @@ interface OpenSearchService {
         dashboardCurrency: String
     )
 
-
     suspend fun generateArDashboardData()
 
     suspend fun generateOutstandingData(

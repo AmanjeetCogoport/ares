@@ -9,7 +9,6 @@ import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
-import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
@@ -93,7 +92,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (:entityCode is null or soo.cogo_entity = :entityCode::varchar)
         """
     )
-    fun getOnAccountAmount ( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
@@ -122,7 +121,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
-    fun getOutstandingData( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
+    fun getOutstandingData(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
 
     @NewSpan
     @Query(
@@ -138,7 +137,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         
         """
     )
-    fun getOnAccountAmountForPastSevenDays ( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @Query(
         """
@@ -495,38 +494,4 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
     )
     suspend fun generateLineGraphViewShipmentCreated(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
-    @NewSpan
-    @Query(
-        """
-        select aau.organization_id,
-        sum(case when due_date >= now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
-        sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
-        sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
-        sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end) as ninety_amount,
-        sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end) as oneeighty_amount,
-        sum(case when (now()::date - due_date) between 180 and 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfive_amount,
-        sum(case when (now()::date - due_date) > 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfiveplus_amount,
-        sum(case when due_date >= now()::date then 1 else 0 end) as not_due_count,
-        sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
-        sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
-        sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
-        sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end) as oneeighty_count,
-        sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
-        sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
-        from account_utilizations aau
-        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
-        INNER JOIN organizations o on o.registration_number = otpd.registration_number
-        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-        WHERE aau.organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
-        AND aau.due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
-        AND (:companyType is null or los.segment = :companyType OR los.id is null)
-        AND ((:orgId) is NULL OR aau.organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
-        AND (CASE WHEN :flag = 'defaulters' THEN aau.organization_id IN (:defaultersOrgIds)
-                 WHEN :flag = 'non_defaulters' THEN (aau.organization_id NOT IN (:defaultersOrgIds) OR (:defaultersOrgIds) is NULL)
-            END)
-        and  aau.acc_type = 'SINV'
-        group by organization_id
-        """
-    )
-    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: List<UUID>?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>?, flag: String, companyType: String?): List<OutstandingAgeing>
 }

@@ -23,4 +23,3 @@ data class OverallStats(
     @JsonProperty("onAccountAmountForPastSevenDaysPercentage")
     var onAccountAmountForPastSevenDaysPercentage: Long? = 0
 )
-

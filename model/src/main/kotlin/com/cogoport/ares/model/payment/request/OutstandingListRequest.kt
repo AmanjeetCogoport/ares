@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.payment.request
 
 import com.cogoport.ares.model.common.AresModelConstants
-import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.enum.OrganizationType
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
@@ -20,6 +19,5 @@ data class OutstandingListRequest(
     @QueryValue(AresModelConstants.ORG_ID) val orgId: String? = null,
     @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
     @QueryValue(AresModelConstants.FLAG) val flag: String? = OrganizationType.NON_DEFAULTERS.value,
-    @QueryValue("orgIds") val orgIds: MutableList<String> = mutableListOf(),
-    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType? = null
+    @QueryValue("orgIds") val orgIds: MutableList<String> = mutableListOf()
 )

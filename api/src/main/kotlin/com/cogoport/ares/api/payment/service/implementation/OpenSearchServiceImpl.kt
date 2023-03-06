@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
-import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
 import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
@@ -44,7 +43,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -158,7 +156,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     override suspend fun generateQuarterlyOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }else {
+        } else {
             null
         }
         val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, entityCode, companyType?.value)
@@ -175,7 +173,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }else {
+        } else {
             null
         }
 
@@ -464,17 +462,15 @@ class OpenSearchServiceImpl : OpenSearchService {
         val currMonth = AresConstants.CURR_MONTH
         val currYear = AresConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
-
     }
 
-
-    override suspend fun generateOutstandingData( searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
+    override suspend fun generateOutstandingData(searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }else {
+        } else {
             null
         }
-        val data = unifiedDBRepo.getOutstandingData( entityCode, defaultersOrgIds)
+        val data = unifiedDBRepo.getOutstandingData(entityCode, defaultersOrgIds)
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
@@ -490,10 +486,10 @@ class OpenSearchServiceImpl : OpenSearchService {
                 )
             }
 
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount( entityCode,defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays( entityCode,defaultersOrgIds)
+            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultersOrgIds)
+            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(entityCode, defaultersOrgIds)
 
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays( entityCode, defaultersOrgIds)
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(entityCode, defaultersOrgIds)
 
             val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
                 overallStats = OverallStats(
