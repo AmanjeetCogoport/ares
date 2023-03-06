@@ -1,14 +1,18 @@
 package com.cogoport.ares.api.common.config
 
 import com.cogoport.ares.api.common.models.SageConfig
+import com.cogoport.brahma.authentication.Authentication
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
+import io.micronaut.context.annotation.Value
 import io.micronaut.runtime.event.annotation.EventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
 import io.sentry.Sentry
 import io.sentry.SentryOptions
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import software.amazon.awssdk.services.servicediscovery.ServiceDiscoveryClient
+import com.cogoport.brahma.authentication.Configuration as AuthConfiguration
 
 @Singleton
 class Bootstrap {
@@ -19,12 +23,25 @@ class Bootstrap {
 
     @Inject private lateinit var sageConfig: SageConfig
 
+    @Inject
+    private lateinit var serviceDiscoveryClient: ServiceDiscoveryClient
+
+    @Value("\${services.namespace}")
+    private lateinit var namespace: String
+
+    @Value("\${cogoport.api_url}")
+    private lateinit var cogoUrl: String
+
+    @Inject
+    private lateinit var authConfig: AuthConfig
+
     @EventListener
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         // Add all bootstrap services here
         configureOpenSearch()
         configureSentry()
         configureSage()
+        configureAuth()
     }
 
     private fun configureOpenSearch() {
@@ -63,6 +80,18 @@ class Bootstrap {
                 username = sageConfig.username!!,
                 userpassword = sageConfig.userpassword!!,
                 sageRestToken = null
+            )
+        )
+    }
+    private fun configureAuth() {
+        Authentication.configure(
+            AuthConfiguration(
+                namespace = namespace,
+                alternateRoute = authConfig.alternateRoute!!,
+                cogoUrl = cogoUrl,
+                isAuthDisabled = authConfig.authDisabled!!,
+                serviceDiscoveryClient = serviceDiscoveryClient,
+                microserviceAuthToken = authConfig.microserviceAuthToken!!
             )
         )
     }

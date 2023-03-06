@@ -18,9 +18,11 @@ import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallStatsMapper
+import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
@@ -31,6 +33,7 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.MonthlyOutstanding
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CollectionResponse
@@ -39,8 +42,11 @@ import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DailyOutstandingResponseData
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
+import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Month
@@ -53,6 +59,12 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var paymentConverter: PaymentToPaymentMapper
 
     @Inject
     lateinit var dsoConverter: DailyOutstandingMapper
@@ -458,12 +470,6 @@ class OpenSearchServiceImpl : OpenSearchService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun generateArDashboardData() {
-        val currMonth = AresConstants.CURR_MONTH
-        val currYear = AresConstants.CURR_YEAR
-        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
-    }
-
     override suspend fun generateOutstandingData(searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
@@ -541,5 +547,41 @@ class OpenSearchServiceImpl : OpenSearchService {
             }
         }
         return updatedList
+    }
+
+    override suspend fun paymentDocumentStatusMigration() {
+        val pdsRecords = paymentRepository.getPaymentDocumentStatusWiseIds()
+        pdsRecords.forEach {
+            it.paymentIds.chunked(5000)
+                .forEach { batch ->
+                    bulkUpdate(it.paymentDocumentStatus, batch)
+                }
+        }
+    }
+
+    private fun bulkUpdate(paymentDocumentStatus: PaymentDocumentStatus, ids: List<Long>) {
+        Client.updateByQuery { s ->
+            s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX).script { s ->
+                s.inline { i -> i.source("ctx._source[\"paymentDocumentStatus\"] = \"${paymentDocumentStatus.name}\"").lang("painless") }
+            }.query { q ->
+                q.bool { b ->
+                    b.must { s ->
+                        s.terms { v ->
+                            v.field("id").terms(
+                                TermsQueryField.of { a ->
+                                    a.value(
+                                        ids.map {
+                                            FieldValue.of(it)
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                    b
+                }
+            }.refresh(true)
+            s
+        }
     }
 }

@@ -2,9 +2,11 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
+import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -36,6 +38,9 @@ class OnAccountController {
 
     @Inject
     lateinit var onAccountService: OnAccountService
+
+    @Inject
+    lateinit var openSearchService: OpenSearchService
 
     @Get("{?request*}")
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
@@ -72,6 +77,11 @@ class OnAccountController {
         return Response<OrgStatsResponse>().ok(onAccountService.getOrgStats(orgId))
     }
 
+    @Get("/org-stats-for-coe-finance")
+    suspend fun getOrgStatsForCoeFinance(@QueryValue(AresConstants.ORG_ID) orgId: UUID?): OrgStatsResponseForCoeFinance {
+        return Response<OrgStatsResponseForCoeFinance>().ok(onAccountService.getOrgStatsForCoeFinance(orgId))
+    }
+
     @Delete("/consolidated")
     suspend fun deleteConsolidatedInvoices(@Body req: DeleteConsolidatedInvoicesReq) {
         onAccountService.deleteConsolidatedInvoices(req)
@@ -92,5 +102,10 @@ class OnAccountController {
             HttpStatus.OK.name,
             if (onAccountService.postPaymentToSage(id, performedBy)) "Success." else "Failed."
         )
+    }
+
+    @Put("/open-search/payment-document-status")
+    suspend fun paymentDocumentStatusMigration() {
+        openSearchService.paymentDocumentStatusMigration()
     }
 }

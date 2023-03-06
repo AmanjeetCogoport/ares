@@ -247,7 +247,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.query,
                 paymentIds,
                 request.sortBy,
-                request.sortType
+                request.sortType,
+                request.entityCode
             )
 
         val totalRecords =
@@ -257,7 +258,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.startDate,
                 request.endDate,
                 request.query,
-                paymentIds
+                paymentIds,
+                request.entityCode
             )
 
         val historyDocuments = mutableListOf<HistoryDocument>()
@@ -2306,33 +2308,35 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-        val documentModel = calculatingTds(documentEntity)
-
-        val checkDocumentData = documentModel.map {
+        val checkDocumentData = documentEntity.map {
+            val status = when (it.accountType) {
+                "REC", "PAY" -> "UTILIZED"
+                else -> "KNOCKED OFF"
+            }
             CheckDocument(
-                id = it.id,
-                documentNo = it.documentNo,
+                id = Hashids.encode(it.id),
+                documentNo = Hashids.encode(it.documentNo),
                 documentValue = it.documentValue,
                 accountType = SettlementType.valueOf(it.accountType),
                 documentAmount = it.documentAmount,
                 tds = 0.toBigDecimal(),
-                afterTdsAmount = 0.toBigDecimal(),
-                balanceAmount = (it.balanceAmount),
+                afterTdsAmount = it.documentAmount,
+                balanceAmount = it.balanceAmount,
                 accMode = it.accMode,
-                allocationAmount = it.allocationAmount!!,
-                currentBalance = it.currentBalance,
-                balanceAfterAllocation = it.balanceAfterAllocation!!,
-                ledgerAmount = it.ledgerAmount,
-                status = it.status.toString(),
+                allocationAmount = it.documentAmount,
+                currentBalance = it.balanceAmount,
+                balanceAfterAllocation = BigDecimal.ZERO,
+                ledgerAmount = it.documentLedAmount,
+                status = status,
                 currency = it.currency,
                 ledCurrency = it.ledCurrency,
                 exchangeRate = it.exchangeRate,
-                transactionDate = it.transactionDate,
-                settledTds = it.settledTds!!,
+                transactionDate = it.documentDate,
+                settledTds = 0.toBigDecimal(),
                 signFlag = it.signFlag,
-                nostroAmount = it.nostroAmount,
-                settledAmount = it.settledAmount,
-                settledAllocation = it.settledAllocation!!,
+                nostroAmount = 0.toBigDecimal(),
+                settledAmount = 0.toBigDecimal(),
+                settledAllocation = it.balanceAmount,
                 settledNostro = 0.toBigDecimal()
             )
         } as MutableList<CheckDocument>

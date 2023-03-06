@@ -509,6 +509,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     document_value ilike :query || '%' 
                     OR au.document_no in (:paymentIds)
                 )
+                AND (:entityCode is null OR :entityCode = au.entity_code) 
                 AND s.deleted_at is null
                 AND au.deleted_at is null
             GROUP BY au.id  
@@ -538,7 +539,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         query: String,
         paymentIds: List<Long>,
         sortBy: String?,
-        sortType: String?
+        sortType: String?,
+        entityCode: Int?
     ): List<HistoryDocument?>
 
     @NewSpan
@@ -561,6 +563,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     OR document_no in (:paymentIds)
                 )
             AND s.deleted_at is null
+            AND (:entityCode is null OR :entityCode = au.entity_code)
             AND account_utilizations.deleted_at is null
             
         """
@@ -571,7 +574,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         startDate: String?,
         endDate: String?,
         query: String,
-        paymentIds: List<Long>
+        paymentIds: List<Long>,
+        entityCode: Int?
     ): Long
 
     @NewSpan

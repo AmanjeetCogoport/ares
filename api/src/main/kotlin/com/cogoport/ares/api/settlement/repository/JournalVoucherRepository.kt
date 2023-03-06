@@ -44,6 +44,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%') AND
+                (:entityCode IS NULL OR :entityCode = entity_code) AND
                 (parent_jv_id is null)
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
@@ -69,7 +70,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         page: Int,
         pageLimit: Int,
         sortType: String?,
-        sortBy: String?
+        sortBy: String?,
+        entityCode: Int?
     ): List<JournalVoucher>
 
     @NewSpan
@@ -82,10 +84,11 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 (:category is null OR  category = :category::JV_CATEGORY) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%') AND
+                (:entityCode IS NULL OR :entityCode = entity_code) AND
                 (parent_jv_id is null)
         """
     )
-    fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?): Long
+    fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?, entityCode: Int?): Long
 
     @NewSpan
     @Query(
