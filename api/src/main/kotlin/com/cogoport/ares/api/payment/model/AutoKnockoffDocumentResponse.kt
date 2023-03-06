@@ -14,5 +14,5 @@ data class AutoKnockoffDocumentResponse(
     var amount: BigDecimal = BigDecimal.ZERO,
     var tdsAmount: BigDecimal = BigDecimal.ZERO,
     var tdsSettlementId: Long? = null,
-    var taggedSettledIds: MutableList<Long?>? = mutableListOf()
+    var taggedSettledIds: List<Long>? = null
 )

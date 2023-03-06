@@ -4,8 +4,6 @@ import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
-import io.micronaut.data.annotation.MappedProperty
-import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.Date
@@ -32,6 +30,5 @@ data class Settlement(
     var supportingDocUrl: String? = null,
     var isDraft: Boolean? = false,
     var unUtilizedAmount: BigDecimal = BigDecimal.ZERO,
-    @MappedProperty(type = DataType.JSON)
     var taggedSettlementId: String? = null
 )

@@ -48,7 +48,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
            ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
-            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null"""
+            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_draft = false"""
     )
     suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
@@ -1465,7 +1465,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             and (:accMode is null or acc_mode=:accMode::account_mode)
              and account_utilizations.deleted_at is null"""
     )
-    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): List<AccountUtilization?>
+    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): List<AccountUtilization>
 
     @NewSpan
     @Query(

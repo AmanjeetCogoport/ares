@@ -323,30 +323,21 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET is_draft = true, un_utilized_amount = :amount WHERE id = :id and is_draft = false
-        """
-    )
-    suspend fun markSettlementIsDraftTrue(id: Long, amount: BigDecimal)
-
-    @NewSpan
-    @Query(
-        """
           SELECT id,source_id, source_type, destination_id,destination_type, currency, amount, un_utilized_amount, tagged_settlement_id,
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null and is_draft = false    
+          deleted_at is null and is_draft = false order by created_at desc limit 2
         """
     )
-    suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): List<Settlement>
+    suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): MutableList<Settlement>
 
     @NewSpan
     @Query(
         """
-            UPDATE settlements set tagged_settlement_id = jsonb_set(tagged_settlement_id,'{taggedIds}',jsonb_build_array(:taggedSettlementIds)) 
-            WHERE id in (:ids)
+            UPDATE settlements set tagged_settlement_id = :taggedSettlementIds WHERE id in (:ids)
         """
     )
-    suspend fun updateTaggedSettlementIds(ids: List<Long>, taggedSettlementIds: List<Long?>)
+    suspend fun updateTaggedSettlementIds(ids: List<Long>, taggedSettlementIds: String)
 
     @NewSpan
     @Query(
@@ -360,28 +351,12 @@ ORDER BY
     @Query(
         """
             SELECT 
-            s.id,
-            s.source_id,
-            s.source_type,
-            s.destination_id,
-            s.destination_type, 
-            s.currency,
-            s.amount,
-            s.led_currency,
-            s.led_amount,
-            s.sign_flag,
-            s.settlement_date,
-            s.created_at,
-            s.created_by,
-            s.updated_at,
-            s.updated_by,
-            s.supporting_doc_url,
-            is_draft,
-            un_utilized_amount,
-            tagged_settlement_id
+            s.id, s.source_id, s.source_type, s.destination_id, s.destination_type,  s.currency, s.amount,
+            s.led_currency, s.led_amount, s.sign_flag, s.settlement_date, s.created_at,  s.created_by,
+            s.updated_at, s.updated_by, s.supporting_doc_url, is_draft,  un_utilized_amount,  tagged_settlement_id
             FROM settlements s
             where source_id = :sourceId and destination_id = :destinationId and deleted_at is null and source_type::varchar in (:sourceType)
         """
     )
-    suspend fun findBySourceId(sourceId: Long, destinationId: Long, sourceType: SettlementType): Settlement?
+    suspend fun findSettlement(sourceId: Long, destinationId: Long, sourceType: SettlementType): Settlement?
 }
