@@ -536,7 +536,11 @@ class OpenSearchServiceImpl : OpenSearchService {
                     tradeType = getTradeAndServiceWiseData(v)
                 )
             }
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(date, cogoEntityId, defaultersOrgIds)
+
+            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(date, entityCode,defaultersOrgIds)
+            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(date, entityCode,defaultersOrgIds)
+
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(date, entityCode, defaultersOrgIds)
 
             val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
                 overallStats = OverallStats(
@@ -545,7 +549,9 @@ class OpenSearchServiceImpl : OpenSearchService {
                     customersCount = data.sumOf { it.customersCount!! },
                     dashboardCurrency = data.first().currency!!,
                     openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                    openInvoiceAmountForPast7DaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong()
+                    openInvoiceAmountForPast7DaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+                    onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
+                    onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)?.times(100.toBigDecimal())?.toLong()
                 ),
                 outstandingServiceWise = mapData
             )

@@ -868,9 +868,10 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse? {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val cogoEntityKey = cogoEntityId.toString() ?: "ALL"
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + cogoEntityId
+        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + cogoEntityKey
 
         var openSearchData = OpenSearchClient().search(
             searchKey = searchKey,
@@ -947,7 +948,7 @@ class DashboardServiceImpl : DashboardService {
                     unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             } else {
-                val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${AresConstants.CURR_MONTH}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${generateMonthKeyIndex(AresConstants.CURR_DATE.toLocalDateTime().dayOfMonth)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateDailySalesStats(
                         endDate,

@@ -18,5 +18,9 @@ data class OverallStats(
     var customersCount: Int? = 0,
     @JsonProperty("openInvoiceAmountForPast7DaysPercentage")
     var openInvoiceAmountForPast7DaysPercentage: Long? = 0,
-
+    @JsonProperty("onAccountAmount")
+    var onAccountAmount: BigDecimal? = BigDecimal.ZERO,
+    @JsonProperty("onAccountAmountForPastSevenDaysPercentage")
+    var onAccountAmountForPastSevenDaysPercentage: Long? = 0
 )
+

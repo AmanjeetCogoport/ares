@@ -11,7 +11,6 @@ import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OverallAgeingStats
-import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -84,6 +83,21 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
+        SELECT 
+        sum(-1*on_account_amount)
+        FROM snapshot_organization_outstandings soo
+        INNER JOIN organization_trade_party_details otpd on soo.registration_number = otpd.registration_number
+        WHERE soo.registration_number is not null 
+        AND soo.created_at::varchar < :asOnDate 
+        AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
+        AND (:entityCode is null or soo.cogo_entity = :entityCode::varchar)
+        """
+    )
+    fun getOnAccountAmount (asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+
+    @NewSpan
+    @Query(
+        """
             SELECT 
                 count(*) as open_invoices_count, 
                 sum(CASE when tod.invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount,
@@ -98,16 +112,33 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 END as grouped_services
             FROM temp_outstanding_invoices tod 
             INNER JOIN loki.jobs lj on lj.job_number = tod.job_number
-            INNER JOIN organizations o on o.registration_number = tod.registration_number
+            INNER JOIN organization_trade_party_details otpd on otpd.registration_number = tod.registration_number
             WHERE 
             tod.registration_number is not null 
             AND tod.open_invoice_amount > 0 
             AND tod.invoice_date::varchar < :asOnDate  
-            AND (:entityCode is null or tod.entity_code = :entityCode)
+            AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
+            AND (:entityCode is null or tod.entity_code = :entityCode::varchar)
             GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
     fun getOutstandingData(asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT 
+        sum(-1*on_account_amount)
+        FROM snapshot_organization_outstandings soo
+        INNER JOIN organization_trade_party_details otpd on soo.registration_number = otpd.registration_number
+        WHERE soo.registration_number is not null 
+        AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
+        AND (:entityCode is null or soo.cogo_entity = :entityCode::varchar)
+        AND date_trunc('day', soo.created_at) > date_trunc('day', :date:: date - '7 day'::interval)
+        
+        """
+    )
+    fun getOnAccountAmountForPastSevenDays (date: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @Query(
         """
@@ -115,15 +146,15 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sum(CASE when tod.invoice_type = 'INVOICE' THEN open_invoice_amount else -1 * open_invoice_amount end) as open_invoice_amount 
             from temp_outstanding_invoices tod 
             INNER JOIN organizations o on o.registration_number = tod.registration_number
-            where 
+            WHERE 
             date_trunc('day', tod.invoice_date) > date_trunc('day', :asOnDate:: date - '7 day'::interval)
-            AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+            AND (:entityCode is null or o.cogo_entity = :entityCode::varchar)
             AND tod.open_invoice_amount > 0
             AND tod.registration_number is not null
         """
     )
 
-    fun getOutstandingAmountForPastSevenDays(asOnDate: String?, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOutstandingAmountForPastSevenDays(asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
@@ -208,7 +239,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
             date_trunc('day',lj.created_at) as duration,
-            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             from loki.jobs lj
@@ -233,7 +264,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
             to_char(date_trunc('month',lj.created_at),'Mon') as duration,
-            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             FROM loki.jobs lj
@@ -258,7 +289,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT date_trunc('year',lj.created_at) as duration,
-            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             from loki.jobs lj
