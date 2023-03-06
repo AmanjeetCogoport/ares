@@ -43,11 +43,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
             AND (pinv.migrated = false)
             AND (pa.organization_type = 'SELLER')
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
         """
     )
-    fun getFunnelData(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): List<SalesInvoiceResponse>?
+    fun getFunnelData(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceResponse>?
 
     @NewSpan
     @Query(
@@ -73,13 +73,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 WHERE i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
                 and i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
                 AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
-                AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+                AND (:companyType is null or los.segment = :companyType OR los.id is null)
                 AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
                 AND (pa.organization_type = 'SELLER')
                 GROUP BY i.id
         """
     )
-    fun getInvoices(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): List<SalesInvoiceTimelineResponse>
+    fun getInvoices(startDate: String, endDate: String, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceTimelineResponse>
     @NewSpan
     @Query(
         """
@@ -142,13 +142,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND aau.deleted_at is null 
         AND (:accType is null or  aau.acc_type = :accType)
         AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-        AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-        AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+        AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
+        AND (:companyType is null or los.segment = :companyType OR los.id is null)
         AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         GROUP BY date_trunc('month',aau.transaction_date), dashboard_currency
         """
     )
-    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -168,12 +168,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
             GROUP BY date_trunc('day',aau.transaction_date), dashboard_currency
         """
     )
-    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -196,12 +196,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         GROUP BY date_trunc('year',aau.transaction_date), dashboard_currency
         """
     )
-    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, cogoEntityId: UUID?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
     @NewSpan
     @Query(
         """
@@ -217,7 +217,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
             and date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
@@ -225,7 +225,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -243,7 +243,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE 
             date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
             and date_trunc('month', lj.created_at) <= date_trunc('month', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
@@ -251,7 +251,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -267,7 +267,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
             and date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
@@ -275,7 +275,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY date_trunc('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -341,7 +341,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = toi.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE toi.due_date is not null 
-            AND  (:companyType is null or los.segment =:companyType::varchar OR los.id is null)
+            AND  (:companyType is null or los.segment =:companyType OR los.id is null)
             AND (:serviceType is null or toi.shipment_service_type = :serviceType)
             AND (:cogoEntityId is null or o.cogo_entity_id =:cogoEntityId)
             AND ((:defaultersOrgIds) IS NULL OR o.id NOT IN (:defaultersOrgIds))
@@ -349,7 +349,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ORDER BY ageing_duration
         """
     )
-    fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: CompanyType?, cogoEntityId: UUID?): List<OverallAgeingStats>
+    fun getOutstandingByAge(serviceType: String?, defaultersOrgIds: List<UUID>?, companyType: String?, cogoEntityId: UUID?): List<OverallAgeingStats>
 
     @NewSpan
     @Query(
@@ -371,7 +371,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE (:serviceType is null or aau.service_type::varchar = :serviceType) AND document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
             AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             GROUP BY dashboard_currency
             )
             SELECT X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
@@ -381,7 +381,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             from X
         """
     )
-    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<DailyOutstanding>
+    suspend fun generateDailySalesOutstanding(date: String, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<DailyOutstanding>
 
     @NewSpan
     @Query(
@@ -400,7 +400,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 WHERE aau.acc_mode = 'AR' AND (:serviceType is null or aau.service_type::varchar = :serviceType) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
                 AND (:cogoEntityId is null or otpd.cogo_entity_id = :cogoEntityId)
-                AND (:companyType is null or los.segment = :companyType::varchar or los.id is null)
+                AND (:companyType is null or los.segment = :companyType or los.id is null)
                 GROUP BY date_trunc('quarter',transaction_date), dashboard_currency
             )
             SELECT case when x.quarter = 1 then 'Jan - Mar'
@@ -413,7 +413,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN y on x.quarter = y.quarter
         """
     )
-    suspend fun generateQuarterlyOutstanding(serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<Outstanding>?
+    suspend fun generateQuarterlyOutstanding(serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: String?): MutableList<Outstanding>?
 
     @NewSpan
     @Query(
@@ -454,7 +454,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '30 day'::interval)
-            AND (:companyType is null or los.segment = :companyType::varchar OR los.id is null)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or o.cogo_entity_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
             ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
@@ -462,5 +462,5 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY date_trunc('day',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateLineGraphViewShipmentCreated(asOnDate: String?, cogoEntityId: UUID?, companyType: CompanyType?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateLineGraphViewShipmentCreated(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 }

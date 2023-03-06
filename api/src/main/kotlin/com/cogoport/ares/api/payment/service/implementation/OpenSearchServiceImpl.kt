@@ -155,7 +155,7 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     override suspend fun generateQuarterlyOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
-        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, cogoEntityId, companyType)
+        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, cogoEntityId, companyType?.value)
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = "INR"
@@ -166,7 +166,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     override suspend fun generateDailySalesOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, date: String, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(date, serviceType, defaultersOrgIds, cogoEntityId, companyType)
+        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(date, serviceType, defaultersOrgIds, cogoEntityId, companyType?.value)
         dailySalesZoneServiceTypeData.map {
             if (it.dashboardCurrency == null) {
                 it.dashboardCurrency = "INR"
@@ -476,7 +476,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size

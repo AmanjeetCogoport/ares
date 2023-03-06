@@ -188,7 +188,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
-        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType, request.cogoEntityCode)
+        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType?.value, request.cogoEntityCode)
 
         val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
 
@@ -779,7 +779,7 @@ class DashboardServiceImpl : DashboardService {
             else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
         }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate, cogoEntityId, companyType, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 
@@ -789,10 +789,10 @@ class DashboardServiceImpl : DashboardService {
 
         val invoiceTatStatsResponse = InvoiceTatStatsResponse()
 
-        mapOfData.entries.map { (k, v) ->
-            v.map { invoice ->
+        mapOfData.entries.map { (status, invoices) ->
+            invoices.map { invoice ->
                 val eventData = objectMapper.readValue(invoice.events, Array<InvoiceEventResponse>::class.java)
-                when (k) {
+                when (status) {
                     "finance_accepted" -> {
                         val createdAtEventDate = eventData.first { it.eventName == "CREATED" }.occurredAt.time
                         var financeAcceptedEventDate = 0L
@@ -920,11 +920,11 @@ class DashboardServiceImpl : DashboardService {
                     defaultersOrgIds,
                     getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                     cogoEntityId,
-                    companyType,
+                    companyType?.value,
                     serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
             }
         } else {
             if (month != null) {
@@ -937,11 +937,11 @@ class DashboardServiceImpl : DashboardService {
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                         cogoEntityId,
-                        companyType,
+                        companyType?.value,
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             } else {
                 val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${AresConstants.CURR_MONTH}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -952,11 +952,11 @@ class DashboardServiceImpl : DashboardService {
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                         cogoEntityId,
-                        companyType,
+                        companyType?.value,
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             }
         }
@@ -1023,7 +1023,7 @@ class DashboardServiceImpl : DashboardService {
                 serviceType
             )!!
         } else {
-            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, req.cogoEntityId, req.companyType, req.serviceType?.name?.lowercase())!!
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, req.cogoEntityId, req.companyType?.value, req.serviceType?.name?.lowercase())!!
         }
 
         if (dailySalesStats.size > 0) {
