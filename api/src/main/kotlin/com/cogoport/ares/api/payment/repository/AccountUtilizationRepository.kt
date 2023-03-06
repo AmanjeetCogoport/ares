@@ -225,37 +225,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-        select organization_id,
-        sum(case when due_date >= now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as not_due_amount,
-        sum(case when (now()::date - due_date) between 1 and 30 then sign_flag * (amount_loc - pay_loc) else 0 end) as thirty_amount,
-        sum(case when (now()::date - due_date) between 31 and 60 then sign_flag * (amount_loc - pay_loc) else 0 end) as sixty_amount,
-        sum(case when (now()::date - due_date) between 61 and 90 then sign_flag * (amount_loc - pay_loc) else 0 end) as ninety_amount,
-        sum(case when (now()::date - due_date) between 91 and 180 then sign_flag * (amount_loc - pay_loc) else 0 end) as oneeighty_amount,
-        sum(case when (now()::date - due_date) between 180 and 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfive_amount,
-        sum(case when (now()::date - due_date) > 365 then sign_flag * (amount_loc - pay_loc) else 0 end) as threesixfiveplus_amount,
-        sum(case when due_date >= now()::date then 1 else 0 end) as not_due_count,
-        sum(case when (now()::date - due_date) between 1 and 30 then 1 else 0 end) as thirty_count,
-        sum(case when (now()::date - due_date) between 31 and 60 then 1 else 0 end) as sixty_count,
-        sum(case when (now()::date - due_date) between 61 and 90 then 1 else 0 end) as ninety_count,
-        sum(case when (now()::date - due_date) between 91 and 180 then 1 else 0 end) as oneeighty_count,
-        sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
-        sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
-        from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
-        and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
-        AND ((:orgId) is NULL OR organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
-        AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
-                 WHEN :flag = 'non_defaulters' THEN (organization_id NOT IN (:defaultersOrgIds) OR (:defaultersOrgIds) is NULL)
-            END)
-        and  acc_type = 'SINV'
-        group by organization_id
-        """
-    )
-    suspend fun getOutstandingAgeingBucket(zone: String?, queryName: String?, orgId: List<UUID>?, page: Int, pageLimit: Int, defaultersOrgIds: List<UUID>?, flag: String): List<OutstandingAgeing>
-
-    @NewSpan
-    @Query(
-        """
         SELECT
             organization_id,
             max(organization_name) as organization_name,

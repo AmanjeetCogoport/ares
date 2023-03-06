@@ -8,6 +8,7 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
@@ -58,6 +59,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject private lateinit var openSearchConfig: OpenSearchConfig
 
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
+
     private fun validateInput(request: OutstandingListRequest) {
         try {
             request.orgIds.map {
@@ -66,8 +70,8 @@ class OutStandingServiceImpl : OutStandingService {
         } catch (exception: IllegalArgumentException) {
             throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
         }
-        if (AresConstants.ROLE_ZONE_HEAD == request.role && request.zone.isNullOrBlank()) {
-            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        if (AresConstants.ROLE_ZONE_HEAD == request.role) {
+            throw AresException(AresError.ERR_1003, "")
         }
     }
 
@@ -81,11 +85,13 @@ class OutStandingServiceImpl : OutStandingService {
         request.orgIds.map {
             orgIds.add(UUID.fromString(it))
         }
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
+        val queryResponse = unifiedDBRepo.getOutstandingAgeingBucket (request.zone,"%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!, request.companyType?.value)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
-            val docId = if (request.zone != null) "${ageing.organizationId}_${request.zone}" else "${ageing.organizationId}_ALL"
+            var zoneKey = request.zone ?: "ALL"
+            var companyTypeKey = request.companyType ?: "ALL"
+            val docId = "${ageing.organizationId}_${zoneKey}_${companyTypeKey}"
             orgId.add(docId)
             ageingBucket.add(outstandingAgeingConverter.convertToModel(ageing))
         }
