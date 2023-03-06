@@ -18,5 +18,6 @@ data class SettlementHistoryRequest(
     val pageLimit: Int = 10,
     val query: String = "",
     val sortType: String = "Desc",
-    val sortBy: String = "transactionDate"
+    val sortBy: String = "transactionDate",
+    var entityCode: Int?
 )

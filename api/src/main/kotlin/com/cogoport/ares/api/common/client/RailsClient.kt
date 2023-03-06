@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.client
 
+import com.cogoport.ares.model.common.GetPartnerRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
@@ -8,6 +9,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import java.util.UUID
 
@@ -30,4 +32,6 @@ interface RailsClient {
 
     @Post("/create_organization_credit_consumption")
     suspend fun sendInvoicePaymentKnockOff(@Body request: com.cogoport.plutus.model.invoice.CreditPaymentRequest): String
+    @Get("/get_partner{?request*}")
+    suspend fun getPartnerDetails(@QueryValue request: GetPartnerRequest): Any?
 }
