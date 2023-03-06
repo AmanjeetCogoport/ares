@@ -68,19 +68,10 @@ interface OpenSearchService {
         dashboardCurrency: String
     )
 
-    suspend fun generatingSalesFunnelData(
-        monthKey: Int,
-        year: Int,
-        searchKey: String,
-        serviceType: ServiceType?,
-        cogoEntityId: UUID?,
-        companyType: CompanyType?
-    )
 
     suspend fun generateArDashboardData()
 
     suspend fun generateOutstandingData(
-        date: String?,
         searchKey: String,
         cogoEntityId: UUID?,
         defaultersOrgIds: List<UUID>?

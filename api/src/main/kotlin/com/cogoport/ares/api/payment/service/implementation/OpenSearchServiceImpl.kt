@@ -465,63 +465,16 @@ class OpenSearchServiceImpl : OpenSearchService {
         val currYear = AresConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-//        val salesFunnelKey = AresConstants.SALES_FUNNEL_PREFIX + months[currMonth-1] + AresConstants.KEY_DELIMITER + currYear
-//        generatingSalesFunnelData(currMonth,currYear, salesFunnelKey)
-
-//        val currentDate = AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-//        val outstandingIndexKey = AresConstants.OUTSTANDING_PREFIX + currentDate
-//        generateOutstandingData(currentDate, outstandingIndexKey, COG)
     }
 
-    override suspend fun generatingSalesFunnelData(monthKey: Int, year: Int, searchKey: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: CompanyType?) {
-        val monthKeyIndex = when (monthKey < 10) {
-            true -> "0$monthKey"
-            else -> monthKey.toString()
-        }
 
-        val startDate = "$year-$monthKeyIndex-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val convertedDate = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val durationOfMonth = convertedDate.month.length(convertedDate.isLeapYear)
-
-        val endDate =
-            "$year-$monthKeyIndex-$durationOfMonth".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val salesFunnelResponse = SalesFunnelResponse()
-
-        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
-
-        if (data?.size != 0) {
-            salesFunnelResponse.draftInvoicesCount = data?.size
-            salesFunnelResponse.financeAcceptedInvoiceCount = data?.count { it.status?.name != "DRAFT" }
-            salesFunnelResponse.irnGeneratedInvoicesCount =
-                data?.count { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }
-            salesFunnelResponse.settledInvoicesCount = data?.count { it.paymentStatus == "PAID" }
-
-            salesFunnelResponse.draftToFinanceAcceptedPercentage =
-                salesFunnelResponse.financeAcceptedInvoiceCount?.times(100)
-                    ?.div(salesFunnelResponse.draftInvoicesCount!!)
-
-            if (salesFunnelResponse.financeAcceptedInvoiceCount!! != 0) {
-                salesFunnelResponse.financeToIrnPercentage = salesFunnelResponse.irnGeneratedInvoicesCount?.times(100)
-                    ?.div(salesFunnelResponse.financeAcceptedInvoiceCount!!)
-            }
-            if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0) {
-                salesFunnelResponse.settledPercentage = salesFunnelResponse.settledInvoicesCount?.times(100)
-                    ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
-            }
-        }
-
-        OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, salesFunnelResponse)
-    }
-
-    override suspend fun generateOutstandingData(date: String?, searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
+    override suspend fun generateOutstandingData( searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
         val entityCode = if (cogoEntityId != null) {
             AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
         }else {
             null
         }
-        val data = unifiedDBRepo.getOutstandingData(date, entityCode, defaultersOrgIds)
+        val data = unifiedDBRepo.getOutstandingData( entityCode, defaultersOrgIds)
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
@@ -537,10 +490,10 @@ class OpenSearchServiceImpl : OpenSearchService {
                 )
             }
 
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(date, entityCode,defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(date, entityCode,defaultersOrgIds)
+            val onAccountAmount = unifiedDBRepo.getOnAccountAmount( entityCode,defaultersOrgIds)
+            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays( entityCode,defaultersOrgIds)
 
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(date, entityCode, defaultersOrgIds)
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays( entityCode, defaultersOrgIds)
 
             val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
                 overallStats = OverallStats(

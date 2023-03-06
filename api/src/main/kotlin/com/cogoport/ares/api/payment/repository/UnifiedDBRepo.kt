@@ -88,12 +88,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         FROM snapshot_organization_outstandings soo
         INNER JOIN organization_trade_party_details otpd on soo.registration_number = otpd.registration_number
         WHERE soo.registration_number is not null 
-        AND soo.created_at::varchar < :asOnDate 
+        AND soo.created_at < NOW() 
         AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
         AND (:entityCode is null or soo.cogo_entity = :entityCode::varchar)
         """
     )
-    fun getOnAccountAmount (asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmount ( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
@@ -116,13 +116,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE 
             tod.registration_number is not null 
             AND tod.open_invoice_amount > 0 
-            AND tod.invoice_date::varchar < :asOnDate  
+            AND tod.invoice_date::date <= Now()
             AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
             AND (:entityCode is null or tod.entity_code = :entityCode::varchar)
             GROUP BY shipment_service_type, open_invoice_currency, lj.job_details  ->> 'tradeType' 
         """
     )
-    fun getOutstandingData(asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
+    fun getOutstandingData( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
 
     @NewSpan
     @Query(
@@ -134,11 +134,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         WHERE soo.registration_number is not null 
         AND ((:defaultersOrgIds) IS NULL OR otpd.id NOT IN (:defaultersOrgIds))
         AND (:entityCode is null or soo.cogo_entity = :entityCode::varchar)
-        AND date_trunc('day', soo.created_at) > date_trunc('day', :date:: date - '7 day'::interval)
+        AND date_trunc('day', soo.created_at) > date_trunc('day', NOW():: date - '7 day'::interval)
         
         """
     )
-    fun getOnAccountAmountForPastSevenDays (date: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmountForPastSevenDays ( entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @Query(
         """
@@ -147,21 +147,21 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             from temp_outstanding_invoices tod 
             INNER JOIN organizations o on o.registration_number = tod.registration_number
             WHERE 
-            date_trunc('day', tod.invoice_date) > date_trunc('day', :asOnDate:: date - '7 day'::interval)
+            date_trunc('day', tod.invoice_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND (:entityCode is null or o.cogo_entity = :entityCode::varchar)
             AND tod.open_invoice_amount > 0
             AND tod.registration_number is not null
         """
     )
 
-    fun getOutstandingAmountForPastSevenDays(asOnDate: String?, entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOutstandingAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
         """
         SELECT 
         to_char(date_trunc('month',aau.transaction_date),'Mon') as duration,
-        coalesce(sum(sign_flag*(aau.amount_curr)) ,0) as amount,
+        coalesce(sum((aau.amount_curr)) ,0) as amount,
         aau.currency as dashboard_currency,
         COUNT(aau.id) as count
         from ares.account_utilizations aau
@@ -186,7 +186,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT date_trunc('day',aau.transaction_date) as duration,
-            coalesce(sum(sign_flag*(aau.amount_curr)) ,0) as amount,
+            coalesce(sum((aau.amount_curr)) ,0) as amount,
             aau.currency as dashboard_currency,
             COUNT(aau.id) as count
             from ares.account_utilizations aau
@@ -212,7 +212,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT 
         date_trunc('year',aau.transaction_date) as duration,
-        coalesce(sum(sign_flag*(aau.amount_curr)) ,0) as amount,
+        coalesce(sum((aau.amount_curr)) ,0) as amount,
         aau.currency as dashboard_currency,
         count(aau.id) as count
         from ares.account_utilizations aau
@@ -451,7 +451,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT date_trunc('day',aau.transaction_date) as duration,
-            coalesce(sum(sign_flag*(aau.amount_curr)) ,0) as amount,
+            coalesce(sum((aau.amount_curr)) ,0) as amount,
             aau.currency as dashboard_currency,
             COUNT(aau.id) as count
             from ares.account_utilizations aau
@@ -460,7 +460,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE aau.acc_mode = 'AR' 
             AND aau.document_status in (:docStatus) 
-            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '30 day'::interval) 
+            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '29 day'::interval) 
             AND aau.deleted_at is null 
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -477,7 +477,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
             date_trunc('day',lj.created_at) as duration,
-            coalesce(sum((pinv.grand_total)) ,0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.currency as dashboard_currency
             from loki.jobs lj
@@ -485,11 +485,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '30 day'::interval)
+            WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '29 day'::interval)
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'SELLER')
             GROUP BY date_trunc('day',lj.created_at),dashboard_currency
         """

@@ -733,32 +733,45 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val cogoEntityKey = cogoEntityId.toString()
-        val companyTypeKey = companyType?.name ?: "ALL"
-
-        val serviceTypeKey = when (serviceType == null || serviceType == ServiceType.NA) {
-            true -> "ALL"
-            else -> serviceType
+        val monthKeyIndex = when (monthKey < 10) {
+            true -> "0$monthKey"
+            else -> monthKey.toString()
         }
 
-        val searchKey = AresConstants.SALES_FUNNEL_PREFIX + months[monthKey - 1] + AresConstants.KEY_DELIMITER + year + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + serviceTypeKey
+        val startDate = "$year-$monthKeyIndex-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        var openSearchData = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = SalesFunnelResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
+        val convertedDate = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val durationOfMonth = convertedDate.month.length(convertedDate.isLeapYear)
 
-        if (openSearchData == null) {
-            openSearchService.generatingSalesFunnelData(monthKey, year, searchKey, serviceType, cogoEntityId, companyType)
-            openSearchData = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = SalesFunnelResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
+        val endDate =
+            "$year-$monthKeyIndex-$durationOfMonth".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
+        val salesFunnelResponse = SalesFunnelResponse()
+
+        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
+
+        if (data?.size != 0) {
+            salesFunnelResponse.draftInvoicesCount = data?.size
+            salesFunnelResponse.financeAcceptedInvoiceCount = data?.count { it.status?.name != "DRAFT" }
+            salesFunnelResponse.irnGeneratedInvoicesCount =
+                data?.count { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }
+            salesFunnelResponse.settledInvoicesCount = data?.count { it.paymentStatus == "PAID" }
+
+            salesFunnelResponse.draftToFinanceAcceptedPercentage =
+                salesFunnelResponse.financeAcceptedInvoiceCount?.times(100)
+                    ?.div(salesFunnelResponse.draftInvoicesCount!!)
+
+            if (salesFunnelResponse.financeAcceptedInvoiceCount!! != 0) {
+                salesFunnelResponse.financeToIrnPercentage = salesFunnelResponse.irnGeneratedInvoicesCount?.times(100)
+                    ?.div(salesFunnelResponse.financeAcceptedInvoiceCount!!)
+            }
+            if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0) {
+                salesFunnelResponse.settledPercentage = salesFunnelResponse.settledInvoicesCount?.times(100)
+                    ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
+            }
         }
 
-        return openSearchData
+        return salesFunnelResponse
     }
 
     override suspend fun getInvoiceTatStats(req: InvoiceTatStatsRequest): InvoiceTatStatsResponse {
@@ -879,8 +892,8 @@ class DashboardServiceImpl : DashboardService {
             index = AresConstants.SALES_DASHBOARD_INDEX
         )
 
-        if (openSearchData == null) {
-            openSearchService.generateOutstandingData(asOnDate, searchKey, cogoEntityId, defaultersOrgIds)
+        if (openSearchData == null && (asOnDate == AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))) ) {
+            openSearchService.generateOutstandingData( searchKey, cogoEntityId, defaultersOrgIds)
 
             openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
