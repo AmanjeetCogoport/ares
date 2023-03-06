@@ -25,6 +25,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -155,7 +156,12 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     override suspend fun generateQuarterlyOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
-        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, cogoEntityId, companyType?.value)
+        val entityCode = if (cogoEntityId != null) {
+            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        }else {
+            null
+        }
+        val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, entityCode, companyType?.value)
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = "INR"
@@ -166,7 +172,14 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     override suspend fun generateDailySalesOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, date: String, defaultersOrgIds: List<UUID>?, cogoEntityId: UUID?, companyType: CompanyType?) {
         logger().info("Updating Daily Sales Outstanding document")
-        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(date, serviceType, defaultersOrgIds, cogoEntityId, companyType?.value)
+
+        val entityCode = if (cogoEntityId != null) {
+            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        }else {
+            null
+        }
+
+        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(date, serviceType, defaultersOrgIds, entityCode, companyType?.value)
         dailySalesZoneServiceTypeData.map {
             if (it.dashboardCurrency == null) {
                 it.dashboardCurrency = "INR"
@@ -503,7 +516,12 @@ class OpenSearchServiceImpl : OpenSearchService {
     }
 
     override suspend fun generateOutstandingData(date: String?, searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
-        val data = unifiedDBRepo.getOutstandingData(date, cogoEntityId, defaultersOrgIds)
+        val entityCode = if (cogoEntityId != null) {
+            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        }else {
+            null
+        }
+        val data = unifiedDBRepo.getOutstandingData(date, entityCode, defaultersOrgIds)
 
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 

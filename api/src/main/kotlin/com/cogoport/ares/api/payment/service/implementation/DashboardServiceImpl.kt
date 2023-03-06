@@ -101,9 +101,9 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun validatingRoleAndEntityCode(cogoEntityId: UUID?, role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role && cogoEntityId == null) {
-            throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
+    private fun validatingRoleAndEntityCode( role: String?) {
+        if (AresConstants.ROLE_ZONE_HEAD == role ) {
+            throw AresException(AresError.ERR_1003,"")
         }
     }
 
@@ -396,7 +396,7 @@ class DashboardServiceImpl : DashboardService {
         val cogoEntityId = request.cogoEntityId
         val companyType = request.companyType
 
-        validatingRoleAndEntityCode(cogoEntityId, request.role)
+        validatingRoleAndEntityCode( request.role)
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -446,9 +446,10 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
-        validatingRoleAndEntityCode(request.cogoEntityId, request.role)
+        validatingRoleAndEntityCode( request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
+
 
         val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
 
@@ -724,8 +725,6 @@ class DashboardServiceImpl : DashboardService {
         val month = req.month
         val companyType = req.companyType
 
-        if (cogoEntityId == null) throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
-
         val year = AresModelConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
@@ -767,7 +766,7 @@ class DashboardServiceImpl : DashboardService {
         val endDate = req.endDate
         val serviceType = req.serviceType
         val companyType = req.companyType
-        val cogoEntityId = req.cogoEntityId ?: throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
+        val cogoEntityId = req.cogoEntityId
 
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
@@ -868,8 +867,6 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse? {
-//        if (cogoEntityId == null) throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
-
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -900,8 +897,14 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = req.serviceType
         val companyType = req.companyType
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
-        val cogoEntityId = req.cogoEntityId ?: throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
+        val cogoEntityId = req.cogoEntityId
         val dashboardCurrency = req.dashboardCurrency ?: "INR"
+
+        val entityCode = if (cogoEntityId != null){
+            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        }else {
+            null
+        }
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -919,7 +922,7 @@ class DashboardServiceImpl : DashboardService {
                     getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                     defaultersOrgIds,
                     getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                    cogoEntityId,
+                    entityCode,
                     companyType?.value,
                     serviceType
                 )!!
@@ -936,7 +939,7 @@ class DashboardServiceImpl : DashboardService {
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                        cogoEntityId,
+                        entityCode,
                         companyType?.value,
                         serviceType
                     )!!
@@ -951,7 +954,7 @@ class DashboardServiceImpl : DashboardService {
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                        cogoEntityId,
+                        entityCode,
                         companyType?.value,
                         serviceType
                     )!!
@@ -961,27 +964,29 @@ class DashboardServiceImpl : DashboardService {
             }
         }
 
-        val uniqueCurrencyList: List<String> = dailySalesStats.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
+        if (!dailySalesStats.isNullOrEmpty()) {
+            val uniqueCurrencyList: List<String> = dailySalesStats.filter { it.dashboardCurrency != null }.map { it.dashboardCurrency!! }.distinct()
 
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
+            val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, dashboardCurrency)
 
-        dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
-            val dailySalesStats = DailySalesStats(
-                amount = 0.toBigDecimal(),
-                duration = key,
-                dashboardCurrency = dashboardCurrency,
-                count = 0L
-            )
+            dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
+                val dailySalesStats = DailySalesStats(
+                    amount = 0.toBigDecimal(),
+                    duration = key,
+                    dashboardCurrency = dashboardCurrency,
+                    count = 0L
+                )
 
-            value.map { item ->
-                dailySalesStats.amount = dailySalesStats.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
-                dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
-            }
+                value.map { item ->
+                    dailySalesStats.amount = dailySalesStats.amount.plus(item.amount.times(exchangeRate[item.dashboardCurrency]!!))
+                    dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                }
 
-            if (hashMap.keys.contains(documentType.name)) {
-                hashMap[documentType.name]?.add(dailySalesStats)
-            } else {
-                hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                if (hashMap.keys.contains(documentType.name)) {
+                    hashMap[documentType.name]?.add(dailySalesStats)
+                } else {
+                    hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                }
             }
         }
         return hashMap
@@ -1006,7 +1011,11 @@ class DashboardServiceImpl : DashboardService {
         val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
 
-        if (cogoEntityId == null) throw AresException(AresError.ERR_1003, AresConstants.COGO_ENTITY_ID)
+        val entityCode = if (cogoEntityId != null) {
+            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        }else {
+             null
+        }
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -1018,12 +1027,12 @@ class DashboardServiceImpl : DashboardService {
                 getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                 defaultersOrgIds,
                 getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
-                cogoEntityId,
+                entityCode,
                 companyType?.value,
                 serviceType
             )!!
         } else {
-            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, req.cogoEntityId, req.companyType?.value, req.serviceType?.name?.lowercase())!!
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, cogoEntityId, req.companyType?.value, req.serviceType?.name?.lowercase())!!
         }
 
         if (dailySalesStats.size > 0) {
