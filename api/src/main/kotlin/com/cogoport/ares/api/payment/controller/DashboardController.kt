@@ -178,11 +178,6 @@ class DashboardController {
         return dashboardService.getOutstanding(date, cogoEntityId)
     }
 
-    @Get("/ar-dashboard")
-    suspend fun generateArDashboardData() {
-        return pushToClientService.generateArDashboardData()
-    }
-
     @Get("/kam-wise-outstanding")
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
         return dashboardService.getKamWiseOutstanding()
