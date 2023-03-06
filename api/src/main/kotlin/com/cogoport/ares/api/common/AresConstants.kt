@@ -17,7 +17,7 @@ object AresConstants {
     const val INVOICE_OUTSTANDING_INDEX = "index_ares_invoice_outstanding"
     const val ON_ACCOUNT_PAYMENT_INDEX = "index_ares_on_account_payment"
     const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
-    val COGO_ENTITIES = listOf(101, 201, 301, 401)
+    val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val KEY_DELIMITER = "_"
 
