@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -15,6 +16,9 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.brahma.authentication.Auth
+import com.cogoport.brahma.authentication.AuthResponse
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -38,6 +42,8 @@ class OutstandingController {
     @Inject
     lateinit var scheduler: Scheduler
 
+    @Inject
+    lateinit var util: Util
     @Get("/overall{?request*}")
     suspend fun getOutstandingList(@Valid request: OutstandingListRequest): OutstandingList? {
         return Response<OutstandingList?>().ok(outStandingService.getOutstandingList(request))
@@ -47,8 +53,10 @@ class OutstandingController {
         return Response<SupplierOutstandingList?>().ok(outStandingService.getSupplierOutstandingList(request))
     }
 
+    @Auth
     @Get("/by-supplier{?request*}")
-    suspend fun getSupplierDetails(@Valid request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?> {
+    suspend fun getSupplierDetails(@Valid request: SupplierOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<SupplierOutstandingDocument?> {
+        request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
         return Response<ResponseList<SupplierOutstandingDocument?>>().ok(outStandingService.listSupplierDetails(request))
     }
 
