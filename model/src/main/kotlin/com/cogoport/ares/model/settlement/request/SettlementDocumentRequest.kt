@@ -12,7 +12,7 @@ import java.util.UUID
 data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.IMPORTER_EXPORTER_ID) val importerExporterId: UUID? = null,
     @QueryValue(AresModelConstants.SERVICE_PROVIDER_ID) val serviceProviderId: UUID? = null,
-    @QueryValue(AresModelConstants.ENTITY_CODE) val entityCode: Int? = null,
+    @QueryValue(AresModelConstants.ENTITY_CODE) var entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,

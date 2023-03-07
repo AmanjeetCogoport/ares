@@ -118,14 +118,16 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             jvListRequest.page,
             jvListRequest.pageLimit,
             jvListRequest.sortType,
-            jvListRequest.sortBy
+            jvListRequest.sortBy,
+            jvListRequest.entityCode
         )
         val totalRecords =
             journalVoucherRepository.countDocument(
                 jvListRequest.status,
                 jvListRequest.category,
                 jvListRequest.type,
-                jvListRequest.query
+                jvListRequest.query,
+                jvListRequest.entityCode
             )
         val jvList = mutableListOf<JournalVoucherResponse>()
         documentEntity.forEach { doc ->
