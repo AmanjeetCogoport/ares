@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.config
 
+import com.cogoport.ares.api.common.AresConstants.WHITE_LISTED_PATHS
 import com.cogoport.ares.api.common.models.SageConfig
 import com.cogoport.brahma.authentication.Authentication
 import com.cogoport.brahma.opensearch.Client
@@ -92,7 +93,7 @@ class Bootstrap {
                 isAuthDisabled = authConfig.authDisabled!!,
                 serviceDiscoveryClient = serviceDiscoveryClient,
                 microserviceAuthToken = authConfig.microserviceAuthToken!!,
-                whiteListedPaths = null
+                whiteListedPaths = WHITE_LISTED_PATHS
             )
         )
     }
