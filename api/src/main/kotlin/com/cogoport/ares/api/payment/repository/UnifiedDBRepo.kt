@@ -147,7 +147,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = tod.registration_number
             WHERE 
             date_trunc('day', tod.invoice_date) > date_trunc('day', NOW():: date - '7 day'::interval)
-            AND (:entityCode is null or o.cogo_entity = :entityCode::varchar)
+            AND (:entityCode is null or tod.entity_code = :entityCode::varchar)
             AND tod.open_invoice_amount > 0
             AND tod.registration_number is not null
         """

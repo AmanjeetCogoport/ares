@@ -492,6 +492,7 @@ class OpenSearchServiceImpl : OpenSearchService {
                 )
             }
 
+
             val onAccountAmount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultersOrgIds)
             val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(entityCode, defaultersOrgIds)
 

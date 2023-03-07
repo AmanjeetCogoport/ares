@@ -186,20 +186,22 @@ class DashboardServiceImpl : DashboardService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): HashMap<String, OverallAgeingStatsResponse>? {
         val defaultersOrgIds = getDefaultersOrgIds()
-        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType?.value, request.cogoEntityCode)
+        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType?.value, request.cogoEntityId)
 
         val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
+        val hashMap = hashMapOf<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
-            return durationKey.map {
-                OverallAgeingStatsResponse(
+            durationKey.map {
+                hashMap[it] = OverallAgeingStatsResponse(
                     ageingDuration = it,
                     amount = 0.toBigDecimal(),
                     dashboardCurrency = "INR"
                 )
             }
+            return hashMap
         }
 
         val data = mutableListOf<OverallAgeingStatsResponse>()
@@ -241,7 +243,12 @@ class DashboardServiceImpl : DashboardService {
         }
         formattedData = formattedData.sortedBy { it.ageingDuration }.toMutableList()
         formattedData.add(0, formattedData.removeAt(4))
-        return formattedData
+
+        durationKey.map {
+            hashMap[it] = formattedData.filter { item -> item.ageingDuration == it }.first()
+        }
+
+        return hashMap
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
