@@ -92,6 +92,8 @@ class SettlementController {
     @Get("/history{?request*}")
     suspend fun getHistory(@Valid request: SettlementHistoryRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<HistoryDocument?> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        request.sortBy = request.sortBy ?: "transactionDate"
+        request.sortType = request.sortType ?: "Desc"
         return Response<ResponseList<HistoryDocument?>>().ok(settlementService.getHistory(request))
     }
 
