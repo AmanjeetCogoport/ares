@@ -71,7 +71,6 @@ dependencies {
     implementation("org.apache.commons:commons-csv:1.9.0")
     implementation("com.cogoport.brahma.aws:s3:0.1.1")
     implementation("com.cogoport.brahma.excel:engine:0.1.6")
-    implementation("com.cogoport.brahma.authentication:authentication:1.0.5")
     // Import model subproject
     implementation(project(":model"))
 
