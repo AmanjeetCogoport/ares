@@ -908,14 +908,10 @@ class DashboardServiceImpl : DashboardService {
             )
         }
 
-        return if (openSearchData != null) {
-            openSearchData
-        } else {
-            OutstandingOpensearchResponse(
-                    null,
-                    null
-            )
-        }
+        return openSearchData ?: OutstandingOpensearchResponse(
+            null,
+            null
+        )
     }
 
     override suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
