@@ -907,7 +907,15 @@ class DashboardServiceImpl : DashboardService {
                 index = AresConstants.SALES_DASHBOARD_INDEX
             )
         }
-        return openSearchData
+
+        return if (openSearchData != null) {
+            openSearchData
+        } else {
+            OutstandingOpensearchResponse(
+                    null,
+                    null
+            )
+        }
     }
 
     override suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
