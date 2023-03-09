@@ -887,7 +887,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse? {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val cogoEntityKey = cogoEntityId.toString() ?: "ALL"
+        val cogoEntityKey = cogoEntityId ?: "ALL"
         val defaultersOrgIds = getDefaultersOrgIds()
 
         val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + cogoEntityKey
