@@ -191,7 +191,7 @@ class DashboardServiceImpl : DashboardService {
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType?.name?.lowercase(), defaultersOrgIds, request.companyType?.value, request.cogoEntityId)
 
         val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
-        val hashMap = hashMapOf<String, OverallAgeingStatsResponse>()
+        val hashMap = LinkedHashMap<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
             durationKey.map {
