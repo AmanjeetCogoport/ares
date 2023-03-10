@@ -295,6 +295,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
+                if (updateInvoiceRequest.currAmount < accountUtilization.amountCurr && updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) {
+//                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated()
+                }
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())

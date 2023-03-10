@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject
@@ -119,5 +120,10 @@ class AresMessageConsumer {
     @Queue("send-payment-details-for-autoKnockOff", prefetch = 1)
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
+    }
+
+    @Queue("update-settlement-bill-updated", prefetch = 1)
+    fun editSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest) = runBlocking {
+        settlementService.editSettlementWhenBillUpdated(updateSettlementRequest)
     }
 }

@@ -22,6 +22,7 @@ import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 
 interface SettlementService {
 
@@ -58,4 +59,6 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
+
+    suspend fun editSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest): Boolean
 }

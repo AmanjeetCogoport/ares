@@ -64,5 +64,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("send-payment-details-for-autoKnockOff", true, false, false, null)
         channel?.queueBind("send-payment-details-for-autoKnockOff", "ares", "send.payment.details.for.autoKnockOff", null)
+
+        channel?.queueDeclare("update-settlement-bill-updated", true, false, false, null)
+        channel?.queueBind("update-settlement-bill-updated", "ares", "update.settlement.bill.updated", null)
     }
 }

@@ -72,6 +72,7 @@ import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
@@ -2498,5 +2499,9 @@ open class SettlementServiceImpl : SettlementService {
                 isSuccess = true
             )
         )
+    }
+
+    override suspend fun editSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest): Boolean {
+        return false
     }
 }

@@ -6,6 +6,7 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
@@ -38,4 +39,7 @@ interface AresMessagePublisher {
 
     @Binding("sage.jv.migration")
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+
+    @Binding("update.settlement.bill.updated")
+    suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest)
 }
