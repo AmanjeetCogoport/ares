@@ -159,7 +159,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
         SELECT 
-        to_char(date_trunc('month',aau.transaction_date),'Mon') as duration,
+        date_trunc('month',aau.transaction_date) as duration,
         coalesce(sum((aau.amount_curr)) ,0) as amount,
         aau.currency as dashboard_currency,
         COUNT(aau.id) as count
@@ -170,6 +170,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         WHERE aau.acc_mode = 'AR' 
         AND aau.document_status in (:docStatus)  
         AND date_trunc('month', aau.transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) 
+        AND date_trunc('month', aau.transaction_date) < date_trunc('month', :asOnDate:: date + '1 month'::interval)
         AND aau.deleted_at is null 
         AND (:accType is null or  aau.acc_type = :accType)
         AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
@@ -177,6 +178,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (:companyType is null or los.segment = :companyType OR los.id is null)
         AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         GROUP BY date_trunc('month',aau.transaction_date), dashboard_currency
+        ORDER BY duration DESC
         """
     )
     suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
@@ -224,7 +226,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             aau.acc_mode = 'AR' 
             AND 
             aau.document_status in (:docStatus)  
-            AND date_trunc('year', aau.transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval) 
+            AND date_trunc('year', aau.transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+            AND date_trunc('year', aau.transaction_date) < date_trunc('year', :asOnDate:: date + '1 year'::interval)
             AND aau.deleted_at is null 
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
@@ -232,6 +235,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
         GROUP BY date_trunc('year',aau.transaction_date), dashboard_currency
+        ORDER BY duration DESC
         """
     )
     suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
@@ -249,7 +253,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
-            and date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
+            AND date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
