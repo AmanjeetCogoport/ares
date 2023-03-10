@@ -75,7 +75,8 @@ open class ICJVServiceImpl : ICJVService {
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
         validateCreateRequest(request)
 
-        val parentJvNumber = getJvNumber()
+//        val parentJvNumber = getJvNumber()
+        val parentJvNumber = "34re"
         val validityDate = request.list.first().validityDate
 
         val parentData = ParentJournalVoucher(
