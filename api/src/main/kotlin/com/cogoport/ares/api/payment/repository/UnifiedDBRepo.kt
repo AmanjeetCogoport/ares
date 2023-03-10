@@ -194,7 +194,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE aau.acc_mode = 'AR' 
             AND aau.document_status in (:docStatus) 
-            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval) 
+            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
+            AND date_trunc('day', aau.transaction_date) < date_trunc('day', :asOnDate:: date + '1 day'::interval)
             AND aau.deleted_at is null 
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
@@ -202,6 +203,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
             GROUP BY date_trunc('day',aau.transaction_date), dashboard_currency
+            ORDER BY duration DESC
         """
     )
     suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
