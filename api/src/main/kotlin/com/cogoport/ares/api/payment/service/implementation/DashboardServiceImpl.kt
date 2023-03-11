@@ -867,9 +867,9 @@ class DashboardServiceImpl : DashboardService {
         invoiceTatStatsResponse.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
         invoiceTatStatsResponse.settledInvoicesCount = mapOfData["settled"]?.size
 
-        invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(1000)?.div(60)?.div(60)
-        invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(1000)?.div(60)?.div(60)
-        invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled = invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(1000)?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(1000)?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled = invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(1000)?.div(1000)?.div(60)?.div(60)
 
         if (invoiceTatStatsResponse.financeAcceptedInvoiceEventCount != 0) {
             invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(invoiceTatStatsResponse.financeAcceptedInvoiceEventCount!!)
