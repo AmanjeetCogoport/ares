@@ -5,7 +5,9 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -41,5 +43,5 @@ interface AresMessagePublisher {
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 
     @Binding("update.settlement.bill.updated")
-    suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest)
+    suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
 }

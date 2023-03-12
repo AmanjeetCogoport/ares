@@ -34,6 +34,7 @@ import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -461,5 +462,46 @@ open class KnockoffServiceImpl : KnockoffService {
                 performedByUserType = performedByUserType
             )
         )
+    }
+
+    override suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent): Boolean {
+        val settlementDetails = settlementRepository.findByDestIdAndDestType(updateRequest.billId, SettlementType.PINV)
+
+        settlementDetails.forEach { settlement ->
+            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PINV.name, AccMode.AP.name)
+
+            var paymentId = paymentRepository.findByPaymentId(settlement.sourceId).id
+            var paymentInvoiceMappingId = invoicePayMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId)
+
+            // settlement done through utr
+            if (paymentInvoiceMappingId != null){
+                invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingId)
+            }
+
+            if (accUtil?.payCurr!! > 0.toBigDecimal()){
+                accUtil.payCurr = accUtil.payCurr.minus(settlement.amount!!)
+                accUtil.payLoc = accUtil.payLoc.minus(settlement.ledAmount)
+                accountUtilizationRepository.update(accUtil)
+            }
+        }
+
+        val settlementId = settlementDetails.map { it?.id!! }
+        settlementRepository.deleleSettlement(settlementId, updateRequest.updatedBy)
+
+        /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
+        val accountUtilization = accountUtilizationRepository.findById(updateRequest.accUtilId)
+        if (accountUtilization == null) {
+            val accPayResponse = AccountPayableFileResponse(
+                    updateRequest.billId, updateRequest.billNumber, false,
+                    KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
+                    updateRequest.updatedBy
+            )
+            emitPaymentStatus(accPayResponse)
+            return false
+        }
+
+
+
+        return false
     }
 }

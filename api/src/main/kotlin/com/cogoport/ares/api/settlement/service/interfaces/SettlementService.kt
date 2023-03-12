@@ -59,6 +59,4 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
-
-    suspend fun editSettlementWhenBillUpdated(updateSettlementRequest: UpdateSettlementWhenBillUpdatedRequest): Boolean
 }

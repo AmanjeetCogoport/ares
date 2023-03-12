@@ -31,6 +31,7 @@ import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.brahma.opensearch.Client
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -296,7 +297,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             if (accUtilizationRequest.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
                 if (updateInvoiceRequest.currAmount < accountUtilization.amountCurr && updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) {
-//                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated()
+                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy))
                 }
             }
         } catch (e: Exception) {

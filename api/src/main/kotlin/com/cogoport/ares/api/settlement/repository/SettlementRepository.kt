@@ -11,6 +11,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -179,10 +180,10 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id) 
+            UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) 
         """
     )
-    suspend fun deleleSettlement(id: List<Long>)
+    suspend fun deleleSettlement(id: List<Long>, updatedBy: UUID? = null)
 
     @NewSpan
     @Query(
