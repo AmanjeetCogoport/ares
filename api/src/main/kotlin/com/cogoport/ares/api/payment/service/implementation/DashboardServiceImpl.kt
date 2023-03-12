@@ -786,6 +786,7 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = req.serviceType
         val companyType = req.companyType
         val cogoEntityId = req.cogoEntityId
+        var countIrnGeneratedEvent: Int? = 0
 
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
@@ -833,8 +834,12 @@ class DashboardServiceImpl : DashboardService {
                         }
 
                         if (irnGeneratedEventDate != 0L) {
-                            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate))
                             invoiceTatStatsResponse.irnGeneratedInvoiceEventCount = invoiceTatStatsResponse.irnGeneratedInvoiceEventCount?.plus(1)
+                        }
+
+                        if (irnGeneratedEventDate != 0L && financeAcceptedEventDate != 0L && irnGeneratedEventDate >= financeAcceptedEventDate) {
+                            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.plus(irnGeneratedEventDate.minus(financeAcceptedEventDate))
+                            countIrnGeneratedEvent = countIrnGeneratedEvent?.plus(1)
                         } else {}
                     }
                     "settled" -> {
@@ -867,16 +872,16 @@ class DashboardServiceImpl : DashboardService {
         invoiceTatStatsResponse.irnGeneratedInvoicesCount = mapOfData["irn_generated"]?.size
         invoiceTatStatsResponse.settledInvoicesCount = mapOfData["settled"]?.size
 
-        invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(1000)?.div(1000)?.div(60)?.div(60)
-        invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(1000)?.div(1000)?.div(60)?.div(60)
-        invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled = invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(1000)?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(1000)?.div(60)?.div(60)
+        invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled = invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(1000)?.div(60)?.div(60)
 
         if (invoiceTatStatsResponse.financeAcceptedInvoiceEventCount != 0) {
             invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted = invoiceTatStatsResponse.tatHoursFromDraftToFinanceAccepted?.div(invoiceTatStatsResponse.financeAcceptedInvoiceEventCount!!)
         }
 
         if (invoiceTatStatsResponse.irnGeneratedInvoiceEventCount != 0) {
-            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(invoiceTatStatsResponse.irnGeneratedInvoiceEventCount!!)
+            invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated = invoiceTatStatsResponse.tatHoursFromFinanceAcceptedToIrnGenerated?.div(countIrnGeneratedEvent!!)
         }
         if (invoiceTatStatsResponse.settledInvoiceEventCount != 0) {
             invoiceTatStatsResponse.tatHoursFromIrnGeneratedToSettled?.div(invoiceTatStatsResponse.settledInvoiceEventCount!!)
