@@ -46,7 +46,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id,taxable_amount_loc
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_draft = false"""
     )
@@ -56,7 +56,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_settlement_id, is_draft
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_settlement_id, is_draft,taxable_amount_loc
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
     )
@@ -714,11 +714,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             due_date, 
             COALESCE(amount_curr, 0) as document_amount, 
             COALESCE(amount_loc, 0) as document_led_amount, 
-            COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
+            COALESCE(taxable_amount_loc - pay_loc, 0) as document_led_balance,
             COALESCE(taxable_amount, 0) as taxable_amount,  
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
-            COALESCE(amount_curr - pay_curr, 0) as balance_amount,
+            COALESCE(taxable_amount - pay_curr, 0) as balance_amount,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
@@ -734,7 +734,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 CASE WHEN 
                     (p.exchange_rate is not null) 
                     THEN p.exchange_rate 
-                    ELSE ((case when amount_curr != 0 then amount_loc / amount_curr else 1 END)) 
+                    ELSE ((case when taxable_amount != 0 then taxable_amount_loc / taxable_amount else 1 END)) 
                     END,
                  1) AS exchange_rate
             FROM account_utilizations au
@@ -893,7 +893,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
+                    AND (taxable_amount - pay_curr) > 0
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)
@@ -1089,7 +1089,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 tagged_organization_id,
                 is_draft,
                 tagged_settlement_id,
-                migrated
+                migrated,
+                taxable_amount_loc
                 FROM account_utilizations
                 WHERE document_value = :documentValue
                 AND   acc_type = :accType::account_type
@@ -1133,6 +1134,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 tagged_organization_id,
                 is_draft,
                 tagged_settlement_id,
+                taxable_amount_loc,
                 migrated
                 FROM account_utilizations
                 WHERE document_no = :documentNo
@@ -1311,7 +1313,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
            au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
            au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at, au.is_draft, au.tagged_settlement_id
+           au.migrated,au.created_at, au.is_draft, au.tagged_settlement_id, au.taxable_amount_loc
            FROM 
            payments p
            JOIN payment_invoice_mapping pim ON 
@@ -1449,11 +1451,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id, taxable_amount_loc
             from account_utilizations 
             where document_no in (:documentNo) and acc_type::varchar in (:accType) 
             and (:accMode is null or acc_mode=:accMode::account_mode)
-             and account_utilizations.deleted_at is null"""
+             and account_utilizations.deleted_at is null and is_draft = false"""
     )
     suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): List<AccountUtilization>
 

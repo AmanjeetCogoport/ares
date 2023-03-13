@@ -42,5 +42,7 @@ data class UpdateInvoiceRequest(
     var zoneCode: String?,
     var serviceType: ServiceType?,
     var category: String?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    val taxableAmountLoc: BigDecimal?,
+    val isDraft: Boolean?
 )

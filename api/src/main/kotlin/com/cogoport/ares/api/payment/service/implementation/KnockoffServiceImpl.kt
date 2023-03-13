@@ -75,21 +75,12 @@ open class KnockoffServiceImpl : KnockoffService {
     lateinit var auditService: AuditService
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [RabbitClientException::class])
-    override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
+    override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse { // TODO(LED AMOUNT)
 
         /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
         val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo, knockOffRecord.accType.name, AccMode.AP.name)
-        if (accountUtilization == null) {
-            val accPayResponse = AccountPayableFileResponse(
-                knockOffRecord.documentNo, knockOffRecord.documentValue, false,
-                KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
-                knockOffRecord.createdBy
-            )
-            emitPaymentStatus(accPayResponse)
-            return accPayResponse
-        }
-
-        if (paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)) {
+        val isTransRefNumberExists = paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)
+        if (accountUtilization == null || isTransRefNumberExists) {
             val accPayResponse = AccountPayableFileResponse(
                 knockOffRecord.documentNo, knockOffRecord.documentValue, false,
                 KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
@@ -107,13 +98,13 @@ open class KnockoffServiceImpl : KnockoffService {
         )
 
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
-        var currTotalAmtPaid = knockOffRecord.currencyAmount + knockOffRecord.currTdsAmount
-        var ledTotalAmtPaid = knockOffRecord.ledgerAmount + knockOffRecord.ledTdsAmount
+        val currTotalAmtPaid = knockOffRecord.currencyAmount
+        val ledTotalAmtPaid = knockOffRecord.ledgerAmount
 
-        val isOverPaid = isOverPaid(accountUtilization, currTotalAmtPaid, ledTotalAmtPaid)
+        val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
 
         if (isOverPaid) {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.amountCurr - accountUtilization.payCurr, accountUtilization.amountLoc - accountUtilization.payLoc)
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.taxableAmount!! - accountUtilization.payCurr, accountUtilization.taxableAmountLoc!! - accountUtilization.payLoc)
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
         }
@@ -128,16 +119,14 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
 
-        saveSettlements(knockOffRecord, false, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
-        saveSettlements(knockOffRecord, true, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
-
+        saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
         if (isOverPaid) {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.amountCurr - accountUtilization.payCurr,
-                accountUtilization.amountLoc - accountUtilization.payLoc
+                currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.taxableAmount!! - accountUtilization.payCurr,
+                accountUtilization.taxableAmount!! - accountUtilization.payLoc
             )
         } else {
             saveAccountUtilization(
@@ -147,26 +136,15 @@ open class KnockoffServiceImpl : KnockoffService {
         }
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
-        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, isTDSEntry = false)
-
-        /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
-        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
-            paymentEntity.amount = knockOffRecord.currTdsAmount
-            paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
-
-            val savedTDSPaymentRecord = savePayment(
-                paymentEntity, isTDSEntry = true, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
-            )
-            saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true)
-        }
+        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord) // TODO(LED AMOUNT)
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
-        val leftAmount = accountUtilization.amountLoc - (accountUtilization.payLoc + ledTotalAmtPaid)
+        val leftAmount = accountUtilization.taxableAmount!! - (accountUtilization.payLoc + ledTotalAmtPaid)
 
         if (leftAmount <= 1.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 1.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
-        var accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
+        val accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
         try {
             emitPaymentStatus(accPayResponse)
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
@@ -180,7 +158,7 @@ open class KnockoffServiceImpl : KnockoffService {
     }
 
     private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
-        if (accountUtilization.amountCurr < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.amountLoc < accountUtilization.payLoc + ledTotalAmtPaid)
+        if (accountUtilization.taxableAmount!! < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.taxableAmountLoc!! < accountUtilization.payLoc + ledTotalAmtPaid)
             return true
         return false
     }
@@ -222,18 +200,18 @@ open class KnockoffServiceImpl : KnockoffService {
         return paymentObj
     }
 
-    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean) {
+    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile) {
         var invoicePayMap = PaymentInvoiceMapping(
             id = null,
             accountMode = AccMode.AP,
             documentNo = knockOffRecord.documentNo,
             paymentId = paymentId,
-            mappingType = if (!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
+            mappingType = PaymentInvoiceMappingType.BILL.name,
             currency = knockOffRecord.currency,
             ledCurrency = knockOffRecord.ledgerCurrency,
             signFlag = SignSuffix.PAY.sign,
-            amount = if (!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
-            ledAmount = if (!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
+            amount = knockOffRecord.currencyAmount,
+            ledAmount = knockOffRecord.ledgerAmount,
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now())
@@ -275,7 +253,8 @@ open class KnockoffServiceImpl : KnockoffService {
             amountLoc = ledTotalAmtPaid,
             payCurr = utilizedCurrTotalAmtPaid,
             payLoc = utilizedLedTotalAmtPaid,
-            taxableAmount = BigDecimal.ZERO,
+            taxableAmount = knockOffRecord.currencyAmount,
+            taxableAmountLoc = knockOffRecord.ledgerAmount,
             dueDate = accountUtilization.dueDate,
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
@@ -298,14 +277,13 @@ open class KnockoffServiceImpl : KnockoffService {
 
     private suspend fun saveSettlements(
         knockOffRecord: AccountPayablesFile,
-        isTDSEntry: Boolean,
         destinationId: Long?,
         sourceId: Long?,
         isOverPaid: Boolean,
         accountUtilization: AccountUtilization
     ) {
 
-        val settlement = generateSettlementEntity(knockOffRecord, isTDSEntry, destinationId, sourceId, isOverPaid, accountUtilization)
+        val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isOverPaid, accountUtilization)
         val settleObj = settlementRepository.save(settlement)
         auditService.createAudit(
             AuditRequest(
@@ -321,37 +299,32 @@ open class KnockoffServiceImpl : KnockoffService {
 
     private fun generateSettlementEntity(
         knockOffRecord: AccountPayablesFile,
-        isTDSEntry: Boolean,
         destinationId: Long?,
         sourceId: Long?,
         isOverPaid: Boolean,
         accountUtilization: AccountUtilization
     ): Settlement {
-        var ledAmount: BigDecimal
-        var amount: BigDecimal
-        if (isTDSEntry) {
-            ledAmount = knockOffRecord.ledTdsAmount
-            amount = knockOffRecord.currTdsAmount
+        val ledAmount: BigDecimal
+        val amount: BigDecimal
+        if (isOverPaid) {
+            ledAmount = accountUtilization.taxableAmountLoc!! - accountUtilization.payLoc
+            amount = accountUtilization.taxableAmount!! - accountUtilization.payCurr
         } else {
-            if (isOverPaid) {
-                ledAmount = accountUtilization.amountLoc - accountUtilization.payLoc
-                amount = accountUtilization.amountCurr - accountUtilization.payCurr
-            } else {
-                ledAmount = knockOffRecord.ledgerAmount
-                amount = knockOffRecord.currencyAmount
-            }
+            ledAmount = knockOffRecord.ledgerAmount
+            amount = knockOffRecord.currencyAmount
         }
+
         return Settlement(
             id = null,
             sourceId = sourceId,
-            sourceType = if (isTDSEntry) SettlementType.VTDS else SettlementType.PAY,
+            sourceType = SettlementType.PAY,
             destinationId = destinationId!!,
             destinationType = SettlementType.PINV,
             ledCurrency = knockOffRecord.ledgerCurrency,
             ledAmount = ledAmount,
             currency = knockOffRecord.currency,
             amount = amount,
-            signFlag = if (isTDSEntry) -1 else 1,
+            signFlag = 1,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             createdBy = knockOffRecord.createdBy,

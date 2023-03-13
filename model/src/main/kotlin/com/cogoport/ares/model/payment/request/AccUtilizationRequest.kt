@@ -36,6 +36,7 @@ data class AccUtilizationRequest(
     var currencyPayment: BigDecimal?,
     var ledgerPayment: BigDecimal?,
     var taxableAmount: BigDecimal?,
+    var taxableAmountLoc: BigDecimal?,
     var zoneCode: String?,
     var docStatus: DocumentStatus?,
     var docValue: String?,
@@ -47,5 +48,6 @@ data class AccUtilizationRequest(
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var performedBy: UUID? = null,
     var performedByType: String? = null,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var isDraft: Boolean?
 )

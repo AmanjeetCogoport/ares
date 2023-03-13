@@ -7,5 +7,5 @@ import java.math.BigDecimal
 data class DocumentRequest(
     var documentNo: String,
     val exchangeRate: BigDecimal,
-    val transferType: String
+    val transferType: String? = null
 )

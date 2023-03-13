@@ -12,8 +12,6 @@ data class Document(
     var id: Long,
     var sourceId: Long?,
     var sourceType: SettlementType?,
-    var settledTds: BigDecimal,
-    var tdsCurrency: String?,
     var documentNo: Long,
     var organizationId: UUID,
     var mappingId: UUID?,
@@ -26,7 +24,6 @@ data class Document(
     var documentLedAmount: BigDecimal,
     var documentLedBalance: BigDecimal,
     var taxableAmount: BigDecimal,
-    var afterTdsAmount: BigDecimal,
     var settledAmount: BigDecimal,
     var balanceAmount: BigDecimal,
     var currency: String,
@@ -34,6 +31,5 @@ data class Document(
     var exchangeRate: BigDecimal,
     var approved: Boolean?,
     var signFlag: Short,
-    var accMode: AccMode,
-    var tds: BigDecimal = BigDecimal.ZERO
+    var accMode: AccMode
 )

@@ -47,5 +47,6 @@ data class AccountUtilization(
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var migrated: Boolean?,
     var isDraft: Boolean? = false,
-    var taggedSettlementId: String? = null
+    var taggedSettlementId: String? = null,
+    var taxableAmountLoc: BigDecimal? = BigDecimal.ZERO
 )

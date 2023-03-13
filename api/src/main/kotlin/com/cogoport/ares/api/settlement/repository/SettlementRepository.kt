@@ -310,6 +310,7 @@ ORDER BY
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in('PINV', 'PREIMB')
                 AND s.destination_type NOT in('VTDS')
+                and s.source_type NOT in ('VTDS')
                 and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
             ORDER BY
                 s.created_at DESC
@@ -324,7 +325,7 @@ ORDER BY
           SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null and is_draft = false order by created_at desc limit 1
+          deleted_at is null and is_draft = false and source_type not in ('VTDS') order by created_at desc limit 1
         """
     )
     suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): Settlement?
