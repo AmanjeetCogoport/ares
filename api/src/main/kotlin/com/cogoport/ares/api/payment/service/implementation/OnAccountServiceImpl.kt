@@ -273,7 +273,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val payment = paymentConverter.convertToEntity(receivableRequest)
 
         setPaymentEntity(payment)
-
+        payment.paymentDocumentStatus = payment.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
         val savedPayment = paymentRepository.save(payment)
         auditService.createAudit(
             AuditRequest(
