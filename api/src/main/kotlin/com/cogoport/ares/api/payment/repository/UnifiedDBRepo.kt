@@ -169,14 +169,15 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE aau.acc_mode = 'AR' 
         AND aau.document_status in (:docStatus)  
-        AND date_trunc('month', aau.transaction_date) >= date_trunc('month', :asOnDate:: date - '3 month'::interval) 
-        AND date_trunc('month', aau.transaction_date) < date_trunc('month', :asOnDate:: date + '1 month'::interval)
+        AND date_trunc('month', aau.transaction_date) >= date_trunc('month', :asOnDate:: date - '4 months'::interval) 
+        AND date_trunc('month', aau.transaction_date) < date_trunc('month', :asOnDate:: date)
         AND aau.deleted_at is null 
         AND (:accType is null or  aau.acc_type = :accType)
         AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
         AND (:entityCode is null or aau.entity_code = :entityCode)
         AND (:companyType is null or los.segment = :companyType OR los.id is null)
-        AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
+        AND (:serviceType is null or aau.service_type::varchar = :serviceType)
+        AND EXTRACT(year FROM aau.transaction_date) = EXTRACT(year FROM :asOnDate::date)
         GROUP BY date_trunc('month',aau.transaction_date), dashboard_currency
         ORDER BY duration DESC
         """

@@ -921,7 +921,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
         val month = req.month
-        val year = req.year
+        var year = req.year
         val asOnDate = req.asOnDate
         val serviceType = req.serviceType
         val companyType = req.companyType
@@ -943,7 +943,7 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
-        if (year != null) {
+        if (year != null && month == null) {
             val endDate = "$year-12-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateYearlySalesStats(
@@ -959,8 +959,9 @@ class DashboardServiceImpl : DashboardService {
                 unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
             }
         } else {
-            if (month != null) {
-                val endDate = "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(months.indexOf(month) + 1)}-31".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            if ((month != null && year != null) || (month != null && year == null)) {
+                year = year ?: AresConstants.CURR_YEAR
+                val endDate = "${year}-${generateMonthKeyIndex(months.indexOf(month) + 2)}-1".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateMonthlySalesStats(
