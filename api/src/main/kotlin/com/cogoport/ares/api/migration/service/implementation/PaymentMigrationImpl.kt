@@ -46,6 +46,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
@@ -190,7 +191,7 @@ class PaymentMigrationImpl : PaymentMigration {
         return PaymentMigrationModel(
             id = null,
             entityCode = paymentRecord.entityCode!!,
-            orgSerialId = rorOrgDetails.organizationSerialId?.toLong(),
+            orgSerialId = null, // rorOrgDetails.organizationSerialId?.toLong(),
             sageOrganizationId = paymentRecord.sageOrganizationId!!,
             organizationId = UUID.fromString(rorOrgDetails.organizationId),
             organizationName = paymentRecord.organizationName,
@@ -306,7 +307,14 @@ class PaymentMigrationImpl : PaymentMigration {
 
     private suspend fun setPaymentEntry(receivableRequest: PaymentMigrationModel): PaymentMigrationEntity {
         // val tradePartyResponse = getTradePartyInfo(receivableRequest.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(receivableRequest.orgSerialId!!, receivableRequest.tradePartySerialId!!.toLong())
+        val organizationSerialId = cogoClient.getCogoOrganization(
+            CogoOrganizationRequest(
+                organizationSerialId = null,
+                organizationId = receivableRequest.organizationId!!.toString()
+            )
+        ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
+
+        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong())
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -387,9 +395,16 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse): AccountUtilizationMigration {
+        // need to call ROR API for org_serial_id
+        val organizationSerialId = cogoClient.getCogoOrganization(
+            CogoOrganizationRequest(
+                organizationSerialId = null,
+                organizationId = orgDetailsResponse.organizationId
+            )
+        ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
         // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(orgDetailsResponse.organizationSerialId!!.toLong(), orgDetailsResponse.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong())
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -460,7 +475,14 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     private suspend fun getJournalVoucherRequest(journalVoucherRecord: JournalVoucherRecord, response: GetOrgDetailsResponse): JournalVoucherRequest {
-        val serialIdInputs = response.organizationSerialId?.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it.toLong(), it1.toLong()) } }
+        val organizationSerialId = cogoClient.getCogoOrganization(
+            CogoOrganizationRequest(
+                organizationSerialId = null,
+                organizationId = response.organizationId
+            )
+        ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
+
+        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong()) } }
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs!!)
         )
