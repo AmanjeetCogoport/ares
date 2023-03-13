@@ -307,7 +307,14 @@ class PaymentMigrationImpl : PaymentMigration {
 
     private suspend fun setPaymentEntry(receivableRequest: PaymentMigrationModel): PaymentMigrationEntity {
         // val tradePartyResponse = getTradePartyInfo(receivableRequest.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(receivableRequest.orgSerialId!!, receivableRequest.tradePartySerialId!!.toLong())
+        val organizationSerialId = cogoClient.getCogoOrganization(
+            CogoOrganizationRequest(
+                organizationSerialId = null,
+                organizationId = receivableRequest.organizationId!!.toString()
+            )
+        ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
+
+        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong())
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
