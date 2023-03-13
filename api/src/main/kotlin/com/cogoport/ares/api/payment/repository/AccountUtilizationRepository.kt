@@ -470,7 +470,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-        value = """
+        """
         Select
             au.id,
             document_no,
@@ -506,9 +506,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
                 AND (
-                    document_value ilike :query || '%' 
-                    OR au.document_no in (:paymentIds)
-                )
+                    (document_value ilike :query || '%')
+                    OR au.document_no in (:paymentIds))
                 AND (:entityCode is null OR :entityCode = au.entity_code) 
                 AND s.deleted_at is null
                 AND au.deleted_at is null
@@ -536,7 +535,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageSize: Int?,
         startDate: String?,
         endDate: String?,
-        query: String,
+        query: String?,
         paymentIds: List<Long>,
         sortBy: String?,
         sortType: String?,
@@ -559,11 +558,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
             AND (
-                    document_value ilike :query || '%' 
+                    (document_value ilike :query || '%')
                     OR document_no in (:paymentIds)
                 )
             AND s.deleted_at is null
-            AND (:entityCode is null OR :entityCode = au.entity_code)
+            AND (:entityCode is null OR :entityCode = entity_code)
             AND account_utilizations.deleted_at is null
             
         """
@@ -573,7 +572,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accountTypes: List<String>,
         startDate: String?,
         endDate: String?,
-        query: String,
+        query: String?,
         paymentIds: List<Long>,
         entityCode: Int?
     ): Long
@@ -618,6 +617,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:query is null OR document_value ilike :query)
                     AND s.deleted_at is null
                     AND au.deleted_at is null
+                    AND (:entityCode is null OR :entityCode = entity_code)
                 GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset

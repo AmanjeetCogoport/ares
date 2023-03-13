@@ -233,9 +233,12 @@ open class SettlementServiceImpl : SettlementService {
         val accountTypes = stringAccountTypes(request)
 
         var paymentIds: List<Long> = emptyList()
-        if (request.query != "") {
-            paymentIds = settlementRepository.getPaymentIds(query = request.query)
+        if (!request.query.isNullOrEmpty()) {
+            paymentIds = settlementRepository.getPaymentIds(query = request.query!!)
+        } else {
+            request.query = ""
         }
+
         val documents =
             accountUtilizationRepository.getHistoryDocument(
                 request.orgId!!,
@@ -246,8 +249,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 request.query,
                 paymentIds,
-                request.sortBy,
-                request.sortType,
+                request.sortBy!!,
+                request.sortType!!,
                 request.entityCode
             )
 
