@@ -35,6 +35,7 @@ import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -466,12 +467,14 @@ open class KnockoffServiceImpl : KnockoffService {
 
     override suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent): Boolean {
         val settlementDetails = settlementRepository.findByDestIdAndDestType(updateRequest.billId, SettlementType.PINV)
+        val paymentNumList = mutableListOf<Long?>()
 
         settlementDetails.forEach { settlement ->
-            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PINV.name, AccMode.AP.name)
+            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PAY.name, AccMode.AP.name)
 
-            var paymentId = paymentRepository.findByPaymentId(settlement.sourceId).id
+            val paymentId = paymentRepository.findByPaymentNumAndPaymentCode(settlement.sourceId, PaymentCode.PAY)
             var paymentInvoiceMappingId = invoicePayMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId)
+            paymentNumList.add(settlement.sourceId)
 
             // settlement done through utr
             if (paymentInvoiceMappingId != null){
@@ -500,8 +503,9 @@ open class KnockoffServiceImpl : KnockoffService {
             return false
         }
 
-
-
+        paymentNumList.forEach { paymentNum ->
+            aresMessagePublisher.emitSettleForAutoKnockOff(AutoKnockOffRequest(paymentNum.toString(), updateRequest.billId.toString(), AccountType.PAY.name, AccountType.PINV.name, updateRequest.updatedBy!!))
+        }
         return false
     }
 }

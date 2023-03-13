@@ -5,10 +5,9 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
-import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
-import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
@@ -41,6 +40,9 @@ interface AresMessagePublisher {
 
     @Binding("sage.jv.migration")
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+
+    @Binding("send.payment.details.for.autoKnockOff")
+    suspend fun emitSettleForAutoKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
 
     @Binding("update.settlement.bill.updated")
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)

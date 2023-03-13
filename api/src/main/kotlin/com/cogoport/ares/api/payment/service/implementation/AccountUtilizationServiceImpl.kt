@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -29,6 +30,7 @@ import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
@@ -66,6 +68,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     /**
      * @param accUtilizationRequestList
@@ -296,7 +301,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
-                if (updateInvoiceRequest.currAmount < accountUtilization.amountCurr && updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) {
+                val settlementDetails = settlementRepository.findByDestIdAndDestType(updateInvoiceRequest.documentNo, SettlementType.PINV)
+                if ((updateInvoiceRequest.currAmount < accountUtilization.amountCurr) && (updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) && settlementDetails != null) {
                     aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy))
                 }
             }
