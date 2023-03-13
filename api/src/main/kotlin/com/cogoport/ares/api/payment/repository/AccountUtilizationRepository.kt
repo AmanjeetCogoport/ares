@@ -46,7 +46,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_draft = false"""
     )
@@ -56,8 +56,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,
-           is_draft
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_settlement_id, is_draft
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
     )
@@ -84,16 +83,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) between 91 and 180 then '91-180'
              when (now()::date - due_date ) between 181 and 365 then '181-365'
              when (now()::date - due_date ) > 365 then '365+'
-             end, 'Unknown') as ageing_duration,
-             zone_code as zone,
-             currency as dashboard_currency,
-             sum(sign_flag * (amount_curr - pay_curr)) as amount
+             end, 'Unknown') as ageing_duration, zone_code as zone, currency as dashboard_currency, sum(sign_flag * (amount_curr - pay_curr)) as amount
              from account_utilizations
              where ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
              AND (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
              and document_status in ('FINAL', 'PROFORMA')  and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-             group by ageing_duration, zone, dashboard_currency
-             order by 1
+             group by ageing_duration, zone, dashboard_currency order by 1
           """
     )
     suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<AgeingBucketZone>
@@ -127,8 +122,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
-        currency as dashboard_currency, 
-        null as id
+        currency as dashboard_currency, null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1094,6 +1088,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 trade_party_mapping_id,
                 tagged_organization_id,
                 is_draft,
+                tagged_settlement_id,
                 migrated
                 FROM account_utilizations
                 WHERE document_value = :documentValue
@@ -1137,6 +1132,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 trade_party_mapping_id,
                 tagged_organization_id,
                 is_draft,
+                tagged_settlement_id,
                 migrated
                 FROM account_utilizations
                 WHERE document_no = :documentNo
@@ -1315,7 +1311,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
            au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
            au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at, au.is_draft   
+           au.migrated,au.created_at, au.is_draft, au.tagged_settlement_id
            FROM 
            payments p
            JOIN payment_invoice_mapping pim ON 
@@ -1421,15 +1417,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """ 
          SELECT COUNT(*) FROM
-        (SELECT organization_id::VARCHAR,
-        document_value as document_number ,
-        document_status AS document_type,
-        service_type,
-        amount_loc AS invoice_amount,
-        sign_flag*(amount_loc - pay_loc) as outstanding_amount
+        (SELECT organization_id::VARCHAR,document_value as document_number , document_status AS document_type, service_type, amount_loc AS invoice_amount, sign_flag*(amount_loc - pay_loc) as outstanding_amount
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL) as output
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL AND deleted_at IS NULL) as output
         """
     )
     suspend fun getInvoicesCountForTradeParty(
@@ -1459,7 +1449,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id
             from account_utilizations 
             where document_no in (:documentNo) and acc_type::varchar in (:accType) 
             and (:accMode is null or acc_mode=:accMode::account_mode)

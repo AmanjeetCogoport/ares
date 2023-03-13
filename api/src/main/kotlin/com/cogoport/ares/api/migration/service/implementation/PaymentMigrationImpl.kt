@@ -51,7 +51,6 @@ import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -427,7 +426,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
-            migrated = true
+            migrated = true,
+            taggedSettlementId = null
         )
     }
 
@@ -606,8 +606,7 @@ class PaymentMigrationImpl : PaymentMigration {
             createdBy = MigrationConstants.createdUpdatedBy,
             createdAt = settlementRecord.createdAt,
             updatedBy = MigrationConstants.createdUpdatedBy,
-            updatedAt = settlementRecord.updatedAt,
-            taggedSettlementId = ObjectMapper().writeValueAsString(mutableListOf<Long?>())
+            updatedAt = settlementRecord.updatedAt
         )
     }
     private fun getSignFlag(sourceType: String): Short {

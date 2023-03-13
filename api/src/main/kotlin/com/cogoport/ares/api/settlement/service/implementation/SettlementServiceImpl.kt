@@ -2059,9 +2059,7 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy,
                 Timestamp.from(Instant.now()),
                 supportingDocUrl,
-                false,
-                BigDecimal.ZERO,
-                null
+                false
             )
         val settleDoc = settlementRepository.save(settledDoc)
 

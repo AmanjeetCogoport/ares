@@ -45,6 +45,6 @@ data class AccountUtilizationMigration(
     var createdAt: Timestamp?,
     var updatedAt: Timestamp?,
     var migrated: Boolean?,
-    var isDraft: Boolean? = false
-
+    var isDraft: Boolean? = false,
+    var taggedSettlementId: String? = null
 )

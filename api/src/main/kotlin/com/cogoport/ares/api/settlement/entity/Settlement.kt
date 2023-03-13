@@ -28,7 +28,5 @@ data class Settlement(
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
     var supportingDocUrl: String? = null,
-    var isDraft: Boolean? = false,
-    var unUtilizedAmount: BigDecimal = BigDecimal.ZERO,
-    var taggedSettlementId: String? = null
+    var isDraft: Boolean? = false
 )

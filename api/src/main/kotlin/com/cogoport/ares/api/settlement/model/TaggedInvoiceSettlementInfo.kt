@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.model
 
 import com.cogoport.ares.model.settlement.SettlementType
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.TypeDef
@@ -22,8 +21,5 @@ data class TaggedInvoiceSettlementInfo(
     val transRefNumber: String?,
     val settlementDate: Timestamp?,
     @field: TypeDef(type = DataType.JSON)
-    @JsonProperty("tagged_settlement_id")
-    var taggedSettlementId: String?,
-    val unUtilizedAmount: BigDecimal,
     val isDraft: Boolean
 )

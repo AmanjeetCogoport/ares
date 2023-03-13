@@ -8,11 +8,7 @@ import java.math.BigDecimal
 data class AutoKnockoffDocumentResponse(
     var accountUtilization: AccountUtilization? = null,
     var settlementId: Long? = null,
-    var paidTds: BigDecimal? = null,
-    var payableTds: BigDecimal? = null,
     var exchangeRate: BigDecimal = BigDecimal.ONE,
     var amount: BigDecimal = BigDecimal.ZERO,
-    var tdsAmount: BigDecimal = BigDecimal.ZERO,
-    var tdsSettlementId: Long? = null,
     var taggedSettledIds: List<Long>? = null
 )

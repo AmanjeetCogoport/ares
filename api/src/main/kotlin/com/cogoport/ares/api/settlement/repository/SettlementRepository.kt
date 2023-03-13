@@ -11,7 +11,6 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
-import java.math.BigDecimal
 import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -24,7 +23,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     suspend fun findByIdIn(ids: List<Long>): List<Settlement>
 
     @NewSpan
-    suspend fun updateAll(entities: Iterable<Settlement>): List<Settlement>
+    suspend fun findByIdInOrderByAmountDesc(ids: List<Long>?): List<Settlement>?
 
     @NewSpan
     @Query(
@@ -45,8 +44,6 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.un_utilized_amount,
-            s.tagged_settlement_id,
             s.is_draft,
             s.supporting_doc_url
             FROM settlements s
@@ -74,6 +71,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
+            s.is_draft,
             s.supporting_doc_url
             FROM settlements s
             where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_draft = false
@@ -302,8 +300,8 @@ ORDER BY
     @Query(
         """
             SELECT
-               s.id as settlement_id, p.trans_ref_number,  source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, un_utilized_amount, tagged_settlement_id, s.is_draft
+               s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
+                s.settlement_date::TIMESTAMP, s.is_draft
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
@@ -323,40 +321,19 @@ ORDER BY
     @NewSpan
     @Query(
         """
-          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount, un_utilized_amount, tagged_settlement_id,
+          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null and is_draft = false order by created_at desc limit 2
+          deleted_at is null and is_draft = false order by created_at desc limit 1
         """
     )
-    suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): MutableList<Settlement>
+    suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): Settlement?
 
     @NewSpan
     @Query(
         """
-            UPDATE settlements set tagged_settlement_id = :taggedSettlementIds WHERE id in (:ids)
+            UPDATE settlements set is_draft = :isDraft WHERE id = :id
         """
     )
-    suspend fun updateTaggedSettlementIds(ids: List<Long>, taggedSettlementIds: String)
-
-    @NewSpan
-    @Query(
-        """
-            UPDATE settlements set un_utilized_amount = un_utilized_amount - :unUtilisedAmount WHERE id = :id
-        """
-    )
-    suspend fun updateTaggedSettlement(id: Long, unUtilisedAmount: BigDecimal)
-
-    @NewSpan
-    @Query(
-        """
-            SELECT 
-            s.id, s.source_id, s.source_type, s.destination_id, s.destination_type,  s.currency, s.amount,
-            s.led_currency, s.led_amount, s.sign_flag, s.settlement_date, s.created_at,  s.created_by,
-            s.updated_at, s.updated_by, s.supporting_doc_url, is_draft,  un_utilized_amount,  tagged_settlement_id
-            FROM settlements s
-            where source_id = :sourceId and destination_id = :destinationId and deleted_at is null and source_type::varchar in (:sourceType)
-        """
-    )
-    suspend fun findSettlement(sourceId: Long, destinationId: Long, sourceType: SettlementType): Settlement?
+    suspend fun updateDraftStatus(id: Long, isDraft: Boolean)
 }

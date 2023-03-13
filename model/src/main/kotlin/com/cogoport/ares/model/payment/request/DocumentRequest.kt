@@ -4,9 +4,8 @@ import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 
 @Introspected
-data class DocumentTdsRequest(
+data class DocumentRequest(
     var documentNo: String,
-    val paidTds: BigDecimal,
-    val payableTds: BigDecimal,
-    val exchangeRate: BigDecimal
+    val exchangeRate: BigDecimal,
+    val transferType: String
 )
