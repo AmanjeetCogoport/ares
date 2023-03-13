@@ -18,7 +18,6 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.math.BigDecimal
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -171,8 +170,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE aau.acc_mode = 'AR' 
         AND aau.document_status in (:docStatus)  
-        AND  aau.transaction_date > :quaterStart::DATE
-        AND aau.transaction_date < :quaterEnd::DATE
+        AND  aau.transaction_date > :quarterStart::DATE
+        AND aau.transaction_date < :quarterEnd::DATE
         AND aau.deleted_at is null 
         AND (:accType is null or  aau.acc_type = :accType)
         AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
@@ -183,7 +182,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         ORDER BY duration DESC
         """
     )
-    suspend fun generateMonthlySalesStats(quaterStart: LocalDateTime, quaterEnd: LocalDateTime,  accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(quarterStart: LocalDateTime, quarterEnd: LocalDateTime, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(

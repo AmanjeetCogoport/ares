@@ -967,8 +967,8 @@ class DashboardServiceImpl : DashboardService {
 
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateMonthlySalesStats(
-                            quarterStart,
-                            quarterEnd,
+                        quarterStart,
+                        quarterEnd,
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
