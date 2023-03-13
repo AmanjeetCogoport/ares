@@ -920,7 +920,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
-        val month = req.month
+        var month = req.month
         var year = req.year
         val asOnDate = req.asOnDate
         val serviceType = req.serviceType
@@ -961,11 +961,14 @@ class DashboardServiceImpl : DashboardService {
         } else {
             if ((month != null && year != null) || (month != null && year == null)) {
                 year = year ?: AresConstants.CURR_YEAR
-                val endDate = "$year-${generateMonthKeyIndex(months.indexOf(month) + 2)}-1".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                val monthInt = generateMonthKeyIndex(months.indexOf(month) + 1)
+                val quarterStart = YearMonth.of(year, monthInt.toInt()).minusMonths(3).atDay(1).atStartOfDay()
+                val quarterEnd = YearMonth.of(year, monthInt.toInt()).plusMonths(1).atDay(1).atStartOfDay()
 
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateMonthlySalesStats(
-                        endDate,
+                            quarterStart,
+                            quarterEnd,
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
@@ -974,7 +977,7 @@ class DashboardServiceImpl : DashboardService {
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterEnd, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             } else {
                 val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${generateMonthKeyIndex(AresConstants.CURR_DATE.toLocalDateTime().dayOfMonth)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))

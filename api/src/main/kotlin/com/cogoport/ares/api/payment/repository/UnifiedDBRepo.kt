@@ -18,6 +18,8 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
@@ -169,20 +171,19 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE aau.acc_mode = 'AR' 
         AND aau.document_status in (:docStatus)  
-        AND date_trunc('month', aau.transaction_date) >= date_trunc('month', :asOnDate:: date - '4 months'::interval) 
-        AND date_trunc('month', aau.transaction_date) < date_trunc('month', :asOnDate:: date)
+        AND  aau.transaction_date > :quaterStart::DATE
+        AND aau.transaction_date < :quaterEnd::DATE
         AND aau.deleted_at is null 
         AND (:accType is null or  aau.acc_type = :accType)
         AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
         AND (:entityCode is null or aau.entity_code = :entityCode)
         AND (:companyType is null or los.segment = :companyType OR los.id is null)
         AND (:serviceType is null or aau.service_type::varchar = :serviceType)
-        AND EXTRACT(year FROM aau.transaction_date) = EXTRACT(year FROM :asOnDate::date)
         GROUP BY date_trunc('month',aau.transaction_date), dashboard_currency
         ORDER BY duration DESC
         """
     )
-    suspend fun generateMonthlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(quaterStart: LocalDateTime, quaterEnd: LocalDateTime,  accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -289,7 +290,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             GROUP BY date_trunc('month',lj.created_at),dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: LocalDateTime?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(

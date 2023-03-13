@@ -43,7 +43,7 @@ services:
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
-    authDisabled: ${AUTH_DISABLED:true}
+    authDisabled: ${AUTH_DISABLED:false}
     microserviceAuthToken: ${MS_AUTH_TOKEN:c3ad6b5c-a100-46e3-8728-8e2bf83f7de0}
 
 jackson:
