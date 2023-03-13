@@ -961,7 +961,7 @@ class DashboardServiceImpl : DashboardService {
         } else {
             if ((month != null && year != null) || (month != null && year == null)) {
                 year = year ?: AresConstants.CURR_YEAR
-                val endDate = "${year}-${generateMonthKeyIndex(months.indexOf(month) + 2)}-1".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                val endDate = "$year-${generateMonthKeyIndex(months.indexOf(month) + 2)}-1".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateMonthlySalesStats(
