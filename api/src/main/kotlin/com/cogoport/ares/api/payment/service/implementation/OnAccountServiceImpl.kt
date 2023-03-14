@@ -1191,7 +1191,11 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
             openSearchPaymentModel.updatedBy = performedBy.toString()
-            openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)!!.userName
+            if (uploadedByName?.size != 0) {
+                openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)?.userName
+            } else {
+                ""
+            }
             openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
