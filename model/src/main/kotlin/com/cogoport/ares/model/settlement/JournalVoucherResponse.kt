@@ -1,4 +1,5 @@
 package com.cogoport.ares.model.settlement
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.micronaut.core.annotation.Introspected
@@ -28,5 +29,6 @@ data class JournalVoucherResponse(
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
     var description: String?,
+    var accMode: AccMode?,
     var parentJvId: String? = null,
 )

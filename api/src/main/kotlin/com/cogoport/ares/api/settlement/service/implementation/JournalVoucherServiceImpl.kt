@@ -15,6 +15,7 @@ import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
+import com.cogoport.ares.api.settlement.repository.JournalVoucherParentRepo
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
@@ -49,6 +50,7 @@ import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
@@ -72,6 +74,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var journalVoucherConverter: JournalVoucherMapper
+
+    @Inject
+    lateinit var journalVoucherParentRepo: JournalVoucherParentRepo
 
     @Inject
     lateinit var journalVoucherRepository: JournalVoucherRepository
@@ -108,8 +113,41 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      * @param: jvListRequest
      * @return: ResponseList
      */
-    override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
+    override suspend fun getJournalVouchersWrapper(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
+        return when(jvListRequest.category) {
+            JVCategory.ICJV, JVCategory.ICJVBT, JVCategory.ICJVC -> getICJV(jvListRequest)
+            else -> getJournalVouchers(jvListRequest)
+        }
+    }
+    private suspend fun getICJV(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
+        val documentEntity = journalVoucherParentRepo.getListVouchers(
+            jvListRequest.status,
+            jvListRequest.category,
+            jvListRequest.query,
+            jvListRequest.page,
+            jvListRequest.pageLimit,
+            jvListRequest.sortType,
+            jvListRequest.sortBy
+        )
+        val totalRecords =
+            journalVoucherParentRepo.countDocument(
+                jvListRequest.status,
+                jvListRequest.category,
+                jvListRequest.query
+            )
+
+        val jvList = journalVoucherConverter.convertParentJVModelToJournalVoucherResponse(documentEntity)
+        return ResponseList(
+            list = jvList,
+            totalPages = Utilities.getTotalPages(totalRecords, jvListRequest.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = jvListRequest.page
+        )
+    }
+
+
+    private suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getListVouchers(
             jvListRequest.status,
             jvListRequest.category,
@@ -129,11 +167,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 jvListRequest.query,
                 jvListRequest.entityCode
             )
-        val jvList = mutableListOf<JournalVoucherResponse>()
-        documentEntity.forEach { doc ->
-            jvList.add(journalVoucherConverter.convertToModelResponse((doc)))
-        }
-
+        val jvList = journalVoucherConverter.convertToModelResponse(documentEntity)
         return ResponseList(
             list = jvList,
             totalPages = Utilities.getTotalPages(totalRecords, jvListRequest.pageLimit),
@@ -257,7 +291,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
+    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode?, signFlag: Short): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -269,7 +303,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             tradePartyMappingId = null,
             organizationName = request.tradePartyName,
             accType = AccountType.valueOf(request.category.toString()),
-            accMode = accMode,
+            accMode = accMode!!,
             signFlag = signFlag,
             currency = request.currency!!,
             ledCurrency = request.ledCurrency,
@@ -352,7 +386,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                     id = request.tradePartyId,
                     businessName = request.tradePartyName,
                     tradePartyType = null,
-                    tradePartyName = null
+                    tradePartyName = null,
+                    category_types = null
                 ),
                 journalVoucherRequest = data,
                 tdsRequest = null,
@@ -364,6 +399,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             type = IncidentType.JOURNAL_VOUCHER_APPROVAL,
             description = "Journal Voucher Approval",
             data = incidentData,
+            source = Source.SETTLEMENT,
+            entityId = UUID.fromString(AresConstants.ENTITY_ID.get(request.entityCode)),
             createdBy = request.createdBy!!
         )
         hadesClient.createIncident(clientRequest)
@@ -375,7 +412,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      * @param: type
      * @return: Short
      */
-    private fun getSignFlag(accMode: AccMode, type: String): Short {
+    private fun getSignFlag(accMode: AccMode?, type: String): Short {
         return when (type) {
             "CREDIT" -> { -1 }
             "DEBIT" -> { 1 }

@@ -14,7 +14,7 @@ import java.util.UUID
 
 interface JournalVoucherService {
 
-    suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse>
+    suspend fun getJournalVouchersWrapper(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse>
 
     suspend fun createJournalVoucher(request: JournalVoucherRequest): String
 
@@ -25,5 +25,5 @@ interface JournalVoucherService {
     suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?)
     suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean
     suspend fun createJV(jv: JournalVoucher): JournalVoucher
-    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization
+    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode?, signFlag: Short): AccountUtilization
 }

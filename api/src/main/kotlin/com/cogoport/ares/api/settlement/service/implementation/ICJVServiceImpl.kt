@@ -18,22 +18,22 @@ import com.cogoport.ares.api.settlement.service.interfaces.ICJVService
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
+import com.cogoport.ares.model.settlement.request.ICJVRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
-import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
+import com.cogoport.ares.model.settlement.request.ParentICJVRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.enums.IncidentStatus
 import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
-import com.cogoport.hades.model.incident.response.InterCompanyJournalVoucher
+import com.cogoport.hades.model.incident.response.ICJVEntry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Date
@@ -41,7 +41,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import javax.transaction.Transactional
 
 @Singleton
@@ -72,52 +72,44 @@ open class ICJVServiceImpl : ICJVService {
     lateinit var auditService: AuditService
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
+    override suspend fun createICJV(request: ParentICJVRequest): String {
         validateCreateRequest(request)
 
 //        val parentJvNumber = getJvNumber()
-        val parentJvNumber = "34re"
-        val validityDate = request.list.first().validityDate
-
-        val parentData = ParentJournalVoucher(
-            id = null,
-            status = JVStatus.PENDING,
-            category = JVCategory.ICJV,
-            validityDate = validityDate,
-            jvNum = parentJvNumber,
-            createdBy = request.createdBy,
-            updatedBy = request.createdBy
-        )
+        val parentJvNumber = "JV/2223/10"
+        request.jvNum = parentJvNumber
+        request.status = JVStatus.PENDING
+        val parentData = journalVoucherConverter.convertParentICJVRequestToParentJV(request)
         val parentJvData = journalVoucherParentRepo.save(parentData)
-        val incidentModelData = mutableListOf<com.cogoport.hades.model.incident.JournalVoucher>()
+
+        val incidentModelData = mutableListOf<ICJVEntry>()
 
         request.list.mapIndexed { index, it ->
             it.jvNum = parentJvNumber + "/L${index + 1}"
             it.parentJvId = parentJvData.id.toString()
             it.status = JVStatus.PENDING
-            it.category = JVCategory.ICJV
+            it.category = request.category
 
-            if (it.entityId == null) {
-                val data = railsClient.getCogoEntity(it.entityCode.toString())
-                if (data.list.isNotEmpty()) {
-                    it.entityId = UUID.fromString(data.list[0]["id"].toString())
-                }
-            }
-
-            if (it.tradePartyName == null) {
-                val data = railsClient.getListOrganizationTradePartyDetails(it.tradePartyId)
-                if (data.list.isNotEmpty()) {
-                    it.tradePartyName = data.list[0]["legal_business_name"].toString()
-                }
-            }
-
-            val jv = convertToJournalVoucherEntity(it)
+//            if (it.entityId == null) {
+//                val data = railsClient.getCogoEntity(it.entityCode.toString())
+//                if (data.list.isNotEmpty()) {
+//                    it.entityId = UUID.fromString(data.list[0]["id"].toString())
+//                }
+//            }
+//
+//            if (it.tradePartyName == null) {
+//                val data = railsClient.getListOrganizationTradePartyDetails(it.tradePartyId)
+//                if (data.list.isNotEmpty()) {
+//                    it.tradePartyName = data.list[0]["legal_business_name"].toString()
+//                }
+//            }
+            it.tradePartyName = "Shayan"
+            it.entityId = UUID.fromString("6ac9148e-d626-4a3c-a3e3-53025f1fc253")
+            val jv = convertToJournalVoucherEntity(request,it)
             val jvEntity = journalVoucherService.createJV(jv)
 
-            it.id = Hashids.encode(jvEntity.id!!)
-            val formattedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it.validityDate)
-            val incidentRequestModel = journalVoucherConverter.convertToIncidentModel(it)
-            incidentRequestModel.validityDate = Date.valueOf(formattedDate)
+            val incidentRequestModel = journalVoucherConverter.convertJournalVoucherModelToICJVEntry(jvEntity)
+            incidentRequestModel.id = Hashids.encode(jvEntity.id!!)
             incidentModelData.add(incidentRequestModel)
         }
 
@@ -162,14 +154,10 @@ open class ICJVServiceImpl : ICJVService {
 
     override suspend fun getJournalVoucherByParentJVId(parentId: String): List<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getJournalVoucherByParentJVId(Hashids.decode(parentId)[0])
-
-        val jvList = mutableListOf<JournalVoucherResponse>()
-        documentEntity.forEach { doc ->
-            jvList.add(journalVoucherConverter.convertToModelResponse((doc)))
-        }
+        val jvList =  journalVoucherConverter.convertToModelResponse(documentEntity)
         return jvList
     }
-    private fun validateCreateRequest(request: ParentJournalVoucherRequest) {
+    private fun validateCreateRequest(request: ParentICJVRequest) {
         if (request.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
     }
 
@@ -178,11 +166,18 @@ open class ICJVServiceImpl : ICJVService {
             SequenceSuffix.JV.prefix
         )
 
-    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest): JournalVoucher {
-        val jv = journalVoucherConverter.convertRequestToEntity(request)
+    private fun convertToJournalVoucherEntity(parentICJV: ParentICJVRequest, request: ICJVRequest): JournalVoucher {
+        val jv = journalVoucherConverter.convertICJVRequestToJournalVoucher(request)
         jv.status = JVStatus.PENDING
-        jv.createdAt = Timestamp.from(Instant.now())
-        jv.updatedAt = Timestamp.from(Instant.now())
+        jv.currency = parentICJV.currency
+        jv.amount = parentICJV.amount
+        jv.accMode = parentICJV.accMode!!  // need to make acc mode nullable in JV
+        jv.validityDate = parentICJV.validityDate
+        jv.ledCurrency = parentICJV.ledCurrency
+        jv.exchangeRate = parentICJV.exchangeRate
+        jv.createdBy = parentICJV.createdBy
+        jv.updatedBy = parentICJV.createdBy
+        jv.description = parentICJV.description
         jv.type = request.type.lowercase()
         return jv
     }
@@ -199,29 +194,13 @@ open class ICJVServiceImpl : ICJVService {
 
     private suspend fun sendToIncidentManagement(
         parentJvData: ParentJournalVoucher,
-        data: MutableList<com.cogoport.hades.model.incident.JournalVoucher>
+        data: MutableList<ICJVEntry>
     ) {
-        var totalDebit = 0.toBigDecimal()
-        var totalCredit = 0.toBigDecimal()
-
-        data.map { it ->
-            if (it.type == "debit") {
-                totalDebit += it.amount
-            } else {
-                totalCredit += it.amount
-            }
-        }
-        val interCompanyJournalVoucherRequest = InterCompanyJournalVoucher(
-            status = parentJvData.status.toString(),
-            category = parentJvData.category.toString(),
-            createdBy = parentJvData.createdBy!!,
-            totalDebit = totalDebit,
-            totalCredit = totalCredit,
-            id = parentJvData.id.toString(),
-            jvNum = parentJvData.jvNum!!,
-            list = data
-        )
-
+        val interCompanyJournalVoucherRequest = journalVoucherConverter.convertParentJVToICJVApproval(parentJvData)
+        interCompanyJournalVoucherRequest.id = Hashids.encode(parentJvData.id!!)
+        val formattedDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(interCompanyJournalVoucherRequest.validityDate)
+        interCompanyJournalVoucherRequest.validityDate = Date.valueOf(formattedDate)
+        interCompanyJournalVoucherRequest.list = data
         val incidentData =
             IncidentData(
                 organization = null,
@@ -237,6 +216,8 @@ open class ICJVServiceImpl : ICJVService {
             type = IncidentType.INTER_COMPANY_JOURNAL_VOUCHER_APPROVAL,
             description = "Inter Company Journal Voucher Approval",
             data = incidentData,
+            source = Source.SETTLEMENT,
+            entityId = null,
             createdBy = parentJvData.createdBy!!
         )
         hadesClient.createIncident(clientRequest)
@@ -245,6 +226,7 @@ open class ICJVServiceImpl : ICJVService {
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun updateICJV(request: ICJVUpdateRequest): String {
         val parentJvId = request.parentJvId!!.toLong()
+        val jvCategories = listOf(JVCategory.ICJVBT, JVCategory.ICJVC)
         // Update Journal Voucher
         val parentJvData = journalVoucherParentRepo.findById(parentJvId) ?: throw AresException(AresError.ERR_1519, "")
 
@@ -261,7 +243,6 @@ open class ICJVServiceImpl : ICJVService {
             it.status = request.status
             it.updatedAt = Timestamp.from(Instant.now())
             it.updatedBy = request.performedBy
-            it.description = request.remark
             journalVoucherRepository.update(it)
 
             auditService.createAudit(
@@ -276,9 +257,11 @@ open class ICJVServiceImpl : ICJVService {
             )
 
             // Insert JV in account_utilizations
-            val accMode = AccMode.valueOf(it.accMode.name)
+            val accMode = it.accMode
             val signFlag = getSignFlag(it.type!!)
-            val accUtilEntity = journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+            if (!jvCategories.contains(parentJvData.category)) {
+                journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+            }
         }
         // Update Incident status on incident management
 
