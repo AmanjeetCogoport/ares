@@ -19,7 +19,6 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             pay_loc 
             FROM account_utilizations 
             WHERE document_value = :documentValue
-            AND amount_loc = :amountLedger
             AND acc_mode = :accMode::account_mode
         """
     )
@@ -38,8 +37,6 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             WHERE 
             document_value = :documentValue
             AND
-            amount_loc = :amountLedger
-            AND
             acc_mode = :accMode::account_mode
          """
     )
@@ -57,8 +54,6 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             select acc_type,document_no from account_utilizations 
             WHERE 
             document_value = :documentValue
-            AND
-            amount_loc = :amountLedger
             AND
             acc_mode = :accMode::account_mode
         """
