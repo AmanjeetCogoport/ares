@@ -109,10 +109,11 @@ class SageServiceImpl : SageService {
             (
             select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
             ,MAX(SNS_0) as sign_flag
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV') GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC') 
+            GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
-            where G.SAC_0 in('AR','SC') and G.TYP_0 in('BANK','CONTR','INTER','MTC','MTCCV')
+            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC')
             """
         if (startDate == null && endDate == null) {
             sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
@@ -265,7 +266,12 @@ class SageServiceImpl : SageService {
         return payments.recordSets!![0]
     }
 
-    override suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails> {
+    override suspend fun getInvoicesPayLocDetails(
+        startDate: String?,
+        endDate: String?,
+        updatedAt: String?,
+        invoiceNumbers: String?
+    ): ArrayList<InvoiceDetails> {
         var sqlQuery = """
                 select case when si.GTE_0 in('ZSINV','ZSDN','ZDN') then 'INVOICE' else 'CREDIT_NOTE' end  as invoiceType
                 ,si.AMTATIL_0 as ledger_total
@@ -277,10 +283,13 @@ class SageServiceImpl : SageService {
                 ,si.CREDATTIM_0 as created_at
                 ,si.UPDDATTIM_0 as updated_at
                 ,acc.UPDDATTIM_0  as utilization_updated_at
+                ,si.BPRSAC_0 as acc_mode
                 from COGO2.SINVOICE si with (NOLOCK)
                 INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
         """.trimIndent()
-        sqlQuery += if (updatedAt == null) {
+        sqlQuery += if (invoiceNumbers != null) {
+            """ where si.NUM_0 in $invoiceNumbers"""
+        } else if (updatedAt == null) {
             """ where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0 desc """
         } else {
             """ where cast(acc.UPDDATTIM_0 as date) = '$updatedAt' """
@@ -302,6 +311,7 @@ class SageServiceImpl : SageService {
                             ,si.CREDATTIM_0 as createdAt
                             ,si.UPDDATTIM_0 as updatedAt
                             ,acc.UPDDATTIM_0  as utilization_updated_at
+                            ,case when si.BPRSAC_0 = 'SC' then 'AP' else si.BPRSAC_0 end as acc_mdoe
                             from COGO2.PINVOICE si with (NOLOCK)
                             INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
         """.trimIndent()
