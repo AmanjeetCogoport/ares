@@ -1204,8 +1204,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val paymentOnSage = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
             val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
-            val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery).get("recordset") as ArrayList<*>
-            if (records.size != 0) {
+            val responseMap = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery)
+            val records = responseMap["recordset"] as? ArrayList<*>
+            if (records?.size != 0) {
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
