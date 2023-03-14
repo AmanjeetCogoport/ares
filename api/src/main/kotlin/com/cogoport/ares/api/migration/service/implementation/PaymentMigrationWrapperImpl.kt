@@ -123,8 +123,23 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return paymentRecords.size
     }
 
-    override suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?, updatedAt: String?): Int {
-        val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate, endDate, updatedAt)
+    override suspend fun updateUtilizationForInvoice(
+        startDate: String?,
+        endDate: String?,
+        updatedAt: String?,
+        invoiceNumbers: List<String>?
+    ): Int {
+        var invoiceNums = StringBuilder()
+        if (invoiceNumbers != null) {
+            invoiceNums.append("(")
+            for (invoiceNumber in invoiceNumbers) {
+                invoiceNums.append("'")
+                invoiceNums.append(invoiceNumber)
+                invoiceNums.append("',")
+            }
+        }
+        val invoices = invoiceNums.substring(0, invoiceNums.length - 1).toString()
+        val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate, endDate, updatedAt, "$invoices)")
         for (invoiceDetail in invoiceDetails) {
             val payLocRecord = getPayLocRecordForInvoice(invoiceDetail)
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
@@ -147,7 +162,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             documentValue = paymentRecord.paymentNum,
             amtLoc = paymentRecord.accountUtilAmtLed,
             payCurr = paymentRecord.accountUtilPayCurr,
-            payLoc = paymentRecord.accountUtilPayLed
+            payLoc = paymentRecord.accountUtilPayLed,
+            accMode = paymentRecord.accMode
         )
     }
     private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails): PayLocUpdateRequest {
@@ -156,7 +172,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             documentValue = invoiceDetails.invoiceNumber,
             amtLoc = invoiceDetails.ledgerTotal,
             payCurr = invoiceDetails.currencyAmountPaid,
-            payLoc = invoiceDetails.ledgerAmountPaid
+            payLoc = invoiceDetails.ledgerAmountPaid,
+            accMode = invoiceDetails.accMode
         )
     }
 }
