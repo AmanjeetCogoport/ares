@@ -642,7 +642,7 @@ class PaymentMigrationImpl : PaymentMigration {
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
                 payLocUpdateRequest.documentValue!!,
-                payLocUpdateRequest.sageOrganizationId!!, payLocUpdateRequest.amtLoc!!
+                payLocUpdateRequest.amtLoc!!, payLocUpdateRequest.accMode!!
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -653,15 +653,15 @@ class PaymentMigrationImpl : PaymentMigration {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
                         payLocUpdateRequest.documentValue,
-                        payLocUpdateRequest.sageOrganizationId,
                         payLocUpdateRequest.amtLoc,
                         payLocUpdateRequest.payLoc!!,
-                        payLocUpdateRequest.payCurr!!
+                        payLocUpdateRequest.payCurr!!,
+                        payLocUpdateRequest.accMode
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
                     payLocUpdateRequest.documentValue,
-                    payLocUpdateRequest.sageOrganizationId,
                     payLocUpdateRequest.amtLoc,
+                    payLocUpdateRequest.accMode,
                 )
                 var status = if (payLocUpdateRequest.payLoc.compareTo(BigDecimal.ZERO) == 0) {
                     "UNPAID"

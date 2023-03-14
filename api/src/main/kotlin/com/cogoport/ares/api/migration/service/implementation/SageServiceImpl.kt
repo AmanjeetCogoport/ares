@@ -266,7 +266,12 @@ class SageServiceImpl : SageService {
         return payments.recordSets!![0]
     }
 
-    override suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails> {
+    override suspend fun getInvoicesPayLocDetails(
+        startDate: String?,
+        endDate: String?,
+        updatedAt: String?,
+        invoiceNumbers: String?
+    ): ArrayList<InvoiceDetails> {
         var sqlQuery = """
                 select case when si.GTE_0 in('ZSINV','ZSDN','ZDN') then 'INVOICE' else 'CREDIT_NOTE' end  as invoiceType
                 ,si.AMTATIL_0 as ledger_total
@@ -278,10 +283,13 @@ class SageServiceImpl : SageService {
                 ,si.CREDATTIM_0 as created_at
                 ,si.UPDDATTIM_0 as updated_at
                 ,acc.UPDDATTIM_0  as utilization_updated_at
+                ,si.BPRSAC_0 as acc_mode
                 from COGO2.SINVOICE si with (NOLOCK)
                 INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
         """.trimIndent()
-        sqlQuery += if (updatedAt == null) {
+        sqlQuery += if (invoiceNumbers != null) {
+            """ where si.NUM_0 in $invoiceNumbers"""
+        } else if (updatedAt == null) {
             """ where si.ACCDAT_0 between '$startDate' and '$endDate' order by si.ACCDAT_0 desc """
         } else {
             """ where cast(acc.UPDDATTIM_0 as date) = '$updatedAt' """
@@ -303,6 +311,7 @@ class SageServiceImpl : SageService {
                             ,si.CREDATTIM_0 as createdAt
                             ,si.UPDDATTIM_0 as updatedAt
                             ,acc.UPDDATTIM_0  as utilization_updated_at
+                            ,case when si.BPRSAC_0 = 'SC' then 'AP' else si.BPRSAC_0 end as acc_mdoe
                             from COGO2.PINVOICE si with (NOLOCK)
                             INNER JOIN COGO2.GACCDUDATE acc with (NOLOCK) on (si.NUM_0=acc.NUM_0 and  si.BPR_0=acc.BPR_0  and acc.TYP_0 =si.GTE_0 and acc.ACCNUM_0=si.ACCNUM_0)
         """.trimIndent()
