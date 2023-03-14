@@ -13,7 +13,7 @@ interface SageService {
     suspend fun migratePaymentByPaymentNum(paymentNums: String): ArrayList<PaymentRecord>
     suspend fun getSettlementDataFromSage(startDate: String, endDate: String, source: String?, destination: String?): ArrayList<SettlementRecord>
 
-    suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails>
+    suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?, invoiceNumbers: String?): ArrayList<InvoiceDetails>
 
     suspend fun getBillPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails>
 }
