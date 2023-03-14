@@ -167,12 +167,12 @@ class OpenSearchClient {
                                     b.must { t ->
                                         t.match { v ->
                                             v.field("accMode")
-                                                    .query(
-                                                            FieldValue.of(
-                                                                    request.accMode
-                                                                            .toString()
-                                                            )
+                                                .query(
+                                                    FieldValue.of(
+                                                        request.accMode
+                                                            .toString()
                                                     )
+                                                )
                                         }
                                     }
                                 }
