@@ -475,28 +475,31 @@ open class KnockoffServiceImpl : KnockoffService {
         val paymentsInAccUtilsList = accountUtilizationRepository.findPaymentsWithSettlementSourceIds(paymentsNumList, AccountType.PAY.name, AccMode.AP.name)
         var paymentData  = hashMapOf<Long,BigDecimal?>()
         var indexToStop = settlementDetails.size - 1
+        var stopSettlementIteration = false
 
-        settlementDetails.forEachIndexed loop@{ index, settlement ->
+        for ((index, settlement) in settlementDetails.withIndex()){
+            if(stopSettlementIteration){
+                break
+            }
             var newSettlement = when {
                 settlement?.amount!! < newBillAmount -> {
                     settlement
                 }
                 settlement.amount!! > newBillAmount  -> {
-
                     if(paymentData.containsKey(settlement.sourceId)){
                         paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(settlement.amount!! - newBillAmount)
                     }else{
                         paymentData[settlement.sourceId!!] = settlement.amount!! - newBillAmount
                     }
-
+                    indexToStop = index + 1
+                    stopSettlementIteration = true
                     settledAmountGreaterThanNewBillAmount(settlement, newBillAmount)
-                    indexToStop = index
-                    return@loop
                 }
                 else -> {
-                    settledAmountEqualsToNewBillAmount(settlement, newBillAmount)
-                    indexToStop = index
-                    return@loop
+                    indexToStop = index + 1
+                    stopSettlementIteration = true
+//                    settledAmountEqualsToNewBillAmount(settlement, newBillAmount)
+                    settlement
                 }
             }
             newBillAmount = newBillAmount.minus(newSettlement.amount!!)
@@ -504,7 +507,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         val settlementIdForDelete = mutableListOf<Long?>()
 
-        for(index in indexToStop until settlementDetails.size){
+        for(index in indexToStop.until(settlementDetails.size)!!){
             val key = settlementDetails[index]?.sourceId
             val amount = settlementDetails[index]?.amount
             if(paymentData.containsKey(key)){
@@ -518,44 +521,14 @@ open class KnockoffServiceImpl : KnockoffService {
             paymentDetails?.payCurr = paymentDetails?.payCurr?.minus(paymentData[paymentNum]!!)!!
             accountUtilizationRepository.update(paymentDetails)
         }
-
-//        settlementDetails.forEach { settlement ->
-//            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PAY.name, AccMode.AP.name)
-//
-//            val paymentId = paymentRepository.findByPaymentNumAndPaymentCode(settlement.sourceId, PaymentCode.PAY)
-//            var paymentInvoiceMappingId = invoicePayMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId)
-//            paymentNumList.add(settlement.sourceId)
-//
-//            // settlement done through utr
-//            if (paymentInvoiceMappingId != null){
-//                invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingId)
-//            }
-//
-//            if (accUtil?.payCurr!! > 0.toBigDecimal()){
-//                accUtil.payCurr = accUtil.payCurr.minus(settlement.amount!!)
-//                accUtil.payLoc = accUtil.payLoc.minus(settlement.ledAmount)
-//                accountUtilizationRepository.update(accUtil)
-//            }
-//        }
-//
-//        val settlementId = settlementDetails.map { it?.id!! }
-//        settlementRepository.deleleSettlement(settlementId, updateRequest.updatedBy)
-//
-//        /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
-//        val accountUtilization = accountUtilizationRepository.findById(updateRequest.accUtilId)
-//        if (accountUtilization == null) {
-//            val accPayResponse = AccountPayableFileResponse(
-//                    updateRequest.billId, updateRequest.billNumber, false,
-//                    KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
-//                    updateRequest.updatedBy
-//            )
-//            emitPaymentStatus(accPayResponse)
-//            return false
-//        }
-//
-//        paymentNumList.forEach { paymentNum ->
-//            aresMessagePublisher.emitSettleForAutoKnockOff(AutoKnockOffRequest(paymentNum.toString(), updateRequest.billId.toString(), AccountType.PAY.name, AccountType.PINV.name, updateRequest.updatedBy!!))
-//        }
+        val paymentEntry = accountUtilizationRepository.findPaymentsByDocumentNo(updateRequest.billId)
+        var newPayCurr: BigDecimal = 0.toBigDecimal()
+        var newPayLoc: BigDecimal = 0.toBigDecimal()
+        for (payments in paymentEntry) {
+            newPayCurr += payments?.payCurr!!
+            newPayLoc += payments.payLoc
+        }
+        accountUtilizationRepository.updateAccountUtilization(updateRequest.billId,newPayCurr,newPayLoc)
     }
 
     private suspend fun settledAmountGreaterThanNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {
@@ -564,8 +537,8 @@ open class KnockoffServiceImpl : KnockoffService {
         return settlementRepository.save(settlement)
     }
 
-    private suspend fun settledAmountEqualsToNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {
-        settlement.amount = billAmount
-        return settlementRepository.update(settlement)
-    }
+//    private suspend fun settledAmountEqualsToNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {
+//        settlement.amount = billAmount
+//        return settlementRepository.update(settlement)
+//    }
 }

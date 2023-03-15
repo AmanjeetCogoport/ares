@@ -231,21 +231,25 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
                 ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
 
-        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
-            val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-            if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
-                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
-            } else {
-                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
-            }
-        }
-        val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-        var newPayCurr: BigDecimal = 0.toBigDecimal()
-        var newPayLoc: BigDecimal = 0.toBigDecimal()
-        for (payments in paymentEntry) {
-            newPayCurr += payments?.payCurr!!
-            newPayLoc += payments.payLoc
-        }
+//        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
+//            val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
+//            if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
+//                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
+//            } else {
+//                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
+//            }
+//        }
+        val settlementDetails = settlementRepository.findByDestIdAndDestType(updateInvoiceRequest.documentNo, SettlementType.PINV)
+//        if ((updateInvoiceRequest.currAmount < accountUtilization.amountCurr) && (updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) && settlementDetails != null) {
+            aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy, updateInvoiceRequest.currAmount))
+//        }
+//        val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
+//        var newPayCurr: BigDecimal = 0.toBigDecimal()
+//        var newPayLoc: BigDecimal = 0.toBigDecimal()
+//        for (payments in paymentEntry) {
+//            newPayCurr += payments?.payCurr!!
+//            newPayLoc += payments.payLoc
+//        }
 
         accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
         accountUtilization.documentValue = updateInvoiceRequest.documentValue
@@ -259,12 +263,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
 
-        if (!newPayCurr.equals(0)) {
-            accountUtilization.payCurr = newPayCurr
-        }
-        if (!newPayLoc.equals(0)) {
-            accountUtilization.payLoc = newPayLoc
-        }
+//        if (!newPayCurr.equals(0)) {
+//            accountUtilization.payCurr = newPayCurr
+//        }
+//        if (!newPayLoc.equals(0)) {
+//            accountUtilization.payLoc = newPayLoc
+//        }
 
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId
@@ -291,20 +295,16 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 performedByUserType = updateInvoiceRequest.performedByType
             )
         )
-        Client.addDocument(
-            AresConstants.ACCOUNT_UTILIZATION_INDEX,
-            accountUtilization.id.toString(),
-            accountUtilization
-        )
+//        Client.addDocument(
+//            AresConstants.ACCOUNT_UTILIZATION_INDEX,
+//            accountUtilization.id.toString(),
+//            accountUtilization
+//        )
         val accUtilizationRequest = accountUtilizationConverter.convertToModel(accountUtilization)
         try {
             emitDashboardAndOutstandingEvent(accUtilizationRequest)
             if (accUtilizationRequest.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
-                val settlementDetails = settlementRepository.findByDestIdAndDestType(updateInvoiceRequest.documentNo, SettlementType.PINV)
-                if ((updateInvoiceRequest.currAmount < accountUtilization.amountCurr) && (updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) && settlementDetails != null) {
-                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy, updateInvoiceRequest.currAmount))
-                }
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
