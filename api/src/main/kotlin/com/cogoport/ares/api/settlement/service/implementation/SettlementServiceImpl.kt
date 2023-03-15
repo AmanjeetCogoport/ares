@@ -1877,6 +1877,7 @@ open class SettlementServiceImpl : SettlementService {
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
                     status = JVStatus.UTILIZED,
+                    accType = accountUtilization.accType,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType
                 )

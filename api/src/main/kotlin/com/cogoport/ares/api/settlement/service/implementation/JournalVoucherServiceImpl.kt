@@ -256,8 +256,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return request.incidentId!!
     }
 
-    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?) {
+    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, accType: AccountType, performedByUserType: String?) {
+        val jvEntity = journalVoucherRepository.findById(id) ?: throw AresException(AresError.ERR_1002, "journal_voucher_id: $id")
         journalVoucherRepository.updateStatus(id, status, performedBy)
+        if (accType == AccountType.ICJV && jvEntity.parentJvId != null) {
+            journalVoucherParentRepo.updateStatus(jvEntity.parentJvId!!, status, performedBy)
+        }
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,

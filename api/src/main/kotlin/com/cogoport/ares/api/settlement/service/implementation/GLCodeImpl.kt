@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
+import com.cogoport.ares.api.settlement.entity.GLCodes
 import com.cogoport.ares.api.settlement.repository.GLCodeRepo
 import com.cogoport.ares.api.settlement.service.interfaces.GLCodeService
 import jakarta.inject.Inject
@@ -11,7 +12,7 @@ class GLCodeImpl : GLCodeService {
     @Inject
     lateinit var glCodeRepo: GLCodeRepo
 
-    override suspend fun getGLCodeByEntity(entityCode: Int): List<String> {
+    override suspend fun getGLCodeByEntity(entityCode: Int): List<GLCodes> {
         return glCodeRepo.getGLCodes(entityCode)
     }
 }

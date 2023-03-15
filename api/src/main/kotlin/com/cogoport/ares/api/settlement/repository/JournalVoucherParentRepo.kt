@@ -8,6 +8,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.util.*
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVoucher, Long> {
@@ -60,4 +61,16 @@ interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVouche
         """
     )
     fun countDocument(status: JVStatus?, category: JVCategory?, query: String?): Long
+
+
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE parent_journal_vouchers 
+            SET status = :status, updated_by = :performedBy, updated_at = NOW() 
+            WHERE id = :id
+        """
+    )
+    suspend fun updateStatus(id: Long, status: JVStatus, performedBy: UUID)
 }
