@@ -1191,8 +1191,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
             openSearchPaymentModel.updatedBy = performedBy.toString()
-            if (uploadedByName?.size != 0) {
-                openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)?.userName
+            openSearchPaymentModel.uploadedBy = if (uploadedByName?.size != 0) {
+                uploadedByName?.get(0)?.userName
             } else {
                 ""
             }
