@@ -10,4 +10,5 @@ data class PayLocUpdateRequest(
     val amtLoc: BigDecimal?,
     val payCurr: BigDecimal?,
     val payLoc: BigDecimal?,
+    val accMode: String?
 )
