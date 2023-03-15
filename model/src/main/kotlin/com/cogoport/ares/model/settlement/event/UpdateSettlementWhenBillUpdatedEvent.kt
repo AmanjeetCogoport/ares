@@ -3,6 +3,7 @@ package com.cogoport.ares.model.settlement.event
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
+import java.math.BigDecimal
 import java.util.UUID
 
 @Introspected
@@ -12,5 +13,6 @@ data class UpdateSettlementWhenBillUpdatedEvent(
         var billId: Long,
         var billNumber: String,
         var accUtilId: Long,
-        var updatedBy: UUID?
+        var updatedBy: UUID?,
+        var updateBillAmount: BigDecimal
 )

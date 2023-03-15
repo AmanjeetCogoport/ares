@@ -289,4 +289,31 @@ ORDER BY
         """
     )
     suspend fun getSettlementDateBySourceId(documentNo: Long?): Timestamp
+
+    @NewSpan
+    @Query(
+            """
+            SELECT 
+            s.id,
+            s.source_id,
+            s.source_type,
+            s.destination_id,
+            s.destination_type, 
+            s.currency,
+            s.amount,
+            s.led_currency,
+            s.led_amount,
+            s.sign_flag,
+            s.settlement_date,
+            s.created_at,
+            s.created_by,
+            s.updated_at,
+            s.updated_by,
+            s.supporting_doc_url
+            FROM settlements s
+            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
+            order by created_at asc
+        """
+    )
+    suspend fun findByDestIdAndDestTypeAndSourceType(destId: Long, destType: SettlementType, sourceType: SettlementType): List<Settlement?>
 }

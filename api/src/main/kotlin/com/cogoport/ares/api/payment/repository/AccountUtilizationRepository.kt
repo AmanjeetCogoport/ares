@@ -1460,4 +1460,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getSupplierOrgIds(): List<UUID>
+
+    @NewSpan
+    @Query(
+        """ 
+            SELECT
+                * 
+            FROM
+                account_utilizations 
+            WHERE
+                document_no IN (:paymentNum)
+            AND
+                (:accType IS NULL OR acc_type= :accType::account_type) 
+            AND 
+                (:accMode IS NULL OR acc_mode=:accMode::account_mode)
+            AND
+                deleted_at IS NULL
+        """
+    )
+    suspend fun findPaymentsWithSettlementSourceIds(paymentNum: List<Long?>, accType: String? = null, accMode: String? = null): List<AccountUtilization?>
 }

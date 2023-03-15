@@ -303,7 +303,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
                 val settlementDetails = settlementRepository.findByDestIdAndDestType(updateInvoiceRequest.documentNo, SettlementType.PINV)
                 if ((updateInvoiceRequest.currAmount < accountUtilization.amountCurr) && (updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) && settlementDetails != null) {
-                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy))
+                    aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo,updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy, updateInvoiceRequest.currAmount))
                 }
             }
         } catch (e: Exception) {
