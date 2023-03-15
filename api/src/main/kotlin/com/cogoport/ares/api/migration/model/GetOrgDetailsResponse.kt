@@ -15,5 +15,5 @@ class GetOrgDetailsResponse(
     @JsonProperty("trade_party_detail_serial_id")
     val tradePartySerialId: String? = null,
     @JsonProperty("organization_trade_party_detail_id")
-    val organizationTradePartyDetailId: UUID?= null
+    val organizationTradePartyDetailId: UUID? = null
 )

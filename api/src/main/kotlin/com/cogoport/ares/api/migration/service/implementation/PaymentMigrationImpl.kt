@@ -639,7 +639,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
     override suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest) {
         try {
-            val organizationType = if(payLocUpdateRequest.accMode == "AP") "expense" else "income";
+            val organizationType = if (payLocUpdateRequest.accMode == "AP") "expense" else "income"
             val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = payLocUpdateRequest.sageOrganizationId,
