@@ -171,7 +171,7 @@ open class ICJVServiceImpl : ICJVService {
         jv.status = JVStatus.PENDING
         jv.currency = parentICJV.currency
         jv.amount = parentICJV.amount
-        jv.accMode = parentICJV.accMode!! // need to make acc mode nullable in JV
+        jv.accMode = parentICJV.accMode
         jv.validityDate = parentICJV.validityDate
         jv.ledCurrency = parentICJV.ledCurrency
         jv.exchangeRate = parentICJV.exchangeRate
@@ -220,7 +220,7 @@ open class ICJVServiceImpl : ICJVService {
             entityId = null,
             createdBy = parentJvData.createdBy!!
         )
-        hadesClient.createIncident(clientRequest)
+//        hadesClient.createIncident(clientRequest)
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
