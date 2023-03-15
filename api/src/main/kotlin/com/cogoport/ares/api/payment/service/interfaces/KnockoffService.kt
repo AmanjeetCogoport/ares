@@ -10,5 +10,5 @@ interface KnockoffService {
 
     suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest)
 
-    suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent): Boolean
+    suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent)
 }

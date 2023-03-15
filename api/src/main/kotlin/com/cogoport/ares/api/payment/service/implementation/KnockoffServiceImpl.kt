@@ -465,7 +465,7 @@ open class KnockoffServiceImpl : KnockoffService {
         )
     }
 
-    override suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent): Boolean {
+    override suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent) {
         var newBillAmount = updateRequest.updateBillAmount
         val settlementDetails = settlementRepository.findByDestIdAndDestTypeAndSourceType(updateRequest.billId, SettlementType.PINV, SettlementType.PAY)
         val paymentNumList = mutableListOf<Long?>()
@@ -474,79 +474,88 @@ open class KnockoffServiceImpl : KnockoffService {
 
         val paymentsInAccUtilsList = accountUtilizationRepository.findPaymentsWithSettlementSourceIds(paymentsNumList, AccountType.PAY.name, AccMode.AP.name)
         var paymentData  = hashMapOf<Long,BigDecimal?>()
+        var indexToStop = settlementDetails.size - 1
 
-        settlementDetails.forEach { settlement ->
+        settlementDetails.forEachIndexed loop@{ index, settlement ->
             var newSettlement = when {
                 settlement?.amount!! < newBillAmount -> {
-                   if(paymentData.containsKey(settlement.sourceId)){
-                       paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(settlement.amount!!)
-                   }else{
-                       paymentData[settlement.sourceId!!] = settlement.amount!!
-                   }
                     settlement
                 }
                 settlement.amount!! > newBillAmount  -> {
+
                     if(paymentData.containsKey(settlement.sourceId)){
-                        paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(newBillAmount)
+                        paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(settlement.amount!! - newBillAmount)
                     }else{
-                        paymentData[settlement.sourceId!!] = newBillAmount
+                        paymentData[settlement.sourceId!!] = settlement.amount!! - newBillAmount
                     }
+
                     settledAmountGreaterThanNewBillAmount(settlement, newBillAmount)
+                    indexToStop = index
+                    return@loop
                 }
                 else -> {
-                    if(paymentData.containsKey(settlement.sourceId)){
-                        paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(newBillAmount)
-                    }else{
-                        paymentData[settlement.sourceId!!] = newBillAmount
-                    }
                     settledAmountEqualsToNewBillAmount(settlement, newBillAmount)
+                    indexToStop = index
+                    return@loop
                 }
             }
             newBillAmount = newBillAmount.minus(newSettlement.amount!!)
         }
 
-        paymentData.keys.forEach {
-            TODO("DELETE AU FOR PAYMENT")
-        }
+        val settlementIdForDelete = mutableListOf<Long?>()
 
-        settlementDetails.forEach { settlement ->
-            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PAY.name, AccMode.AP.name)
-
-            val paymentId = paymentRepository.findByPaymentNumAndPaymentCode(settlement.sourceId, PaymentCode.PAY)
-            var paymentInvoiceMappingId = invoicePayMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId)
-            paymentNumList.add(settlement.sourceId)
-
-            // settlement done through utr
-            if (paymentInvoiceMappingId != null){
-                invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingId)
-            }
-
-            if (accUtil?.payCurr!! > 0.toBigDecimal()){
-                accUtil.payCurr = accUtil.payCurr.minus(settlement.amount!!)
-                accUtil.payLoc = accUtil.payLoc.minus(settlement.ledAmount)
-                accountUtilizationRepository.update(accUtil)
+        for(index in indexToStop until settlementDetails.size){
+            val key = settlementDetails[index]?.sourceId
+            val amount = settlementDetails[index]?.amount
+            if(paymentData.containsKey(key)){
+                paymentData[key!!] = paymentData[key]?.plus(amount!!)
+            }else{
+                paymentData[key!!] = amount!!
             }
         }
-
-        val settlementId = settlementDetails.map { it?.id!! }
-        settlementRepository.deleleSettlement(settlementId, updateRequest.updatedBy)
-
-        /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
-        val accountUtilization = accountUtilizationRepository.findById(updateRequest.accUtilId)
-        if (accountUtilization == null) {
-            val accPayResponse = AccountPayableFileResponse(
-                    updateRequest.billId, updateRequest.billNumber, false,
-                    KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
-                    updateRequest.updatedBy
-            )
-            emitPaymentStatus(accPayResponse)
-            return false
+        paymentData.keys.forEach { paymentNum ->
+            val paymentDetails = accountUtilizationRepository.findRecord(paymentNum, AccountType.PAY.name, AccMode.AP.name)
+            paymentDetails?.payCurr = paymentDetails?.payCurr?.minus(paymentData[paymentNum]!!)!!
+            accountUtilizationRepository.update(paymentDetails)
         }
 
-        paymentNumList.forEach { paymentNum ->
-            aresMessagePublisher.emitSettleForAutoKnockOff(AutoKnockOffRequest(paymentNum.toString(), updateRequest.billId.toString(), AccountType.PAY.name, AccountType.PINV.name, updateRequest.updatedBy!!))
-        }
-        return false
+//        settlementDetails.forEach { settlement ->
+//            val accUtil = accountUtilizationRepository.findRecord(settlement?.sourceId!!, AccountType.PAY.name, AccMode.AP.name)
+//
+//            val paymentId = paymentRepository.findByPaymentNumAndPaymentCode(settlement.sourceId, PaymentCode.PAY)
+//            var paymentInvoiceMappingId = invoicePayMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId)
+//            paymentNumList.add(settlement.sourceId)
+//
+//            // settlement done through utr
+//            if (paymentInvoiceMappingId != null){
+//                invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingId)
+//            }
+//
+//            if (accUtil?.payCurr!! > 0.toBigDecimal()){
+//                accUtil.payCurr = accUtil.payCurr.minus(settlement.amount!!)
+//                accUtil.payLoc = accUtil.payLoc.minus(settlement.ledAmount)
+//                accountUtilizationRepository.update(accUtil)
+//            }
+//        }
+//
+//        val settlementId = settlementDetails.map { it?.id!! }
+//        settlementRepository.deleleSettlement(settlementId, updateRequest.updatedBy)
+//
+//        /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
+//        val accountUtilization = accountUtilizationRepository.findById(updateRequest.accUtilId)
+//        if (accountUtilization == null) {
+//            val accPayResponse = AccountPayableFileResponse(
+//                    updateRequest.billId, updateRequest.billNumber, false,
+//                    KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
+//                    updateRequest.updatedBy
+//            )
+//            emitPaymentStatus(accPayResponse)
+//            return false
+//        }
+//
+//        paymentNumList.forEach { paymentNum ->
+//            aresMessagePublisher.emitSettleForAutoKnockOff(AutoKnockOffRequest(paymentNum.toString(), updateRequest.billId.toString(), AccountType.PAY.name, AccountType.PINV.name, updateRequest.updatedBy!!))
+//        }
     }
 
     private suspend fun settledAmountGreaterThanNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {

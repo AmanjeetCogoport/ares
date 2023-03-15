@@ -41,9 +41,6 @@ interface AresMessagePublisher {
     @Binding("sage.jv.migration")
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 
-    @Binding("send.payment.details.for.autoKnockOff")
-    suspend fun emitSettleForAutoKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
-
     @Binding("update.settlement.bill.updated")
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
 }
