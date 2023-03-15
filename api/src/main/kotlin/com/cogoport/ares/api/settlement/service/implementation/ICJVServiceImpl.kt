@@ -220,7 +220,7 @@ open class ICJVServiceImpl : ICJVService {
             entityId = null,
             createdBy = parentJvData.createdBy!!
         )
-//        hadesClient.createIncident(clientRequest)
+        hadesClient.createIncident(clientRequest)
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
