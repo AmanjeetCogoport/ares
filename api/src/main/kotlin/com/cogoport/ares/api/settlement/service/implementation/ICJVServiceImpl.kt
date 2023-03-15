@@ -152,8 +152,8 @@ open class ICJVServiceImpl : ICJVService {
         )
     }
 
-    override suspend fun getJournalVoucherByParentJVId(parentId: String): List<JournalVoucherResponse> {
-        val documentEntity = journalVoucherRepository.getJournalVoucherByParentJVId(Hashids.decode(parentId)[0])
+    override suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucherResponse> {
+        val documentEntity = journalVoucherRepository.getJournalVoucherByParentJVId(parentId)
         val jvList = journalVoucherConverter.convertToModelResponse(documentEntity)
         return jvList
     }

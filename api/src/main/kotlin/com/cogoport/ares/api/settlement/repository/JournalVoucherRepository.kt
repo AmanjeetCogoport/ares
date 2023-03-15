@@ -135,7 +135,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
-            j.parent_jv_id
+            j.parent_jv_id,
+            j.gl_code
             FROM journal_vouchers j 
             Where 
                 j.parent_jv_id = :parentId

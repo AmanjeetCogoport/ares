@@ -35,7 +35,7 @@ class ICJVController {
     }
 
     @Get
-    suspend fun getJournalVoucherByParentJVId(@QueryValue("parentId") parentId: String): List<JournalVoucherResponse> {
+    suspend fun getJournalVoucherByParentJVId(@QueryValue("parentId") parentId: Long): List<JournalVoucherResponse> {
         return icjvService.getJournalVoucherByParentJVId(parentId)
     }
 
