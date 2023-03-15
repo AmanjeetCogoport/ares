@@ -31,6 +31,11 @@ r2dbc:
       username: ${DB_USER}
       password: ${DB_PASSWORD}
       dialect: POSTGRES
+    dms:
+      url: r2dbc:postgresql://${DB_HOST:`52.66.190.93`}:${DB_PORT:6432}/${DB_NAME:dms}?preparedStatementCacheQueries=0
+      username: readuser_unifieddb
+      password: 72fe0630c542cc9ac415bf12a6002149
+      dialect: POSTGRES
 
 opensearch:
   host: ${OPENSEARCH_HOST}

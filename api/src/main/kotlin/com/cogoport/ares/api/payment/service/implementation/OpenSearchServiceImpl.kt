@@ -504,7 +504,7 @@ class OpenSearchServiceImpl : OpenSearchService {
                     customersCount = data.sumOf { it.customersCount!! },
                     dashboardCurrency = data.first().currency!!,
                     openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                    openInvoiceAmountForPast7DaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+                    openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
                     onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
                     onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)?.times(100.toBigDecimal())?.toLong()
                 ),
