@@ -11,9 +11,10 @@ import io.micronaut.tracing.annotation.NewSpan
 interface GLCodeRepo : CoroutineCrudRepository<ParentJournalVoucher, Long> {
 
     @NewSpan
-    @Query("""
+    @Query(
+        """
         SELECT gl_code from gl_codes where entity_code = :entityCode
-    """)
+    """
+    )
     fun getGLCodes(entityCode: Int): List<String>
-
 }

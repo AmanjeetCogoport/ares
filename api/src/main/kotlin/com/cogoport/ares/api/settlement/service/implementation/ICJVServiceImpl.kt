@@ -105,7 +105,7 @@ open class ICJVServiceImpl : ICJVService {
 //            }
             it.tradePartyName = "Shayan"
             it.entityId = UUID.fromString("6ac9148e-d626-4a3c-a3e3-53025f1fc253")
-            val jv = convertToJournalVoucherEntity(request,it)
+            val jv = convertToJournalVoucherEntity(request, it)
             val jvEntity = journalVoucherService.createJV(jv)
 
             val incidentRequestModel = journalVoucherConverter.convertJournalVoucherModelToICJVEntry(jvEntity)
@@ -154,7 +154,7 @@ open class ICJVServiceImpl : ICJVService {
 
     override suspend fun getJournalVoucherByParentJVId(parentId: String): List<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getJournalVoucherByParentJVId(Hashids.decode(parentId)[0])
-        val jvList =  journalVoucherConverter.convertToModelResponse(documentEntity)
+        val jvList = journalVoucherConverter.convertToModelResponse(documentEntity)
         return jvList
     }
     private fun validateCreateRequest(request: ParentICJVRequest) {
@@ -171,7 +171,7 @@ open class ICJVServiceImpl : ICJVService {
         jv.status = JVStatus.PENDING
         jv.currency = parentICJV.currency
         jv.amount = parentICJV.amount
-        jv.accMode = parentICJV.accMode!!  // need to make acc mode nullable in JV
+        jv.accMode = parentICJV.accMode!! // need to make acc mode nullable in JV
         jv.validityDate = parentICJV.validityDate
         jv.ledCurrency = parentICJV.ledCurrency
         jv.exchangeRate = parentICJV.exchangeRate

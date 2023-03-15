@@ -7,7 +7,6 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 
-
 @Validated
 @Controller("/glcode")
 class GLCodeController {

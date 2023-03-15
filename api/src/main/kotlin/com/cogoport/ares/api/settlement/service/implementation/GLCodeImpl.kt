@@ -6,7 +6,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
-class GLCodeImpl: GLCodeService {
+class GLCodeImpl : GLCodeService {
 
     @Inject
     lateinit var glCodeRepo: GLCodeRepo

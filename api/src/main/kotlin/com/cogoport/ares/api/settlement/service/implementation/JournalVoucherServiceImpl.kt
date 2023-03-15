@@ -115,7 +115,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      */
     override suspend fun getJournalVouchersWrapper(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
-        return when(jvListRequest.category) {
+        return when (jvListRequest.category) {
             JVCategory.ICJV, JVCategory.ICJVBT, JVCategory.ICJVC -> getICJV(jvListRequest)
             else -> getJournalVouchers(jvListRequest)
         }
@@ -145,7 +145,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             pageNo = jvListRequest.page
         )
     }
-
 
     private suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getListVouchers(

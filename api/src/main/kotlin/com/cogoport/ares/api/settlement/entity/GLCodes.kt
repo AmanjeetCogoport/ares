@@ -8,7 +8,6 @@ import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
 
-
 @Introspected
 @MappedEntity(value = "gl_codes")
 data class GLCodes(
