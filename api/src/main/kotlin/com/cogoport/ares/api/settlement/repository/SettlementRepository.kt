@@ -23,7 +23,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     suspend fun findByIdIn(ids: List<Long>): List<Settlement>
 
     @NewSpan
-    suspend fun findByIdInOrderByAmountDesc(ids: List<Long>?): List<Settlement>?
+    suspend fun findByIdInOrderByAmountDesc(ids: List<Long?>): List<Settlement>?
 
     @NewSpan
     @Query(
@@ -301,12 +301,14 @@ ORDER BY
         """
             SELECT
                s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, s.is_draft
+                s.settlement_date::TIMESTAMP, s.is_draft, au.tagged_settlement_id
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
+                LEFT JOIN account_utilizations au on au.document_no = s.destination_id
             WHERE
                 s.destination_id in (:documentNo)
+                and au.acc_mode = 'AP'
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in('PINV', 'PREIMB')
                 AND s.destination_type NOT in('VTDS')

@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
-import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
@@ -12,8 +11,10 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.api.settlement.entity.SettlementTaggedMapping
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.repository.SettlementTaggedMappingRepository
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -51,19 +52,19 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
     private lateinit var settlementServiceImpl: SettlementServiceImpl
 
     @Inject
+    private lateinit var settlementTaggedMappingRepository: SettlementTaggedMappingRepository
+
+    @Inject
     private lateinit var documentConverter: DocumentMapper
 
     @Inject
     private lateinit var aresMessagePublisher: AresMessagePublisher
 
-    @Inject
-    private lateinit var kuberMessagePublisher: KuberMessagePublisher
-
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) { // TODO(MULTIPLE SETTLEMENT WITH SAME SOURCE ID)
         val destinationDocument = AutoKnockoffDocumentResponse()
-        var settledTaggedPreviousIds: List<Long>?
-        val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
+        val settlementIds = mutableSetOf<Long?>()
+        var extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
         req.document.documentNo = Hashids.decode(req.document.documentNo)[0].toString()
         val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it.documentNo)[0] }
 
@@ -75,6 +76,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
 
         val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
         settledSourceDocuments.forEach { it1 ->
+            settlementIds.add(it1?.settlementId)
             val exchangeRate = req.taggedDocuments.find { it2 -> Hashids.decode(it2.documentNo)[0] == it1?.destinationId!!.toLong() }!!.exchangeRate
             if (!it1?.isDraft!!) {
                 if (listOf(SettlementType.PCN, SettlementType.PAY, SettlementType.PREIMB).contains(it1.sourceType)) {
@@ -90,29 +92,39 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                 }
             }
         }
-
         val sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
-        val sourceAccountUtilization = accountUtilizationRepository.findRecords(
-            settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null
-        )
+        val sourceAccountUtilization = accountUtilizationRepository.findRecords(settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null)
+
+        val settlementTaggedMapping = settlementTaggedMappingRepository.getAllSettlementIds(settlementIds.toList())
+        val settleMapping = mutableSetOf<Long>()
+        settleMapping.addAll(settlementTaggedMapping.map { it.settlementId })
+        settleMapping.addAll(settlementTaggedMapping.map { it.utilizedSettlementId })
+
+        val settled = settlementRepository.findByIdInOrderByAmountDesc(settleMapping.toList())
 
         sourceAccountUtilization.forEach { source ->
             var paymentInfo = settledSourceDocuments.filter { it?.sourceId!!.toLong() == source.documentNo }
             paymentInfo = paymentInfo.sortedBy { it?.sourceType }
-            settledTaggedPreviousIds = source.taggedSettlementId?.split(",")?.toList()?.map { it.toLong() }
-            val sourceUtilization = settlementRepository.findByIdInOrderByAmountDesc(settledTaggedPreviousIds)
             val documentInfo = req.taggedDocuments.find { Hashids.decode(it.documentNo)[0] == paymentInfo[0]?.destinationId!!.toLong() }
-            val amount = if (documentInfo?.transferType == "PAYRUN") {
-                source.amountCurr - source.payCurr
+            val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.taxableAmount!! - destinationDocument.accountUtilization!!.payCurr)) {
+                paymentInfo[0]?.amount!!
             } else {
-                sourceUtilization?.get(0)?.amount
+                val doc = settled?.filter { it.sourceId == source.documentNo && it.isDraft!! }?.sortedByDescending { it.amount }
+                if (doc.isNullOrEmpty()) {
+                    paymentInfo[0]?.amount
+                } else {
+                    val maxAmountBorrowed = settled.filter { it.sourceId == source.documentNo && !it.isDraft!! }
+                        .sumOf { it.amount ?: BigDecimal.ZERO }
+                    doc[0].amount?.minus(maxAmountBorrowed)
+                }
             }
+
             extendedSourceDocument.add(
                 AutoKnockoffDocumentResponse(
                     accountUtilization = source,
                     settlementId = paymentInfo[0]?.settlementId,
                     exchangeRate = documentInfo?.exchangeRate!!,
-                    taggedSettledIds = settledTaggedPreviousIds,
+                    taggedSettledIds = paymentInfo[0]?.taggedSettlementId?.split(",")?.toList()?.map { it.toLong() },
                     amount = amount ?: BigDecimal.ZERO
                 )
             )
@@ -144,11 +156,12 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         } else {
             taggedIds.addAll(sourceDocument.taggedSettledIds!!)
             taggedIds.add(sourceDocument.settlementId!!)
-        } // testing
+        }
 
         val settlement = settlementRepository.getSettlementDetailsByDestinationId(destinationDocument.accountUtilization!!.documentNo, sourceDocument.accountUtilization?.documentNo!!)
         if (settlement != null) {
             accountUtilizationRepo.updateTaggedSettlementIds(destinationDocument.accountUtilization!!.documentNo, taggedIds.joinToString())
+            settlementTaggedMappingRepository.save(SettlementTaggedMapping(id = null, settlementId = settlement.id!!, utilizedSettlementId = sourceDocument.settlementId!!))
             destinationDocument.accountUtilization!!.payCurr += settlement.amount!!
             destinationDocument.accountUtilization!!.payLoc += (settlement.amount!! * settledList!![1].exchangeRate)
             req.settledAmount -= settlement.amount!!
@@ -169,7 +182,6 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, document.id!!, AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
 
 //        try {
-//            kuber
 //            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
 //        } catch (e: Exception) {
 //            Sentry.captureException(e)
@@ -250,7 +262,6 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         }
         return settled
     }
-
     private suspend fun calculatingTds(documentEntity: List<Document?>, settlingAmount: BigDecimal): List<com.cogoport.ares.model.settlement.Document> {
         val documentModel = settlementServiceImpl.groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {

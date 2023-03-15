@@ -6,6 +6,5 @@ import java.math.BigDecimal
 @Introspected
 data class DocumentRequest(
     var documentNo: String,
-    val exchangeRate: BigDecimal,
-    val transferType: String? = null
+    val exchangeRate: BigDecimal
 )

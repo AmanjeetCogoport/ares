@@ -3,8 +3,6 @@ package com.cogoport.ares.api.settlement.model
 import com.cogoport.ares.model.settlement.SettlementType
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
-import io.micronaut.data.annotation.TypeDef
-import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 import java.sql.Timestamp
 
@@ -20,6 +18,6 @@ data class TaggedInvoiceSettlementInfo(
     val amount: BigDecimal,
     val transRefNumber: String?,
     val settlementDate: Timestamp?,
-    @field: TypeDef(type = DataType.JSON)
+    val taggedSettlementId: String?,
     val isDraft: Boolean
 )

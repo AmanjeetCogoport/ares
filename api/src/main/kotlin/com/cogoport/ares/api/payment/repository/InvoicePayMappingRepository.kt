@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.model.PaymentMapResponse
-import com.cogoport.ares.model.payment.DocumentStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -37,11 +36,4 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
-    @NewSpan
-    @Query(
-        """
-            UPDATE payment_invoice_mapping SET status = :status WHERE id = :id
-        """
-    )
-    suspend fun markPaymentMappingDraft(id: Long?, status: DocumentStatus)
 }
