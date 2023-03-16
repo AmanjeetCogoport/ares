@@ -468,11 +468,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var newBillAmount = updateRequest.updateBillAmount
         var newLedgerAmount = updateRequest.updateLedgerAmount
         val settlementDetails = settlementRepository.findByDestIdAndDestTypeAndSourceType(updateRequest.billId, SettlementType.PINV, SettlementType.PAY)
-        val paymentNumList = mutableListOf<Long?>()
 
-        val paymentsNumList = settlementDetails.map { it?.sourceId }
-
-        val paymentsInAccUtilsList = accountUtilizationRepository.findPaymentsWithSettlementSourceIds(paymentsNumList, AccountType.PAY.name, AccMode.AP.name)
         var paymentData = hashMapOf<Long, BigDecimal?>()
         var indexToStop = settlementDetails.size - 1
         var stopSettlementIteration = false
