@@ -47,10 +47,10 @@ class ICJVController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postICJVToSage(parentICJVId: Long, performedBy: UUID): Response<String> {
+    suspend fun postICJVToSage(id: Long, performedBy: UUID): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (icjvService.postICJVToSage(parentICJVId, performedBy)) "Success." else "Failed."
+            if (icjvService.postICJVToSage(id, performedBy)) "Success." else "Failed."
         )
     }
 }
