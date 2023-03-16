@@ -38,6 +38,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.description as description,
             j.acc_mode,
             j.gl_code,
+            NULL as bank_name,
+            NULL as account_number ,
             j.parent_jv_id
             FROM journal_vouchers j
             where 
