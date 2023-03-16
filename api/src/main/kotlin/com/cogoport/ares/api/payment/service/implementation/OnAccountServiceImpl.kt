@@ -675,10 +675,6 @@ open class OnAccountServiceImpl : OnAccountService {
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
 
-        if (!payment.isPosted) {
-            payment.isPosted = false
-        }
-//        payment.isPosted = false
         payment.isDeleted = false
     }
 
