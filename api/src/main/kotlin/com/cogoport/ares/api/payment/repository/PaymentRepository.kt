@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
-import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import io.micronaut.data.annotation.Query
@@ -82,12 +81,4 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             """
     )
     suspend fun updatePaymentDocumentStatus(id: Long, paymentDocumentStatus: PaymentDocumentStatus, performedBy: UUID)
-
-    @NewSpan
-    @Query(
-        """
-            UPDATE payments SET status = :status, updated_at = NOW() WHERE id = :paymentId
-        """
-    )
-    suspend fun markPaymentStatusDraft(paymentId: Long?, status: DocumentStatus?)
 }

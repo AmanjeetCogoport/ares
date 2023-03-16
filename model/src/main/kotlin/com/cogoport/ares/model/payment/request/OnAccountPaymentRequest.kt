@@ -6,8 +6,8 @@ import java.util.UUID
 
 @Introspected
 data class OnAccountPaymentRequest(
-    var document: DocumentRequest,
-    var taggedDocuments: List<DocumentRequest>,
+    var document: String,
+    var taggedDocuments: List<String>,
     var settledAmount: BigDecimal,
     val createdBy: UUID?
 )
