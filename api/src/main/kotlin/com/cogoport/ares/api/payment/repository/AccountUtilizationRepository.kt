@@ -520,7 +520,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-        value = """
+        """
         Select
             au.id,
             document_no,
@@ -556,9 +556,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:startDate is null or transaction_date >= :startDate::date)
                 AND (:endDate is null or transaction_date <= :endDate::date)
                 AND (
-                    document_value ilike :query || '%' 
-                    OR au.document_no in (:paymentIds)
-                )
+                    (document_value ilike :query || '%')
+                    OR au.document_no in (:paymentIds))
+                AND (:entityCode is null OR :entityCode = au.entity_code) 
                 AND s.deleted_at is null
                 AND au.deleted_at is null
             GROUP BY au.id  
@@ -585,10 +585,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         pageSize: Int?,
         startDate: String?,
         endDate: String?,
-        query: String,
+        query: String?,
         paymentIds: List<Long>,
         sortBy: String?,
-        sortType: String?
+        sortType: String?,
+        entityCode: Int?
     ): List<HistoryDocument?>
 
     @NewSpan
@@ -607,10 +608,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND (:startDate is null or transaction_date >= :startDate::date)
             AND (:endDate is null or transaction_date <= :endDate::date)
             AND (
-                    document_value ilike :query || '%' 
+                    (document_value ilike :query || '%')
                     OR document_no in (:paymentIds)
                 )
             AND s.deleted_at is null
+            AND (:entityCode is null OR :entityCode = entity_code)
             AND account_utilizations.deleted_at is null
             
         """
@@ -620,8 +622,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         accountTypes: List<String>,
         startDate: String?,
         endDate: String?,
-        query: String,
-        paymentIds: List<Long>
+        query: String?,
+        paymentIds: List<Long>,
+        entityCode: Int?
     ): Long
 
     @NewSpan
@@ -664,6 +667,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:query is null OR document_value ilike :query)
                     AND s.deleted_at is null
                     AND au.deleted_at is null
+                    AND (:entityCode is null OR :entityCode = entity_code)
                 GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset
@@ -1027,6 +1031,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrgStats(orgId: UUID): OrgStatsResponse?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT 
+            :orgId as organization_id,
+            MAX(ledger_currency) as ledger_currency,
+            SUM(COALESCE(open_payables,0)) as payables,
+            null as receivables
+        FROM (
+            SELECT
+                MAX(led_currency) as ledger_currency,
+                CASE WHEN acc_type in ('PINV','PDN') then SUM(sign_flag*(amount_loc - pay_loc)) end as open_payables
+            FROM account_utilizations
+            WHERE 
+                acc_type in ('PDN', 'PINV')
+                AND organization_id = :orgId
+                AND deleted_at is null
+            GROUP BY  acc_type
+        ) A
+    """
+    )
+    suspend fun getOrgStatsForCoeFinance(orgId: UUID): OrgStatsResponse?
 
     @NewSpan
     @Query(
@@ -1446,24 +1473,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun markPaymentUnutilized(id: Long, payCurr: BigDecimal, payLoc: BigDecimal)
-
-    @NewSpan
-    @Query(
-        """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id, taxable_amount_loc
-            from account_utilizations 
-            where document_no in (:documentNo) and acc_type::varchar in (:accType) 
-            and (:accMode is null or acc_mode=:accMode::account_mode)
-             and account_utilizations.deleted_at is null order by updated_at desc"""
-    )
-    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): MutableList<AccountUtilization>
-
-    @NewSpan
-    @Query(
-
-        """UPDATE account_utilizations SET 
-              updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
-    )
-    suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean)
 }

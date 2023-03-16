@@ -19,15 +19,13 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             pay_loc 
             FROM account_utilizations 
             WHERE document_value = :documentValue
-            AND sage_organization_id = :sageOrganizationId
-            AND amount_loc = :amountLedger
-            AND migrated = true
+            AND acc_mode = :accMode::account_mode
         """
     )
     fun getRecordFromAccountUtilization(
         documentValue: String,
-        sageOrganizationId: String,
-        amountLedger: BigDecimal
+        amountLedger: BigDecimal,
+        accMode: String
     ): BigDecimal?
 
     @NewSpan
@@ -39,19 +37,15 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             WHERE 
             document_value = :documentValue
             AND
-            sage_organization_id = :sageOrganizationId
-            AND
-            amount_loc = :amountLedger
-            AND
-            migrated = true
-        """
+            acc_mode = :accMode::account_mode
+         """
     )
     fun updateUtilizationAmount(
         documentValue: String,
-        sageOrganizationId: String,
         amountLedger: BigDecimal,
         payLedger: BigDecimal,
-        payCurrency: BigDecimal
+        payCurrency: BigDecimal,
+        accMode: String
     )
 
     @NewSpan
@@ -61,16 +55,12 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             WHERE 
             document_value = :documentValue
             AND
-            sage_organization_id = :sageOrganizationId
-            AND
-            amount_loc = :amountLedger
-            AND
-            migrated = true
+            acc_mode = :accMode::account_mode
         """
     )
     fun getAccType(
         documentValue: String,
-        sageOrganizationId: String,
         amountLedger: BigDecimal,
+        accMode: String
     ): PayLocUpdateResponse
 }

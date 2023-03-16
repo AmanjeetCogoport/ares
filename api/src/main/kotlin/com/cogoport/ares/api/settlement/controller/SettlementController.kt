@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
@@ -32,6 +33,9 @@ import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
+import com.cogoport.brahma.authentication.Auth
+import com.cogoport.brahma.authentication.AuthResponse
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -55,12 +59,16 @@ class SettlementController {
 
     @Inject
     lateinit var cpSettlementService: CpSettlementService
+    @Inject
+    lateinit var util: Util
 
     @Inject
     lateinit var taggedSettlementService: TaggedSettlementService
 
+    @Auth
     @Get("/documents{?request*}")
-    suspend fun getDocuments(@Valid request: SettlementDocumentRequest): ResponseList<Document>? {
+    suspend fun getDocuments(@Valid request: SettlementDocumentRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<Document>? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<ResponseList<Document>?>().ok(settlementService.getDocuments(request))
     }
 
@@ -78,14 +86,19 @@ class SettlementController {
     suspend fun getInvoices(@Valid request: SettlementInvoiceRequest): ResponseList<SettlementInvoiceResponse>? {
         return Response<ResponseList<SettlementInvoiceResponse>?>().ok(cpSettlementService.getInvoices(request))
     }
-
+    @Auth
     @Get("/account-balance{?request*}")
-    suspend fun getAccountBalance(@Valid request: SummaryRequest): SummaryResponse {
+    suspend fun getAccountBalance(@Valid request: SummaryRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): SummaryResponse {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<SummaryResponse>().ok(settlementService.getAccountBalance(request))
     }
 
+    @Auth
     @Get("/history{?request*}")
-    suspend fun getHistory(@Valid request: SettlementHistoryRequest): ResponseList<HistoryDocument?> {
+    suspend fun getHistory(@Valid request: SettlementHistoryRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<HistoryDocument?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        request.sortBy = request.sortBy ?: "transactionDate"
+        request.sortType = request.sortType ?: "Desc"
         return Response<ResponseList<HistoryDocument?>>().ok(settlementService.getHistory(request))
     }
 

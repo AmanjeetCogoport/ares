@@ -21,4 +21,24 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun updateTaggedSettlementIds(documentNo: Long, taggedSettlementIds: String)
+
+    @NewSpan
+    @Query(
+        """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
+           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id, taxable_amount_loc
+            from account_utilizations 
+            where document_no in (:documentNo) and acc_type::varchar in (:accType) 
+            and (:accMode is null or acc_mode=:accMode::account_mode)
+             and account_utilizations.deleted_at is null order by updated_at desc"""
+    )
+    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): MutableList<AccountUtilization>
+
+    @NewSpan
+    @Query(
+
+        """UPDATE account_utilizations SET 
+              updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
+    )
+    suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean)
 }

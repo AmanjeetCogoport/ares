@@ -62,7 +62,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
     private lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) { // TODO(MULTIPLE SETTLEMENT WITH SAME SOURCE ID)
+    override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) {
         val destinationDocument = AutoKnockoffDocumentResponse()
         val settlementIds = mutableSetOf<Long?>()
         val taggedBillIds = mutableListOf<Long>()
@@ -98,18 +98,18 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         }
 
         val sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
-        val sourceAccountUtilization = accountUtilizationRepository.findRecords(settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null)
+        val sourceAccountUtilization = accountUtilizationRepo.findRecords(settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null)
 
         val settlementTaggedMapping = settlementTaggedMappingRepository.getAllSettlementIds(settlementIds.toList())
-        val settleMapping = mutableSetOf<Long>()
-        settleMapping.addAll(settlementTaggedMapping.map { it.settlementId })
-        settleMapping.addAll(settlementTaggedMapping.map { it.utilizedSettlementId })
+        val settleMappingIds = mutableSetOf<Long>()
+        settleMappingIds.addAll(settlementTaggedMapping.map { it.settlementId })
+        settleMappingIds.addAll(settlementTaggedMapping.map { it.utilizedSettlementId })
 
-        val settled = settlementRepository.findByIdInOrderByAmountDesc(settleMapping.toList())
+        val settled = settlementRepository.findByIdInOrderByAmountDesc(settleMappingIds.toList())
         var taggedSettlements: MutableList<TaggedInvoiceSettlementInfo?> = mutableListOf()
         if (taggedBillIds.isNotEmpty()) {
             taggedSettlements = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedBillIds.distinct())
-            val sourceAcc = accountUtilizationRepository.findRecords(taggedSettlements.map { it?.sourceId!!.toLong() }, listOf("PAY", "PCN"), "AP")
+            val sourceAcc = accountUtilizationRepo.findRecords(taggedSettlements.map { it?.sourceId!!.toLong() }, listOf("PAY", "PCN"), "AP")
             sourceAccountUtilization.addAll(sourceAcc.filter { it !in sourceAccountUtilization })
         }
 
@@ -193,14 +193,14 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         return destinationDocument.accountUtilization!!.taxableAmount!! - destinationDocument.accountUtilization!!.payCurr
     }
     private suspend fun reversePayment(reversePaymentRequest: ReversePaymentRequest) {
-        val accountUtilization = accountUtilizationRepository.findRecords(listOf(reversePaymentRequest.document, reversePaymentRequest.source), listOf(AccountType.PINV.name, AccountType.PAY.name, AccountType.PCN.name), AccMode.AP.name)
+        val accountUtilization = accountUtilizationRepo.findRecords(listOf(reversePaymentRequest.document, reversePaymentRequest.source), listOf(AccountType.PINV.name, AccountType.PAY.name, AccountType.PCN.name), AccMode.AP.name)
         val settlement = settlementRepository.getSettlementDetailsByDestinationId(reversePaymentRequest.document, reversePaymentRequest.source)
             ?: throw AresException(AresError.ERR_1000, "Settlement Not Found")
         val document = accountUtilization.find { it.accType == AccountType.PINV }
         val source = accountUtilization.find { it.accType != AccountType.PINV }
         settlementRepository.updateDraftStatus(settlement.id!!, true)
         accountUtilizationRepository.markPaymentUnutilized(source?.id!!, settlement.amount!!, (settlement.amount!! * (source.amountLoc.divide(source.amountCurr))))
-        accountUtilizationRepository.updateAccountUtilizations(document?.id!!, true)
+        accountUtilizationRepo.updateAccountUtilizations(document?.id!!, true)
 
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, source.id, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, document.id!!, AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
