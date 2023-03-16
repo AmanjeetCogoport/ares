@@ -30,5 +30,8 @@ data class JournalVoucherResponse(
     var updatedAt: Timestamp?,
     var description: String?,
     var accMode: AccMode?,
+    var glCode: String?,
+    var bankName: String?,
+    var accountNumber: String?,
     var parentJvId: String? = null,
 )

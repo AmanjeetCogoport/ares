@@ -136,8 +136,11 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.description as description,
             j.acc_mode,
             j.parent_jv_id,
-            j.gl_code
+            j.gl_code,
+            gl.bank_name,
+            gl.account_number
             FROM journal_vouchers j 
+            LEFT JOIN gl_codes gl on j.gl_code = gl.gl_code
             Where 
                 j.parent_jv_id = :parentId
         """
