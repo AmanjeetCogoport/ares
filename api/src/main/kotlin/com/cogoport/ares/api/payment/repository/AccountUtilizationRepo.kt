@@ -12,7 +12,11 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-            UPDATE account_utilizations SET tagged_settlement_id = :taggedSettlementIds WHERE document_no = :documentNo
+            UPDATE account_utilizations SET 
+            tagged_settlement_id = CASE WHEN tagged_settlement_id IS NULL THEN :taggedSettlementIds
+                                        ELSE CONCAT(tagged_settlement_id, ', ',:taggedSettlementIds)
+                                   END
+            WHERE document_no = :documentNo
             and acc_mode = 'AP' and is_draft = false and deleted_at is null
         """
     )

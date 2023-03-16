@@ -64,7 +64,8 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
     override suspend fun settleOnAccountInvoicePayment(req: OnAccountPaymentRequest) { // TODO(MULTIPLE SETTLEMENT WITH SAME SOURCE ID)
         val destinationDocument = AutoKnockoffDocumentResponse()
         val settlementIds = mutableSetOf<Long?>()
-        var extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
+        val taggedBillIds = mutableListOf<Long>()
+        val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
         req.document.documentNo = Hashids.decode(req.document.documentNo)[0].toString()
         val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it.documentNo)[0] }
 
@@ -75,11 +76,15 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         destinationDocument.exchangeRate = req.document.exchangeRate
 
         val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
+
         settledSourceDocuments.forEach { it1 ->
             settlementIds.add(it1?.settlementId)
+            if (it1?.taggedSettlementId != null) {
+                taggedBillIds.addAll(it1.taggedSettlementId.split(", ").toList().map { it.toLong() })
+            }
             val exchangeRate = req.taggedDocuments.find { it2 -> Hashids.decode(it2.documentNo)[0] == it1?.destinationId!!.toLong() }!!.exchangeRate
             if (!it1?.isDraft!!) {
-                if (listOf(SettlementType.PCN, SettlementType.PAY, SettlementType.PREIMB).contains(it1.sourceType)) {
+                if (listOf(SettlementType.PCN, SettlementType.PAY).contains(it1.sourceType)) {
                     reversePayment(
                         ReversePaymentRequest(
                             it1.destinationId.toLong(),
@@ -92,6 +97,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                 }
             }
         }
+
         val sourceType: List<String?> = settledSourceDocuments.map { it?.sourceType.toString() }.distinct()
         val sourceAccountUtilization = accountUtilizationRepository.findRecords(settledSourceDocuments.map { it?.sourceId!!.toLong() }, sourceType, null)
 
@@ -101,6 +107,11 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         settleMapping.addAll(settlementTaggedMapping.map { it.utilizedSettlementId })
 
         val settled = settlementRepository.findByIdInOrderByAmountDesc(settleMapping.toList())
+        if (taggedBillIds.isNotEmpty()) {
+            val taggedSettlements = settlementRepository.findByDestIdsAndDestTypes(taggedBillIds.distinct(), listOf(SettlementType.PINV))
+            val sourceAcc = accountUtilizationRepository.findRecords(taggedSettlements.map { it?.sourceId!!.toLong() }, listOf("PAY", "PCN"), "AP")
+            sourceAccountUtilization.addAll(sourceAcc.filter { it !in sourceAccountUtilization })
+        }
 
         sourceAccountUtilization.forEach { source ->
             var paymentInfo = settledSourceDocuments.filter { it?.sourceId!!.toLong() == source.documentNo }
@@ -109,22 +120,22 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.taxableAmount!! - destinationDocument.accountUtilization!!.payCurr)) {
                 paymentInfo[0]?.amount!!
             } else {
-                val doc = settled?.filter { it.sourceId == source.documentNo && it.isDraft!! }?.sortedByDescending { it.amount }
-                if (doc.isNullOrEmpty()) {
+                val doc = settled?.find { it.sourceId == source.documentNo && it.isDraft!! }
+                if (doc == null) {
                     paymentInfo[0]?.amount
                 } else {
                     val maxAmountBorrowed = settled.filter { it.sourceId == source.documentNo && !it.isDraft!! }
                         .sumOf { it.amount ?: BigDecimal.ZERO }
-                    doc[0].amount?.minus(maxAmountBorrowed)
+                    doc.amount?.minus(maxAmountBorrowed)
                 }
             }
-
             extendedSourceDocument.add(
                 AutoKnockoffDocumentResponse(
                     accountUtilization = source,
                     settlementId = paymentInfo[0]?.settlementId,
                     exchangeRate = documentInfo?.exchangeRate!!,
-                    taggedSettledIds = paymentInfo[0]?.taggedSettlementId?.split(",")?.toList()?.map { it.toLong() },
+                    destinationId = paymentInfo[0]?.destinationId!!.toLong(),
+                    taggedSettledIds = paymentInfo[0]?.taggedSettlementId?.split(", ")?.toList()?.map { it.toLong() },
                     amount = amount ?: BigDecimal.ZERO
                 )
             )
@@ -148,14 +159,14 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         req: OnAccountPaymentRequest,
         balanceSettlingAmount: BigDecimal
     ): BigDecimal {
-        sourceDocument?.amount = minOf(sourceDocument?.amount!!, req.settledAmount, balanceSettlingAmount)
+        sourceDocument?.amount = minOf(sourceDocument?.amount!!, req.settledAmount, balanceSettlingAmount, sourceDocument.accountUtilization!!.taxableAmount!!)
         val settledList = settleTaggedDocument(destinationDocument, sourceDocument, req.createdBy)
         val taggedIds = mutableListOf<Long>()
         if (sourceDocument.taggedSettledIds.isNullOrEmpty()) {
-            taggedIds.add(sourceDocument.settlementId!!)
+            taggedIds.add(sourceDocument.destinationId!!)
         } else {
             taggedIds.addAll(sourceDocument.taggedSettledIds!!)
-            taggedIds.add(sourceDocument.settlementId!!)
+            taggedIds.add(sourceDocument.destinationId!!)
         }
 
         val settlement = settlementRepository.getSettlementDetailsByDestinationId(destinationDocument.accountUtilization!!.documentNo, sourceDocument.accountUtilization?.documentNo!!)

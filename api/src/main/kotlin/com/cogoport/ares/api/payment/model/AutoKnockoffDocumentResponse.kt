@@ -10,5 +10,6 @@ data class AutoKnockoffDocumentResponse(
     var settlementId: Long? = null,
     var exchangeRate: BigDecimal = BigDecimal.ONE,
     var amount: BigDecimal = BigDecimal.ZERO,
-    var taggedSettledIds: List<Long>? = null
+    var taggedSettledIds: List<Long>? = null,
+    val destinationId: Long? = null
 )

@@ -1457,7 +1457,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             and (:accMode is null or acc_mode=:accMode::account_mode)
              and account_utilizations.deleted_at is null order by updated_at desc"""
     )
-    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): List<AccountUtilization>
+    suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): MutableList<AccountUtilization>
 
     @NewSpan
     @Query(
