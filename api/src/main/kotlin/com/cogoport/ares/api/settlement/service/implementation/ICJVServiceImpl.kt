@@ -124,21 +124,20 @@ open class ICJVServiceImpl : ICJVService {
             it.status = JVStatus.PENDING
             it.category = request.category
 
-//            if (it.entityId == null) {
-//                val data = railsClient.getCogoEntity(it.entityCode.toString())
-//                if (data.list.isNotEmpty()) {
-//                    it.entityId = UUID.fromString(data.list[0]["id"].toString())
-//                }
-//            }
-//
-//            if (it.tradePartyName == null) {
-//                val data = railsClient.getListOrganizationTradePartyDetails(it.tradePartyId)
-//                if (data.list.isNotEmpty()) {
-//                    it.tradePartyName = data.list[0]["legal_business_name"].toString()
-//                }
-//            }
-            it.tradePartyName = "Shayan"
-            it.entityId = UUID.fromString("6ac9148e-d626-4a3c-a3e3-53025f1fc253")
+            if (it.entityId == null) {
+                val data = railsClient.getCogoEntity(it.entityCode.toString())
+                if (data.list.isNotEmpty()) {
+                    it.entityId = UUID.fromString(data.list[0]["id"].toString())
+                }
+            }
+
+            if (it.tradePartyName == null) {
+                val data = railsClient.getListOrganizationTradePartyDetails(it.tradePartyId!!)
+                if (data.list.isNotEmpty()) {
+                    it.tradePartyName = data.list[0]["legal_business_name"].toString()
+                }
+            }
+
             val jv = convertToJournalVoucherEntity(request, it)
             val jvEntity = journalVoucherService.createJV(jv)
 
@@ -356,7 +355,7 @@ open class ICJVServiceImpl : ICJVService {
                 ThirdPartyApiAudit(
                     null,
                     "PostICJVToSage",
-                    "Inter Company Journal Voucher",
+                    "PostICJV",
                     parentICJVId,
                     "ICJV/BT/C",
                     "500",
@@ -371,7 +370,7 @@ open class ICJVServiceImpl : ICJVService {
                 ThirdPartyApiAudit(
                     null,
                     "PostICJVToSage",
-                    "Inter Company Journal Voucher",
+                    "PostICJV",
                     parentICJVId,
                     "ICJV/BT/C",
                     "500",
@@ -461,11 +460,12 @@ open class ICJVServiceImpl : ICJVService {
 
         if (status == 1) {
             journalVoucherRepository.updateStatus(jv.id!!, JVStatus.POSTED, performedBy)
+            journalVoucherParentRepo.updateStatus(jv.parentJvId!!, JVStatus.POSTED, performedBy)
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
                     null,
                     "PostICJVToSage",
-                    "Inter Company Journal Voucher",
+                    "PostICJV",
                     jv.id,
                     "${jv.category}",
                     "200",
@@ -477,11 +477,12 @@ open class ICJVServiceImpl : ICJVService {
             return true
         } else {
             journalVoucherRepository.updateStatus(jv.id!!, JVStatus.POSTING_FAILED, performedBy)
+            journalVoucherParentRepo.updateStatus(jv.parentJvId!!, JVStatus.POSTING_FAILED, performedBy)
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
                     null,
                     "PostICJVToSage",
-                    "Inter Company Journal Voucher",
+                    "PostICJV",
                     jv.id,
                     "${jv.category}",
                     "200",
