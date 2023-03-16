@@ -8,6 +8,7 @@ import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentICJVRequest
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -15,6 +16,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.UUID
 import javax.validation.Valid
 
 @Validated
@@ -42,5 +44,13 @@ class ICJVController {
     @Post("/update")
     suspend fun updateICJV(@Valid @Body request: ICJVUpdateRequest): String {
         return icjvService.updateICJV(request)
+    }
+
+    @Post("/post-to-sage")
+    suspend fun postICJVToSage(parentICJVId: Long, performedBy: UUID): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            if (icjvService.postICJVToSage(parentICJVId, performedBy)) "Success." else "Failed."
+        )
     }
 }

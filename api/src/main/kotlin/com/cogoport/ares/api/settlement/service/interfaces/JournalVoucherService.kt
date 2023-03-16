@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.interfaces
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
-import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
@@ -24,7 +23,7 @@ interface JournalVoucherService {
 
     suspend fun rejectJournalVoucher(request: JournalVoucherReject): String
 
-    suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, accType: AccountType,  performedByUserType: String?)
+    suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, accType: AccountType, performedByUserType: String?)
     suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean
     suspend fun createJV(jv: JournalVoucher): JournalVoucher
     suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode?, signFlag: Short): AccountUtilization

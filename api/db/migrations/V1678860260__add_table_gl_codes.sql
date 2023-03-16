@@ -9,7 +9,7 @@ CREATE TABLE PUBLIC.gl_codes (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
-INSERT INTO gl_codes(entity_code, account_number, bank_name, currency, gl_code, bank_short_name)
+INSERT INTO gl_codes(entity_code, account_number, bank_name, currency, gl_code, bank_short_name, created_at)
 VALUES (301, '609000842058', 'RBL Bank Ltd', 'INR', 222021, 'RBLCP', NOW()),
        (301, '409001406475', 'RBL Bank Ltd', 'INR', 222013, 'RBLP', NOW()),
        (301, '201015563832', 'Indusind Bank Ltd', 'INR', 222015, 'INDC', NOW()),

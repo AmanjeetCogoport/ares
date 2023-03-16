@@ -41,7 +41,5 @@ data class JournalVoucher(
     var description: String?,
     var accMode: AccMode?,
     var glCode: String?,
-    var bankName: String?,
-    var accountNumber: String?,
     var parentJvId: Long? = null
 )

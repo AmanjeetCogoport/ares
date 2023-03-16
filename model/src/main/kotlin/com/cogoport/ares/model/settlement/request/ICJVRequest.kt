@@ -5,7 +5,6 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
-
 @Introspected
 data class ICJVRequest(
     var id: String?,
