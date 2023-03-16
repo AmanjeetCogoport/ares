@@ -20,7 +20,6 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
-import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject

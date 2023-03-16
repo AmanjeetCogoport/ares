@@ -10,9 +10,10 @@ import java.util.UUID
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class UpdateSettlementWhenBillUpdatedEvent(
-        var billId: Long,
-        var billNumber: String,
-        var accUtilId: Long,
-        var updatedBy: UUID?,
-        var updateBillAmount: BigDecimal
+    var billId: Long,
+    var billNumber: String,
+    var accUtilId: Long,
+    var updatedBy: UUID?,
+    var updateBillAmount: BigDecimal,
+    var updateLedgerAmount: BigDecimal
 )

@@ -7,7 +7,6 @@ import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
-import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient

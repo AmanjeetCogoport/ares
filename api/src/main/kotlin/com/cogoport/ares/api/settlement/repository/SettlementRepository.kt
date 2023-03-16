@@ -292,7 +292,7 @@ ORDER BY
 
     @NewSpan
     @Query(
-            """
+        """
             SELECT 
             s.id,
             s.source_id,
@@ -312,6 +312,7 @@ ORDER BY
             s.supporting_doc_url
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
+            and deleted_at IS NULL
             order by created_at asc
         """
     )

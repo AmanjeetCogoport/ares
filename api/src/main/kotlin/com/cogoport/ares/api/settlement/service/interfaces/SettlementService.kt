@@ -22,7 +22,6 @@ import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
-import com.cogoport.ares.model.settlement.request.UpdateSettlementWhenBillUpdatedRequest
 
 interface SettlementService {
 

@@ -35,7 +35,6 @@ import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
-import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -467,78 +466,81 @@ open class KnockoffServiceImpl : KnockoffService {
 
     override suspend fun editSettlementWhenBillUpdated(updateRequest: UpdateSettlementWhenBillUpdatedEvent) {
         var newBillAmount = updateRequest.updateBillAmount
+        var newLedgerAmount = updateRequest.updateLedgerAmount
         val settlementDetails = settlementRepository.findByDestIdAndDestTypeAndSourceType(updateRequest.billId, SettlementType.PINV, SettlementType.PAY)
         val paymentNumList = mutableListOf<Long?>()
 
         val paymentsNumList = settlementDetails.map { it?.sourceId }
 
         val paymentsInAccUtilsList = accountUtilizationRepository.findPaymentsWithSettlementSourceIds(paymentsNumList, AccountType.PAY.name, AccMode.AP.name)
-        var paymentData  = hashMapOf<Long,BigDecimal?>()
+        var paymentData = hashMapOf<Long, BigDecimal?>()
         var indexToStop = settlementDetails.size - 1
         var stopSettlementIteration = false
 
-        for ((index, settlement) in settlementDetails.withIndex()){
-            if(stopSettlementIteration){
+        for ((index, settlement) in settlementDetails.withIndex()) {
+            if (stopSettlementIteration) {
                 break
             }
             var newSettlement = when {
                 settlement?.amount!! < newBillAmount -> {
                     settlement
                 }
-                settlement.amount!! > newBillAmount  -> {
-                    if(paymentData.containsKey(settlement.sourceId)){
+                settlement.amount!! > newBillAmount -> {
+                    if (paymentData.containsKey(settlement.sourceId)) {
                         paymentData[settlement.sourceId!!] = paymentData[settlement.sourceId]?.plus(settlement.amount!! - newBillAmount)
-                    }else{
+                    } else {
                         paymentData[settlement.sourceId!!] = settlement.amount!! - newBillAmount
                     }
                     indexToStop = index + 1
                     stopSettlementIteration = true
-                    settledAmountGreaterThanNewBillAmount(settlement, newBillAmount)
+                    settledAmountGreaterThanNewBillAmount(settlement, newBillAmount, newLedgerAmount)
                 }
                 else -> {
                     indexToStop = index + 1
                     stopSettlementIteration = true
-//                    settledAmountEqualsToNewBillAmount(settlement, newBillAmount)
                     settlement
                 }
             }
             newBillAmount = newBillAmount.minus(newSettlement.amount!!)
+            newLedgerAmount = newLedgerAmount.minus(newSettlement.ledAmount)
         }
 
-        val settlementIdForDelete = mutableListOf<Long?>()
+        val settlementIdForDelete = mutableListOf<Long>()
 
-        for(index in indexToStop.until(settlementDetails.size)!!){
+        for (index in indexToStop.until(settlementDetails.size)!!) {
+            settlementIdForDelete.add(settlementDetails[index]?.id!!)
             val key = settlementDetails[index]?.sourceId
             val amount = settlementDetails[index]?.amount
-            if(paymentData.containsKey(key)){
+            if (paymentData.containsKey(key)) {
                 paymentData[key!!] = paymentData[key]?.plus(amount!!)
-            }else{
+            } else {
                 paymentData[key!!] = amount!!
             }
         }
+
+        settlementRepository.deleleSettlement(settlementIdForDelete.toList())
+
         paymentData.keys.forEach { paymentNum ->
             val paymentDetails = accountUtilizationRepository.findRecord(paymentNum, AccountType.PAY.name, AccMode.AP.name)
             paymentDetails?.payCurr = paymentDetails?.payCurr?.minus(paymentData[paymentNum]!!)!!
+            paymentDetails.payLoc = paymentDetails.payLoc.minus(paymentData[paymentNum]!!)
             accountUtilizationRepository.update(paymentDetails)
         }
-        val paymentEntry = accountUtilizationRepository.findPaymentsByDocumentNo(updateRequest.billId)
+
+        val newSettlementDetails = settlementRepository.findByDestIdAndDestTypeAndSourceType(updateRequest.billId, SettlementType.PINV, SettlementType.PAY)
         var newPayCurr: BigDecimal = 0.toBigDecimal()
         var newPayLoc: BigDecimal = 0.toBigDecimal()
-        for (payments in paymentEntry) {
-            newPayCurr += payments?.payCurr!!
-            newPayLoc += payments.payLoc
+        for (settlement in newSettlementDetails) {
+            newPayCurr += settlement?.amount!!
+            newPayLoc += settlement.ledAmount
         }
-        accountUtilizationRepository.updateAccountUtilization(updateRequest.billId,newPayCurr,newPayLoc)
+        accountUtilizationRepository.updateAccountUtilizationByDocumentNo(updateRequest.billId, newPayCurr, newPayLoc, AccountType.PINV)
     }
 
-    private suspend fun settledAmountGreaterThanNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {
+    private suspend fun settledAmountGreaterThanNewBillAmount(settlement: Settlement, billAmount: BigDecimal, ledgerAmount: BigDecimal): Settlement {
         settlement.amount = billAmount
+        settlement.ledAmount = ledgerAmount
         settlementRepository.deleleSettlement(arrayListOf(settlement.id!!))
         return settlementRepository.save(settlement)
     }
-
-//    private suspend fun settledAmountEqualsToNewBillAmount(settlement: Settlement, billAmount: BigDecimal): Settlement {
-//        settlement.amount = billAmount
-//        return settlementRepository.update(settlement)
-//    }
 }

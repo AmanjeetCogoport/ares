@@ -1479,4 +1479,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun findPaymentsWithSettlementSourceIds(paymentNum: List<Long?>, accType: String? = null, accMode: String? = null): List<AccountUtilization?>
+
+    @NewSpan
+    @Query(
+        """UPDATE account_utilizations SET 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE document_no =:documentNo AND acc_type = :accType::account_type AND deleted_at is null"""
+    )
+    suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
 }
