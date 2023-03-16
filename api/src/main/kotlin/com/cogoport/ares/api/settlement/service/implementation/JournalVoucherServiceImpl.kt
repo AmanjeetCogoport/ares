@@ -166,7 +166,6 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 jvListRequest.query,
                 jvListRequest.entityCode
             )
-//        val jvList = journalVoucherConverter.convertToModelResponse(documentEntity)
         return ResponseList(
             list = documentEntity,
             totalPages = Utilities.getTotalPages(totalRecords, jvListRequest.pageLimit),

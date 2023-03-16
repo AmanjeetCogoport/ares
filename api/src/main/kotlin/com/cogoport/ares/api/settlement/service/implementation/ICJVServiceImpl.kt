@@ -109,8 +109,7 @@ open class ICJVServiceImpl : ICJVService {
     override suspend fun createICJV(request: ParentICJVRequest): String {
         validateCreateRequest(request)
 
-//        val parentJvNumber = getJvNumber()
-        val parentJvNumber = "JV/2223/10"
+        val parentJvNumber = getJvNumber()
         request.jvNum = parentJvNumber
         request.status = JVStatus.PENDING
         val parentData = journalVoucherConverter.convertParentICJVRequestToParentJV(request)
@@ -187,7 +186,6 @@ open class ICJVServiceImpl : ICJVService {
 
     override suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getJournalVoucherByParentJVId(parentId)
-//        val jvList = journalVoucherConverter.convertToModelResponse(documentEntity)
         return documentEntity
     }
     private fun validateCreateRequest(request: ParentICJVRequest) {
