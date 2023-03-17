@@ -40,7 +40,7 @@ services:
       enabledLocally: false
     - id: hades
       url: http://localhost:8093
-      enabledLocally: true
+      enabledLocally: false
     - id: plutus
       url: http://localhost:8083
       enabledLocally: false
