@@ -9,8 +9,8 @@ import io.micronaut.data.annotation.Id
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
 import java.util.Date
+import java.util.UUID
 
 @Introspected
 data class ParentICJVRequest(
