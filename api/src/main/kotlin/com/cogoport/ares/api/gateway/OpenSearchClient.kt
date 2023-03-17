@@ -163,6 +163,19 @@ class OpenSearchClient {
                                         }
                                     }
                                 }
+                                if (request.accMode != null) {
+                                    b.must { t ->
+                                        t.match { v ->
+                                            v.field("accMode")
+                                                .query(
+                                                    FieldValue.of(
+                                                        request.accMode
+                                                            .toString()
+                                                    )
+                                                )
+                                        }
+                                    }
+                                }
                                 if (request.startDate != null && request.endDate != null
                                 ) {
                                     b.must { m ->
