@@ -48,5 +48,6 @@ data class AccountUtilization(
     var migrated: Boolean?,
     var isDraft: Boolean? = false,
     var taggedSettlementId: String? = null,
-    var taxableAmountLoc: BigDecimal? = BigDecimal.ZERO
+    var payableAmountLoc: BigDecimal? = BigDecimal.ZERO,
+    var payableAmount: BigDecimal? = BigDecimal.ZERO
 )

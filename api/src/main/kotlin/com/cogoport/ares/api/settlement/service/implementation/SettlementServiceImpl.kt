@@ -2143,7 +2143,7 @@ open class SettlementServiceImpl : SettlementService {
                 dueDate = it.dueDate,
                 taxableAmount = it.taxableAmount!!,
                 settledAmount = it.payCurr,
-                balanceAmount = (it.taxableAmount!! - it.payCurr),
+                balanceAmount = (it.payableAmount!! - it.payCurr),
                 currency = it.currency,
                 ledCurrency = it.ledCurrency,
                 exchangeRate = 1.toBigDecimal(),
@@ -2152,7 +2152,7 @@ open class SettlementServiceImpl : SettlementService {
                 accMode = it.accMode,
                 documentDate = it.transactionDate!!,
                 documentLedAmount = it.amountLoc,
-                documentLedBalance = (it.taxableAmountLoc!! - it.payLoc),
+                documentLedBalance = (it.payableAmountLoc!! - it.payLoc),
                 sourceId = it.documentNo,
                 sourceType = SettlementType.valueOf(it.accType.name)
             )

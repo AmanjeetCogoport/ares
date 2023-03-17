@@ -227,7 +227,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
         if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
             val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-            if (updateInvoiceRequest.taxableAmount!! > accountUtilization.taxableAmount!! && updateInvoiceRequest.taxableAmountLoc!! > accountUtilization.taxableAmountLoc!!) {
+            if (updateInvoiceRequest.currAmount!! > accountUtilization.payableAmount!! && updateInvoiceRequest.ledAmount!! > accountUtilization.payableAmountLoc!!) {
                 amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
             } else {
                 amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
@@ -268,7 +268,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.organizationName = updateInvoiceRequest.organizationName ?: accountUtilization.organizationName
         accountUtilization.signFlag = updateInvoiceRequest.signFlag ?: accountUtilization.signFlag
         accountUtilization.taxableAmount = updateInvoiceRequest.taxableAmount ?: accountUtilization.taxableAmount
-        accountUtilization.taxableAmountLoc = updateInvoiceRequest.taxableAmountLoc ?: accountUtilization.taxableAmountLoc
+        accountUtilization.payableAmount = updateInvoiceRequest.payableAmount ?: accountUtilization.payableAmount
+        accountUtilization.payableAmountLoc = updateInvoiceRequest.payableAmountLoc ?: accountUtilization.payableAmountLoc
         accountUtilization.zoneCode = updateInvoiceRequest.zoneCode ?: accountUtilization.zoneCode
         accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
         accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
@@ -467,8 +468,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
     }
     private suspend fun amountGreaterThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, accountUtilization: AccountUtilization, paymentEntry: List<AccountUtilization?>) {
-        var extraUtilizationAmountCurr = updateInvoiceRequest.taxableAmount!! - accountUtilization.taxableAmount!!
-        var extraUtilizationAmountLoc = updateInvoiceRequest.taxableAmountLoc!! - accountUtilization.taxableAmountLoc!!
+        var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount!! - accountUtilization.payableAmount!!
+        var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount!! - accountUtilization.payableAmountLoc!!
         for (payment in paymentEntry) {
             if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal()) {
                 continue

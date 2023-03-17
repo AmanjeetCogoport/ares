@@ -117,7 +117,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             var paymentInfo = settledSourceDocuments.filter { it?.sourceId!!.toLong() == source.documentNo }
             if (paymentInfo.isNotEmpty()) {
                 paymentInfo = paymentInfo.sortedBy { it?.sourceType }
-                val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.taxableAmount!! - destinationDocument.accountUtilization!!.payCurr)) {
+                val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.payableAmount!! - destinationDocument.accountUtilization!!.payCurr)) {
                     paymentInfo[0]?.amount!!
                 } else {
                     val doc = settled?.find { it.sourceId == source.documentNo && it.isDraft!! }
@@ -148,13 +148,13 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                         exchangeRate = source.amountLoc.divide(source.amountCurr),
                         destinationId = settleInfo[0]?.destinationId!!.toLong(),
                         taggedSettledIds = settleInfo[0]?.taggedSettlementId?.split(", ")?.toList()?.map { it.toLong() },
-                        amount = source.taxableAmount!! - source.payCurr
+                        amount = source.payableAmount!! - source.payCurr
                     )
                 )
             }
         }
 
-        var balanceSettlingAmount = destinationDocument.accountUtilization?.taxableAmount!!.minus(destinationDocument.accountUtilization?.payCurr!!)
+        var balanceSettlingAmount = destinationDocument.accountUtilization?.payableAmount!!.minus(destinationDocument.accountUtilization?.payCurr!!)
         var sourceStartIndex = 0
         val sourceEndIndex = extendedSourceDocument.size
         while (sourceStartIndex < sourceEndIndex && balanceSettlingAmount > BigDecimal.ZERO && req.settledAmount >= BigDecimal.ZERO) {
@@ -172,7 +172,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         req: OnAccountPaymentRequest,
         balanceSettlingAmount: BigDecimal
     ): BigDecimal {
-        sourceDocument?.amount = minOf(sourceDocument?.amount!!, req.settledAmount, balanceSettlingAmount, sourceDocument.accountUtilization!!.taxableAmount!! - sourceDocument.accountUtilization!!.payCurr)
+        sourceDocument?.amount = minOf(sourceDocument?.amount!!, req.settledAmount, balanceSettlingAmount, sourceDocument.accountUtilization!!.payableAmount!! - sourceDocument.accountUtilization!!.payCurr)
         val settledList = settleTaggedDocument(destinationDocument, sourceDocument, req.createdBy)
         val taggedIds = mutableListOf<Long>()
         if (sourceDocument.taggedSettledIds.isNullOrEmpty()) {
@@ -190,7 +190,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             destinationDocument.accountUtilization!!.payLoc += (settlement.amount!! * settledList!![1].exchangeRate)
             req.settledAmount -= settlement.amount!!
         }
-        return destinationDocument.accountUtilization!!.taxableAmount!! - destinationDocument.accountUtilization!!.payCurr
+        return destinationDocument.accountUtilization!!.payableAmount!! - destinationDocument.accountUtilization!!.payCurr
     }
     private suspend fun reversePayment(reversePaymentRequest: ReversePaymentRequest) {
         val accountUtilization = accountUtilizationRepo.findRecords(listOf(reversePaymentRequest.document, reversePaymentRequest.source), listOf(AccountType.PINV.name, AccountType.PAY.name, AccountType.PCN.name), AccMode.AP.name)
@@ -231,7 +231,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                     dueDate = doc.dueDate,
                     taxableAmount = doc.taxableAmount!!,
                     settledAmount = doc.payCurr,
-                    balanceAmount = doc.taxableAmount!! - doc.payCurr,
+                    balanceAmount = doc.payableAmount!! - doc.payCurr,
                     currency = doc.currency,
                     ledCurrency = doc.ledCurrency,
                     exchangeRate = it.exchangeRate,
@@ -240,7 +240,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                     accMode = doc.accMode,
                     documentDate = doc.transactionDate!!,
                     documentLedAmount = doc.amountLoc,
-                    documentLedBalance = doc.taxableAmountLoc!! - doc.payLoc,
+                    documentLedBalance = doc.payableAmountLoc!! - doc.payLoc,
                     sourceId = doc.documentNo,
                     sourceType = SettlementType.valueOf(doc.accType.name)
                 )
