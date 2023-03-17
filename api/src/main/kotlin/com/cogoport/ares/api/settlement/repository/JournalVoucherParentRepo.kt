@@ -16,7 +16,21 @@ interface JournalVoucherParentRepo : CoroutineCrudRepository<ParentJournalVouche
     @NewSpan
     @Query(
         """
-            SELECT *
+            SELECT j.id,
+            j.status,
+            j.jv_num,
+            j.category,
+            j.amount,
+            j.currency,
+            j.led_currency,
+            j.exchange_rate,
+            j.description,
+            j.acc_mode,
+            j.validity_date,
+            j.created_at,
+            j.created_by,
+            j.updated_at,
+            j.updated_by
             FROM parent_journal_vouchers j
             where 
                 (:status is null OR  j.status = :status::JV_STATUS) AND

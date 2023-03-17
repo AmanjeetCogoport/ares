@@ -10,7 +10,7 @@ import java.sql.Timestamp
 
 @Introspected
 @MappedEntity(value = "gl_codes")
-data class GLCodes(
+data class GLCode(
     @field:Id @GeneratedValue
     var id: Long?,
     var entityCode: Int,
