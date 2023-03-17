@@ -8,6 +8,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<AccountUtilizationMigration, Long> {
@@ -19,14 +20,14 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             pay_loc 
             FROM account_utilizations 
             WHERE document_value = :documentValue
-            AND amount_loc = :amountLedger
             AND acc_mode = :accMode::account_mode
+            AND organization_id = :organizationId
         """
     )
     fun getRecordFromAccountUtilization(
         documentValue: String,
-        amountLedger: BigDecimal,
-        accMode: String
+        accMode: String,
+        organizationId: UUID
     ): BigDecimal?
 
     @NewSpan
@@ -38,17 +39,16 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             WHERE 
             document_value = :documentValue
             AND
-            amount_loc = :amountLedger
-            AND
             acc_mode = :accMode::account_mode
+            AND organization_id = :organizationId 
          """
     )
     fun updateUtilizationAmount(
         documentValue: String,
-        amountLedger: BigDecimal,
         payLedger: BigDecimal,
         payCurrency: BigDecimal,
-        accMode: String
+        accMode: String,
+        organizationId: UUID
     )
 
     @NewSpan
@@ -58,14 +58,13 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             WHERE 
             document_value = :documentValue
             AND
-            amount_loc = :amountLedger
-            AND
             acc_mode = :accMode::account_mode
+            AND organization_id = :organizationId
         """
     )
     fun getAccType(
         documentValue: String,
-        amountLedger: BigDecimal,
-        accMode: String
+        accMode: String,
+        organizationId: UUID
     ): PayLocUpdateResponse
 }
