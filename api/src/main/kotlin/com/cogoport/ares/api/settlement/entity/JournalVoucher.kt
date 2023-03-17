@@ -31,7 +31,7 @@ data class JournalVoucher(
     var status: JVStatus,
     var exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
-    val tradePartyName: String,
+    val tradePartyName: String?,
     var createdBy: UUID?,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?,

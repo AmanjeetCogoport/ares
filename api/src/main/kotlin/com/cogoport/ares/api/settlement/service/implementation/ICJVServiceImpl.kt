@@ -130,7 +130,7 @@ open class ICJVServiceImpl : ICJVService {
                 }
             }
 
-            if (it.tradePartyName == null) {
+            if (it.tradePartyName == null && it.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(it.tradePartyId!!)
                 if (data.list.isNotEmpty()) {
                     it.tradePartyName = data.list[0]["legal_business_name"].toString()
@@ -346,7 +346,7 @@ open class ICJVServiceImpl : ICJVService {
             }
             val result = postEachJV(jv1, performedBy, "JV_1")
             if (result) {
-                postEachJV(jv2, performedBy, "JV_2")
+                return postEachJV(jv2, performedBy, "JV_2")
             }
         } catch (exception: SageException) {
             thirdPartyApiAuditService.createAudit(
