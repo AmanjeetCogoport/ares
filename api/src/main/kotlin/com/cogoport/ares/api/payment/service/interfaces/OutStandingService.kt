@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -29,4 +31,6 @@ interface OutStandingService {
     suspend fun updateSupplierDetails(id: String, flag: Boolean, document: SupplierOutstandingDocument?)
 
     suspend fun listSupplierDetails(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?>
+
+    suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?>
 }

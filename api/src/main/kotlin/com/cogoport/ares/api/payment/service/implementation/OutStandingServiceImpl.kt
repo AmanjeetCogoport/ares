@@ -7,6 +7,8 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
@@ -423,5 +425,20 @@ class OutStandingServiceImpl : OutStandingService {
             )
         }
         return supplierOutstandingDocument!!
+    }
+
+    override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
+
+        var list: List<CustomerOutstandingPaymentResponse?>
+        list = accountUtilizationRepository.getPaymentByTaggedOrganizationID(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%")
+
+        val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
+
+        responseList.list = list
+        responseList.totalRecords = list.size.toLong()
+        responseList.totalPages = if (responseList.totalRecords!! % request.pageLimit!! == 0.toLong()) (responseList.totalRecords!! / request.pageLimit!!) else (responseList.totalRecords!! / request.pageLimit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
     }
 }

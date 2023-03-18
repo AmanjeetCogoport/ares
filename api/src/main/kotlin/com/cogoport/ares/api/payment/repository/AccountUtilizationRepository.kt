@@ -13,12 +13,14 @@ import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
@@ -1460,4 +1462,60 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getSupplierOrgIds(): List<UUID>
+
+    @NewSpan
+    @Query(
+        """ 
+        SELECT
+        *
+        FROM (
+            SELECT
+                acc_code,
+                acc_mode,
+                amount_curr AS payment_amount,
+                amount_loc,
+                pay_curr AS utilized_amount,
+                pay_loc AS payment_loc,
+                created_at,
+                currency,
+                entity_code,
+                led_currency AS ledger_currency,
+                organization_name,
+                document_no,
+                document_value AS payment_number,
+                sign_flag,
+                transaction_date,
+                updated_at,
+                (
+                    CASE WHEN pay_curr = 0 THEN
+                        'UNUTILIZED'
+                    WHEN amount_curr = pay_curr THEN
+                        'PARTIAL_UTILIZED'
+                    ELSE
+                        'UTILIZED'
+                    END
+                ) utilizaton_status
+            FROM
+                account_utilizations
+            WHERE (document_value LIKE :query
+                AND tagged_organization_id = :taggedOrganizationId)
+        ) subquery
+        WHERE
+            utilizaton_status IN (:statusList)
+        ORDER BY
+          CASE WHEN :sortBy = 'transactionDate'
+               THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
+          END ASC,
+          CASE WHEN :sortBy = 'transactionDate'
+               THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
+          END DESC,
+          CASE WHEN :sortBy = 'paymentAmount'
+               THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
+          END ASC,
+          CASE WHEN :sortBy = 'paymentAmount'
+               THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
+          END DESC
+        """
+    )
+    suspend fun getPaymentByTaggedOrganizationID(taggedOrganizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus?>?, query: String?): List<CustomerOutstandingPaymentResponse>
 }
