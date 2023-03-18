@@ -84,7 +84,8 @@ open class KnockoffServiceImpl : KnockoffService {
             val accPayResponse = AccountPayableFileResponse(
                 knockOffRecord.documentNo, knockOffRecord.documentValue, false,
                 KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,
-                knockOffRecord.createdBy
+                knockOffRecord.createdBy,
+                null
             )
             emitPaymentStatus(accPayResponse)
             return accPayResponse
@@ -119,7 +120,7 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
 
-        saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
+        val settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
         /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
 
         if (isOverPaid) {
@@ -144,7 +145,7 @@ open class KnockoffServiceImpl : KnockoffService {
         if (leftAmount <= 1.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 1.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
 
-        val accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy)
+        val accPayResponse = AccountPayableFileResponse(knockOffRecord.documentNo, knockOffRecord.documentValue, true, paymentStatus, null, knockOffRecord.createdBy, settlementNum)
         try {
             emitPaymentStatus(accPayResponse)
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = knockOffRecord.organizationId))
@@ -282,9 +283,10 @@ open class KnockoffServiceImpl : KnockoffService {
         sourceId: Long?,
         isOverPaid: Boolean,
         accountUtilization: AccountUtilization
-    ) {
+    ): String? {
 
         val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isOverPaid, accountUtilization)
+        settlement.settlementNum = sequenceGeneratorImpl.getSettlementNumber()
         val settleObj = settlementRepository.save(settlement)
         auditService.createAudit(
             AuditRequest(
@@ -296,6 +298,7 @@ open class KnockoffServiceImpl : KnockoffService {
                 performedByUserType = knockOffRecord.performedByType
             )
         )
+        return settleObj.settlementNum
     }
 
     private fun generateSettlementEntity(
@@ -330,7 +333,8 @@ open class KnockoffServiceImpl : KnockoffService {
             updatedAt = Timestamp.from(Instant.now()),
             createdBy = knockOffRecord.createdBy,
             updatedBy = knockOffRecord.updatedBy,
-            settlementDate = Date(Timestamp.from(Instant.now()).time)
+            settlementDate = Date(Timestamp.from(Instant.now()).time),
+            settlementNum = null
         )
     }
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])

@@ -67,17 +67,14 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         val settlementIds = mutableSetOf<Long?>()
         val taggedBillIds = mutableListOf<Long>()
         val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
-        req.document = Hashids.decode(req.document)[0].toString()
-        val taggedDocumentIds = req.taggedDocuments.map { Hashids.decode(it)[0] }
 
-        destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(req.document.toLong(), AccountType.PINV.name, AccMode.AP.name)
+        destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(req.document, AccountType.PINV.name, AccMode.AP.name)
         if (destinationDocument.accountUtilization == null) {
             throw AresException(AresError.ERR_1503, "")
         }
         destinationDocument.exchangeRate = destinationDocument.accountUtilization?.amountLoc!!.divide(destinationDocument.accountUtilization?.amountCurr)
 
-        val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(taggedDocumentIds)
-
+        val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(req.taggedDocuments)
         settledSourceDocuments.forEach { it1 ->
             settlementIds.add(it1?.settlementId)
             if (it1?.taggedSettlementId != null) {
@@ -157,7 +154,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         var balanceSettlingAmount = destinationDocument.accountUtilization?.payableAmount!!.minus(destinationDocument.accountUtilization?.payCurr!!)
         var sourceStartIndex = 0
         val sourceEndIndex = extendedSourceDocument.size
-        while (sourceStartIndex < sourceEndIndex && balanceSettlingAmount > BigDecimal.ZERO && req.settledAmount >= BigDecimal.ZERO) {
+        while (sourceStartIndex < sourceEndIndex && balanceSettlingAmount > BigDecimal.ZERO) {
             val source = extendedSourceDocument[sourceStartIndex]
             if (source?.amount!! > BigDecimal.ZERO) {
                 balanceSettlingAmount = doSettlement(destinationDocument, source, req, balanceSettlingAmount)
@@ -172,14 +169,14 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         req: OnAccountPaymentRequest,
         balanceSettlingAmount: BigDecimal
     ): BigDecimal {
-        sourceDocument?.amount = minOf(sourceDocument?.amount!!, req.settledAmount, balanceSettlingAmount, sourceDocument.accountUtilization!!.payableAmount!! - sourceDocument.accountUtilization!!.payCurr)
+        sourceDocument?.amount = minOf(sourceDocument?.amount!!, balanceSettlingAmount, (sourceDocument.accountUtilization!!.payableAmount!! - sourceDocument.accountUtilization!!.payCurr))
         val settledList = settleTaggedDocument(destinationDocument, sourceDocument, req.createdBy)
         val taggedIds = mutableListOf<Long>()
         if (sourceDocument.taggedSettledIds.isNullOrEmpty()) {
-            taggedIds.addAll(req.taggedDocuments.map { Hashids.decode(it)[0] })
+            taggedIds.addAll(req.taggedDocuments)
         } else {
             taggedIds.addAll(sourceDocument.taggedSettledIds!!)
-            taggedIds.addAll(req.taggedDocuments.map { Hashids.decode(it)[0] })
+            taggedIds.addAll(req.taggedDocuments)
         }
 
         val settlement = settlementRepository.getSettlementDetailsByDestinationId(destinationDocument.accountUtilization!!.documentNo, sourceDocument.accountUtilization?.documentNo!!)
@@ -188,7 +185,6 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             settlementTaggedMappingRepository.save(SettlementTaggedMapping(id = null, settlementId = settlement.id!!, utilizedSettlementId = sourceDocument.settlementId!!))
             destinationDocument.accountUtilization!!.payCurr += settlement.amount!!
             destinationDocument.accountUtilization!!.payLoc += (settlement.amount!! * settledList!![1].exchangeRate)
-            req.settledAmount -= settlement.amount!!
         }
         return destinationDocument.accountUtilization!!.payableAmount!! - destinationDocument.accountUtilization!!.payCurr
     }

@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
+import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -11,7 +12,6 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
-import java.sql.Timestamp
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -45,7 +45,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_at,
             s.updated_by,
             s.is_draft,
-            s.supporting_doc_url
+            s.supporting_doc_url,
+            settlement_num
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_draft = false
         """
@@ -72,7 +73,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_at,
             s.updated_by,
             s.is_draft,
-            s.supporting_doc_url
+            s.supporting_doc_url,
+            s.settlement_num
             FROM settlements s
             where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_draft = false
         """
@@ -205,7 +207,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         """
            SELECT
                 p.entity_code, p.bank_id, p.bank_name, p.trans_ref_number,
-                p.pay_mode, s.settlement_date::TIMESTAMP
+                p.pay_mode, s.settlement_date::TIMESTAMP, s.settlement_num
            FROM
                 settlements s
                 LEFT JOIN payments p  on p.payment_num = s.source_id WHERE
@@ -294,7 +296,7 @@ ORDER BY
            LIMIT 1
         """
     )
-    suspend fun getSettlementDateBySourceId(documentNo: Long?): Timestamp
+    suspend fun getSettlementDateBySourceId(documentNo: Long?): SettlementNumInfo
 
     @NewSpan
     @Query(
@@ -324,7 +326,7 @@ ORDER BY
     @NewSpan
     @Query(
         """
-          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,
+          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
           deleted_at is null and is_draft = false and source_type not in ('VTDS') order by created_at desc limit 1

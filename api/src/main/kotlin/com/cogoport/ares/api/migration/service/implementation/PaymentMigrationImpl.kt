@@ -33,6 +33,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
@@ -77,6 +78,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var journalVoucherConverter: JournalVoucherMapper
 
     @Inject lateinit var settlementRepository: SettlementRepository
+
+    @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject lateinit var settlementMigrationRepository: SettlementsMigrationRepository
 
@@ -532,6 +535,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 return
             }
             val settlement = getSettlementEntity(settlementRecord)
+            settlement.settlementNum = sequenceGeneratorImpl.getSettlementNumber()
             if (paymentMigrationRepository.checkDuplicateForSettlements(
                     settlement.sourceId!!,
                     settlement.destinationId,
@@ -628,7 +632,8 @@ class PaymentMigrationImpl : PaymentMigration {
             createdBy = MigrationConstants.createdUpdatedBy,
             createdAt = settlementRecord.createdAt,
             updatedBy = MigrationConstants.createdUpdatedBy,
-            updatedAt = settlementRecord.updatedAt
+            updatedAt = settlementRecord.updatedAt,
+            settlementNum = null
         )
     }
     private fun getSignFlag(sourceType: String): Short {

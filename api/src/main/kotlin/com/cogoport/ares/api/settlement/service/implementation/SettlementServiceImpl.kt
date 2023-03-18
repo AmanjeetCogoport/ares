@@ -21,6 +21,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -140,6 +141,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject
     lateinit var incidentMappingsRepository: IncidentMappingsRepository
@@ -1799,13 +1803,15 @@ open class SettlementServiceImpl : SettlementService {
             "FULL"
 
         val paymentInfo = if (accountUtilization.accType == AccountType.PCN) {
+            val settlementInfo = settlementRepository.getSettlementDateBySourceId(accountUtilization.documentNo)
             PaymentInfo(
                 entityCode = null,
                 bankId = null,
                 bankName = null,
                 transRefNumber = null,
                 payMode = null,
-                settlementDate = settlementRepository.getSettlementDateBySourceId(accountUtilization.documentNo)
+                settlementDate = settlementInfo.settlementDate,
+                settlementNum = settlementInfo.settlementNum
             )
         } else {
             settlementRepository.getPaymentDetailsByPaymentNum(accountUtilization.documentNo)
@@ -1825,7 +1831,8 @@ open class SettlementServiceImpl : SettlementService {
                 cogoBankName = paymentInfo?.bankName,
                 cogoEntity = paymentInfo?.entityCode,
                 paymentDate = paymentInfo?.settlementDate,
-                paidTds = BigDecimal.ZERO
+                paidTds = BigDecimal.ZERO,
+                settlementNum = paymentInfo?.settlementNum!!
             )
         )
         try {
@@ -1910,7 +1917,8 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy,
                 Timestamp.from(Instant.now()),
                 supportingDocUrl,
-                false
+                false,
+                sequenceGeneratorImpl.getSettlementNumber()
             )
         val settleDoc = settlementRepository.save(settledDoc)
 

@@ -5,4 +5,5 @@ enum class SequenceSuffix(val prefix: String) {
     RECEIVED("REC"),
     TDS("TDS"),
     JV("JV"),
+    SETTLEMENT("SET"),
 }
