@@ -1,7 +1,9 @@
 package com.cogoport.ares.model.payment.request
 
+import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
+@Introspected
 data class CustomerOutstandingRequest(
     var q: String? = null,
     var salesAgentId: List<UUID>? = null,
