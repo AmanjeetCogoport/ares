@@ -15,6 +15,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
@@ -99,5 +100,16 @@ class OutstandingController {
     @Put("/supplier-outstanding-migrate")
     suspend fun migrateSupplierOutstanding() {
         return scheduler.updateSupplierOutstandingOnOpenSearch()
+    }
+
+    @Post("/customer")
+    suspend fun createCustomerDetails(@Valid @Body request: CustomerOutstandingDocumentResponse): Response<String> {
+        outStandingService.createCustomerDetails(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Put("/customer")
+    suspend fun updateCustomerDetails(request: UpdateSupplierOutstandingRequest) {
+        return outStandingService.updateCustomerDetails(request.orgId.toString(), flag = false, document = null)
     }
 }
