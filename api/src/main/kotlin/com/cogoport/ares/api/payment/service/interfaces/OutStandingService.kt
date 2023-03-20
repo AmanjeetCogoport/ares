@@ -38,5 +38,6 @@ interface OutStandingService {
     suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponse?)
 
     suspend fun getCustomerOutstandingList(request: OutstandingListRequest): CustomerOutstandingList
+
     suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?>
 }

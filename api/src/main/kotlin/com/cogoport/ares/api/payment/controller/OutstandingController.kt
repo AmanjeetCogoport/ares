@@ -8,9 +8,11 @@ import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.CustomerOutstandingList
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
+import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
@@ -111,5 +113,17 @@ class OutstandingController {
     @Put("/customer")
     suspend fun updateCustomerDetails(request: UpdateSupplierOutstandingRequest) {
         return outStandingService.updateCustomerDetails(request.orgId.toString(), flag = false, document = null)
+    }
+
+    @Get("/invoice-overall{?request*}")
+    suspend fun getInvoiceOutstanding(@Valid request: OutstandingListRequest): CustomerOutstandingList? {
+        return Response<CustomerOutstandingList?>().ok(outStandingService.getCustomerOutstandingList(request))
+    }
+
+    @Auth
+    @Get("/by-customer{?request*}")
+    suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
+        request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
+        return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
     }
 }

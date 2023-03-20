@@ -10,7 +10,6 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.util.UUID
 
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -35,7 +34,7 @@ data class CustomerOutstandingDocumentResponse(
     @JsonProperty("companyType")
     var companyType: String?,
     @JsonProperty("creditController")
-    var creditController: UUID?,
+    var creditController: SalesAgent?,
     @JsonProperty("kam")
     var kam: SalesAgent?,
     @JsonProperty("salesAgent")

@@ -4,7 +4,9 @@ import java.util.UUID
 
 data class CustomerOutstandingRequest(
     var q: String? = null,
-    var supplyAgentId: List<UUID>? = null,
+    var salesAgentId: List<UUID>? = null,
+    var kamId: List<UUID>? = null,
+    var creditController: List<UUID>? = null,
     var sageId: String? = null,
     var tradePartySerialId: String? = null,
     var organizationSerialId: String? = null,

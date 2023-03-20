@@ -658,13 +658,29 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.supplyAgentId != null) {
+                        if (request.salesAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
                                     v.field("supplyAgent.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
-                                                request.supplyAgentId?.map {
+                                                request.salesAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.kamId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("supplyAgent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.kamId?.map {
                                                     FieldValue.of(it.toString())
                                                 }
                                             )
@@ -697,31 +713,6 @@ class OpenSearchClient {
                                 }
                             }
                             b
-                        }
-                        if (request.category != null) {
-                            if (request.category in categoryTypes) {
-                                b.must { t ->
-                                    t.match { v ->
-                                        v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
-                                    }
-                                }
-                                b
-                            } else {
-                                b.mustNot { s ->
-                                    s.terms { v ->
-                                        v.field("category").terms(
-                                            TermsQueryField.of { a ->
-                                                a.value(
-                                                    categoryTypes.map {
-                                                        FieldValue.of(it)
-                                                    }
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
-                                b
-                            }
                         }
                         b
                     }
