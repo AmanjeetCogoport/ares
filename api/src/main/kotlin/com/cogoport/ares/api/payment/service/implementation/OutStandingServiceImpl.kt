@@ -33,6 +33,7 @@ import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch._types.FieldValue
@@ -483,7 +484,6 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponse?) {
         logger().info("Starting to update customer details of $id")
-        configureOpenSearchForRabbitMqListener()
         try {
             var customerOutstanding: CustomerOutstandingDocumentResponse? = null
             if (flag) {
@@ -519,15 +519,15 @@ class OutStandingServiceImpl : OutStandingService {
                 }
             }
         } catch (error: Exception) {
-            logger().error(error.toString())
             logger().error(error.stackTraceToString())
+            Sentry.captureException(error)
         }
     }
 
     override suspend fun getCustomerOutstandingList(request: OutstandingListRequest): CustomerOutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
-        val totalRecords = accountUtilizationRepository.getInvoicesOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
+        val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket("%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
+        val totalRecords = accountUtilizationRepository.getInvoicesOutstandingAgeingBucketCount("%" + request.query + "%", request.orgId)
         val ageingBucket = mutableListOf<InvoicesOutstandingAgeingResponse>()
         val listOrganization: MutableList<CustomersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()
@@ -547,9 +547,9 @@ class OutStandingServiceImpl : OutStandingService {
             val invoicesLedgerAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
             val paymentsLedgerAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
             val outstandingLedgerAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
-            openSearchServiceImpl.validateDueAmount(invoicesDues)
-            openSearchServiceImpl.validateDueAmount(paymentsDues)
-            openSearchServiceImpl.validateDueAmount(outstandingDues)
+            invoicesDues
+            paymentsDues
+            outstandingDues
             val orgId = it.organizationId
             val orgName = it.organizationName
             val orgOutstanding = CustomersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedgerAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedgerAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedgerAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount, it.debitNoteCount, it.totalDebitAmount)
@@ -576,8 +576,8 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
         var index: String = AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX
 
-        if (request.flag != "overall") {
-            index = "customer_outstanding_${request.flag}"
+        if (request.entityCode != "overall") {
+            index = "customer_outstanding_${request.entityCode}"
         }
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)

@@ -1605,12 +1605,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM
                 account_utilizations
             WHERE
-                (:query IS NULL OR organization_name ILIKE :query)
-                AND (:zone IS NULL OR zone_code = :zone)
+                organization_name ILIKE :query || '%'
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND acc_mode = 'AR'
                 AND due_date IS NOT NULL
-                AND document_status in('FINAL', 'PROFORMA')
+                AND document_status in('FINAL')
                 AND organization_id IS NOT NULL
                 AND amount_curr - pay_curr > 0
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
@@ -1622,30 +1621,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             LIMIT :pageLimit        
         """
     )
-    suspend fun getInvoicesOutstandingAgeingBucket(zone: String?, query: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<CustomerOutstandingAgeing>
+    suspend fun getInvoicesOutstandingAgeingBucket(query: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<CustomerOutstandingAgeing>
 
     @NewSpan
     @Query(
         """
             SELECT
-                count(t.organization_id)
+                count(c.organization_id)
             FROM (
                 SELECT
                     organization_id
                 FROM
                     account_utilizations
                 WHERE
-                    organization_name ILIKE :queryName
-                    AND (:zone IS NULL OR zone_code = :zone)
+                    organization_name ILIKE :queryName || '%'
                     AND acc_mode = 'AR'
                     AND due_date IS NOT NULL
-                    AND document_status in('FINAL', 'PROFORMA')
+                    AND document_status in('FINAL')
                     AND organization_id IS NOT NULL
                     AND acc_type = 'SINV'
                     AND deleted_at IS NULL
                 GROUP BY
-                    organization_id) AS t 
+                    organization_id) AS c
         """
     )
-    suspend fun getInvoicesOutstandingAgeingBucketCount(zone: String?, queryName: String?, orgId: String?): Int
+    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
 }

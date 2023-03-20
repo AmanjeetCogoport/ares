@@ -689,13 +689,13 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.creditController != null) {
+                        if (request.creditControllerId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("creditController.id.keyword").terms(
+                                    v.field("creditControllerId.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
-                                                request.creditController?.map {
+                                                request.creditControllerId?.map {
                                                     FieldValue.of(it.toString())
                                                 }
                                             )
