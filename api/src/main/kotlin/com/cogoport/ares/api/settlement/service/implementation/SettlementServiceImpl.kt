@@ -4,6 +4,8 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
+import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
@@ -16,11 +18,14 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.PaymentData
+import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
+import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -40,13 +45,20 @@ import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -73,6 +85,7 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.opensearch.Client
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
@@ -169,6 +182,18 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Inject
+    lateinit var paymentConverter: PaymentToPaymentMapper
+
+    @Inject
+    lateinit var accUtilizationToPaymentConverter: AccUtilizationToPaymentMapper
+
+    @Inject
+    lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1801,6 +1826,19 @@ open class SettlementServiceImpl : SettlementService {
             } else {
                 SettlementType.VTDS
             }
+
+        createTdsAsPaymentEntry(
+            destId,
+            destType,
+            currency,
+            ledCurrency,
+            tdsAmount,
+            tdsLedAmount,
+            createdBy,
+            createdByUserType,
+            tdsType
+        )
+
         createSettlement(
             sourceId,
             tdsType,
@@ -2503,5 +2541,127 @@ open class SettlementServiceImpl : SettlementService {
                 isSuccess = true
             )
         )
+    }
+
+    private suspend fun createTdsAsPaymentEntry (
+        destId: Long,
+        destType: SettlementType,
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        tdsType: SettlementType?
+    ): Long?{
+        val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
+
+        val accCodeAndSignFlag = when (invoiceAndBillData?.accMode){
+            AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.AR_ACCOUNT_CODE)
+            else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.AP_ACCOUNT_CODE)
+        }
+
+        val paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.TDS.prefix)
+        val paymentNumValue = "$tdsType$paymentNum"
+        val serviceType = when (invoiceAndBillData?.serviceType.isNullOrEmpty()) {
+            true -> ServiceType.NA
+            else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
+        }
+
+        val paymentsRequest = Payment(
+            id = null,
+            entityType = invoiceAndBillData?.entityCode,
+            sageOrganizationId = invoiceAndBillData?.sageOrganizationId,
+            bankId = null,
+            organizationId = invoiceAndBillData?.organizationId,
+            paymentNum = paymentNum,
+            paymentNumValue = paymentNumValue,
+            refAccountNo = paymentNumValue,
+            serviceType =  serviceType,
+            taggedOrganizationId = invoiceAndBillData?.taggedOrganizationId,
+            tradePartyMappingId = invoiceAndBillData?.tradePartyMappingId,
+            amount = tdsAmount,
+            currency = currency,
+            ledAmount =  tdsLedAmount,
+            ledCurrency = ledCurrency,
+            accMode = invoiceAndBillData?.accMode,
+            signFlag = accCodeAndSignFlag["signFlag"]?.toShort(),
+            createdBy = createdBy.toString(),
+            performedByUserType = createdByUserType,
+            paymentDocumentStatus = PaymentDocumentStatus.APPROVED,
+            accCode = accCodeAndSignFlag["accCode"],
+            orgSerialId = invoiceAndBillData?.orgSerialId,
+            organizationName = invoiceAndBillData?.organizationName,
+            zone = invoiceAndBillData?.zoneCode,
+            utr = paymentNumValue,
+            remarks = "tds against $destId",
+            updatedBy = createdBy.toString(),
+            paymentCode = PaymentCode.valueOf(tdsType?.name!!),
+        )
+
+        val payment = paymentConverter.convertToEntity(paymentsRequest)
+
+        payment.migrated = false
+        payment.createdAt = Timestamp.from(Instant.now())
+        payment.updatedAt = Timestamp.from(Instant.now())
+        payment.isDeleted = false
+
+        val savedPayment = paymentRepository.save(payment)
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PAYMENTS,
+                objectId = savedPayment.id,
+                actionName = AresConstants.CREATE,
+                data = savedPayment,
+                performedBy = createdBy.toString(),
+                performedByUserType = createdByUserType
+            )
+        )
+        paymentsRequest.id = savedPayment.id
+
+        val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
+
+        accUtilizationModel.serviceType = serviceType
+        accUtilizationModel.accType = AccountType.valueOf(tdsType?.name!!)
+        accUtilizationModel.zoneCode = invoiceAndBillData?.zoneCode
+        accUtilizationModel.currencyPayment = tdsAmount
+        accUtilizationModel.ledgerPayment = tdsLedAmount
+        accUtilizationModel.ledgerAmount = tdsLedAmount
+        accUtilizationModel.ledCurrency = ledCurrency
+        accUtilizationModel.currency = currency!!
+        accUtilizationModel.docStatus = DocumentStatus.FINAL
+        accUtilizationModel.migrated = false
+
+        val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
+
+        accUtilEntity.documentNo = payment.paymentNum!!
+        accUtilEntity.documentValue = payment.paymentNumValue
+        accUtilEntity.taxableAmount = BigDecimal.ZERO
+        accUtilEntity.accCode = accCodeAndSignFlag["accCode"]!!
+
+        val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilRes.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilRes,
+                performedBy = createdBy.toString(),
+                performedByUserType = createdByUserType
+            )
+        )
+        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
+
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            if (accUtilRes.accMode == AccMode.AP) {
+                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+            Sentry.captureException(ex)
+        }
+        return savedPayment.id!!
     }
 }
