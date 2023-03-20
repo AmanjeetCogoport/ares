@@ -609,7 +609,6 @@ class OpenSearchClient {
     fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponse>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
-        val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)
                 .query { q ->
@@ -694,13 +693,13 @@ class OpenSearchClient {
                             b.must { s ->
                                 s.terms { v ->
                                     v.field("creditController.id.keyword").terms(
-                                            TermsQueryField.of { a ->
-                                                a.value(
-                                                        request.creditController?.map {
-                                                            FieldValue.of(it.toString())
-                                                        }
-                                                )
-                                            }
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.creditController?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
                                     )
                                 }
                             }
