@@ -537,7 +537,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         ageingBucket.forEach { it ->
-            val data = accountUtilizationRepository.generateInvoiceOrgOutstanding(it.organizationId!!, request.zone, request.entityCode)
+            val data = accountUtilizationRepository.generateOrgOutstanding(it.organizationId!!, request.zone, request.entityCode)
             val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
             val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
             val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
