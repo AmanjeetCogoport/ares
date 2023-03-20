@@ -1339,7 +1339,7 @@ open class SettlementServiceImpl : SettlementService {
                     performedByUserType = updatedByUserType
                 )
             )
-            updateExternalSystemInvoice(accUtilObj, updatedBy, updatedByUserType)
+            updateExternalSystemInvoice(accUtilObj, updatedBy, updatedByUserType, false, true)
             sendInvoiceDataToDebitConsumption(accUtil)
             OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
             emitDashboardAndOutstandingEvent(accUtilObj)
@@ -1728,10 +1728,11 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization: AccountUtilization,
         performedBy: UUID,
         performedByUserType: String?,
-        isAutoKnockOff: Boolean = false
+        isAutoKnockOff: Boolean = false,
+        isDelete: Boolean = false
     ) {
         when (accountUtilization.accType) {
-            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, performedBy, performedByUserType, isAutoKnockOff)
+            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, performedBy, performedByUserType, isAutoKnockOff, isDelete)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
                 journalVoucherService.updateJournalVoucherStatus(
@@ -1793,11 +1794,12 @@ open class SettlementServiceImpl : SettlementService {
         accountUtilization: AccountUtilization,
         performedBy: UUID?,
         performedByUserType: String?,
-        isAutoKnockOff: Boolean
+        isAutoKnockOff: Boolean,
+        isDelete: Boolean
     ) {
         val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"
-        else if (accountUtilization.taxableAmount!! > accountUtilization.payCurr)
+        else if (accountUtilization.payableAmount!! > accountUtilization.payCurr)
             "PARTIAL"
         else
             "FULL"
@@ -1832,7 +1834,8 @@ open class SettlementServiceImpl : SettlementService {
                 cogoEntity = paymentInfo?.entityCode,
                 paymentDate = paymentInfo?.settlementDate,
                 paidTds = BigDecimal.ZERO,
-                settlementNum = paymentInfo?.settlementNum!!
+                settlementNum = paymentInfo?.settlementNum!!,
+                deleteSettlement = isDelete
             )
         )
         try {
