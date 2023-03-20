@@ -607,7 +607,7 @@ class OutStandingServiceImpl : OutStandingService {
                 tradePartyId = customerOutstanding.tradePartyId,
                 tradePartyType = customerOutstanding.tradePartyType,
                 registrationNumber = customerOutstanding.registrationNumber,
-                serialId = customerOutstanding.serialId,
+                tradePartySerialId = customerOutstanding.tradePartySerialId,
                 organizationSerialId = customerOutstanding.organizationSerialId,
                 sageId = customerOutstanding.sageId,
                 countryCode = customerOutstanding.countryCode,

@@ -34,15 +34,15 @@ data class CustomerOutstandingDocumentResponse(
     @JsonProperty("companyType")
     var companyType: String?,
     @JsonProperty("creditController")
-    var creditController: SalesAgent?,
+    var creditController: SupplyAgent?,
     @JsonProperty("kam")
-    var kam: SalesAgent?,
+    var kam: SupplyAgent?,
     @JsonProperty("salesAgent")
-    var salesAgent: SalesAgent?,
+    var salesAgent: SupplyAgent?,
     @JsonProperty("sageId")
     var sageId: String?,
-    @JsonProperty("serialId")
-    var serialId: String?,
+    @JsonProperty("tradePartySerialId")
+    var tradePartySerialId: String?,
     @JsonProperty("countryId")
     var countryId: String?,
     @JsonProperty("countryCode")
