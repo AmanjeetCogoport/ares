@@ -1456,11 +1456,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
+        WHERE acc_mode = :accMode AND organization_id IS NOT NULL 
         AND deleted_at IS NULL
         """
     )
-    suspend fun getSupplierOrgIds(): List<UUID>
+    suspend fun getSupplierOrgIds(accMode: AccMode?): List<UUID>
 
     @NewSpan
     @Query(

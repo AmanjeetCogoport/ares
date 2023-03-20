@@ -126,4 +126,9 @@ class OutstandingController {
         request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
         return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
     }
+
+    @Put("/customer-outstanding-migrate")
+    suspend fun migrateCustomerOutstanding() {
+        return scheduler.updateCustomerOutstandingOnOpenSearch()
+    }
 }
