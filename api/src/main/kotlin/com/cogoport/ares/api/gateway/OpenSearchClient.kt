@@ -650,7 +650,7 @@ class OpenSearchClient {
                         if (request.tradePartySerialId != null) {
                             b.must { s ->
                                 s.queryString { qs ->
-                                    qs.fields(mutableListOf("serialId.keyword")).query("*${request.tradePartySerialId}*")
+                                    qs.fields(mutableListOf("tradePartySerialId.keyword")).query("*${request.tradePartySerialId}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
@@ -661,7 +661,7 @@ class OpenSearchClient {
                         if (request.salesAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("supplyAgent.id.keyword").terms(
+                                    v.field("salesAgentId.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.salesAgentId?.map {
@@ -677,7 +677,7 @@ class OpenSearchClient {
                         if (request.kamId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("supplyAgent.id.keyword").terms(
+                                    v.field("kamId.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.kamId?.map {
@@ -685,6 +685,22 @@ class OpenSearchClient {
                                                 }
                                             )
                                         }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.creditController != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("creditController.id.keyword").terms(
+                                            TermsQueryField.of { a ->
+                                                a.value(
+                                                        request.creditController?.map {
+                                                            FieldValue.of(it.toString())
+                                                        }
+                                                )
+                                            }
                                     )
                                 }
                             }

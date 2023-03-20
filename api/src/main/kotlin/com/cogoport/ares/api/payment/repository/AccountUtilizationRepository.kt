@@ -1460,7 +1460,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         AND deleted_at IS NULL
         """
     )
-    suspend fun getSupplierOrgIds(accMode: AccMode?): List<UUID>
+    suspend fun getTradePartyOrgIds(accMode: AccMode?): List<UUID>
 
     @NewSpan
     @Query(

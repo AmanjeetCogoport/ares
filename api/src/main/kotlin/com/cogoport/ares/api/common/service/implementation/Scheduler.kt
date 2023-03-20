@@ -16,7 +16,7 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
         runBlocking {
-            val orgIds = accountUtilizationRepository.getSupplierOrgIds(AccMode.AP)
+            val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AP)
             for (orgId in orgIds) {
                 try {
                     emitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
@@ -31,7 +31,7 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
     @Scheduled(cron = "0 0 * * *")
     fun updateCustomerOutstandingOnOpenSearch() {
         runBlocking {
-            val orgIds = accountUtilizationRepository.getSupplierOrgIds(AccMode.AR)
+            val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AR)
             for (orgId in orgIds) {
                 try {
                     emitter.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
