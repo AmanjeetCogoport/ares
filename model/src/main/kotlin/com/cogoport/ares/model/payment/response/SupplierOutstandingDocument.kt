@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreType
 @ReflectiveAccess
-data class CustomerOutstandingDocumentResponseSupplierOutstandingDocument(
+data class SupplierOutstandingDocument(
     @JsonProperty("organizationId")
     var organizationId: String?,
     @JsonProperty("selfOrganizationId")

@@ -433,9 +433,9 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponse) {
         val searchResponse = Client.search({ s ->
             s.index(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX)
-                    .query { q ->
-                        q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
-                    }
+                .query { q ->
+                    q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
+                }
         }, CustomerOutstandingDocumentResponse::class.java)
 
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
@@ -491,9 +491,9 @@ class OutStandingServiceImpl : OutStandingService {
             } else {
                 val searchResponse = Client.search({ s ->
                     s.index(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX)
-                            .query { q ->
-                                q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
-                            }
+                        .query { q ->
+                            q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
+                        }
                 }, CustomerOutstandingDocumentResponse::class.java)
                 if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
                     customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
@@ -503,9 +503,9 @@ class OutStandingServiceImpl : OutStandingService {
             if (customerOutstanding != null) {
                 var outstandingResponse: CustomerOutstandingDocumentResponse
 
-                val overallOutstanding = getSupplierOutstandingList(OutstandingListRequest(orgId = id))
+                val overallOutstanding = getCustomerOutstandingList(OutstandingListRequest(orgId = id))
                 if (!overallOutstanding.list.isNullOrEmpty()) {
-                    outstandingResponse = supplierOutstandingResponseMapper(overallOutstanding, customerOutstanding)
+                    outstandingResponse = customerOutstandingResponseMapper(overallOutstanding, customerOutstanding)
                     Client.updateDocument(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
                 }
 
@@ -566,10 +566,10 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return CustomerOutstandingList(
-                list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
-                totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
-                totalRecords = totalRecords,
-                page = request.page
+            list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
+            totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
+            totalRecords = totalRecords,
+            page = request.page
         )
     }
 
@@ -600,53 +600,53 @@ class OutStandingServiceImpl : OutStandingService {
 
         outstanding.list!!.forEach { customer ->
             customerOutstandingDocument = CustomerOutstandingDocumentResponse(
-                    organizationId = customerOutstanding.organizationId,
-                    businessName = customerOutstanding.businessName,
-                    legalBusinessName = customerOutstanding.legalBusinessName,
-                    tradePartyName = customerOutstanding.tradePartyName,
-                    tradePartyId = customerOutstanding.tradePartyId,
-                    tradePartyType = customerOutstanding.tradePartyType
-                    registrationNumber = customerOutstanding.registrationNumber,
-                    serialId = customerOutstanding.serialId,
-                    organizationSerialId = customerOutstanding.organizationSerialId,
-                    sageId = customerOutstanding.sageId,
-                    countryCode = customerOutstanding.countryCode,
-                    countryId = customerOutstanding.countryId,
-                    companyType = customerOutstanding.companyType,
-                    creditController = customerOutstanding.creditController,
-                    kam = customerOutstanding.kam,
-                    salesAgent = customerOutstanding.salesAgent,
-                    creditDays = customerOutstanding.creditDays,
-                    updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                    onAccountPayment = customer?.onAccountPayment!!.amountDue,
-                    totalOutstanding = customer.totalOutstanding!!.amountDue,
-                    openInvoice = customer.openInvoices!!.amountDue,
-                    onAccountPaymentInvoiceCount = customer.onAccountPayment!!.invoicesCount,
-                    openInvoiceCount = customer.openInvoices!!.invoicesCount,
-                    totalOutstandingInvoiceCount = customer.totalOutstanding!!.invoicesCount,
-                    totalOutstandingInvoiceLedgerAmount = customer.totalOutstanding!!.invoiceLedAmount,
-                    onAccountPaymentInvoiceLedgerAmount = customer.onAccountPayment!!.invoiceLedAmount,
-                    openInvoiceLedgerAmount = customer.openInvoices!!.invoiceLedAmount,
-                    totalCreditNoteAmount = customer.totalCreditAmount,
-                    totalDebitNoteAmount = customer.totalDebitAmount,
-                    creditNoteCount = customer.creditNoteCount,
-                    debitNoteCount = customer.debitNoteCount,
-                    notDueAmount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
-                    notDueCount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
-                    todayAmount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
-                    todayCount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.count,
-                    thirtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.amount,
-                    thirtyCount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.count,
-                    sixtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.amount,
-                    sixtyCount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.count,
-                    ninetyAmount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.amount,
-                    ninetyCount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.count,
-                    oneEightyAmount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.amount,
-                    oneEightyCount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.count,
-                    threeSixtyFiveAmount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.amount,
-                    threeSixtyFiveCount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.count,
-                    threeSixtyFivePlusAmount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.amount,
-                    threeSixtyFivePlusCount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.count
+                organizationId = customerOutstanding.organizationId,
+                businessName = customerOutstanding.businessName,
+                legalBusinessName = customerOutstanding.legalBusinessName,
+                tradePartyName = customerOutstanding.tradePartyName,
+                tradePartyId = customerOutstanding.tradePartyId,
+                tradePartyType = customerOutstanding.tradePartyType,
+                registrationNumber = customerOutstanding.registrationNumber,
+                serialId = customerOutstanding.serialId,
+                organizationSerialId = customerOutstanding.organizationSerialId,
+                sageId = customerOutstanding.sageId,
+                countryCode = customerOutstanding.countryCode,
+                countryId = customerOutstanding.countryId,
+                companyType = customerOutstanding.companyType,
+                creditController = customerOutstanding.creditController,
+                kam = customerOutstanding.kam,
+                salesAgent = customerOutstanding.salesAgent,
+                creditDays = customerOutstanding.creditDays,
+                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                onAccountPayment = customer?.onAccountPayment!!.amountDue,
+                totalOutstanding = customer.totalOutstanding!!.amountDue,
+                openInvoice = customer.openInvoices!!.amountDue,
+                onAccountPaymentInvoiceCount = customer.onAccountPayment!!.invoicesCount,
+                openInvoiceCount = customer.openInvoices!!.invoicesCount,
+                totalOutstandingInvoiceCount = customer.totalOutstanding!!.invoicesCount,
+                totalOutstandingInvoiceLedgerAmount = customer.totalOutstanding!!.invoiceLedAmount,
+                onAccountPaymentInvoiceLedgerAmount = customer.onAccountPayment!!.invoiceLedAmount,
+                openInvoiceLedgerAmount = customer.openInvoices!!.invoiceLedAmount,
+                totalCreditNoteAmount = customer.totalCreditAmount,
+                totalDebitNoteAmount = customer.totalDebitAmount,
+                creditNoteCount = customer.creditNoteCount,
+                debitNoteCount = customer.debitNoteCount,
+                notDueAmount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
+                notDueCount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
+                todayAmount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
+                todayCount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.count,
+                thirtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.amount,
+                thirtyCount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.count,
+                sixtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.amount,
+                sixtyCount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.count,
+                ninetyAmount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.amount,
+                ninetyCount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.count,
+                oneEightyAmount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.amount,
+                oneEightyCount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.count,
+                threeSixtyFiveAmount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.amount,
+                threeSixtyFiveCount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.count,
+                threeSixtyFivePlusAmount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.amount,
+                threeSixtyFivePlusCount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.count
             )
         }
         return customerOutstandingDocument!!

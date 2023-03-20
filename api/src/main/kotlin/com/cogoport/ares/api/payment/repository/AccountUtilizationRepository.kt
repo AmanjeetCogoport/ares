@@ -1626,7 +1626,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-            """
+        """
             SELECT
                 count(t.organization_id)
             FROM (
@@ -1651,7 +1651,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-            """
+        """
         select organization_id::varchar, currency,
         sum(case when acc_type not in ('PAY', 'PCN', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and amount_curr - pay_curr <> 0 then 1 else 0 end) as open_invoices_count,
         sum(case when acc_type not in ('PAY', 'PCN', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,

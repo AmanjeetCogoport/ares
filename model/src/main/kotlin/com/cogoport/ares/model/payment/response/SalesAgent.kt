@@ -10,16 +10,16 @@ import java.util.UUID
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SalesAgent(
-        @JsonProperty("id")
-        var id: UUID?,
-        @JsonProperty("name")
-        var name: String?,
-        @JsonProperty("email")
-        var email: String?,
-        @JsonProperty("mobileCountryCode")
-        var mobileCountryCode: String?,
-        @JsonProperty("mobileNumber")
-        var mobileNumber: String?,
-        @JsonProperty("reportingManagerID")
-        var reportingManagerID: UUID?
+    @JsonProperty("id")
+    var id: UUID?,
+    @JsonProperty("name")
+    var name: String?,
+    @JsonProperty("email")
+    var email: String?,
+    @JsonProperty("mobileCountryCode")
+    var mobileCountryCode: String?,
+    @JsonProperty("mobileNumber")
+    var mobileNumber: String?,
+    @JsonProperty("reportingManagerID")
+    var reportingManagerID: UUID?
 )

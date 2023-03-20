@@ -612,133 +612,133 @@ class OpenSearchClient {
         val categoryTypes: MutableList<String> = mutableListOf("shipping_line", "airline", "nvocc", "iata", "transporter", "freight_forwarder", "customs_service_provider")
         val response = Client.search({ t ->
             t.index(index)
-                    .query { q ->
-                        q.bool { b ->
-                            if (request.q != null) {
-                                b.must { s ->
-                                    s.queryString { qs ->
-                                        qs.fields(searchFilterFields).query("*${request.q}*")
-                                                .lenient(true)
-                                                .allowLeadingWildcard(true)
-                                                .defaultOperator(Operator.And)
-                                    }
-                                }
-                                b
-                            }
-                            if (request.sageId != null) {
-                                b.must { s ->
-                                    s.queryString { qs ->
-                                        qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
-                                                .lenient(true)
-                                                .allowLeadingWildcard(true)
-                                                .defaultOperator(Operator.And)
-                                    }
-                                }
-                                b
-                            }
-                            if (request.organizationSerialId != null) {
-                                b.must { s ->
-                                    s.queryString { qs ->
-                                        qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
-                                                .lenient(true)
-                                                .allowLeadingWildcard(true)
-                                                .defaultOperator(Operator.And)
-                                    }
-                                }
-                                b
-                            }
-                            if (request.tradePartySerialId != null) {
-                                b.must { s ->
-                                    s.queryString { qs ->
-                                        qs.fields(mutableListOf("serialId.keyword")).query("*${request.tradePartySerialId}*")
-                                                .lenient(true)
-                                                .allowLeadingWildcard(true)
-                                                .defaultOperator(Operator.And)
-                                    }
-                                }
-                                b
-                            }
-                            if (request.supplyAgentId != null) {
-                                b.must { s ->
-                                    s.terms { v ->
-                                        v.field("supplyAgent.id.keyword").terms(
-                                                TermsQueryField.of { a ->
-                                                    a.value(
-                                                            request.supplyAgentId?.map {
-                                                                FieldValue.of(it.toString())
-                                                            }
-                                                    )
-                                                }
-                                        )
-                                    }
-                                }
-                                b
-                            }
-                            if (request.countryId != null) {
-                                b.must { s ->
-                                    s.terms { v ->
-                                        v.field("countryId.keyword").terms(
-                                                TermsQueryField.of { a ->
-                                                    a.value(
-                                                            request.countryId?.map {
-                                                                FieldValue.of(it.toString())
-                                                            }
-                                                    )
-                                                }
-                                        )
-                                    }
-                                }
-                                b
-                            }
-                            if (request.companyType != null) {
-                                b.must { t ->
-                                    t.match { v ->
-                                        v.field("companyType.keyword").query(FieldValue.of(request.companyType))
-                                    }
-                                }
-                                b
-                            }
-                            if (request.category != null) {
-                                if (request.category in categoryTypes) {
-                                    b.must { t ->
-                                        t.match { v ->
-                                            v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
-                                        }
-                                    }
-                                    b
-                                } else {
-                                    b.mustNot { s ->
-                                        s.terms { v ->
-                                            v.field("category").terms(
-                                                    TermsQueryField.of { a ->
-                                                        a.value(
-                                                                categoryTypes.map {
-                                                                    FieldValue.of(it)
-                                                                }
-                                                        )
-                                                    }
-                                            )
-                                        }
-                                    }
-                                    b
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
                                 }
                             }
                             b
                         }
-                        q
-                    }
-                    .sort { t ->
-                        if (!request.sortBy.isNullOrBlank()) {
-                            if (!request.sortType.isNullOrBlank()) {
-                                t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
-                            } else {
-                                t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                        if (request.sageId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
                             }
-                        } else {
-                            t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                            b
                         }
+                        if (request.organizationSerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartySerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("serialId.keyword")).query("*${request.tradePartySerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.supplyAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("supplyAgent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.supplyAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.countryId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("countryId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.countryId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType.keyword").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        if (request.category != null) {
+                            if (request.category in categoryTypes) {
+                                b.must { t ->
+                                    t.match { v ->
+                                        v.field("category").query(FieldValue.of(request.category)).operator(Operator.And)
+                                    }
+                                }
+                                b
+                            } else {
+                                b.mustNot { s ->
+                                    s.terms { v ->
+                                        v.field("category").terms(
+                                            TermsQueryField.of { a ->
+                                                a.value(
+                                                    categoryTypes.map {
+                                                        FieldValue.of(it)
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                                b
+                            }
+                        }
+                        b
                     }
-                    .from(offset).size(request.limit)
+                    q
+                }
+                .sort { t ->
+                    if (!request.sortBy.isNullOrBlank()) {
+                        if (!request.sortType.isNullOrBlank()) {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
+                        } else {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                        }
+                    } else {
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                    }
+                }
+                .from(offset).size(request.limit)
         }, CustomerOutstandingDocumentResponse::class.java)
 
         return response
