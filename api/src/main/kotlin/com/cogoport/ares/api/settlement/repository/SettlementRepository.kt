@@ -341,4 +341,12 @@ ORDER BY
         """
     )
     suspend fun updateDraftStatus(id: Long, isDraft: Boolean)
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE settlements set settlement_num = :settlementNum WHERE id = :id
+        """
+    )
+    suspend fun updateSettlementNumber(id: Long, settlementNum: String)
 }

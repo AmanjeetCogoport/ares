@@ -120,4 +120,9 @@ class AresMessageConsumer {
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
+
+    @Queue("migrate-settlement-number", prefetch = 1)
+    fun migrateSettlementNum(id: Long) = runBlocking {
+        paymentMigration.migrateSettlementNum(id)
+    }
 }

@@ -738,7 +738,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 CASE WHEN 
                     (p.exchange_rate is not null) 
                     THEN p.exchange_rate 
-                    ELSE ((case when amount_curr != 0 then amount_curr_loc / amount_curr else 1 END)) 
+                    ELSE ((case when amount_curr != 0 then amount_loc / amount_curr else 1 END)) 
                     END,
                  1) AS exchange_rate
             FROM account_utilizations au

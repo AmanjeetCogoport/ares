@@ -6,7 +6,7 @@ ADD COLUMN PAYABLE_AMOUNT numeric(13, 4) NOT null default 0;
 
 ALTER TABLE settlements
 ADD COLUMN is_draft bool NOT NULL DEFAULT false,
-ADD COLUMN settlement_num VARCHAR(255);
+ADD COLUMN settlement_num VARCHAR(255);         --add uniqueness here
 
 CREATE TABLE "settlement_tagged_mappings" (
      "id" BIGSERIAL PRIMARY KEY,

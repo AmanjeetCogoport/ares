@@ -719,4 +719,9 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         }
     }
+
+    override suspend fun migrateSettlementNum(id: Long) {
+        val settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+        settlementRepository.updateSettlementNumber(id, settlementNum)
+    }
 }

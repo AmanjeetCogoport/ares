@@ -11,4 +11,6 @@ interface PaymentMigration {
 
     suspend fun migrateSettlements(settlementRecord: SettlementRecord)
     suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest)
+
+    suspend fun migrateSettlementNum(ids: Long)
 }

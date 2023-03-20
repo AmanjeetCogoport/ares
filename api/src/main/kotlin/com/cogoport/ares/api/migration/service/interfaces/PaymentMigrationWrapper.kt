@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
+import com.cogoport.ares.model.common.PayableAmountReq
+
 interface PaymentMigrationWrapper {
     suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int
     suspend fun migrateJournalVoucher(startDate: String?, endDate: String?, jvNums: List<String>?): Int
@@ -12,4 +14,8 @@ interface PaymentMigrationWrapper {
     suspend fun updateUtilizationAmountByPaymentNum(paymentNums: List<String>): Int
     suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?, updatedAt: String?, invoiceNumbers: List<String>?): Int
     suspend fun updateUtilizationForBill(startDate: String?, endDate: String?, updatedAt: String?): Int
+
+    suspend fun migrateSettlementNumWrapper(ids: List<Long>)
+
+    suspend fun migratePayableAmount(req: PayableAmountReq)
 }

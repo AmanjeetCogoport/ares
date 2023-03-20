@@ -6,6 +6,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.math.BigDecimal
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -41,4 +42,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
               updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
     )
     suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean)
+    @NewSpan
+    @Query(
+
+        """
+            UPDATE account_utilizations SET 
+            payable_amount = :payableAmount, payable_amount_loc = :payableAmountLoc 
+            WHERE document_no = :documentNo and acc_mode = 'AP' AND deleted_at is null
+        """
+    )
+    suspend fun updatePayableAmount(documentNo: Long, payableAmountLoc: BigDecimal, payableAmount: BigDecimal)
 }

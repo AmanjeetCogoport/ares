@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.PayableAmountReq
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -126,5 +127,15 @@ class MigratePaymentsController {
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
         )
+    }
+
+    @Post("/settlementNum-migrate")
+    suspend fun migrateSettlementNum(@Body settlementIds: List<Long>) {
+        paymentMigration.migrateSettlementNumWrapper(settlementIds)
+    }
+
+    @Post("/payable-amount")
+    suspend fun migratePayableAmount(@Body req: PayableAmountReq) {
+        paymentMigration.migratePayableAmount(req)
     }
 }
