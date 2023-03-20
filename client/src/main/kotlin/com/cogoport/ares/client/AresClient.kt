@@ -180,6 +180,6 @@ interface AresClient {
     @Post("/payments/accounts/settle-tagged-invoice-payment")
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
 
-    @Post("/payments/payable-amount")
-    suspend fun migratePayableAmount(@Body req: PayableAmountReq)
+    @Put("/payments/payable-amount")
+    suspend fun migratePayableAmount(@Body req: List<PayableAmountReq>)
 }

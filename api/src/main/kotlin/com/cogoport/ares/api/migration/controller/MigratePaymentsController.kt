@@ -9,6 +9,7 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import jakarta.inject.Inject
 
@@ -134,8 +135,8 @@ class MigratePaymentsController {
         paymentMigration.migrateSettlementNumWrapper(settlementIds)
     }
 
-    @Post("/payable-amount")
-    suspend fun migratePayableAmount(@Body req: PayableAmountReq) {
+    @Put("/payable-amount")
+    suspend fun migratePayableAmount(@Body req: List<PayableAmountReq>) {
         paymentMigration.migratePayableAmount(req)
     }
 }
