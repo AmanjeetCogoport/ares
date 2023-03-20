@@ -5,7 +5,6 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
-import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
@@ -51,13 +50,11 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -2543,7 +2540,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun createTdsAsPaymentEntry (
+    private suspend fun createTdsAsPaymentEntry(
         destId: Long,
         destType: SettlementType,
         currency: String?,
@@ -2553,10 +2550,10 @@ open class SettlementServiceImpl : SettlementService {
         createdBy: UUID?,
         createdByUserType: String?,
         tdsType: SettlementType?
-    ): Long?{
+    ): Long? {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
 
-        val accCodeAndSignFlag = when (invoiceAndBillData?.accMode){
+        val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
             AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.AR_ACCOUNT_CODE)
             else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.AP_ACCOUNT_CODE)
         }
@@ -2577,12 +2574,12 @@ open class SettlementServiceImpl : SettlementService {
             paymentNum = paymentNum,
             paymentNumValue = paymentNumValue,
             refAccountNo = paymentNumValue,
-            serviceType =  serviceType,
+            serviceType = serviceType,
             taggedOrganizationId = invoiceAndBillData?.taggedOrganizationId,
             tradePartyMappingId = invoiceAndBillData?.tradePartyMappingId,
             amount = tdsAmount,
             currency = currency,
-            ledAmount =  tdsLedAmount,
+            ledAmount = tdsLedAmount,
             ledCurrency = ledCurrency,
             accMode = invoiceAndBillData?.accMode,
             signFlag = accCodeAndSignFlag["signFlag"]?.toShort(),
@@ -2623,7 +2620,7 @@ open class SettlementServiceImpl : SettlementService {
         val accUtilizationModel: AccUtilizationRequest = accUtilizationToPaymentConverter.convertEntityToModel(payment)
 
         accUtilizationModel.serviceType = serviceType
-        accUtilizationModel.accType = AccountType.valueOf(tdsType?.name!!)
+        accUtilizationModel.accType = AccountType.valueOf(tdsType.name)
         accUtilizationModel.zoneCode = invoiceAndBillData?.zoneCode
         accUtilizationModel.currencyPayment = tdsAmount
         accUtilizationModel.ledgerPayment = tdsLedAmount
