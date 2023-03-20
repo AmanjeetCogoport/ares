@@ -13,6 +13,8 @@ class SettlementInvoiceResponse(
     var dueDate: Date?,
     var invoiceAmount: BigDecimal?,
     var taxableAmount: BigDecimal?,
+    var tds: BigDecimal?,
+    var afterTdsAmount: BigDecimal?,
     var settledAmount: BigDecimal?,
     var balanceAmount: BigDecimal?,
     var status: String,
@@ -21,4 +23,6 @@ class SettlementInvoiceResponse(
     var sid: String?,
     var shipmentType: String? = null,
     var pdfUrl: String? = null,
+    var tdsPercentage: BigDecimal = BigDecimal.ZERO,
+    var settledTds: BigDecimal
 )

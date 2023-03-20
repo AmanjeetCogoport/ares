@@ -238,7 +238,10 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                     documentLedAmount = doc.amountLoc,
                     documentLedBalance = doc.payableAmountLoc!! - doc.payLoc,
                     sourceId = doc.documentNo,
-                    sourceType = SettlementType.valueOf(doc.accType.name)
+                    sourceType = SettlementType.valueOf(doc.accType.name),
+                    settledTds = BigDecimal.ZERO,
+                    tdsCurrency = doc.currency,
+                    afterTdsAmount = doc.amountCurr
                 )
             }
 
@@ -248,6 +251,8 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                 CheckDocument(
                     id = it.id,
                     documentNo = it.documentNo,
+                    tds = BigDecimal.ZERO,
+                    afterTdsAmount = it.documentAmount,
                     documentValue = it.documentValue,
                     accountType = SettlementType.valueOf(it.accountType),
                     documentAmount = it.documentAmount,
@@ -264,6 +269,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                     transactionDate = it.transactionDate,
                     signFlag = it.signFlag,
                     nostroAmount = it.nostroAmount,
+                    settledTds = 0.toBigDecimal(),
                     settledAmount = it.settledAmount,
                     settledAllocation = it.settledAllocation!!,
                     settledNostro = 0.toBigDecimal()

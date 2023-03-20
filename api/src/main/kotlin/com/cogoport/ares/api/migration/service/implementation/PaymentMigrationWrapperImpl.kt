@@ -189,7 +189,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     }
 
     override suspend fun migratePayableAmount(req: List<PayableAmountReq>) {
-        req.forEach{
+        req.forEach {
             accountUtilizationRepo.updatePayableAmount(it.documentNo, it.payableAmountLoc, it.payableAmount)
         }
     }

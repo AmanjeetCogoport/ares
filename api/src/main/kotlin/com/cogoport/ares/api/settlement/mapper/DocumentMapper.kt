@@ -1,3 +1,4 @@
+
 package com.cogoport.ares.api.settlement.mapper
 
 import com.cogoport.ares.api.settlement.entity.Document
@@ -32,6 +33,7 @@ interface DocumentMapper {
     @Mapping(source = "documentDate", target = "transactionDate")
     @Mapping(source = "balanceAmount", target = "currentBalance")
     @Mapping(source = "documentLedBalance", target = "ledgerBalance")
+    @Mapping(source = "tds", target = "tds")
     @Mapping(target = "nostroAmount", expression = "java(java.math.BigDecimal.ZERO)")
     fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
 
