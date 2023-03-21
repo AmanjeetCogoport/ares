@@ -162,7 +162,7 @@ class OutStandingServiceImpl : OutStandingService {
 
         customerOutstanding?.hits()?.hits()?.map {
             it.source()?.let {
-                it1 ->
+                    it1 ->
                 listOrganization.add(it1)
             }
         }
@@ -474,7 +474,7 @@ class OutStandingServiceImpl : OutStandingService {
             customerOutstandingDocument.threeSixtyFiveCount = 0
             customerOutstandingDocument.threeSixtyFivePlusAmount = BigDecimal.ZERO
             customerOutstandingDocument.threeSixtyFivePlusCount = 0
-            Client.addDocument(AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, customerOutstandingDocument, true)
+            Client.addDocument(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, customerOutstandingDocument, true)
             AresConstants.COGO_ENTITIES.forEach {
                 val index = "customer_outstanding_$it"
                 Client.addDocument(index, request.organizationId!!, customerOutstandingDocument, true)

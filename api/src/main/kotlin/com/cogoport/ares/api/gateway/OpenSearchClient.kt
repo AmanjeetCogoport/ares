@@ -660,7 +660,7 @@ class OpenSearchClient {
                         if (request.salesAgentId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("salesAgentId.id.keyword").terms(
+                                    v.field("salesAgent.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.salesAgentId?.map {
@@ -676,7 +676,7 @@ class OpenSearchClient {
                         if (request.kamId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("kamId.id.keyword").terms(
+                                    v.field("kam.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.kamId?.map {
@@ -692,7 +692,7 @@ class OpenSearchClient {
                         if (request.creditControllerId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("creditControllerId.id.keyword").terms(
+                                    v.field("creditController.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.creditControllerId?.map {
