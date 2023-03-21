@@ -51,6 +51,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Operator
+import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
@@ -1824,7 +1825,7 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.VTDS
             }
 
-        createTdsAsPaymentEntry(
+        val tdsAsPaymentNum = createTdsAsPaymentEntry(
             destId,
             destType,
             currency,
@@ -1837,7 +1838,7 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         createSettlement(
-            sourceId,
+            tdsAsPaymentNum,
             tdsType,
             destId,
             destType,
@@ -2591,9 +2592,10 @@ open class SettlementServiceImpl : SettlementService {
             organizationName = invoiceAndBillData?.organizationName,
             zone = invoiceAndBillData?.zoneCode,
             utr = paymentNumValue,
-            remarks = "tds against $destId",
+            remarks = "tds against $destType$destId",
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
+            payMode = PayMode.BANK
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
@@ -2659,6 +2661,6 @@ open class SettlementServiceImpl : SettlementService {
             logger().error(ex.stackTraceToString())
             Sentry.captureException(ex)
         }
-        return savedPayment.id!!
+        return savedPayment.paymentNum!!
     }
 }
