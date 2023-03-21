@@ -11,7 +11,6 @@ import java.util.Date
 @Introspected
 @MappedEntity
 data class CustomerOutstandingPaymentResponse(
-
     val accCode: Int?,
     val accMode: AccMode?,
     val paymentAmount: String?,

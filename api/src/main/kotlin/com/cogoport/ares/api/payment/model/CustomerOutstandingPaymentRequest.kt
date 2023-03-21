@@ -10,11 +10,11 @@ import javax.validation.constraints.NotNull
 data class CustomerOutstandingPaymentRequest(
     @field:NotNull(message = "orgId is mandate")
     val orgId: UUID? = null,
-    val statusList: List<DocStatus?>? = null,
+    val statusList: List<DocStatus>? = listOf(DocStatus.PARTIAL_UTILIZED, DocStatus.UNUTILIZED, DocStatus.UTILIZED),
     var entityCode: String? = "overall",
     val page: Int = 1,
     val pageLimit: Int = 10,
-    val query: String? = null,
+    val query: String? = "",
     var sortType: String? = "Desc",
     var sortBy: String? = "transactionDate",
     var accType: AccountType? = null
