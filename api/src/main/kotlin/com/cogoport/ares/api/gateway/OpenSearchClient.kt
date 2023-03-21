@@ -3,10 +3,12 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import io.micronaut.tracing.annotation.NewSpan
@@ -599,6 +601,151 @@ class OpenSearchClient {
                 }
                 .from(offset).size(request.limit)
         }, SupplierOutstandingDocument::class.java)
+
+        return response
+    }
+
+    @NewSpan
+    fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponse>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
+        val response = Client.search({ t ->
+            t.index(index)
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.sageId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.organizationSerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartySerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("tradePartySerialId.keyword")).query("*${request.tradePartySerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.salesAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("salesAgentId.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.salesAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.kamId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("kamId.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.kamId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.creditControllerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("creditControllerId.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.creditControllerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.countryId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("countryId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.countryId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType.keyword").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        b
+                    }
+                    q
+                }
+                .sort { t ->
+                    if (!request.sortBy.isNullOrBlank()) {
+                        if (!request.sortType.isNullOrBlank()) {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
+                        } else {
+                            t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
+                        }
+                    } else {
+                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                    }
+                }
+                .from(offset).size(request.limit)
+        }, CustomerOutstandingDocumentResponse::class.java)
 
         return response
     }

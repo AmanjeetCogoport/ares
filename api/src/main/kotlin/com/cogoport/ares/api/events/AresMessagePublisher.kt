@@ -38,4 +38,7 @@ interface AresMessagePublisher {
 
     @Binding("sage.jv.migration")
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+
+    @Binding("customer.outstanding")
+    suspend fun emitUpdateCustomerOutstanding(request: UpdateSupplierOutstandingRequest)
 }
