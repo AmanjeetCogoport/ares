@@ -162,7 +162,7 @@ class OutStandingServiceImpl : OutStandingService {
 
         customerOutstanding?.hits()?.hits()?.map {
             it.source()?.let {
-                    it1 ->
+                it1 ->
                 listOrganization.add(it1)
             }
         }
