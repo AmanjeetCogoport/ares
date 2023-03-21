@@ -88,7 +88,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              where ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
              AND (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
              and document_status in ('FINAL', 'PROFORMA')  and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-             group by ageing_duration, zone, dashboard_currency order by 1
+             group by ageing_duration, zone, dashboard_currency
+             order by 1
           """
     )
     suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<AgeingBucketZone>
@@ -122,7 +123,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
         coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
         coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
-        currency as dashboard_currency, null as id
+        currency as dashboard_currency, 
+        null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -718,11 +720,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             due_date, 
             COALESCE(amount_curr, 0) as document_amount, 
             COALESCE(amount_loc, 0) as document_led_amount, 
-            COALESCE(payable_amount_loc - pay_loc, 0) as document_led_balance,
+            COALESCE(amount_curr - pay_loc, 0) as document_led_balance,
             COALESCE(taxable_amount, 0) as taxable_amount,  
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
+            COALESCE(amount_curr - payable_amount, 0) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
@@ -830,6 +833,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
             COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
+            COALESCE(amount_curr - payable_amount, 0) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,

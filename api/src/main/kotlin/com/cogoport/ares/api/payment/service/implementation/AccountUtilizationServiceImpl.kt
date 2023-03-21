@@ -227,7 +227,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
         if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
             val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-            if (updateInvoiceRequest.currAmount!! > accountUtilization.payableAmount!! && updateInvoiceRequest.ledAmount!! > accountUtilization.payableAmountLoc!!) {
+            if (updateInvoiceRequest.payableAmount!! > accountUtilization.payableAmount && updateInvoiceRequest.payableAmountLoc!! > accountUtilization.payableAmountLoc) {
                 amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
             } else {
                 amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
@@ -468,8 +468,8 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         }
     }
     private suspend fun amountGreaterThanExistingRecord(updateInvoiceRequest: UpdateInvoiceRequest, accountUtilization: AccountUtilization, paymentEntry: List<AccountUtilization?>) {
-        var extraUtilizationAmountCurr = updateInvoiceRequest.currAmount!! - accountUtilization.payableAmount!!
-        var extraUtilizationAmountLoc = updateInvoiceRequest.ledAmount!! - accountUtilization.payableAmountLoc!!
+        var extraUtilizationAmountCurr = updateInvoiceRequest.payableAmount!! - accountUtilization.payableAmount!!
+        var extraUtilizationAmountLoc = updateInvoiceRequest.payableAmountLoc!! - accountUtilization.payableAmountLoc!!
         for (payment in paymentEntry) {
             if (extraUtilizationAmountCurr <= 0.toBigDecimal() || extraUtilizationAmountLoc <= 0.toBigDecimal()) {
                 continue
@@ -506,12 +506,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         var totalUtilisedTillNowPay = accountUtilization.payCurr
         var totalUtilisedTillNowLed = accountUtilization.payLoc
 
-        if (updateInvoiceRequest.currAmount >= totalUtilisedTillNowPay && updateInvoiceRequest.ledAmount >= totalUtilisedTillNowLed) {
+        if (updateInvoiceRequest.payableAmount!! >= totalUtilisedTillNowPay && updateInvoiceRequest.payableAmountLoc!! >= totalUtilisedTillNowLed) {
             return
         }
 
-        var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.currAmount
-        var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.ledAmount
+        var extraUtilizationAmountCurr = totalUtilisedTillNowPay - updateInvoiceRequest.payableAmount!!
+        var extraUtilizationAmountLoc = totalUtilisedTillNowLed - updateInvoiceRequest.payableAmountLoc!!
         for (payment in paymentEntry) {
             var toUpdatePayCurr: BigDecimal
             var toUpdateLedCurr: BigDecimal
