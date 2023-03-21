@@ -29,4 +29,5 @@ data class JournalVoucherResponse(
     var updatedAt: Timestamp?,
     var description: String?,
     var parentJvId: String? = null,
+    var sageUniqueId: String? = null
 )
