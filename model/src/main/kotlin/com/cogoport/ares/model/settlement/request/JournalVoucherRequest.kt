@@ -28,4 +28,5 @@ data class JournalVoucherRequest(
     var accMode: AccMode,
     var description: String?,
     var parentJvId: String? = null,
+    var sageUniqueId: String? = null
 )
