@@ -601,7 +601,6 @@ class OutStandingServiceImpl : OutStandingService {
             customerOutstandingDocument = CustomerOutstandingDocumentResponse(
                 organizationId = customerOutstanding.organizationId,
                 businessName = customerOutstanding.businessName,
-                legalBusinessName = customerOutstanding.legalBusinessName,
                 tradePartyName = customerOutstanding.tradePartyName,
                 tradePartyId = customerOutstanding.tradePartyId,
                 tradePartyType = customerOutstanding.tradePartyType,

@@ -19,16 +19,14 @@ import java.time.LocalDateTime
 data class CustomerOutstandingDocumentResponse(
     @JsonProperty("organizationId")
     var organizationId: String?,
-    @JsonProperty("tradePartyId")
+    @JsonProperty("selfOrganizationId")
     var tradePartyId: String?,
     @JsonProperty("businessName")
     var businessName: String?,
-    @JsonProperty("tradePartyName")
+    @JsonProperty("selfOrganizationName")
     var tradePartyName: String?,
-    @JsonProperty("legalBusinessName")
-    var legalBusinessName: String?,
-    @JsonProperty("tradePartyType")
-    var tradePartyType: String?,
+    @JsonProperty("collectionPartyType")
+    var tradePartyType: List<String?>?,
     @JsonProperty("registrationNumber")
     var registrationNumber: String?,
     @JsonProperty("companyType")
@@ -41,7 +39,7 @@ data class CustomerOutstandingDocumentResponse(
     var salesAgent: SupplyAgent?,
     @JsonProperty("sageId")
     var sageId: String?,
-    @JsonProperty("tradePartySerialId")
+    @JsonProperty("serialId")
     var tradePartySerialId: String?,
     @JsonProperty("countryId")
     var countryId: String?,
