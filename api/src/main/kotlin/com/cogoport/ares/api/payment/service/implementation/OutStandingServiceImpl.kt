@@ -161,8 +161,7 @@ class OutStandingServiceImpl : OutStandingService {
         val customerOutstanding = OpenSearchClient().listCustomerSaleOutstanding(index = AresConstants.SALES_OUTSTANDING_INDEX, classType = CustomerOutstanding::class.java, values = "${orgId}_ALL")
 
         customerOutstanding?.hits()?.hits()?.map {
-            it.source()?.let {
-                it1 ->
+            it.source()?.let { it1 ->
                 listOrganization.add(it1)
             }
         }
