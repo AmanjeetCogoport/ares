@@ -11,7 +11,7 @@ data class CustomerOutstandingPaymentRequest(
     @field:NotNull(message = "orgId is mandate")
     val orgId: UUID? = null,
     val statusList: List<DocStatus?>? = null,
-    var entityCode: Int? = null,
+    var entityCode: String? = "overall",
     val page: Int = 1,
     val pageLimit: Int = 10,
     val query: String? = null,
