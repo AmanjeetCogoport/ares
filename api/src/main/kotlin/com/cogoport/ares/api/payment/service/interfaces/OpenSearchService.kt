@@ -28,6 +28,7 @@ interface OpenSearchService {
     suspend fun generateOutstandingData(
         searchKey: String,
         cogoEntityId: UUID?,
-        defaultersOrgIds: List<UUID>?
+        defaultersOrgIds: List<UUID>?,
+        dashboardCurrency: String?
     )
 }

@@ -52,4 +52,13 @@ object AresModelConstants {
         "c7e1390d-ec41-477f-964b-55423ee84700" to 201,
         "6fd98605-9d5d-479d-9fac-cf905d292b88" to 101
     )
+
+    var COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING = mapOf(
+        101 to "INR",
+        201 to "EUR",
+        301 to "INR",
+        401 to "SGD",
+        501 to "VND"
+
+    )
 }

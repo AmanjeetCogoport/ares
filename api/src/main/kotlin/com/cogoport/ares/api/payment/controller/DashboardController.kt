@@ -90,8 +90,8 @@ class DashboardController {
     }
 
     @Get("/outstanding-by-age{?request*}")
-    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): HashMap<String, OverallAgeingStatsResponse>? {
-        return Response<HashMap<String, OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
+    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
+        return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
     }
 
     @Get("/receivables-by-age{?request*}")
@@ -173,9 +173,10 @@ class DashboardController {
     @Get("/outstanding")
     suspend fun getOutstanding(
         @QueryValue("date") date: String? = null,
-        @QueryValue("cogoEntityId") cogoEntityId: UUID?
+        @QueryValue("cogoEntityId") cogoEntityId: UUID?,
+        @QueryValue("dashboardCurrency") dashboardCurrency: String? = "INR"
     ): OutstandingOpensearchResponse? {
-        return dashboardService.getOutstanding(date, cogoEntityId)
+        return dashboardService.getOutstanding(date, cogoEntityId, dashboardCurrency)
     }
 
     @Get("/kam-wise-outstanding")

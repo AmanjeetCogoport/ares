@@ -46,7 +46,7 @@ interface DashboardService {
     suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding?
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
-    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): HashMap<String, OverallAgeingStatsResponse>?
+    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
     suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
@@ -65,7 +65,7 @@ interface DashboardService {
 
     suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 
-    suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse?
+    suspend fun getOutstanding(date: String?, cogoEntityId: UUID?, dashboardCurrency: String?): OutstandingOpensearchResponse?
 
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 

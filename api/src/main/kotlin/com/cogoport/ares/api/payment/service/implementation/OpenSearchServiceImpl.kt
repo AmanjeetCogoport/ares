@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
 import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
+import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -89,6 +90,9 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Inject
+    lateinit var exchangeRateHelper: ExchangeRateHelper
 
     /**
      * @param: OpenSearchRequest
@@ -470,32 +474,30 @@ class OpenSearchServiceImpl : OpenSearchService {
         return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
     }
 
-    override suspend fun generateOutstandingData(searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?) {
-        val entityCode = if (cogoEntityId != null) {
-            AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        } else {
-            null
+    override suspend fun generateOutstandingData(searchKey: String, cogoEntityId: UUID?, defaultersOrgIds: List<UUID>?, dashboardCurrency: String?) {
+        val entityCode = when (cogoEntityId != null) {
+            true -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+            else -> 301
         }
-        val data = unifiedDBRepo.getOutstandingData(entityCode, defaultersOrgIds)
 
+        val data = unifiedDBRepo.getOutstandingData(entityCode, defaultersOrgIds)
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
         if (!data.isNullOrEmpty()) {
+            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultersOrgIds)
+            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(entityCode, defaultersOrgIds)
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(entityCode, defaultersOrgIds)
+
             data.map { it.tradeType = it.tradeType?.uppercase() }
             data.map { it.serviceType = it.serviceType?.uppercase() }
 
             data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
                 mapData[k.toString()] = ServiceLevelOutstanding(
                     openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                    currency = v.first().currency,
+                    currency = dashboardCurrency,
                     tradeType = getTradeAndServiceWiseData(v)
                 )
             }
-
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(entityCode, defaultersOrgIds)
-
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(entityCode, defaultersOrgIds)
 
             val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
                 overallStats = OverallStats(
@@ -504,9 +506,9 @@ class OpenSearchServiceImpl : OpenSearchService {
                     customersCount = data.sumOf { it.customersCount!! },
                     dashboardCurrency = data.first().currency!!,
                     openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                    openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
-                    onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
-                    onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)?.times(100.toBigDecimal())?.toLong()
+                    openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.amount?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+                    onAccountAmount = onAccountAmount?.amount?.setScale(4, RoundingMode.UP),
+                    onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDays?.amount?.div(onAccountAmount?.amount?.setScale(4, RoundingMode.UP)!!)?.times(100.toBigDecimal())?.toLong()
                 ),
                 outstandingServiceWise = mapData
             )
@@ -519,7 +521,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         val updatedList = mutableListOf<TradeAndServiceLevelOutstanding>()
         value.map { item ->
             if (item.serviceType == null || item.tradeType == null) {
-                var document = updatedList.filter { it.key == "others" }
+                val document = updatedList.filter { it.key == "others" }
                 if (document.isNotEmpty()) {
                     document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
                 } else {
@@ -532,7 +534,7 @@ class OpenSearchServiceImpl : OpenSearchService {
                     updatedList.add(tradeAndServiceWiseDocument)
                 }
             } else {
-                var document = updatedList.filter { it.key == "${item.serviceType}_${item.tradeType}" }
+                val document = updatedList.filter { it.key == "${item.serviceType}_${item.tradeType}" }
                 if (document.isNotEmpty()) {
                     document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
                 } else {
