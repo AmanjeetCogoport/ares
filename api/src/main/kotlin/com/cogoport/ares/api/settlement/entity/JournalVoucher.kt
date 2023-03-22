@@ -41,5 +41,6 @@ data class JournalVoucher(
     var description: String?,
     var accMode: AccMode,
     var parentJvId: Long? = null,
-    var sageUniqueId: String? = null
+    var sageUniqueId: String? = null,
+    var migrated: Boolean? = false
 )
