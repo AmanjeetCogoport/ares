@@ -1,12 +1,17 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, Long> {
@@ -37,8 +42,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-
-        """UPDATE account_utilizations SET 
+        """
+            UPDATE account_utilizations SET 
               updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
     )
     suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean)
@@ -55,10 +60,107 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
+        """ 
+        SELECT
+        *
+        FROM (
+            SELECT
+                acc_code,
+                acc_mode,
+                amount_curr AS payment_amount,
+                amount_loc,
+                pay_curr AS utilized_amount,
+                pay_loc AS payment_loc,
+                created_at,
+                currency,
+                entity_code,
+                led_currency AS ledger_currency,
+                organization_name,
+                document_no,
+                document_value AS payment_number,
+                sign_flag,
+                transaction_date,
+                updated_at,
+                (
+                    CASE WHEN pay_curr = 0 THEN
+                        'UNUTILIZED'
+                    WHEN amount_curr = pay_curr THEN
+                        'PARTIAL_UTILIZED'
+                    ELSE
+                        'UTILIZED'
+                    END
+                ) utilization_status
+            FROM
+                account_utilizations
+            WHERE (document_value LIKE :query
+                AND trade_party_mapping_id = :tradePartyMappingId)
+        ) subquery
+        WHERE
+            utilization_status::varchar IN (:statusList)
+        ORDER BY
+            CASE WHEN :sortBy = 'transactionDate'
+                THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
+            END ASC,
+            CASE WHEN :sortBy = 'transactionDate'
+                THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
+            END DESC,
+            CASE WHEN :sortBy = 'paymentAmount'
+                THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
+            END ASC,
+            CASE WHEN :sortBy = 'paymentAmount'
+                THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
+            END DESC   
+        
+        """
+    )
+    suspend fun getPaymentByTradePartyMappingId(tradePartyMappingId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?): List<CustomerOutstandingPaymentResponse>
+    @NewSpan
+    @Query(
         """
             UPDATE account_utilizations SET pay_curr = (pay_curr - :payCurr), pay_loc = (pay_loc - :payLoc) WHERE id = :id
         """
     )
     suspend fun markPaymentUnutilized(id: Long, payCurr: BigDecimal, payLoc: BigDecimal)
+
+    @NewSpan
+    @Query(
+        """UPDATE account_utilizations SET 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE document_no =:documentNo AND acc_type = :accType::account_type AND deleted_at is null"""
+    )
+    suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
+
+
+    @NewSpan
+    @Query(
+        """
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
+        """
+    )
+    suspend fun getDataByPaymentNumForTaggedBill(paymentNum: Long?): PaymentUtilizationResponse
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                count(c.organization_id)
+            FROM (
+                SELECT
+                    organization_id
+                FROM
+                    account_utilizations
+                WHERE
+                    organization_name ILIKE :queryName || '%'
+                    AND acc_mode = 'AR'
+                    AND due_date IS NOT NULL
+                    AND document_status in('FINAL')
+                    AND organization_id IS NOT NULL
+                    AND acc_type = 'SINV'
+                    AND deleted_at IS NULL
+                GROUP BY
+                    organization_id) AS c
+        """
+    )
+    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
+
 
 }

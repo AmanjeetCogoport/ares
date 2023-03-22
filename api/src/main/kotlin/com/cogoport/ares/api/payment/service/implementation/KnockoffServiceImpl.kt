@@ -11,6 +11,7 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -50,6 +51,9 @@ open class KnockoffServiceImpl : KnockoffService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
     @Inject
     lateinit var paymentRepository: PaymentRepository
@@ -508,7 +512,7 @@ open class KnockoffServiceImpl : KnockoffService {
             newPayCurr += settlement?.amount!!
             newPayLoc += settlement.ledAmount
         }
-        accountUtilizationRepository.updateAccountUtilizationByDocumentNo(updateRequest.billId, newPayCurr, newPayLoc, AccountType.PINV)
+        accountUtilizationRepo.updateAccountUtilizationByDocumentNo(updateRequest.billId, newPayCurr, newPayLoc, AccountType.PINV)
     }
 
     private suspend fun settledAmountGreaterThanNewBillAmount(settlement: Settlement, billAmount: BigDecimal, ledgerAmount: BigDecimal): Settlement {

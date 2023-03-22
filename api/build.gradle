@@ -25,6 +25,32 @@ repositories {
         }
     }
 
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/loki")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/hades")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+
+    maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
+
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/kuber")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+
     maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
 }
 
@@ -60,7 +86,7 @@ dependencies {
 
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:0.1.4.3")
-    implementation("com.cogoport.hades:hades-model:0.1.6-beta")
+    implementation("com.cogoport.hades:hades-model:1.0.2")
 
     //Kuber Client
 //    implementation("com.cogoport.kuber:kuber-model:0.1.25.4")
