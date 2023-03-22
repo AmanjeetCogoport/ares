@@ -3,6 +3,7 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
+import com.cogoport.ares.api.settlement.model.SalesPaymentForDestinationId
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
@@ -288,4 +289,37 @@ ORDER BY
         """
     )
     suspend fun getSettlementDateBySourceId(documentNo: Long?): Timestamp
+
+    @NewSpan
+    @Query(
+        """
+        SELECT
+            au.document_value,
+            au.org_serial_id,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'paymentValue', p.payment_num_value,
+                    'amount', s.amount,
+                    'flag', CASE
+                                WHEN p.payment_num_value LIKE 'REC%' THEN 'P'
+                                ELSE NULL
+                            END
+                )
+            ) AS payment_values,
+            SUM(s.amount) AS total_amount
+        FROM
+            settlements s
+            INNER JOIN payments p ON s.source_id = p.payment_num
+            INNER JOIN account_utilizations au ON au.document_no = s.destination_id 
+        WHERE (
+            p.payment_document_status = 'POSTED'
+            AND s.destination_type = 'SINV'
+            AND s.id IN (:settlementIds)
+            AND au.acc_type = 'SINV')
+        GROUP BY
+            au.document_value,
+            au.org_serial_id
+        """
+    )
+    suspend fun getAllPaymentDocumentValueForSettlementIds(settlementIds: List<Long>?): List<SalesPaymentForDestinationId>?
 }

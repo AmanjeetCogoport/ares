@@ -103,5 +103,5 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             UPDATE payments SET sage_num_value = :sageNumValue WHERE id = :id
         """
     )
-    suspend fun updateSagePaymentNumValue(id: Long, sageNumValue: String?)
+    suspend fun updateSagePaymentNumValue(id: Long, sageNumValue: String)
 }

@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.interfaces
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.model.FailedDocumentValues
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.settlement.CheckDocument
@@ -58,4 +59,5 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
+    suspend fun matchingSettlementOnSage(settlementIds: List<Long>): FailedDocumentValues
 }

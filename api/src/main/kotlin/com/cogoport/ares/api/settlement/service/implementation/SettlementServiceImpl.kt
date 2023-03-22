@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.SageStatus.Companion.getZstatus
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
@@ -31,7 +32,9 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
+import com.cogoport.ares.api.settlement.model.FailedDocumentValues
 import com.cogoport.ares.api.settlement.model.PaymentInfo
+import com.cogoport.ares.api.settlement.model.PaymentValuesList
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -73,6 +76,7 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
@@ -85,11 +89,15 @@ import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
+import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.json.XML
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
@@ -102,6 +110,7 @@ import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
+import com.cogoport.brahma.sage.Client as SageClient
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -2502,6 +2511,53 @@ open class SettlementServiceImpl : SettlementService {
                 response = response.toString(),
                 isSuccess = true
             )
+        )
+    }
+
+    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>): FailedDocumentValues {
+        var matchingSettlementRequest: MutableList<SageSettlementRequest> = mutableListOf()
+        var failedDocumentValues: MutableList<String> = mutableListOf()
+
+        val paymentEntriesList = settlementRepository.getAllPaymentDocumentValueForSettlementIds(settlementIds)
+
+        paymentEntriesList?.forEach { it ->
+            val sageOrganizationResponse = cogoClient.getSageOrganization(
+                SageOrganizationRequest(
+                    it.orgSerialId.toString(),
+                    "SINV"
+                )
+            )
+
+            matchingSettlementRequest.add(
+                SageSettlementRequest(
+                    it.documentValue,
+                    sageOrganizationResponse.sageOrganizationId!!,
+                    it.totalAmount.toString(),
+                    ""
+                )
+            )
+
+            val paymentValues: List<PaymentValuesList> = ObjectMapper().readValue(it.paymentValues, object : TypeReference<List<PaymentValuesList>>() {})
+
+            paymentValues.forEach { it ->
+                matchingSettlementRequest.add(
+                    SageSettlementRequest(
+                        it.paymentValue,
+                        sageOrganizationResponse.sageOrganizationId!!,
+                        it.amount.toString(),
+                        it.flag
+                    )
+                )
+            }
+
+            val result = SageClient.postSettlementToSage(matchingSettlementRequest)
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getZstatus(processedResponse)
+            if (status != "DONE") failedDocumentValues.add(it.documentValue)
+        }
+
+        return FailedDocumentValues(
+            failedDocumentValues
         )
     }
 }

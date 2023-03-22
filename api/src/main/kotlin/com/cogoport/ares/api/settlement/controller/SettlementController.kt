@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.model.FailedDocumentValues
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Util
@@ -181,5 +182,10 @@ class SettlementController {
     @Post("/unfreeze-credit-consumption")
     suspend fun unfreezeCreditConsumption(@Valid @Body request: Settlement) {
         return settlementService.sendKnockOffDataToCreditConsumption(request)
+    }
+
+    @Post("/matching-on-sage")
+    suspend fun matchingSettlementOnSage(settlementIds: List<Long>): FailedDocumentValues {
+        return settlementService.matchingSettlementOnSage(settlementIds)
     }
 }
