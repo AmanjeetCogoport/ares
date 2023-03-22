@@ -524,7 +524,7 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
-        jv.migrated = true;
+        jv.migrated = true
         return jv
     }
 
