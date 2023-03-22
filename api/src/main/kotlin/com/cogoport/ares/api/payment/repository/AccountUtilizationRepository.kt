@@ -1696,28 +1696,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getInvoicesOutstandingAgeingBucket(entityCode: Int, query: String?, orgId: String?): List<CustomerOutstandingAgeing>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-                count(c.organization_id)
-            FROM (
-                SELECT
-                    organization_id
-                FROM
-                    account_utilizations
-                WHERE
-                    organization_name ILIKE :queryName || '%'
-                    AND acc_mode = 'AR'
-                    AND due_date IS NOT NULL
-                    AND document_status in('FINAL')
-                    AND organization_id IS NOT NULL
-                    AND acc_type = 'SINV'
-                    AND deleted_at IS NULL
-                GROUP BY
-                    organization_id) AS c
-        """
-    )
-    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
 }

@@ -454,7 +454,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                 val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
                 customerOutstanding = CustomerOutstandingDocumentResponse(
-                    updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
                     organizationId = request.organizationId,
                     tradePartyId = request.tradePartyId,
                     businessName = request.businessName,
@@ -477,8 +477,8 @@ class OutStandingServiceImpl : OutStandingService {
                     openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
                     entityCode = entity
                 )
-
-                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
+                val customerOutstandingModel = outstandingAgeingConverter.convertCustomerDetailsRequestToDocument(customerOutstanding)
+                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstandingModel, true)
             }
         }
     }
@@ -664,30 +664,31 @@ class OutStandingServiceImpl : OutStandingService {
                         val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
 
                         var openSearchData = CustomerOutstandingDocumentResponse(
-                            updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                            organizationId = document?.organizationId ?: id,
-                            tradePartyId = document?.tradePartyId,
-                            businessName = document?.businessName,
-                            companyType = document?.companyType,
+                            lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                            organizationId = customerOutstanding?.organizationId ?: id,
+                            tradePartyId = customerOutstanding?.tradePartyId,
+                            businessName = customerOutstanding?.businessName,
+                            companyType = customerOutstanding?.companyType,
                             ageingBucket = ageingBucket,
-                            countryCode = document?.countryCode,
-                            countryId = document?.countryId,
-                            creditController = document?.creditController,
-                            creditDays = document?.creditDays,
-                            kam = document?.kam,
-                            organizationSerialId = document?.organizationSerialId,
-                            registrationNumber = document?.registrationNumber,
-                            sageId = document?.sageId,
-                            salesAgent = document?.salesAgent,
-                            tradePartyName = document?.tradePartyName,
-                            tradePartySerialId = document?.tradePartySerialId,
-                            tradePartyType = document?.tradePartyType,
+                            countryCode = customerOutstanding?.countryCode,
+                            countryId = customerOutstanding?.countryId,
+                            creditController = customerOutstanding?.creditController,
+                            creditDays = customerOutstanding?.creditDays,
+                            kam = customerOutstanding?.kam,
+                            organizationSerialId = customerOutstanding?.organizationSerialId,
+                            registrationNumber = customerOutstanding?.registrationNumber,
+                            sageId = customerOutstanding?.sageId,
+                            salesAgent = customerOutstanding?.salesAgent,
+                            tradePartyName = customerOutstanding?.tradePartyName,
+                            tradePartySerialId = customerOutstanding?.tradePartySerialId,
+                            tradePartyType = customerOutstanding?.tradePartyType,
                             onAccountPayment = onAccountPayment,
                             totalOutstanding = totalOutstanding,
-                            openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
+                            openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount!! },
                             entityCode = entity
                         )
-                        Client.addDocument("customer_outstanding_$entity", document?.organizationId!!, openSearchData, true)
+                        val openSearchDataModel = outstandingAgeingConverter.convertCustomerDetailsRequestToDocument(openSearchData)
+                        Client.addDocument("customer_outstanding_$entity", id, openSearchDataModel, true)
                     }
                 }
             }

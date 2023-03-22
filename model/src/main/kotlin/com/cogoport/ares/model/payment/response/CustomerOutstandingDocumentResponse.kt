@@ -3,7 +3,6 @@ package com.cogoport.ares.model.payment.response
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.sql.Timestamp
@@ -12,7 +11,6 @@ import java.time.LocalDateTime
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-@JsonIgnoreType
 data class CustomerOutstandingDocumentResponse(
     @JsonProperty("organizationId")
     var organizationId: String?,
@@ -50,8 +48,8 @@ data class CustomerOutstandingDocumentResponse(
     var ageingBucket: HashMap<String, AgeingBucketOutstanding>?,
     @JsonProperty("onAccountPayment")
     var onAccountPayment: AgeingBucketOutstanding?,
-    @JsonProperty("updatedAt")
-    var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
+    @JsonProperty("lastUpdatedAt")
+    var lastUpdatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
     @JsonProperty("totalOutstanding")
     var totalOutstanding: AgeingBucketOutstanding?,
     @JsonProperty("openInvoiceCount")
