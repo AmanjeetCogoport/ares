@@ -1387,6 +1387,9 @@ open class SettlementServiceImpl : SettlementService {
         }
         accUtil.updatedAt = Timestamp.from(Instant.now())
         val accUtilObj = accountUtilizationRepository.update(accUtil)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtil.organizationId))
+
         try {
             auditService.createAudit(
                 AuditRequest(
@@ -1841,6 +1844,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
         try {
             auditService.createAudit(
                 AuditRequest(

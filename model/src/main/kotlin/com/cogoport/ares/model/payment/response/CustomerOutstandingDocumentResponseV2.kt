@@ -51,16 +51,12 @@ data class CustomerOutstandingDocumentResponseV2(
     var creditDays: String?,
     @JsonProperty("ageingBucket")
     var ageingBucket: HashMap<String, AgeingBucketOutstanding>?,
-    @JsonProperty("creditNote")
-    var creditNote: List<DueAmount>?,
-    @JsonProperty("debitNote")
-    var debitNote: List<DueAmount>?,
     @JsonProperty("onAccountPayment")
-    var onAccountPayment: List<DueAmount>?,
+    var onAccountPayment: AgeingBucketOutstanding?,
     @JsonProperty("updatedAt")
     var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
     @JsonProperty("totalOutstanding")
-    var totalOutstanding: List<DueAmount>?,
+    var totalOutstanding: AgeingBucketOutstanding?,
     @JsonProperty("openInvoiceCount")
     var openInvoiceCount: Int?,
     @JsonProperty("entityCode")

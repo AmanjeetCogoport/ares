@@ -423,6 +423,8 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
         kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,

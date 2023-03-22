@@ -18,6 +18,8 @@ data class AgeingBucketOutstanding(
     var ledgerAmount: BigDecimal?,
     @JsonProperty("ledgerCount")
     var ledgerCount: Int?,
+    @JsonProperty("ledgerCurrency")
+    var ledgerCurrency: String?,
     @JsonProperty("invoiceBucket")
     var invoiceBucket: MutableList<DueAmount>
 )

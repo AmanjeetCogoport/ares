@@ -474,6 +474,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -589,6 +592,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
             val accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
             auditService.createAudit(
                 AuditRequest(
                     objectType = AresConstants.ACCOUNT_UTILIZATIONS,
