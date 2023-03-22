@@ -14,8 +14,6 @@ data class CustomersOutstanding(
     var organizationId: String?,
     @JsonProperty("organizationName")
     var organizationName: String?,
-    @JsonProperty("zoneCode")
-    var zoneCode: String?,
     @JsonProperty("openInvoices")
     var openInvoices: InvoiceStats?,
     @JsonProperty("onAccountPayment")

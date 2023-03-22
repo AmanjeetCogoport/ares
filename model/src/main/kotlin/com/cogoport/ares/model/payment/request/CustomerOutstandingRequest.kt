@@ -15,7 +15,7 @@ data class CustomerOutstandingRequest(
     var countryId: List<UUID>? = null,
     var ageingKey: List<String?> = listOf(),
     var companyType: String? = null,
-    var entityCode: String? = "overall",
+    var entityCode: String? = "301",
     var sortBy: String? = null,
     var sortType: String? = "Desc",
     var page: Int? = 1,

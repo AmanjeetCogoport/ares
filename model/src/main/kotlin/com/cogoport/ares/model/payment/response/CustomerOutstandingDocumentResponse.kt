@@ -49,6 +49,8 @@ data class CustomerOutstandingDocumentResponse(
     var organizationSerialId: String?,
     @JsonProperty("creditDays")
     var creditDays: String?,
+    @JsonProperty("entityCode")
+    var entityCode: Int?,
     @JsonProperty("openInvoice")
     var openInvoice: List<DueAmount>?,
     @JsonProperty("onAccountPayment")

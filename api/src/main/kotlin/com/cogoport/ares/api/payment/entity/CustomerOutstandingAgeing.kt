@@ -7,6 +7,8 @@ import java.math.BigDecimal
 data class CustomerOutstandingAgeing(
     val organizationId: String?,
     val organizationName: String?,
+    val entityCode: Int,
+    val currency: String,
     val notDueAmount: BigDecimal?,
     val thirtyAmount: BigDecimal?,
     val sixtyAmount: BigDecimal?,
@@ -14,7 +16,7 @@ data class CustomerOutstandingAgeing(
     val oneEightyAmount: BigDecimal?,
     val threeSixtyFiveAmount: BigDecimal?,
     val todayAmount: BigDecimal?,
-    val todayCount: BigDecimal?,
+    val todayCount: Int? = 0,
     val threeSixtyFivePlusAmount: BigDecimal?,
     val totalOutstanding: BigDecimal?,
     val totalCreditAmount: BigDecimal?,

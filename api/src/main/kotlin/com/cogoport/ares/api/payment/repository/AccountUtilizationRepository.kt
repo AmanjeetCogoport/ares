@@ -1467,6 +1467,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
             SELECT
                 organization_id,
+                entity_code,
+                currency,
                 max(organization_name) as organization_name,
                 sum(
                     CASE WHEN (acc_type in('SINV')
@@ -1605,23 +1607,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM
                 account_utilizations
             WHERE
-                organization_name ILIKE :query || '%'
-                AND (:entityCode IS NULL OR entity_code = :entityCode)
+                (:query is null OR organization_name ILIKE :query || '%')
                 AND acc_mode = 'AR'
                 AND due_date IS NOT NULL
                 AND document_status in('FINAL')
                 AND organization_id IS NOT NULL
                 AND amount_curr - pay_curr > 0
+                AND entity_code = :entityCode
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
                 AND acc_type IN ('SINV', 'SCN', 'SDN')
                 AND deleted_at IS NULL
             GROUP BY
-                organization_id
-            OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
-            LIMIT :pageLimit        
+                organization_id, entity_code, currency 
         """
     )
-    suspend fun getInvoicesOutstandingAgeingBucket(query: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<CustomerOutstandingAgeing>
+    suspend fun getInvoicesOutstandingAgeingBucket(entityCode: Int, query: String?, orgId: String?): List<CustomerOutstandingAgeing>
 
     @NewSpan
     @Query(

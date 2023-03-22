@@ -8,7 +8,7 @@ import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import io.micronaut.tracing.annotation.NewSpan
@@ -606,7 +606,7 @@ class OpenSearchClient {
     }
 
     @NewSpan
-    fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponse>? {
+    fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponseV2>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
         val response = Client.search({ t ->
@@ -745,7 +745,7 @@ class OpenSearchClient {
                     }
                 }
                 .from(offset).size(request.limit)
-        }, CustomerOutstandingDocumentResponse::class.java)
+        }, CustomerOutstandingDocumentResponseV2::class.java)
 
         return response
     }
