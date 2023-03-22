@@ -104,6 +104,7 @@ class SageServiceImpl : SageService {
             ,G.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,G.TYP_0 as account_type
+            ,GC.ROWID as sage_unique_id
             from  COGO2.GACCENTRY GC 
             INNER JOIN           
             (

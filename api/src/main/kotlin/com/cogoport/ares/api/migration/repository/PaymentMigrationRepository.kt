@@ -32,10 +32,11 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
                 where j.created_by = '2f5e5152-03f4-4ea8-a3db-a6eff388161b' 
                 and j.jv_num =:jvNum 
                 and j.acc_mode =:accMode::account_mode
-                and au.acc_type=:accType::account_type)
+                and au.acc_type=:accType::account_type
+                and j.sage_unique_id = :sageUniqueId)
         """
     )
-    suspend fun checkJVExists(jvNum: String, accMode: String, accType: String): Boolean
+    suspend fun checkJVExists(jvNum: String, accMode: String, accType: String, sageUniqueId: String): Boolean
 
     @NewSpan
     @Query(

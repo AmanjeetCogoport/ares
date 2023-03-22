@@ -314,6 +314,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
 
     override suspend fun createJV(jv: JournalVoucher): JournalVoucher {
+        jv.migrated = false
         val jvObj = journalVoucherRepository.save(jv)
         auditService.createAudit(
             AuditRequest(

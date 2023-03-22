@@ -137,7 +137,8 @@ class PaymentMigrationImpl : PaymentMigration {
             if (paymentMigrationRepository.checkJVExists(
                     journalVoucherRecord.paymentNum!!,
                     journalVoucherRecord.accMode!!,
-                    AccountType.valueOf(journalVoucherRecord.accountType!!).name
+                    AccountType.valueOf(journalVoucherRecord.accountType!!).name,
+                    journalVoucherRecord.sageUniqueId!!
                 )
             ) {
                 throw AresException(AresError.ERR_1010, "JV record is already present")
@@ -522,6 +523,8 @@ class PaymentMigrationImpl : PaymentMigration {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
+        jv.sageUniqueId = journalVoucherRecord.sageUniqueId
+        jv.migrated = true
         return jv
     }
 
