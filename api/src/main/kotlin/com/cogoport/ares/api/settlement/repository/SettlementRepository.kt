@@ -12,6 +12,8 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.sql.Timestamp
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -187,10 +189,10 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET deleted_at = NOW() WHERE id in (:id)  and is_draft = false
+            UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) and is_draft = false
         """
     )
-    suspend fun deleleSettlement(id: List<Long>)
+    suspend fun deleleSettlement(id: List<Long>, updatedBy: UUID? = null)
 
     @NewSpan
     @Query(
@@ -286,7 +288,7 @@ ORDER BY
     @Query(
         """
            SELECT
-                 settlement_date::TIMESTAMP
+                 settlement_date::TIMESTAMP, settlement_num
            FROM
                 settlements s where 
                 s.source_id = :documentNo
@@ -349,4 +351,32 @@ ORDER BY
         """
     )
     suspend fun updateSettlementNumber(id: Long, settlementNum: String)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            s.id,
+            s.source_id,
+            s.source_type,
+            s.destination_id,
+            s.destination_type, 
+            s.currency,
+            s.amount,
+            s.led_currency,
+            s.led_amount,
+            s.sign_flag,
+            s.settlement_date,
+            s.created_at,
+            s.created_by,
+            s.updated_at,
+            s.updated_by,
+            s.supporting_doc_url
+            FROM settlements s
+            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
+            and deleted_at IS NULL
+            order by created_at asc
+        """
+    )
+    suspend fun findByDestIdAndDestTypeAndSourceType(destId: Long, destType: SettlementType, sourceType: SettlementType): List<Settlement?>
 }

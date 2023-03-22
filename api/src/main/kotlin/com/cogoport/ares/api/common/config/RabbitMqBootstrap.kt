@@ -67,5 +67,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("migrate-settlement-number", true, false, false, null)
         channel?.queueBind("migrate-settlement-number", "ares", "migrate.settlement.number", null)
+
+        channel?.queueDeclare("update-settlement-bill-updated", true, false, false, null)
+        channel?.queueBind("update-settlement-bill-updated", "ares", "update.settlement.bill.updated", null)
     }
 }

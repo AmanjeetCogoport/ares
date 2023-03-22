@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -29,8 +30,10 @@ import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.brahma.opensearch.Client
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -65,6 +68,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     /**
      * @param accUtilizationRequestList
@@ -225,22 +231,17 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             accUtilRepository.findRecord(updateInvoiceRequest.documentNo, updateInvoiceRequest.accType.name)
                 ?: throw AresException(AresError.ERR_1005, updateInvoiceRequest.documentNo.toString())
 
-        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
-            val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-            if ((updateInvoiceRequest.currAmount - updateInvoiceRequest.tdsAmount!!) > (accountUtilization.amountCurr - accountUtilization.tdsAmount!!) &&
-                (updateInvoiceRequest.ledAmount - updateInvoiceRequest.tdsAmountLoc!!) > (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!)
-            ) {
-                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
-            } else {
-                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
-            }
-        }
-        val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
-        var newPayCurr: BigDecimal = 0.toBigDecimal()
-        var newPayLoc: BigDecimal = 0.toBigDecimal()
-        for (payments in paymentEntry) {
-            newPayCurr += payments?.payCurr!!
-            newPayLoc += payments.payLoc
+//        if (accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0 && accountUtilization.payLoc.compareTo(BigDecimal.ZERO) != 0) {
+//            val paymentEntry = accUtilRepository.findPaymentsByDocumentNo(updateInvoiceRequest.documentNo)
+//            if (updateInvoiceRequest.currAmount > accountUtilization.amountCurr && updateInvoiceRequest.ledAmount > accountUtilization.amountLoc) {
+//                amountGreaterThanExistingRecord(updateInvoiceRequest, accountUtilization, paymentEntry)
+//            } else {
+//                amountLessThanExistingRecord(updateInvoiceRequest, paymentEntry, accountUtilization)
+//            }
+//        }
+        val settlementDetails = settlementRepository.findByDestIdAndDestType(updateInvoiceRequest.documentNo, SettlementType.PINV)
+        if ((updateInvoiceRequest.currAmount < accountUtilization.amountCurr) && (updateInvoiceRequest.ledAmount < accountUtilization.amountLoc) && settlementDetails != null) {
+            aresMessagePublisher.emitUpdateSettlementWhenBillUpdated(UpdateSettlementWhenBillUpdatedEvent(updateInvoiceRequest.documentNo, updateInvoiceRequest.documentValue, accountUtilization.id!!, updateInvoiceRequest.performedBy, updateInvoiceRequest.currAmount, updateInvoiceRequest.ledAmount))
         }
 
         accountUtilization.transactionDate = updateInvoiceRequest.transactionDate
@@ -254,13 +255,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.amountLoc = updateInvoiceRequest.ledAmount
         accountUtilization.accType = updateInvoiceRequest.accType
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
-
-        if (!newPayCurr.equals(0)) {
-            accountUtilization.payCurr = newPayCurr
-        }
-        if (!newPayLoc.equals(0)) {
-            accountUtilization.payLoc = newPayLoc
-        }
 
         accountUtilization.orgSerialId = updateInvoiceRequest.orgSerialId ?: accountUtilization.orgSerialId
         accountUtilization.sageOrganizationId = updateInvoiceRequest.sageOrganizationId ?: accountUtilization.sageOrganizationId

@@ -198,7 +198,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         val document = accountUtilization.find { it.accType == AccountType.PINV }
         val source = accountUtilization.find { it.accType != AccountType.PINV }
         settlementRepository.updateDraftStatus(settlement.id!!, true)
-        accountUtilizationRepository.markPaymentUnutilized(source?.id!!, settlement.amount!!, (settlement.amount!! * (source.amountLoc.divide(source.amountCurr))))
+        accountUtilizationRepo.markPaymentUnutilized(source?.id!!, settlement.amount!!, (settlement.amount!! * (source.amountLoc.divide(source.amountCurr))))
         accountUtilizationRepo.updateAccountUtilizations(document?.id!!, true)
 
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, source.id, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)

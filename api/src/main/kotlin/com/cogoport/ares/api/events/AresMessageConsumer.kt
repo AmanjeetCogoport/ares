@@ -18,6 +18,7 @@ import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
@@ -124,5 +125,10 @@ class AresMessageConsumer {
     @Queue("migrate-settlement-number", prefetch = 1)
     fun migrateSettlementNum(id: Long) = runBlocking {
         paymentMigration.migrateSettlementNum(id)
+    }
+
+    @Queue("update-settlement-bill-updated", prefetch = 1)
+    fun editSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent) = runBlocking {
+        knockoffService.editSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent)
     }
 }

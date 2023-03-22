@@ -46,7 +46,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id, tds_amount, tdsamount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id, tds_amount, tds_amount_loc
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_draft = false"""
     )
@@ -83,7 +83,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
              when (now()::date - due_date ) between 91 and 180 then '91-180'
              when (now()::date - due_date ) between 181 and 365 then '181-365'
              when (now()::date - due_date ) > 365 then '365+'
-             end, 'Unknown') as ageing_duration, zone_code as zone, currency as dashboard_currency, sum(sign_flag * (amount_curr - pay_curr)) as amount
+             end, 'Unknown') as ageing_duration,
+             zone_code as zone,
+             currency as dashboard_currency,
+             sum(sign_flag * (amount_curr - pay_curr)) as amount
              from account_utilizations
              where ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
              AND (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
@@ -720,7 +723,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             due_date, 
             COALESCE(amount_curr, 0) as document_amount, 
             COALESCE(amount_loc, 0) as document_led_amount, 
-            COALESCE(amount_curr - pay_loc, 0) as document_led_balance,
+            COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
             COALESCE(taxable_amount, 0) as taxable_amount,  
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
@@ -1322,8 +1325,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND 
-            deleted_at is null 
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
         """
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
@@ -1450,9 +1452,15 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """ 
          SELECT COUNT(*) FROM
-        (SELECT organization_id::VARCHAR,document_value as document_number , document_status AS document_type, service_type, amount_loc AS invoice_amount, sign_flag*(amount_loc - pay_loc) as outstanding_amount
+        (SELECT organization_id::VARCHAR,
+        document_value as document_number ,
+        document_status AS document_type,
+        service_type,
+        amount_loc AS invoice_amount,
+        sign_flag*(amount_loc - pay_loc) as outstanding_amount
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL AND deleted_at IS NULL) as output
+        WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL) as output
         """
     )
     suspend fun getInvoicesCountForTradeParty(
@@ -1469,12 +1477,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getSupplierOrgIds(): List<UUID>
-
     @NewSpan
     @Query(
-        """
-            UPDATE account_utilizations SET pay_curr = (pay_curr - :payCurr), pay_loc = (pay_loc - :payLoc) WHERE id = :id
-        """
+        """UPDATE account_utilizations SET 
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE document_no =:documentNo AND acc_type = :accType::account_type AND deleted_at is null"""
     )
-    suspend fun markPaymentUnutilized(id: Long, payCurr: BigDecimal, payLoc: BigDecimal)
+    suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
 }
