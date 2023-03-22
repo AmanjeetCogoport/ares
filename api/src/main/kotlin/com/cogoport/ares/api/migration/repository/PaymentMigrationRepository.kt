@@ -36,7 +36,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
                 and j.sage_unique_id = :sageUniqueId)
         """
     )
-    suspend fun checkJVExists(jvNum: String, accMode: String, accType: String,sageUniqueId: String): Boolean
+    suspend fun checkJVExists(jvNum: String, accMode: String, accType: String, sageUniqueId: String): Boolean
 
     @NewSpan
     @Query(
