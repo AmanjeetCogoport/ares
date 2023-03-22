@@ -105,7 +105,7 @@ open class KnockoffServiceImpl : KnockoffService {
         val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
 
         if (isOverPaid) {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, accountUtilization.payableAmount!! - accountUtilization.payCurr, accountUtilization.payableAmountLoc!! - accountUtilization.payLoc)
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr), (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc))
         } else {
             accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
         }
@@ -126,8 +126,8 @@ open class KnockoffServiceImpl : KnockoffService {
         if (isOverPaid) {
             saveAccountUtilization(
                 savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, accountUtilization.payableAmount!! - accountUtilization.payCurr,
-                accountUtilization.payableAmountLoc!! - accountUtilization.payLoc
+                currTotalAmtPaid, ledTotalAmtPaid, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr),
+                (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc)
             )
         } else {
             saveAccountUtilization(
@@ -140,7 +140,7 @@ open class KnockoffServiceImpl : KnockoffService {
         saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord) // TODO(LED AMOUNT)
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
-        val leftAmount = accountUtilization.payableAmountLoc!! - (accountUtilization.payLoc + ledTotalAmtPaid)
+        val leftAmount = (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) - (accountUtilization.payLoc + ledTotalAmtPaid)
 
         if (leftAmount <= 1.toBigDecimal() || leftAmount.setScale(2, RoundingMode.HALF_UP) <= 1.toBigDecimal())
             paymentStatus = KnockOffStatus.FULL.name
@@ -159,7 +159,8 @@ open class KnockoffServiceImpl : KnockoffService {
     }
 
     private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
-        if (accountUtilization.payableAmount!! < accountUtilization.payCurr + currTotalAmtPaid && accountUtilization.payableAmountLoc!! < accountUtilization.payLoc + ledTotalAmtPaid)
+
+        if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid)
             return true
         return false
     }
@@ -255,8 +256,8 @@ open class KnockoffServiceImpl : KnockoffService {
             payCurr = utilizedCurrTotalAmtPaid,
             payLoc = utilizedLedTotalAmtPaid,
             taxableAmount = BigDecimal.ZERO,
-            payableAmountLoc = knockOffRecord.ledgerAmount,
-            payableAmount = knockOffRecord.currencyAmount,
+            tdsAmountLoc = BigDecimal.ZERO,
+            tdsAmount = BigDecimal.ZERO,
             dueDate = accountUtilization.dueDate,
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
@@ -311,8 +312,8 @@ open class KnockoffServiceImpl : KnockoffService {
         val ledAmount: BigDecimal
         val amount: BigDecimal
         if (isOverPaid) {
-            ledAmount = accountUtilization.payableAmountLoc!! - accountUtilization.payLoc
-            amount = accountUtilization.payableAmount!! - accountUtilization.payCurr
+            ledAmount = accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc
+            amount = accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr
         } else {
             ledAmount = knockOffRecord.ledgerAmount
             amount = knockOffRecord.currencyAmount

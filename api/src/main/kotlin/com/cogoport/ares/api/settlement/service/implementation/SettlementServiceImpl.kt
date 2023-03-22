@@ -1841,7 +1841,7 @@ open class SettlementServiceImpl : SettlementService {
                 )
         if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN) && paymentUtilization.accType !in listOf(AccountType.PINV, AccountType.PREIMB)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
-        } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && (paymentUtilization.payableAmount!! - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
+        } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
         paymentUtilization.payCurr += utilizedAmount
@@ -1948,7 +1948,7 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         val status = if (accountUtilization.payLoc.compareTo(BigDecimal.ZERO) == 0)
             "UNPAID"
-        else if (accountUtilization.payableAmount!! > accountUtilization.payCurr)
+        else if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) > accountUtilization.payCurr)
             "PARTIAL"
         else
             "FULL"

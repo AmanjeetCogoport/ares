@@ -6,6 +6,6 @@ import java.math.BigDecimal
 @Introspected
 data class PayableAmountReq(
     val documentNo: Long,
-    val payableAmount: BigDecimal,
-    val payableAmountLoc: BigDecimal
+    val tdsAmount: BigDecimal,
+    val tdsAmountLoc: BigDecimal
 )

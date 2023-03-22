@@ -137,6 +137,6 @@ class MigratePaymentsController {
 
     @Put("/payable-amount")
     suspend fun migratePayableAmount(@Body req: List<PayableAmountReq>) {
-        paymentMigration.migratePayableAmount(req)
+        paymentMigration.migrateTdsAmount(req)
     }
 }

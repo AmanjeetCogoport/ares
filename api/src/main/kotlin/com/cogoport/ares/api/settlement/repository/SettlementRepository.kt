@@ -326,7 +326,7 @@ ORDER BY
     @NewSpan
     @Query(
         """
-          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num
+          SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num,
           led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
           deleted_at is null and is_draft = false and source_type not in ('VTDS') order by created_at desc limit 1

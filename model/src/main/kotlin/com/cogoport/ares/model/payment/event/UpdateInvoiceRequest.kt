@@ -43,7 +43,7 @@ data class UpdateInvoiceRequest(
     var serviceType: ServiceType?,
     var category: String?,
     var migrated: Boolean?,
-    var payableAmountLoc: BigDecimal? = BigDecimal.ZERO,
-    var payableAmount: BigDecimal? = BigDecimal.ZERO,
+    var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
+    var tdsAmount: BigDecimal? = BigDecimal.ZERO,
     val isDraft: Boolean?
 )

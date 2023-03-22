@@ -17,5 +17,5 @@ interface PaymentMigrationWrapper {
 
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
-    suspend fun migratePayableAmount(req: List<PayableAmountReq>)
+    suspend fun migrateTdsAmount(req: List<PayableAmountReq>)
 }
