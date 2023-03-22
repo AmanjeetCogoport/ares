@@ -9,7 +9,7 @@ import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
-import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import java.math.BigDecimal
 
@@ -32,9 +32,9 @@ interface OutStandingService {
 
     suspend fun listSupplierDetails(request: SupplierOutstandingRequest): ResponseList<SupplierOutstandingDocument?>
 
-    suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponseV2)
+    suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponse)
 
-    suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponseV2?)
+    suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponse?)
 
-    suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?>
+    suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?>
 }

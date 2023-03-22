@@ -28,7 +28,7 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
-import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
@@ -430,7 +430,7 @@ class OutStandingServiceImpl : OutStandingService {
         return supplierOutstandingDocument!!
     }
 
-    override suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponseV2) {
+    override suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponse) {
         AresConstants.COGO_ENTITIES.forEach { entity ->
             val index = "customer_outstanding_$entity"
             val searchResponse = Client.search({ s ->
@@ -438,7 +438,7 @@ class OutStandingServiceImpl : OutStandingService {
                     .query { q ->
                         q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
                     }
-            }, CustomerOutstandingDocumentResponseV2::class.java)
+            }, CustomerOutstandingDocumentResponse::class.java)
 
             if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
                 updateCustomerDetails(request.organizationId!!, flag = true, searchResponse?.hits()?.hits()?.map { it.source() }?.get(0))
@@ -448,42 +448,42 @@ class OutStandingServiceImpl : OutStandingService {
                     return@forEach
                 }
                 val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
-                var customerOutstanding: CustomerOutstandingDocumentResponseV2? = null
+                var customerOutstanding: CustomerOutstandingDocumentResponse? = null
 
                 val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(request.organizationId!!, null, entity)
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                 val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
-                customerOutstanding = CustomerOutstandingDocumentResponseV2(
-                        updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                        organizationId = request.organizationId,
-                        tradePartyId = request.tradePartyId,
-                        businessName = request.businessName,
-                        companyType = request.companyType,
-                        ageingBucket = ageingBucket,
-                        countryCode = request.countryCode,
-                        countryId = request.countryId,
-                        creditController = request.creditController,
-                        creditDays = request.creditDays,
-                        kam = request.kam,
-                        organizationSerialId = request.organizationSerialId,
-                        registrationNumber = request.registrationNumber,
-                        sageId = request.sageId,
-                        salesAgent = request.salesAgent,
-                        tradePartyName = request.tradePartyName,
-                        tradePartySerialId = request.tradePartySerialId,
-                        tradePartyType = request.tradePartyType,
-                        onAccountPayment = onAccountPayment,
-                        totalOutstanding = totalOutstanding,
-                        openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
-                        entityCode = entity
+                customerOutstanding = CustomerOutstandingDocumentResponse(
+                    updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    organizationId = request.organizationId,
+                    tradePartyId = request.tradePartyId,
+                    businessName = request.businessName,
+                    companyType = request.companyType,
+                    ageingBucket = ageingBucket,
+                    countryCode = request.countryCode,
+                    countryId = request.countryId,
+                    creditController = request.creditController,
+                    creditDays = request.creditDays,
+                    kam = request.kam,
+                    organizationSerialId = request.organizationSerialId,
+                    registrationNumber = request.registrationNumber,
+                    sageId = request.sageId,
+                    salesAgent = request.salesAgent,
+                    tradePartyName = request.tradePartyName,
+                    tradePartySerialId = request.tradePartySerialId,
+                    tradePartyType = request.tradePartyType,
+                    onAccountPayment = onAccountPayment,
+                    totalOutstanding = totalOutstanding,
+                    openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
+                    entityCode = entity
                 )
 
-                Client.addDocument("customer_outstanding_${entity}", request.organizationId!!, customerOutstanding, true)
+                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
             }
         }
     }
 
-    private fun getOnAccountPaymentDetails(orgOutstandingData:  List<OrgOutstanding>, entity: Int):  AgeingBucketOutstanding {
+    private fun getOnAccountPaymentDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val onAccountBucket: AgeingBucketOutstanding?
         var onAccountLedAmount = 0.toBigDecimal()
         var onAccountLedCount = 0
@@ -498,7 +498,7 @@ class OutStandingServiceImpl : OutStandingService {
         return onAccountBucket
     }
 
-    private fun getTotalOutstandingDetails(orgOutstandingData:  List<OrgOutstanding>, entity: Int):  AgeingBucketOutstanding {
+    private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         var totalOutstandingBucket: AgeingBucketOutstanding?
         var totalOutstandingLedAmount = 0.toBigDecimal()
         var totalOutstandingLedCount = 0
@@ -521,7 +521,7 @@ class OutStandingServiceImpl : OutStandingService {
             val notDue = DueAmount(it.currency, it.notDueAmountInvoiceCurrency, it.notDueCount)
             val today = DueAmount(it.currency, it.todayAmountInvoiceCurrency, it.todayCount)
             val thirty = DueAmount(it.currency, it.thirtyAmountInvoiceCurrency, it.thirtyCount)
-            val sixty= DueAmount(it.currency, it.sixtyAmountInvoiceCurrency, it.sixtyCount)
+            val sixty = DueAmount(it.currency, it.sixtyAmountInvoiceCurrency, it.sixtyCount)
             val ninety = DueAmount(it.currency, it.ninetyAmountInvoiceCurrency, it.ninetyCount)
             val oneEighty = DueAmount(it.currency, it.oneEightyAmountInvoiceCurrency, it.oneEightyCount)
             val threeSixtyFive = DueAmount(it.currency, it.threeSixtyFiveAmountInvoiceCurrency, it.threeSixtyFiveCount)
@@ -633,10 +633,10 @@ class OutStandingServiceImpl : OutStandingService {
         return ageingBucketsInInvoiceCurrency
     }
 
-    override suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponseV2?) {
+    override suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponse?) {
         logger().info("Starting to update customer details of $id")
         try {
-            var customerOutstanding: CustomerOutstandingDocumentResponseV2? = null
+            var customerOutstanding: CustomerOutstandingDocumentResponse? = null
             if (flag) {
                 customerOutstanding = document
             } else {
@@ -647,65 +647,65 @@ class OutStandingServiceImpl : OutStandingService {
                             .query { q ->
                                 q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
                             }
-                    }, CustomerOutstandingDocumentResponseV2::class.java)
+                    }, CustomerOutstandingDocumentResponse::class.java)
                     if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
                         customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
                     }
 
                     if (customerOutstanding != null) {
-                            val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket(entity, null, id)
-                            if (queryResponse.isNullOrEmpty()) {
-                                return@forEach
-                            }
-                            val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
-
-                            var orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
-                            val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
-                            val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
-
-                            var openSearchData = CustomerOutstandingDocumentResponseV2(
-                                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                                organizationId = document?.organizationId ?: id,
-                                tradePartyId = document?.tradePartyId,
-                                businessName = document?.businessName,
-                                companyType = document?.companyType,
-                                ageingBucket = ageingBucket,
-                                countryCode = document?.countryCode,
-                                countryId = document?.countryId,
-                                creditController = document?.creditController,
-                                creditDays = document?.creditDays,
-                                kam = document?.kam,
-                                organizationSerialId = document?.organizationSerialId,
-                                registrationNumber = document?.registrationNumber,
-                                sageId = document?.sageId,
-                                salesAgent = document?.salesAgent,
-                                tradePartyName = document?.tradePartyName,
-                                tradePartySerialId = document?.tradePartySerialId,
-                                tradePartyType = document?.tradePartyType,
-                                onAccountPayment = onAccountPayment,
-                                totalOutstanding = totalOutstanding,
-                                openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
-                                entityCode = entity
-                            )
-                            Client.addDocument("customer_outstanding_${entity}", document?.organizationId!!, openSearchData, true)
+                        val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket(entity, null, id)
+                        if (queryResponse.isNullOrEmpty()) {
+                            return@forEach
                         }
+                        val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
+
+                        var orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
+                        val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
+                        val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
+
+                        var openSearchData = CustomerOutstandingDocumentResponse(
+                            updatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                            organizationId = document?.organizationId ?: id,
+                            tradePartyId = document?.tradePartyId,
+                            businessName = document?.businessName,
+                            companyType = document?.companyType,
+                            ageingBucket = ageingBucket,
+                            countryCode = document?.countryCode,
+                            countryId = document?.countryId,
+                            creditController = document?.creditController,
+                            creditDays = document?.creditDays,
+                            kam = document?.kam,
+                            organizationSerialId = document?.organizationSerialId,
+                            registrationNumber = document?.registrationNumber,
+                            sageId = document?.sageId,
+                            salesAgent = document?.salesAgent,
+                            tradePartyName = document?.tradePartyName,
+                            tradePartySerialId = document?.tradePartySerialId,
+                            tradePartyType = document?.tradePartyType,
+                            onAccountPayment = onAccountPayment,
+                            totalOutstanding = totalOutstanding,
+                            openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
+                            entityCode = entity
+                        )
+                        Client.addDocument("customer_outstanding_$entity", document?.organizationId!!, openSearchData, true)
                     }
                 }
+            }
         } catch (error: Exception) {
             logger().error(error.stackTraceToString())
             Sentry.captureException(error)
         }
     }
 
-    override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?> {
+    override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
         var index = "customer_outstanding_${request.entityCode}"
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)
-        var list: List<CustomerOutstandingDocumentResponseV2?> = listOf()
+        var list: List<CustomerOutstandingDocumentResponse?> = listOf()
         if (!response?.hits()?.hits().isNullOrEmpty()) {
             list = response?.hits()?.hits()?.map { it.source() }!!
         }
-        val responseList = ResponseList<CustomerOutstandingDocumentResponseV2?>()
+        val responseList = ResponseList<CustomerOutstandingDocumentResponse?>()
 
         responseList.list = list
         responseList.totalRecords = response?.hits()?.total()?.value() ?: 0

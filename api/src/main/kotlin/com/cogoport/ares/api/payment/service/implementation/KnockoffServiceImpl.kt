@@ -284,6 +284,9 @@ open class KnockoffServiceImpl : KnockoffService {
             migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,

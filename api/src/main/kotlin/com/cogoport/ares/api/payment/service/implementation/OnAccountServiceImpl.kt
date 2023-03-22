@@ -316,6 +316,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
