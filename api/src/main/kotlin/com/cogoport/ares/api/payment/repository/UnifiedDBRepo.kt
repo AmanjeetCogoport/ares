@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.AmountCurrencyResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.SalesInvoiceResponse
 import com.cogoport.ares.api.common.models.SalesInvoiceTimelineResponse
@@ -18,6 +17,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -41,6 +41,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE pinv.created_at::varchar < :endDate and pinv.created_at::varchar > :startDate 
             AND pinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            AND pinv.invoice_type = 'INVOICE'
             AND (pinv.migrated = false)
             AND (pa.organization_type = 'SELLER')
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
@@ -71,7 +72,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 LEFT JOIN organizations o on o.registration_number = pa.registration_number
                 LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
                 WHERE i.created_at::varchar < :endDate and i.created_at::varchar > :startDate
-                and i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
+                AND i.invoice_type = 'INVOICE'
+                AND i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
                 AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
                 AND (:companyType is null or los.segment = :companyType OR los.id is null)
                 AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
@@ -83,8 +85,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-        SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount,
-        led_currency as currency
+        SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
         WHERE document_status = 'FINAL'
         AND (:entityCode is null OR aau.entity_code = :entityCode)
@@ -93,10 +94,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (acc_mode = 'AR')
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
         AND deleted_at is null
-        group by led_currency
         """
     )
-    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): AmountCurrencyResponse?
+    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(
@@ -120,6 +120,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             where
             aau.trade_party_mapping_id is not null 
             AND acc_mode ='AR'
+            AND acc_type in ('SINV', 'SCN')
             AND aau.migrated = false
             AND (amount_loc-pay_loc) > 0 
             AND aau.transaction_date::date <= Now()
@@ -133,8 +134,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount,
-            led_currency as currency
+            SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
             FROM ares.account_utilizations aau
             WHERE document_status = 'FINAL'
             AND (:entityCode is null OR aau.entity_code = :entityCode)
@@ -144,10 +144,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND deleted_at is null
             AND date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
-            GROUP BY led_currency
         """
     )
-    fun getOnAccountAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): AmountCurrencyResponse?
+    fun getOnAccountAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @Query(
         """
@@ -165,7 +164,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
     )
 
-    fun getOutstandingAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): AmountCurrencyResponse?
+    fun getOutstandingAmountForPastSevenDays(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
 
     @NewSpan
     @Query(

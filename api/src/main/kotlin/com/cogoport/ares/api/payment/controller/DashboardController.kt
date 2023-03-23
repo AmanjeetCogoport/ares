@@ -174,9 +174,8 @@ class DashboardController {
     suspend fun getOutstanding(
         @QueryValue("date") date: String? = null,
         @QueryValue("cogoEntityId") cogoEntityId: UUID?,
-        @QueryValue("dashboardCurrency") dashboardCurrency: String? = "INR"
     ): OutstandingOpensearchResponse? {
-        return dashboardService.getOutstanding(date, cogoEntityId, dashboardCurrency)
+        return dashboardService.getOutstanding(date, cogoEntityId)
     }
 
     @Get("/kam-wise-outstanding")

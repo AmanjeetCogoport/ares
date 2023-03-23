@@ -393,10 +393,9 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = request.serviceType
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
-        var cogoEntityId = request.cogoEntityId
-        if (request.cogoEntityId == null) {
-            cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING.filter { it.value == 301 }.keys.first())
-        }
+        val cogoEntityId = request.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
+
+        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
 
         val companyType = request.companyType
 
@@ -405,11 +404,10 @@ class DashboardServiceImpl : DashboardService {
         val defaultersOrgIds = getDefaultersOrgIds()
 
         val serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-        val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
         val companyTypeKey = companyType?.name ?: "ALL"
 
         val searchKey =
-            AresConstants.QUARTERLY_TREND_PREFIX + cogoEntityKey + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
+            AresConstants.QUARTERLY_TREND_PREFIX + entityCode + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
 
         var data = OpenSearchClient().search(
             searchKey = searchKey,
@@ -418,27 +416,12 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (data == null) {
-            openSearchService.generateQuarterlyOutstanding(quarter, year, serviceType, defaultersOrgIds, cogoEntityId, companyType)
+            openSearchService.generateQuarterlyOutstanding(quarter, year, serviceType, defaultersOrgIds, entityCode, companyType)
             data = OpenSearchClient().search(
                 searchKey = searchKey,
                 classType = QuarterlyOutstanding::class.java,
                 index = AresConstants.SALES_DASHBOARD_INDEX
             )
-        }
-
-        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency }?.distinct()!!
-
-        var exchangeRate = HashMap<String, BigDecimal>()
-        if (uniqueCurrencyList.isNotEmpty()) {
-            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, "INR")
-        }
-
-        data.list?.forEach { outstandingRes ->
-            if (outstandingRes.dashboardCurrency != "INR") {
-                val avgExchangeRate = exchangeRate[outstandingRes.dashboardCurrency]
-                outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
-                outstandingRes.dashboardCurrency = "INR"
-            }
         }
 
         val newData = getQuarterlyOutStandingData(data)
@@ -454,10 +437,9 @@ class DashboardServiceImpl : DashboardService {
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        var cogoEntityId = request.cogoEntityId
-        if (request.cogoEntityId == null) {
-            cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING.filter { it.value == 301 }.keys.first())
-        }
+        val cogoEntityId = request.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
+        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
         val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
 
@@ -468,8 +450,9 @@ class DashboardServiceImpl : DashboardService {
                 q.split("_")[1].toInt(),
                 AresConstants.DAILY_SALES_OUTSTANDING_PREFIX,
                 request.serviceType,
-                cogoEntityId,
+                entityCode,
                 request.companyType
+
             )
             var salesResponse = clientResponse(salesResponseKey)
 
@@ -486,17 +469,16 @@ class DashboardServiceImpl : DashboardService {
                         request.serviceType,
                         date,
                         defaultersOrgIds,
-                        cogoEntityId,
+                        entityCode,
                         request.companyType
                     )
                 }
                 salesResponse = clientResponse(salesResponseKey)
             }
 
-            val dso = mutableListOf<DsoResponse>()
             for (hts in salesResponse?.hits()?.hits()!!) {
                 val data = hts.source()
-                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal())
+                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal(), dashboardCurrency)
                 val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
                 data?.list?.map {
                     dsoResponse.month = it.month.toString()
@@ -508,8 +490,10 @@ class DashboardServiceImpl : DashboardService {
         }
 
         val dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth)
+            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, dashboardCurrency)
         }
+
+        dsoResponseData.sortedBy { it.month }
 
         return DailySalesOutstanding(dsoResponse = dsoResponseData)
     }
@@ -522,8 +506,8 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    private fun searchKeyDailyOutstanding(quarter: Int, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, cogoEntityId, companyType)
+    private fun searchKeyDailyOutstanding(quarter: Int, year: Int, index: String, serviceType: ServiceType?, entityCode: Int?, companyType: CompanyType?): MutableList<String> {
+        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, entityCode, companyType)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
@@ -536,14 +520,13 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, cogoEntityId: UUID?, companyType: CompanyType?): MutableList<String> {
+    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, entityCode: Int?, companyType: CompanyType?): MutableList<String> {
         val serviceTypeKey = serviceType?.name ?: "ALL"
-        val cogoEntityKey = cogoEntityId?.toString() ?: "ALL"
         val companyTypeKey = companyType?.name ?: "ALL"
 
         val keyList = mutableListOf<String>()
         for (item in monthList) {
-            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + cogoEntityKey + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
+            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + entityCode + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
         }
         return keyList
     }
@@ -728,11 +711,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getSalesFunnel(req: SalesFunnelRequest): SalesFunnelResponse {
-        var cogoEntityId = req.cogoEntityId
-
-        if (req.cogoEntityId == null) {
-            cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING.filter { it.value == 301 }.keys.first())
-        }
+        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
         val serviceType = req.serviceType
         val month = req.month
         val companyType = req.companyType
@@ -793,11 +772,7 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         var countIrnGeneratedEvent: Int? = 0
 
-        var cogoEntityId = req.cogoEntityId
-
-        if (req.cogoEntityId == null) {
-            cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING.filter { it.value == 301 }.keys.first())
-        }
+        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
 
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
@@ -901,16 +876,19 @@ class DashboardServiceImpl : DashboardService {
         return invoiceTatStatsResponse
     }
 
-    override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?, dashboardCurrency: String?): OutstandingOpensearchResponse {
+    override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val cogoEntityKey = when (cogoEntityId == null) {
+        val entityCode = when (cogoEntityId == null) {
             true -> 301
             else -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
         }
+
+        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + cogoEntityKey
+        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + entityCode
 
         var openSearchData = OpenSearchClient().search(
             searchKey = searchKey,
@@ -919,7 +897,7 @@ class DashboardServiceImpl : DashboardService {
         )
 
         if (openSearchData == null && (asOnDate == AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
-            openSearchService.generateOutstandingData(searchKey, cogoEntityId, defaultersOrgIds, dashboardCurrency)
+            openSearchService.generateOutstandingData(searchKey, entityCode, defaultersOrgIds, dashboardCurrency)
 
             openSearchData = OpenSearchClient().search(
                 searchKey = searchKey,
@@ -1050,15 +1028,11 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
         val serviceType = req.serviceType
         val companyType = req.companyType
-        val cogoEntityId = req.cogoEntityId
+        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
         val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
 
-        val entityCode = when (cogoEntityId != null) {
-            true -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-            else -> 301
-        }
-
+        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
         val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
