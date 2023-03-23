@@ -370,7 +370,9 @@ ORDER BY
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.supporting_doc_url
+            s.supporting_doc_url,
+            is_void,
+            settlement_num
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
             and deleted_at IS NULL
