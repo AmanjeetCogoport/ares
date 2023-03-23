@@ -3,7 +3,7 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
-import com.cogoport.ares.model.common.PayableAmountReq
+import com.cogoport.ares.model.common.TdsAmountReq
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -136,7 +136,7 @@ class MigratePaymentsController {
     }
 
     @Put("/tds-amount")
-    suspend fun migrateTdsAmount(@Body req: List<PayableAmountReq>) {
+    suspend fun migrateTdsAmount(@Body req: List<TdsAmountReq>) {
         paymentMigration.migrateTdsAmount(req)
     }
 }

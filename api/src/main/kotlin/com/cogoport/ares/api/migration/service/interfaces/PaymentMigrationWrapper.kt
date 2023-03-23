@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
-import com.cogoport.ares.model.common.PayableAmountReq
+import com.cogoport.ares.model.common.TdsAmountReq
 
 interface PaymentMigrationWrapper {
     suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int
@@ -17,5 +17,5 @@ interface PaymentMigrationWrapper {
 
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
-    suspend fun migrateTdsAmount(req: List<PayableAmountReq>)
+    suspend fun migrateTdsAmount(req: List<TdsAmountReq>)
 }

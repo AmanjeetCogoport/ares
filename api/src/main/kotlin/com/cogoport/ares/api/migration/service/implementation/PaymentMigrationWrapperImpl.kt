@@ -9,7 +9,7 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrappe
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.common.PayableAmountReq
+import com.cogoport.ares.model.common.TdsAmountReq
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -188,7 +188,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
     }
 
-    override suspend fun migrateTdsAmount(req: List<PayableAmountReq>) {
+    override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
             accountUtilizationRepo.updatePayableAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
         }

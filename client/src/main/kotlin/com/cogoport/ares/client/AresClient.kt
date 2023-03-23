@@ -1,7 +1,7 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
-import com.cogoport.ares.model.common.PayableAmountReq
+import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -181,5 +181,5 @@ interface AresClient {
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
 
     @Put("/payments/payable-amount")
-    suspend fun migratePayableAmount(@Body req: List<PayableAmountReq>)
+    suspend fun migratePayableAmount(@Body req: List<TdsAmountReq>)
 }
