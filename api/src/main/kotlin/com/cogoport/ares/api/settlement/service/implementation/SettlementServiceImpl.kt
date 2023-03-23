@@ -2587,14 +2587,19 @@ open class SettlementServiceImpl : SettlementService {
                     }
 
                     val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(settlementDocuments.documentValue)
+                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocValue(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType)
 
-                    if (!isDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", settlementDocuments.documentValue) ||
-                        sageDocument.paymentDocumentStatus != PaymentDocumentStatus.POSTED
-                    ) {
+                    var boolean: Boolean
+                    if (settlementDocuments.destinationType == AccountType.SINV) {
+                        boolean = isInvoiceDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", accountUtilization.documentValue)
+                    } else {
+                        boolean = isBillDataPresentOnSage(accountUtilization.documentValue, settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId)
+                    }
+
+                    if (!boolean || sageDocument.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
                         throw AresException(AresError.ERR_1527, "")
                     }
 
-                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocValue(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType)
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
 
                     matchingSettlementOnSageRequest?.add(
@@ -2674,11 +2679,25 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun isDataPresentOnSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
+    private fun isInvoiceDataPresentOnSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
         val query = "Select $key from $sageDatabase where $key='$invoiceNumber'"
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
+
+        return records.size != 0
+    }
+
+    private fun isBillDataPresentOnSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
+        var query = """
+            SELECT  * FROM $sageDatabase.PINVOICE P 
+            	            INNER JOIN $sageDatabase.BPSUPPLIER BP ON (P.BPR_0 = BP.BPSNUM_0) 
+            	            WHERE (P.BPRVCR_0 = '$billNumber'  
+            	            OR P.BPRVCR_0 = '$billNumber&$organizationSerialId')
+            	            AND BPSNUM_0 ='$sageOrganizationId'
+        """.trimIndent()
+        var resultFromQuery = Client.sqlQuery(query)
+        var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
 
         return records.size != 0
     }
