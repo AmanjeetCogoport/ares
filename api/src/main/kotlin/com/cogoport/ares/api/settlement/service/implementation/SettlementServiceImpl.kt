@@ -2533,10 +2533,10 @@ open class SettlementServiceImpl : SettlementService {
 
                     if (settlementDocuments.organizationId != null) {
                         val organization = railsClient.getListOrganizationTradePartyDetails(settlementDocuments.organizationId !!)
-                        val sageOrganizationQuery = if (settlementDocuments.accountType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+                        val sageOrganizationQuery = if (settlementDocuments.destinationType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
                         val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
                         val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
-                        sageOrganizationFromSageId = if (settlementDocuments.accountType == AccountType.SINV) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+                        sageOrganizationFromSageId = if (settlementDocuments.destinationType == AccountType.SINV) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
                     } else {
                         throw error("organizationId is not present")
                     }
@@ -2544,7 +2544,11 @@ open class SettlementServiceImpl : SettlementService {
                     val sageOrganizationResponse = cogoClient.getSageOrganization(
                         SageOrganizationRequest(
                             settlementDocuments.orgSerialId.toString(),
-                            settlementDocuments.accountType!!.name
+                            if (settlementDocuments.destinationType == AccountType.SINV) {
+                                "importer_exporter"
+                            } else {
+                                "service_provider"
+                            }
                         )
                     )
 
@@ -2582,17 +2586,20 @@ open class SettlementServiceImpl : SettlementService {
                         throw error("sage serial organization id different in sage db and cogoport db")
                     }
 
+                    val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(settlementDocuments.documentValue)
+
                     if (!isDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", settlementDocuments.documentValue) ||
-                        settlementDocuments.paymentDocumentStatus != PaymentDocumentStatus.POSTED
+                        sageDocument.paymentDocumentStatus != PaymentDocumentStatus.POSTED
                     ) {
                         throw AresException(AresError.ERR_1527, "")
                     }
 
+                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocValue(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType)
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
 
                     matchingSettlementOnSageRequest?.add(
                         SageSettlementRequest(
-                            settlementDocuments.documentValue!!,
+                            accountUtilization.documentValue!!,
                             sageOrganizationResponse.sageOrganizationId!!,
                             settlementDocuments.amount.toString(),
                             ""
@@ -2601,7 +2608,7 @@ open class SettlementServiceImpl : SettlementService {
 
                     matchingSettlementOnSageRequest?.add(
                         SageSettlementRequest(
-                            settlementDocuments.sageNumValue!!,
+                            sageDocument.sageNumValue!!,
                             sageOrganizationResponse.sageOrganizationId!!,
                             settlementDocuments.amount.toString(),
                             settlementDocuments.flag

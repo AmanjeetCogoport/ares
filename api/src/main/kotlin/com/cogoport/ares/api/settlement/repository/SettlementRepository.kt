@@ -296,25 +296,22 @@ ORDER BY
     @Query(
         """
             SELECT
-                au.document_value,
-                au.org_serial_id,
-                s.destination_type as account_type,
-                p.sage_num_value, 
                 s.amount,
-                p.payment_num_value,
-                p.organization_id,
-                CASE WHEN (p.payment_num_value LIKE 'REC%'
-                    OR p.payment_num_value LIKE 'PAY%') THEN
+                au.document_value,
+                s.destination_id,
+                s.destination_type,
+                au.organization_id,
+                au.org_serial_id ,CASE WHEN (au.document_value LIKE 'REC%'
+                    OR au.document_value LIKE 'PAY%') THEN
                     'P'
                 ELSE
                     NULL
                 END AS flag
             FROM
                 settlements s
-                INNER JOIN account_utilizations au ON au.document_no = s.destination_id
-                INNER JOIN payments p ON p.payment_num = s.source_id
+                INNER JOIN account_utilizations au ON au.document_no = s.source_id
             WHERE
-                s.destination_type in ('SINV','PINV') 
+                au.acc_type::VARCHAR = s.source_type::VARCHAR
                 AND s.id = :id
         """
     )

@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
+import com.cogoport.ares.model.settlement.SageStatusResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -20,7 +21,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              select id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
-             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by
+             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status,
+             sage_num_value, created_by, updated_by
              from payments where id =:id and deleted_at is null
         """
     )
@@ -48,7 +50,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             SELECT id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
-             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by
+             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, 
+             sage_num_value,created_by, updated_by
              FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null
         """
     )
@@ -104,4 +107,19 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun updateSagePaymentNumValue(id: Long, sageNumValue: String)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                sage_num_value,
+                payment_document_status
+            FROM
+                payments
+            WHERE
+                payment_num_value = :paymentNumValue 
+
+        """
+    )
+    suspend fun getSageDocumentNumberAndStatusByPaymentNumValue(paymentNumValue: String): SageStatusResponse
 }
