@@ -5,7 +5,6 @@ import com.cogoport.ares.model.payment.DocumentType
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.http.annotation.QueryValue
-import java.util.UUID
 
 @Introspected
 data class DailyStatsRequest(
@@ -14,7 +13,6 @@ data class DailyStatsRequest(
     @QueryValue("asOnDate") val asOnDate: String? = null,
     @QueryValue("documentType") val documentType: DocumentType? = DocumentType.SALES_INVOICE,
     @QueryValue("companyType") val companyType: CompanyType? = null,
-    @QueryValue("cogoEntityId") val cogoEntityId: UUID? = null,
-    @QueryValue("serviceType") val serviceType: ServiceType? = null,
-    @QueryValue("dashboardCurrency") val dashboardCurrency: String? = "INR"
+    @QueryValue("entityCode") var entityCode: Int? = 301,
+    @QueryValue("serviceType") val serviceType: ServiceType? = null
 )

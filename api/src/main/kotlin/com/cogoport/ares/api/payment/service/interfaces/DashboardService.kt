@@ -35,7 +35,6 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
-import java.util.UUID
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -65,7 +64,7 @@ interface DashboardService {
 
     suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 
-    suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse?
+    suspend fun getOutstanding(date: String?, entityCode: Int?): OutstandingOpensearchResponse?
 
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 

@@ -9,6 +9,7 @@ import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -41,6 +42,9 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.brahma.authentication.Auth
+import com.cogoport.brahma.authentication.AuthResponse
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -50,7 +54,6 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
-import java.util.UUID
 import javax.validation.Valid
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -64,13 +67,22 @@ class DashboardController {
     lateinit var pushToClientService: OpenSearchService
     @Inject
     lateinit var exchangeRateHelper: ExchangeRateHelper
+
+    @Inject
+    lateinit var util: Util
+
     @Get("/overall-stats{?request*}")
     suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData? {
         return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
     }
 
     @Get("/daily-sales-outstanding{?request*}")
-    suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding? {
+    suspend fun getDailySalesOutstanding(
+        @Valid request: DsoRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): DailySalesOutstanding? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<DailySalesOutstanding?>().ok(dashboardService.getDailySalesOutstanding(request))
     }
 
@@ -85,12 +97,23 @@ class DashboardController {
     }
 
     @Get("/quarterly-outstanding{?request*}")
-    suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding? {
+    suspend fun getQuarterlyOutstanding(
+        @Valid request: QuarterlyOutstandingRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): QuarterlyOutstanding? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<QuarterlyOutstanding?>().ok(dashboardService.getQuarterlyOutstanding(request))
     }
 
+    @Auth
     @Get("/outstanding-by-age{?request*}")
-    suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
+    suspend fun getOutStandingByAge(
+        @Valid request: OutstandingAgeingRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): List<OverallAgeingStatsResponse>? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
     }
 
@@ -151,31 +174,49 @@ class DashboardController {
     @Get("/index")
     suspend fun createIndex(@QueryValue("name") name: String) { return dashboardService.createIndex(name) }
 
+    @Auth
     @Get("/sales-funnel{?request*}")
     suspend fun getSalesFunnel(
-        @Valid request: SalesFunnelRequest
+        @Valid request: SalesFunnelRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
     ): SalesFunnelResponse? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getSalesFunnel(request)
     }
 
+    @Auth
     @Get("/invoice-tat-stats{?request*}")
     suspend fun getInvoiceTatStats(
-        @Valid request: InvoiceTatStatsRequest
+        @Valid request: InvoiceTatStatsRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
     ): InvoiceTatStatsResponse? {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getInvoiceTatStats(request)
     }
 
+    @Auth
     @Get("/daily-sales-statistics{?req*}")
-    suspend fun getDailySalesStatistics(@Valid req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
+    suspend fun getDailySalesStatistics(
+        @Valid req: DailyStatsRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): HashMap<String, ArrayList<DailySalesStats>> {
+        req.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: req.entityCode
         return dashboardService.getDailySalesStatistics(req)
     }
 
+    @Auth
     @Get("/outstanding")
     suspend fun getOutstanding(
         @QueryValue("date") date: String? = null,
-        @QueryValue("cogoEntityId") cogoEntityId: UUID?,
+        @QueryValue("entityCode") entityCode: Int? = 301,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
     ): OutstandingOpensearchResponse? {
-        return dashboardService.getOutstanding(date, cogoEntityId)
+        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+        return dashboardService.getOutstanding(date, updatedEntityCode)
     }
 
     @Get("/kam-wise-outstanding")
@@ -183,8 +224,14 @@ class DashboardController {
         return dashboardService.getKamWiseOutstanding()
     }
 
+    @Auth
     @Get("/line-graph-view{?req*}")
-    suspend fun getLineGraphViewDailyStats(@Valid req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
+    suspend fun getLineGraphViewDailyStats(
+        @Valid req: DailyStatsRequest,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): HashMap<String, ArrayList<DailySalesStats>> {
+        req.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: req.entityCode
         return dashboardService.getLineGraphViewDailyStats(req)
     }
 }

@@ -188,11 +188,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
         val defaultersOrgIds = getDefaultersOrgIds()
-
-        val entityCode = when (request.cogoEntityId == null) {
-            true -> 301
-            else -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[request.cogoEntityId.toString()]
-        }
+        val entityCode = request.entityCode
 
         val ledgerCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
@@ -393,9 +389,7 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = request.serviceType
         val quarter: Int = AresConstants.CURR_QUARTER
         val year: Int = AresConstants.CURR_YEAR
-        val cogoEntityId = request.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
-
-        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        val entityCode = request.entityCode ?: 301
 
         val companyType = request.companyType
 
@@ -436,9 +430,7 @@ class DashboardServiceImpl : DashboardService {
         validatingRoleAndEntityCode(request.role)
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
-
-        val cogoEntityId = request.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
-        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        val entityCode = request.entityCode ?: 301
         val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
         val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
@@ -711,7 +703,8 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getSalesFunnel(req: SalesFunnelRequest): SalesFunnelResponse {
-        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
+        val entityCode = req.entityCode
+        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
         val serviceType = req.serviceType
         val month = req.month
         val companyType = req.companyType
@@ -771,8 +764,9 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = req.serviceType
         val companyType = req.companyType
         var countIrnGeneratedEvent: Int? = 0
+        val entityCode = req.entityCode
 
-        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
+        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
 
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
@@ -876,13 +870,8 @@ class DashboardServiceImpl : DashboardService {
         return invoiceTatStatsResponse
     }
 
-    override suspend fun getOutstanding(date: String?, cogoEntityId: UUID?): OutstandingOpensearchResponse {
+    override suspend fun getOutstanding(date: String?, entityCode: Int?): OutstandingOpensearchResponse {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val entityCode = when (cogoEntityId == null) {
-            true -> 301
-            else -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-        }
 
         val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
@@ -919,17 +908,11 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = req.serviceType
         val companyType = req.companyType
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
-        val cogoEntityId = req.cogoEntityId
-
-        val entityCode = when (cogoEntityId != null) {
-            true -> AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
-            else -> 301
-        }
-
+        val entityCode = req.entityCode
+        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
         val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
-
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         var dailySalesStats = mutableListOf<DailySalesStats>()
@@ -1028,11 +1011,10 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {
         val serviceType = req.serviceType
         val companyType = req.companyType
-        val cogoEntityId = req.cogoEntityId ?: UUID.fromString("ee09645b-5f34-4d2e-8ec7-6ac83a7946e1")
         val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
-
-        val entityCode = AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[cogoEntityId.toString()]
+        val entityCode = req.entityCode
+        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
         val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
