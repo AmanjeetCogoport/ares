@@ -519,10 +519,11 @@ class PaymentMigrationImpl : PaymentMigration {
             description = null
         )
     }
+
     private fun getTypeForJV(accMode: String, signFlag: Short): String {
         if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
             return "credit"
-        } else if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
+        } else if (accMode.equals("AR") && signFlag.compareTo(1) == 0) {
             return "debit"
         } else if (accMode.equals("AP") && signFlag.compareTo(1) == 0) {
             return "debit"
