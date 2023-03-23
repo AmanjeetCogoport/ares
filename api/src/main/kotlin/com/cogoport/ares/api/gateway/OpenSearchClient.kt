@@ -622,42 +622,18 @@ class OpenSearchClient {
         var debitNote = false
 
         when (request.sortBy) {
-            "totalOutstandingLedgerAmount" -> {
-                totalOutstanding = true
-            }
-            "onAccountPaymentLedgerAmount" -> {
-                onAccountPayment = true
-            }
-            "notDueLedgerAmount" -> {
-                notDue = true
-            }
-            "todayLedgerAmount" -> {
-                today = true
-            }
-            "thirtyLedgerAmount" -> {
-                thirty = true
-            }
-            "sixtyLedgerAmount" -> {
-                sixty = true
-            }
-            "ninetyLedgerAmount" -> {
-                ninety = true
-            }
-            "oneEightyLedgerAmount" -> {
-                oneEighty = true
-            }
-            "threeSixtyFiveLedgerAmount" -> {
-                threeSixtyFive = true
-            }
-            "threeSixtyFivePlusLedgerAmount" -> {
-                threeSixtyFivePlus = true
-            }
-            "creditNoteLedgerAmount" -> {
-                creditNote = true
-            }
-            "debitNoteLedgerAmount" -> {
-                debitNote = true
-            }
+            "totalOutstandingLedgerAmount" -> totalOutstanding = true
+            "onAccountPaymentLedgerAmount" -> onAccountPayment = true
+            "notDueLedgerAmount" -> notDue = true
+            "todayLedgerAmount" -> today = true
+            "thirtyLedgerAmount" -> thirty = true
+            "sixtyLedgerAmount" -> sixty = true
+            "ninetyLedgerAmount" -> ninety = true
+            "oneEightyLedgerAmount" -> oneEighty = true
+            "threeSixtyFiveLedgerAmount" -> threeSixtyFive = true
+            "threeSixtyFivePlusLedgerAmount" -> threeSixtyFivePlus = true
+            "creditNoteLedgerAmount" -> creditNote = true
+            "debitNoteLedgerAmount" -> debitNote = true
         }
 
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
@@ -786,30 +762,19 @@ class OpenSearchClient {
                     q
                 }
                 .sort { t ->
-                    if (totalOutstanding) {
-                        t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (onAccountPayment) {
-                        t.field { f -> f.field("onAccountPayment.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (notDue) {
-                        t.field { f -> f.field("ageingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (today) {
-                        t.field { f -> f.field("ageingBucket.today.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (thirty) {
-                        t.field { f -> f.field("ageingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (sixty) {
-                        t.field { f -> f.field("ageingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (ninety) {
-                        t.field { f -> f.field("ageingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (oneEighty) {
-                        t.field { f -> f.field("ageingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (threeSixtyFive) {
-                        t.field { f -> f.field("ageingBucket.threeSixtyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (threeSixtyFivePlus) {
-                        t.field { f -> f.field("ageingBucket.threeSixtyFivePlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (creditNote) {
-                        t.field { f -> f.field("ageingBucket.creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    } else if (debitNote) {
-                        t.field { f -> f.field("ageingBucket.debitNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                    when {
+                        totalOutstanding -> t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        onAccountPayment -> t.field { f -> f.field("onAccountPayment.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        notDue -> t.field { f -> f.field("ageingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        today -> t.field { f -> f.field("ageingBucket.today.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        thirty -> t.field { f -> f.field("ageingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        sixty -> t.field { f -> f.field("ageingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        ninety -> t.field { f -> f.field("ageingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        oneEighty -> t.field { f -> f.field("ageingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        threeSixtyFive -> t.field { f -> f.field("ageingBucket.threeSixtyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        threeSixtyFivePlus -> t.field { f -> f.field("ageingBucket.threeSixtyFivePlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        creditNote -> t.field { f -> f.field("ageingBucket.creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        debitNote -> t.field { f -> f.field("ageingBucket.debitNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
                     }
                     t
                 }
