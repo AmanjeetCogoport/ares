@@ -37,4 +37,6 @@ data class JournalVoucherResponse(
     var accountNumber: String?,
     var ledCurrency: String?,
     var parentJvId: String? = null,
+    var sageUniqueId: String? = null,
+    var migrated: Boolean? = false
 )
