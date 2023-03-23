@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -27,6 +28,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.SettlementType
@@ -92,6 +94,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
@@ -327,6 +332,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,

@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CogoBanksDetails
 import com.cogoport.ares.api.common.models.TdsStylesResponse
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -27,6 +28,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
 import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
@@ -79,6 +81,9 @@ class CpSettlementServiceImpl : CpSettlementService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     /**
      * Get invoices for Given CP orgId.
@@ -314,6 +319,11 @@ class CpSettlementServiceImpl : CpSettlementService {
         )
 
         val accUtilObj = accountUtilizationRepository.save(accountUtilization)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
