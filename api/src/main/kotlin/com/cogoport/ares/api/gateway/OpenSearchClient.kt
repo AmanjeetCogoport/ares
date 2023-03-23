@@ -3,10 +3,12 @@ package com.cogoport.ares.api.gateway
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import io.micronaut.tracing.annotation.NewSpan
@@ -599,6 +601,185 @@ class OpenSearchClient {
                 }
                 .from(offset).size(request.limit)
         }, SupplierOutstandingDocument::class.java)
+
+        return response
+    }
+
+    @NewSpan
+    fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponse>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        var totalOutstanding = false
+        var onAccountPayment = false
+        var notDue = false
+        var today = false
+        var thirty = false
+        var sixty = false
+        var ninety = false
+        var oneEighty = false
+        var threeSixtyFive = false
+        var threeSixtyFivePlus = false
+        var creditNote = false
+        var debitNote = false
+
+        when (request.sortBy) {
+            "totalOutstandingLedgerAmount" -> totalOutstanding = true
+            "onAccountPaymentLedgerAmount" -> onAccountPayment = true
+            "notDueLedgerAmount" -> notDue = true
+            "todayLedgerAmount" -> today = true
+            "thirtyLedgerAmount" -> thirty = true
+            "sixtyLedgerAmount" -> sixty = true
+            "ninetyLedgerAmount" -> ninety = true
+            "oneEightyLedgerAmount" -> oneEighty = true
+            "threeSixtyFiveLedgerAmount" -> threeSixtyFive = true
+            "threeSixtyFivePlusLedgerAmount" -> threeSixtyFivePlus = true
+            "creditNoteLedgerAmount" -> creditNote = true
+            "debitNoteLedgerAmount" -> debitNote = true
+        }
+
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
+        val response = Client.search({ t ->
+            t.index(index)
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.sageId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.organizationSerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartySerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("tradePartySerialId.keyword")).query("*${request.tradePartySerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.salesAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("salesAgent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.salesAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.kamId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("kam.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.kamId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.creditControllerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("creditController.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.creditControllerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.countryId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("countryId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.countryId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType.keyword").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        b
+                    }
+                    q
+                }
+                .sort { t ->
+                    when {
+                        totalOutstanding -> t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        onAccountPayment -> t.field { f -> f.field("onAccountPayment.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        notDue -> t.field { f -> f.field("ageingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        today -> t.field { f -> f.field("ageingBucket.today.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        thirty -> t.field { f -> f.field("ageingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        sixty -> t.field { f -> f.field("ageingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        ninety -> t.field { f -> f.field("ageingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        oneEighty -> t.field { f -> f.field("ageingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        threeSixtyFive -> t.field { f -> f.field("ageingBucket.threeSixtyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        threeSixtyFivePlus -> t.field { f -> f.field("ageingBucket.threeSixtyFivePlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        creditNote -> t.field { f -> f.field("ageingBucket.creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        debitNote -> t.field { f -> f.field("ageingBucket.debitNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                    }
+                    t
+                }
+                .from(offset).size(request.limit)
+        }, CustomerOutstandingDocumentResponse::class.java)
 
         return response
     }

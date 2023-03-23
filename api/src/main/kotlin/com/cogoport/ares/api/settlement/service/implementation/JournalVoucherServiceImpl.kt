@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -15,6 +16,7 @@ import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
+import com.cogoport.ares.api.settlement.repository.JournalVoucherParentRepo
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
@@ -26,6 +28,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.SettlementType
@@ -49,6 +52,7 @@ import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
@@ -74,6 +78,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     lateinit var journalVoucherConverter: JournalVoucherMapper
 
     @Inject
+    lateinit var journalVoucherParentRepo: JournalVoucherParentRepo
+
+    @Inject
     lateinit var journalVoucherRepository: JournalVoucherRepository
 
     @Inject
@@ -87,6 +94,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
@@ -108,8 +118,40 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      * @param: jvListRequest
      * @return: ResponseList
      */
-    override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
+    override suspend fun getJournalVouchersWrapper(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
 
+        return when (jvListRequest.category) {
+            JVCategory.ICJV, JVCategory.ICJVBT, JVCategory.ICJVC -> getICJV(jvListRequest)
+            else -> getJournalVouchers(jvListRequest)
+        }
+    }
+    private suspend fun getICJV(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
+        val documentEntity = journalVoucherParentRepo.getListVouchers(
+            jvListRequest.status,
+            jvListRequest.category,
+            jvListRequest.query,
+            jvListRequest.page,
+            jvListRequest.pageLimit,
+            jvListRequest.sortType,
+            jvListRequest.sortBy
+        )
+        val totalRecords =
+            journalVoucherParentRepo.countDocument(
+                jvListRequest.status,
+                jvListRequest.category,
+                jvListRequest.query
+            )
+
+        val jvList = journalVoucherConverter.convertParentJVModelToJournalVoucherResponse(documentEntity)
+        return ResponseList(
+            list = jvList,
+            totalPages = Utilities.getTotalPages(totalRecords, jvListRequest.pageLimit),
+            totalRecords = totalRecords,
+            pageNo = jvListRequest.page
+        )
+    }
+
+    private suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse> {
         val documentEntity = journalVoucherRepository.getListVouchers(
             jvListRequest.status,
             jvListRequest.category,
@@ -129,13 +171,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 jvListRequest.query,
                 jvListRequest.entityCode
             )
-        val jvList = mutableListOf<JournalVoucherResponse>()
-        documentEntity.forEach { doc ->
-            jvList.add(journalVoucherConverter.convertToModelResponse((doc)))
-        }
-
         return ResponseList(
-            list = jvList,
+            list = documentEntity,
             totalPages = Utilities.getTotalPages(totalRecords, jvListRequest.pageLimit),
             totalRecords = totalRecords,
             pageNo = jvListRequest.page
@@ -223,8 +260,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return request.incidentId!!
     }
 
-    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?) {
+    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, accType: AccountType, performedByUserType: String?) {
+        val jvEntity = journalVoucherRepository.findById(id) ?: throw AresException(AresError.ERR_1002, "journal_voucher_id: $id")
         journalVoucherRepository.updateStatus(id, status, performedBy)
+        if (accType == AccountType.ICJV && jvEntity.parentJvId != null) {
+            journalVoucherParentRepo.updateStatus(jvEntity.parentJvId!!, status, performedBy)
+        }
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
@@ -257,7 +298,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         return jvEntity
     }
 
-    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
+    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode?, signFlag: Short): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -269,7 +310,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             tradePartyMappingId = null,
             organizationName = request.tradePartyName,
             accType = AccountType.valueOf(request.category.toString()),
-            accMode = accMode,
+            accMode = accMode!!,
             signFlag = signFlag,
             currency = request.currency!!,
             ledCurrency = request.ledCurrency,
@@ -291,6 +332,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -352,7 +396,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                     id = request.tradePartyId,
                     businessName = request.tradePartyName,
                     tradePartyType = null,
-                    tradePartyName = null
+                    tradePartyName = null,
+                    category_types = null
                 ),
                 journalVoucherRequest = data,
                 tdsRequest = null,
@@ -364,6 +409,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             type = IncidentType.JOURNAL_VOUCHER_APPROVAL,
             description = "Journal Voucher Approval",
             data = incidentData,
+            source = Source.SETTLEMENT,
+            entityId = UUID.fromString(AresConstants.ENTITY_ID.get(request.entityCode)),
             createdBy = request.createdBy!!
         )
         hadesClient.createIncident(clientRequest)
@@ -375,7 +422,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
      * @param: type
      * @return: Short
      */
-    private fun getSignFlag(accMode: AccMode, type: String): Short {
+    private fun getSignFlag(accMode: AccMode?, type: String): Short {
         return when (type) {
             "CREDIT" -> { -1 }
             "DEBIT" -> { 1 }

@@ -396,10 +396,10 @@ class OpenSearchServiceImpl : OpenSearchService {
         if (request.orgId.isEmpty()) {
             throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId, null).also {
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, null, null).also {
             updateOrgOutstanding(null, request.orgName, request.orgId, it)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone).also {
+        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone, null).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
