@@ -39,6 +39,9 @@ data class JournalVoucher(
     @DateCreated var updatedAt: Timestamp?,
     var updatedBy: UUID?,
     var description: String?,
-    var accMode: AccMode,
-    var parentJvId: Long? = null
+    var accMode: AccMode?,
+    var glCode: String?,
+    var parentJvId: Long? = null,
+    var sageUniqueId: String? = null,
+    var migrated: Boolean? = false
 )

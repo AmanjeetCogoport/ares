@@ -38,6 +38,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.description as description,
             j.acc_mode,
             j.parent_jv_id
+            j.sage_unique_id,
+            j.migrated
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
@@ -134,7 +136,9 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
-            j.parent_jv_id
+            j.parent_jv_id,
+            j.sage_unique_id,
+            j.migrated
             FROM journal_vouchers j 
             Where 
                 j.parent_jv_id = :parentId
