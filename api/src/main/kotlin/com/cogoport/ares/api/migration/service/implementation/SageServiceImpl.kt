@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
@@ -64,6 +65,7 @@ class SageServiceImpl : SageService {
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 = '$mode'  and P.BPR_0 = '$bpr'
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
              """
         //  -- and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
@@ -115,6 +117,7 @@ class SageServiceImpl : SageService {
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC')
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         if (startDate == null && endDate == null) {
             sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
@@ -172,7 +175,8 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in ('AR','SC')
+            where P.BPRSAC_0 in ('AR','SC') 
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         sqlQuery += if (updatedAt == null) {
             """  and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
@@ -227,7 +231,9 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in ('AR','SC') and GC.NUM_0 in ($paymentNums) order by P.ACCDAT_0 ASC;
+            where P.BPRSAC_0 in ('AR','SC') 
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
+            and GC.NUM_0 in ($paymentNums) order by P.ACCDAT_0 ASC;
         """
 
         val paymentRecords = Client.sqlQuery(sqlQuery)
@@ -355,6 +361,7 @@ class SageServiceImpl : SageService {
             INNER JOIN 
             ( select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0 ,MAX(SNS_0) as sign_flag from COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC') GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0 ) G on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0) 
             where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC') 
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             and G.NUM_0 = '$jvNum'
         """.trimIndent()
         val journalRecords = Client.sqlQuery(sqlQuery)
