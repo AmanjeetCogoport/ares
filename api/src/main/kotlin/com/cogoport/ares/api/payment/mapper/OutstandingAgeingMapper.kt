@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.mapper
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
-import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import org.mapstruct.Mapper
@@ -19,6 +18,4 @@ interface OutstandingAgeingMapper {
     fun convertToOutstandingModel(billOutstanding: SupplierOutstandingAgeing): BillOutStandingAgeingResponse
 
     fun convertSupplierDetailsRequestToDocument(request: SupplierOutstandingDocument): SupplierOutstandingDocument
-
-    fun convertCustomerDetailsRequestToDocument(request: CustomerOutstandingDocumentResponse): CustomerOutstandingDocumentResponse
 }

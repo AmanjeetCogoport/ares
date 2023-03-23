@@ -448,7 +448,7 @@ class OutStandingServiceImpl : OutStandingService {
                     return@forEach
                 }
                 val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
-                var customerOutstanding: CustomerOutstandingDocumentResponse? = null
+                val customerOutstanding: CustomerOutstandingDocumentResponse?
 
                 val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(request.organizationId!!, null, entity)
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
@@ -474,11 +474,10 @@ class OutStandingServiceImpl : OutStandingService {
                     tradePartyType = request.tradePartyType,
                     onAccountPayment = onAccountPayment,
                     totalOutstanding = totalOutstanding,
-                    openInvoiceCount = orgOutstandingData.sumOf { it -> it.openInvoicesCount!! },
+                    openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
                     entityCode = entity
                 )
-                val customerOutstandingModel = outstandingAgeingConverter.convertCustomerDetailsRequestToDocument(customerOutstanding)
-                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstandingModel, true)
+                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
             }
         }
     }
@@ -489,26 +488,26 @@ class OutStandingServiceImpl : OutStandingService {
         var onAccountLedCount = 0
         val onAccountInvoiceBucket = mutableListOf<DueAmount>()
         orgOutstandingData.forEach {
-            onAccountLedAmount += it.paymentsLedAmount!!
-            onAccountLedCount += it.paymentsCount!!
+            onAccountLedAmount += it.paymentsLedAmount * 1.0.toBigDecimal()
+            onAccountLedCount += it.paymentsCount
             onAccountInvoiceBucket.add(DueAmount(it.currency, it.paymentsAmount, it.paymentsCount))
         }
-        onAccountBucket = AgeingBucketOutstanding(onAccountLedAmount, onAccountLedCount, AresConstants.LEDGER_CURRENCY.get(entity), onAccountInvoiceBucket)
+        onAccountBucket = AgeingBucketOutstanding(onAccountLedAmount, onAccountLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, onAccountInvoiceBucket)
 
         return onAccountBucket
     }
 
     private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
-        var totalOutstandingBucket: AgeingBucketOutstanding?
+        val totalOutstandingBucket: AgeingBucketOutstanding?
         var totalOutstandingLedAmount = 0.toBigDecimal()
         var totalOutstandingLedCount = 0
         val totalOutstandingInvoiceBucket = mutableListOf<DueAmount>()
         orgOutstandingData.forEach {
-            totalOutstandingLedAmount += it.openInvoicesLedAmount!!
-            totalOutstandingLedCount += it.openInvoicesCount!!
+            totalOutstandingLedAmount += it.openInvoicesLedAmount * 1.0.toBigDecimal()
+            totalOutstandingLedCount += it.openInvoicesCount
             totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
         }
-        totalOutstandingBucket = AgeingBucketOutstanding(totalOutstandingLedAmount, totalOutstandingLedCount, AresConstants.LEDGER_CURRENCY.get(entity), totalOutstandingInvoiceBucket)
+        totalOutstandingBucket = AgeingBucketOutstanding(totalOutstandingLedAmount, totalOutstandingLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, totalOutstandingInvoiceBucket)
 
         return totalOutstandingBucket
     }
@@ -530,103 +529,103 @@ class OutStandingServiceImpl : OutStandingService {
             val debitNote = DueAmount(it.currency, it.totalDebitAmountInvoiceCurrency, it.debitNoteCount)
 
             if (ageingBucketsInInvoiceCurrency.contains("notDue")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("notDue")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(notDue.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.notDueAmount)
-                ageingBucket?.invoiceBucket?.add(notDue)
-                ageingBucketsInInvoiceCurrency.put("notDue", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["notDue"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(notDue.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.notDueAmount)
+                ageingBucket.invoiceBucket.add(notDue)
+                ageingBucketsInInvoiceCurrency["notDue"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("notDue", AgeingBucketOutstanding(it.notDueAmount, it.notDueCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(notDue)))
+                ageingBucketsInInvoiceCurrency["notDue"] = AgeingBucketOutstanding(it.notDueAmount, it.notDueCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(notDue))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("today")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("today")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(today.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.todayAmount)
-                ageingBucket?.invoiceBucket?.add(today)
-                ageingBucketsInInvoiceCurrency.put("today", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["today"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(today.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.todayAmount)
+                ageingBucket.invoiceBucket.add(today)
+                ageingBucketsInInvoiceCurrency["today"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("today", AgeingBucketOutstanding(it.todayAmount, it.todayCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(today)))
+                ageingBucketsInInvoiceCurrency["today"] = AgeingBucketOutstanding(it.todayAmount, it.todayCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(today))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("thirty")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("thirty")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(thirty.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.thirtyAmount)
-                ageingBucket?.invoiceBucket?.add(thirty)
-                ageingBucketsInInvoiceCurrency.put("thirty", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["thirty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(thirty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.thirtyAmount)
+                ageingBucket.invoiceBucket.add(thirty)
+                ageingBucketsInInvoiceCurrency["thirty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("thirty", AgeingBucketOutstanding(it.thirtyAmount, it.thirtyCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(thirty)))
+                ageingBucketsInInvoiceCurrency["thirty"] = AgeingBucketOutstanding(it.thirtyAmount, it.thirtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(thirty))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("sixty")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("sixty")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(sixty.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.sixtyAmount)
-                ageingBucket?.invoiceBucket?.add(sixty)
-                ageingBucketsInInvoiceCurrency.put("sixty", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["sixty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(sixty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.sixtyAmount)
+                ageingBucket.invoiceBucket.add(sixty)
+                ageingBucketsInInvoiceCurrency["sixty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("sixty", AgeingBucketOutstanding(it.sixtyAmount, it.sixtyCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(sixty)))
+                ageingBucketsInInvoiceCurrency["sixty"] = AgeingBucketOutstanding(it.sixtyAmount, it.sixtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(sixty))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("ninety")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("ninety")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(ninety.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.ninetyAmount)
-                ageingBucket?.invoiceBucket?.add(ninety)
-                ageingBucketsInInvoiceCurrency.put("ninety", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["ninety"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(ninety.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.ninetyAmount)
+                ageingBucket.invoiceBucket.add(ninety)
+                ageingBucketsInInvoiceCurrency["ninety"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("ninety", AgeingBucketOutstanding(it.ninetyAmount, it.ninetyCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(ninety)))
+                ageingBucketsInInvoiceCurrency["ninety"] = AgeingBucketOutstanding(it.ninetyAmount, it.ninetyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(ninety))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("oneEighty")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("oneEighty")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(oneEighty.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.oneEightyAmount)
-                ageingBucket?.invoiceBucket?.add(oneEighty)
-                ageingBucketsInInvoiceCurrency.put("oneEighty", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["oneEighty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(oneEighty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.oneEightyAmount)
+                ageingBucket.invoiceBucket.add(oneEighty)
+                ageingBucketsInInvoiceCurrency["oneEighty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("oneEighty", AgeingBucketOutstanding(it.oneEightyAmount, it.oneEightyCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(oneEighty)))
+                ageingBucketsInInvoiceCurrency["oneEighty"] = AgeingBucketOutstanding(it.oneEightyAmount, it.oneEightyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(oneEighty))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFive")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("threeSixtyFive")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFive.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.threeSixtyFiveAmount)
-                ageingBucket?.invoiceBucket?.add(threeSixtyFive)
-                ageingBucketsInInvoiceCurrency.put("threeSixtyFive", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFive"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFive.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFiveAmount)
+                ageingBucket.invoiceBucket.add(threeSixtyFive)
+                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("threeSixtyFive", AgeingBucketOutstanding(it.threeSixtyFiveAmount, it.threeSixtyFiveCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(threeSixtyFive)))
+                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = AgeingBucketOutstanding(it.threeSixtyFiveAmount, it.threeSixtyFiveCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(threeSixtyFive))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFivePlus")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("threeSixtyFivePlus")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFivePlus.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.threeSixtyFivePlusAmount)
-                ageingBucket?.invoiceBucket?.add(threeSixtyFivePlus)
-                ageingBucketsInInvoiceCurrency.put("threeSixtyFivePlus", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFivePlus.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFivePlusAmount)
+                ageingBucket.invoiceBucket.add(threeSixtyFivePlus)
+                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("threeSixtyFivePlus", AgeingBucketOutstanding(it.threeSixtyFivePlusAmount, it.threeSixtyFivePlusCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(threeSixtyFivePlus)))
+                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = AgeingBucketOutstanding(it.threeSixtyFivePlusAmount, it.threeSixtyFivePlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(threeSixtyFivePlus))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("creditNote")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("creditNote")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(creditNote.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.totalCreditAmount)
-                ageingBucket?.invoiceBucket?.add(creditNote)
-                ageingBucketsInInvoiceCurrency.put("creditNote", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["creditNote"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(creditNote.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalCreditAmount)
+                ageingBucket.invoiceBucket.add(creditNote)
+                ageingBucketsInInvoiceCurrency["creditNote"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("creditNote", AgeingBucketOutstanding(it.totalCreditAmount, it.creditNoteCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(creditNote)))
+                ageingBucketsInInvoiceCurrency["creditNote"] = AgeingBucketOutstanding(it.totalCreditAmount, it.creditNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(creditNote))
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("debitNote")) {
-                var ageingBucket = ageingBucketsInInvoiceCurrency.get("debitNote")
-                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(debitNote.invoicesCount!!)
-                ageingBucket?.ledgerAmount = ageingBucket?.ledgerAmount?.plus(it.totalDebitAmount)
-                ageingBucket?.invoiceBucket?.add(debitNote)
-                ageingBucketsInInvoiceCurrency.put("debitNote", ageingBucket!!)
+                val ageingBucket = ageingBucketsInInvoiceCurrency["debitNote"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(debitNote.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalDebitAmount)
+                ageingBucket.invoiceBucket.add(debitNote)
+                ageingBucketsInInvoiceCurrency["debitNote"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency.put("debitNote", AgeingBucketOutstanding(it.totalDebitAmount, it.debitNoteCount, AresConstants.LEDGER_CURRENCY.get(entity), mutableListOf(debitNote)))
+                ageingBucketsInInvoiceCurrency["debitNote"] = AgeingBucketOutstanding(it.totalDebitAmount, it.debitNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(debitNote))
             }
         }
 
@@ -659,11 +658,11 @@ class OutStandingServiceImpl : OutStandingService {
                         }
                         val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
 
-                        var orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
+                        val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
                         val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                         val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
 
-                        var openSearchData = CustomerOutstandingDocumentResponse(
+                        val openSearchData = CustomerOutstandingDocumentResponse(
                             lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
                             organizationId = customerOutstanding?.organizationId ?: id,
                             tradePartyId = customerOutstanding?.tradePartyId,
@@ -684,11 +683,10 @@ class OutStandingServiceImpl : OutStandingService {
                             tradePartyType = customerOutstanding?.tradePartyType,
                             onAccountPayment = onAccountPayment,
                             totalOutstanding = totalOutstanding,
-                            openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount!! },
+                            openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
                             entityCode = entity
                         )
-                        val openSearchDataModel = outstandingAgeingConverter.convertCustomerDetailsRequestToDocument(openSearchData)
-                        Client.addDocument("customer_outstanding_$entity", id, openSearchDataModel, true)
+                        Client.addDocument("customer_outstanding_$entity", id, openSearchData, true)
                     }
                 }
             }
@@ -699,7 +697,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
-        var index = "customer_outstanding_${request.entityCode}"
+        val index = "customer_outstanding_${request.entityCode}"
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)
         var list: List<CustomerOutstandingDocumentResponse?> = listOf()

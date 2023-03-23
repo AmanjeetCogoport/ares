@@ -55,5 +55,5 @@ data class CustomerOutstandingDocumentResponse(
     @JsonProperty("openInvoiceCount")
     var openInvoiceCount: Int?,
     @JsonProperty("entityCode")
-    var entityCode: Int?,
+    var entityCode: Int?
 )
