@@ -80,5 +80,8 @@ data class JournalVoucherRecord(
     val accountType: String? = null,
 
     @JsonProperty("exchange_rate")
-    val exchangeRate: BigDecimal? = null
+    val exchangeRate: BigDecimal? = null,
+
+    @JsonProperty("sage_unique_id")
+    val sageUniqueId: String? = null
 )
