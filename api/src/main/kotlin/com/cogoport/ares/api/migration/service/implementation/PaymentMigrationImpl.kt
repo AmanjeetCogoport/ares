@@ -654,10 +654,16 @@ class PaymentMigrationImpl : PaymentMigration {
 
     override suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest) {
         try {
+            val organizationType = if (payLocUpdateRequest.accMode == "AP") "expense" else "income"
+            val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
+                GetOrgDetailsRequest(
+                    sageOrganizationId = payLocUpdateRequest.sageOrganizationId,
+                    organizationType = organizationType
+                )
+            ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                payLocUpdateRequest.documentValue!!,
-                payLocUpdateRequest.amtLoc!!, payLocUpdateRequest.accMode!!
+                payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -668,19 +674,19 @@ class PaymentMigrationImpl : PaymentMigration {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
                         payLocUpdateRequest.documentValue,
-                        payLocUpdateRequest.amtLoc,
                         payLocUpdateRequest.payLoc!!,
                         payLocUpdateRequest.payCurr!!,
-                        payLocUpdateRequest.accMode
+                        payLocUpdateRequest.accMode,
+                        tradePartyDetailId
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
                     payLocUpdateRequest.documentValue,
-                    payLocUpdateRequest.amtLoc,
                     payLocUpdateRequest.accMode,
+                    tradePartyDetailId
                 )
                 var status = if (payLocUpdateRequest.payLoc.compareTo(BigDecimal.ZERO) == 0) {
                     "UNPAID"
-                } else if (payLocUpdateRequest.amtLoc > payLocUpdateRequest.payLoc) {
+                } else if (payLocUpdateRequest.amtLoc!! > payLocUpdateRequest.payLoc) {
                     "PARTIAL_PAID"
                 } else {
                     "PAID"

@@ -120,4 +120,8 @@ class AresMessageConsumer {
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
         settlementService.settleWithSourceIdAndDestinationId(autoKnockOffRequest)
     }
+    @Queue("update-customer-details", prefetch = 1)
+    fun updateCustomerOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
+        outstandingService.updateCustomerDetails(request.orgId.toString(), false, null)
+    }
 }

@@ -316,6 +316,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -474,6 +477,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -589,6 +595,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
             val accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
             auditService.createAudit(
                 AuditRequest(
                     objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -1191,8 +1200,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
             openSearchPaymentModel.updatedBy = performedBy.toString()
-            if (uploadedByName?.size != 0) {
-                openSearchPaymentModel.uploadedBy = uploadedByName?.get(0)?.userName
+            openSearchPaymentModel.uploadedBy = if (uploadedByName?.size != 0) {
+                uploadedByName?.get(0)?.userName
             } else {
                 ""
             }
