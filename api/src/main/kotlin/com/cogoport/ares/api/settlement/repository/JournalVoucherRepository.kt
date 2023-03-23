@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
-import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.data.annotation.Query
@@ -38,9 +37,6 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
-            j.gl_code,
-            NULL as bank_name,
-            NULL as account_number ,
             j.parent_jv_id
             FROM journal_vouchers j
             where 
@@ -76,7 +72,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         sortType: String?,
         sortBy: String?,
         entityCode: Int?
-    ): List<JournalVoucherResponse>
+    ): List<JournalVoucher>
 
     @NewSpan
     @Query(
@@ -138,29 +134,13 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
-            j.parent_jv_id,
-            j.gl_code,
-            gl.bank_name,
-            gl.account_number
+            j.parent_jv_id
             FROM journal_vouchers j 
-            LEFT JOIN gl_codes gl on j.gl_code = gl.gl_code
             Where 
                 j.parent_jv_id = :parentId
         """
     )
-    suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucherResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT *
-            FROM journal_vouchers j 
-            LEFT JOIN gl_codes gl on j.gl_code = gl.gl_code
-            Where 
-                j.parent_jv_id = :parentId
-        """
-    )
-    suspend fun getJVModelByParentJVId(parentId: Long): List<JournalVoucher>
+    suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
 
     @NewSpan
     @Query(
