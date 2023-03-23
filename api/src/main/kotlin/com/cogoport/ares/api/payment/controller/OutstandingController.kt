@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -124,5 +126,12 @@ class OutstandingController {
     @Put("/customer-outstanding-migrate")
     suspend fun migrateCustomerOutstanding() {
         return scheduler.updateCustomerOutstandingOnOpenSearch()
+    }
+
+    @Auth
+    @Get("/customer-payment{?request*}")
+    suspend fun getCustomerOutstandingPaymentDetails(@Valid request: CustomerOutstandingPaymentRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingPaymentResponse?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
+        return Response<ResponseList<CustomerOutstandingPaymentResponse?>>().ok(outStandingService.getCustomerOutstandingPaymentDetails(request))
     }
 }

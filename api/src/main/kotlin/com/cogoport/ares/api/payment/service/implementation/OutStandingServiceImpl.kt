@@ -9,6 +9,9 @@ import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
@@ -49,6 +52,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
     @Inject
     lateinit var outstandingAgeingConverter: OutstandingAgeingMapper
@@ -709,6 +715,21 @@ class OutStandingServiceImpl : OutStandingService {
         responseList.list = list
         responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
         responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
+    }
+
+    override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
+
+        var list: List<CustomerOutstandingPaymentResponse?>
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%")
+
+        val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
+
+        responseList.list = list
+        responseList.totalRecords = list.size.toLong()
+        responseList.totalPages = if (responseList.totalRecords!! % request.pageLimit!! == 0.toLong()) (responseList.totalRecords!! / request.pageLimit!!) else (responseList.totalRecords!! / request.pageLimit!!) + 1.toLong()
         responseList.pageNo = request.page!!
 
         return responseList
