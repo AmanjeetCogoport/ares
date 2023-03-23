@@ -456,7 +456,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
                 val customerOutstanding: CustomerOutstandingDocumentResponse?
 
-                val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(request.organizationId!!, null, entity)
+                val orgOutstandingData = accountUtilizationRepository.generateCustomerOutstanding(request.organizationId!!, entity)
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                 val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                 val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
@@ -682,7 +682,7 @@ class OutStandingServiceImpl : OutStandingService {
                         }
                         val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
 
-                        val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
+                        val orgOutstandingData = accountUtilizationRepository.generateCustomerOutstanding(id, entity)
                         val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                         val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                         val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
