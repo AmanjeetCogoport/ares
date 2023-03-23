@@ -15,7 +15,7 @@ data class SettlementDocuments(
     var accountType: AccountType?,
     var paymentDocumentStatus: PaymentDocumentStatus?,
     var amount: BigDecimal?,
-    var paymentNumValue: String?,
+    var sageNumValue: String?,
     var organizationId: UUID?,
     var flag: String?,
 

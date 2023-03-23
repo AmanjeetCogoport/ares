@@ -185,7 +185,7 @@ class SettlementController {
     }
 
     @Post("/matching-on-sage")
-    suspend fun matchingSettlementOnSage(settlementIds: List<Long> , performedBy: UUID): FailedSettlementIds {
-        return settlementService.matchingSettlementOnSage(settlementIds)
+    suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
+        return settlementService.matchingSettlementOnSage(settlementIds, performedBy)
     }
 }

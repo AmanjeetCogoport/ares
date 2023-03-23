@@ -2523,7 +2523,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
-        var failedDocumentValues: MutableList<Long>? = mutableListOf()
+        var failedSettlementIds: MutableList<Long>? = mutableListOf()
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
                 try {
@@ -2549,23 +2549,37 @@ open class SettlementServiceImpl : SettlementService {
                     )
 
                     if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-                        paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                        openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                        com.cogoport.brahma.opensearch.Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
                         thirdPartyApiAuditService.createAudit(
                             ThirdPartyApiAudit(
                                 null,
-                                "PostPaymentToSage",
-                                "Payment",
-                                paymentId,
-                                "PAYMENT",
+                                "MatchSettlementOnSage",
+                                "Settlement",
+                                it,
+                                "SETTLEMENT",
                                 "500",
-                                sageOrganization.toString(),
+                                sageOrganizationResponse.toString(),
                                 "Sage organization not present",
                                 false
                             )
                         )
-                        return false
+                        throw Exception("sage organizationId is not present in table")
+                    }
+
+                    if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "MatchSettlementOnSage",
+                                "Settlement",
+                                it,
+                                "SETTLEMENT",
+                                "500",
+                                sageOrganizationResponse.toString(),
+                                "sage serial organization id different in sage db and cogoport db",
+                                false
+                            )
+                        )
+                        throw error("sage serial organization id different in sage db and cogoport db")
                     }
 
                     if (!isDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", settlementDocuments.documentValue) ||
@@ -2587,7 +2601,7 @@ open class SettlementServiceImpl : SettlementService {
 
                     matchingSettlementOnSageRequest?.add(
                         SageSettlementRequest(
-                            settlementDocuments.paymentNumValue!!,
+                            settlementDocuments.sageNumValue!!,
                             sageOrganizationResponse.sageOrganizationId!!,
                             settlementDocuments.amount.toString(),
                             settlementDocuments.flag
@@ -2597,9 +2611,41 @@ open class SettlementServiceImpl : SettlementService {
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
-                    if (status != "DONE") failedDocumentValues?.add(it)
+                    if (status == "DONE") {
+                        settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTED, performedBy)
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "MatchSettlementOnSage",
+                                "Settlement",
+                                it,
+                                "SETTLEMENT",
+                                "200",
+                                result.requestString,
+                                result.response,
+                                true
+                            )
+                        )
+                    } else {
+                        settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
+                        failedSettlementIds?.add(it)
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "MatchSettlementOnSage",
+                                "Settlement",
+                                it,
+                                "SETTLEMENT",
+                                "200",
+                                result.requestString,
+                                result.response,
+                                false
+                            )
+                        )
+                    }
                 } catch (e: Exception) {
-
+                    settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(it)
                     ThirdPartyApiAudit(
                         null,
                         "MatchSettlementOnSage",
@@ -2617,7 +2663,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return FailedSettlementIds(
-            failedDocumentValues
+            failedSettlementIds
         )
     }
 

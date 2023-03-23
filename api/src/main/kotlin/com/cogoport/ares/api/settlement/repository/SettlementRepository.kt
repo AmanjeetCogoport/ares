@@ -3,9 +3,9 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
-import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.settlement.SettlementDocuments
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -13,7 +13,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
-import java.util.*
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -299,7 +299,7 @@ ORDER BY
                 au.document_value,
                 au.org_serial_id,
                 s.destination_type as account_type,
-                p.payment_document_status, 
+                p.sage_num_value, 
                 s.amount,
                 p.payment_num_value,
                 p.organization_id,
@@ -326,10 +326,10 @@ ORDER BY
             UPDATE 
                 settlements
             SET 
-                payment_document_status = :paymentDocumentStatus, updated_at = NOW(), updated_by = :performedBy
+                settlement_status = :settlementStatus, updated_at = NOW(), updated_by = :performedBy
             WHERE 
                 id = :id
             """
     )
-    suspend fun updatePaymentDocumentStatus(id: Long, paymentDocumentStatus: PaymentDocumentStatus, performedBy: UUID)
+    suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
 }
