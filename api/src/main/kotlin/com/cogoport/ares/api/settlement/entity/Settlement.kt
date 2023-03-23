@@ -28,6 +28,6 @@ data class Settlement(
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
     var supportingDocUrl: String? = null,
-    var isDraft: Boolean? = false,
+    var isVoid: Boolean? = false,
     var settlementNum: String?
 )

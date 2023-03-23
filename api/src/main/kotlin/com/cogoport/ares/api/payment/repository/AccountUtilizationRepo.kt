@@ -23,7 +23,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                         ELSE CONCAT(tagged_settlement_id, ', ',:taggedSettlementIds)
                                    END
             WHERE document_no = :documentNo
-            and acc_mode = 'AP' and is_draft = false and deleted_at is null
+            and acc_mode = 'AP' and is_void = false and deleted_at is null
         """
     )
     suspend fun updateTaggedSettlementIds(documentNo: Long, taggedSettlementIds: String)
@@ -32,7 +32,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_draft,tagged_settlement_id,  tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_settlement_id,  tds_amount, tds_amount_loc
             from account_utilizations 
             where document_no in (:documentNo) and acc_type::varchar in (:accType) 
             and (:accMode is null or acc_mode=:accMode::account_mode)
@@ -44,9 +44,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """
             UPDATE account_utilizations SET 
-              updated_at = NOW(), is_draft = :isDraft WHERE id =:id AND deleted_at is null"""
+              updated_at = NOW(), is_void = :isVoid WHERE id in (:ids) AND deleted_at is null"""
     )
-    suspend fun updateAccountUtilizations(id: Long, isDraft: Boolean)
+    suspend fun updateAccountUtilizations(ids: List<Long>, isVoid: Boolean)
     @NewSpan
     @Query(
 

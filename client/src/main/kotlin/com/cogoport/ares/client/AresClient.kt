@@ -1,8 +1,8 @@
 package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
-import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerOutstanding

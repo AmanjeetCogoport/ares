@@ -50,5 +50,5 @@ data class AccUtilizationRequest(
     var performedBy: UUID? = null,
     var performedByType: String? = null,
     var migrated: Boolean?,
-    var isDraft: Boolean?
+    var isVoid: Boolean?
 )

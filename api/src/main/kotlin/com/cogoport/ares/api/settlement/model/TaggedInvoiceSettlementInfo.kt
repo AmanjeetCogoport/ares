@@ -19,5 +19,5 @@ data class TaggedInvoiceSettlementInfo(
     val transRefNumber: String?,
     val settlementDate: Timestamp?,
     val taggedSettlementId: String?,
-    val isDraft: Boolean
+    val isVoid: Boolean
 )

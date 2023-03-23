@@ -45,11 +45,11 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.is_draft,
+            s.is_void,
             s.supporting_doc_url,
             settlement_num
             FROM settlements s
-            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_draft = false
+            where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_void = false
         """
     )
     suspend fun findByDestIdAndDestType(destId: Long, destType: SettlementType): List<Settlement?>
@@ -73,11 +73,11 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.is_draft,
+            s.is_void,
             s.supporting_doc_url,
             s.settlement_num
             FROM settlements s
-            where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_draft = false
+            where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_void = false
         """
     )
     suspend fun findBySourceIdAndSourceType(sourceId: Long, sourceType: List<SettlementType>): List<Settlement?>
@@ -148,7 +148,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             FROM settlements 
             WHERE source_id = :sourceId 
             AND source_type = :sourceType::SETTLEMENT_TYPE
-            AND deleted_at is null and is_draft = false
+            AND deleted_at is null and is_void = false
         """
     )
     suspend fun countSettlement(sourceId: Long, sourceType: SettlementType): Long
@@ -160,7 +160,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE destination_id = :destinationId 
             AND destination_type = :destinationType::SETTLEMENT_TYPE
             AND source_type = :sourceType::SETTLEMENT_TYPE
-            AND deleted_at is null and is_draft = false
+            AND deleted_at is null and is_void = false
         """
     )
     suspend fun countDestinationBySourceType(destinationId: Long, destinationType: SettlementType, sourceType: SettlementType): Long
@@ -179,8 +179,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE 
                 au.document_value ILIKE :query || '%'
                 AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
-                AND s.deleted_at is null and s.is_draft = false
-                AND au.deleted_at is null and au.is_draft = false
+                AND s.deleted_at is null and s.is_void = false
+                AND au.deleted_at is null and au.is_void = false
         """
     )
     suspend fun getPaymentIds(query: String): List<Long>
@@ -188,7 +188,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) and is_draft = false
+            UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) and is_void = false
         """
     )
     suspend fun deleleSettlement(id: List<Long>, updatedBy: UUID? = null)
@@ -197,7 +197,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
     @Query(
         """
           SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null and is_draft = false
+          deleted_at is null and is_void = false
               
         """
     )
@@ -304,7 +304,7 @@ ORDER BY
         """
             SELECT
                s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, s.is_draft, au.tagged_settlement_id
+                s.settlement_date::TIMESTAMP, s.is_void, au.tagged_settlement_id
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
@@ -328,9 +328,9 @@ ORDER BY
     @Query(
         """
           SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num,
-          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_draft
+          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_void
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
-          deleted_at is null and is_draft = false and source_type not in ('VTDS') order by created_at desc limit 1
+          deleted_at is null and is_void = false and source_type not in ('VTDS') order by created_at desc limit 1
         """
     )
     suspend fun getSettlementDetailsByDestinationId(destinationId: Long, sourceId: Long): Settlement?
@@ -338,10 +338,10 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements set is_draft = :isDraft WHERE id = :id
+            UPDATE settlements set is_void = :isVoid WHERE id = :id
         """
     )
-    suspend fun updateDraftStatus(id: Long, isDraft: Boolean)
+    suspend fun updateVoidStatus(id: Long, isVoid: Boolean)
 
     @NewSpan
     @Query(

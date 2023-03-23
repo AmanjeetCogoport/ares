@@ -45,5 +45,5 @@ data class UpdateInvoiceRequest(
     var migrated: Boolean?,
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
     var tdsAmount: BigDecimal? = BigDecimal.ZERO,
-    val isDraft: Boolean?
+    val isVoid: Boolean?
 )

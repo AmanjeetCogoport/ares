@@ -71,18 +71,31 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         val extendedSourceDocument = mutableListOf<AutoKnockoffDocumentResponse?>()
 
         destinationDocument.accountUtilization = accountUtilizationRepository.findRecord(req.document, AccountType.PINV.name, AccMode.AP.name)
+
         if (destinationDocument.accountUtilization == null) {
             throw AresException(AresError.ERR_1503, "")
         }
         destinationDocument.exchangeRate = destinationDocument.accountUtilization?.amountLoc!!.divide(destinationDocument.accountUtilization?.amountCurr)
 
         val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(req.taggedDocuments)
+        if (req.taggedDocuments.isNotEmpty()) {
+            accountUtilizationRepo.updateAccountUtilizations(req.taggedDocuments, true)
+            if (settledSourceDocuments.isEmpty()) {
+                try {
+                    aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = destinationDocument.accountUtilization?.organizationId))
+                } catch (e: Exception) {
+                    Sentry.captureException(e)
+                }
+                return
+            }
+        }
+
         settledSourceDocuments.forEach { it1 ->
             settlementIds.add(it1?.settlementId)
             if (it1?.taggedSettlementId != null) {
                 taggedBillIds.addAll(it1.taggedSettlementId.split(", ").toList().map { it.toLong() })
             }
-            if (!it1?.isDraft!!) {
+            if (!it1?.isVoid!!) {
                 if (listOf(SettlementType.PCN, SettlementType.PAY).contains(it1.sourceType)) {
                     reversePayment(
                         ReversePaymentRequest(
@@ -116,14 +129,14 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             var paymentInfo = settledSourceDocuments.filter { it?.sourceId!!.toLong() == source.documentNo }
             if (paymentInfo.isNotEmpty()) {
                 paymentInfo = paymentInfo.sortedBy { it?.sourceType }
-                val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.amountCurr!! - destinationDocument.accountUtilization!!.tdsAmount!! - destinationDocument.accountUtilization!!.payCurr)) {
+                val amount = if (paymentInfo[0]?.amount!! > (destinationDocument.accountUtilization!!.amountCurr!! - destinationDocument.accountUtilization!!.tdsAmount!! - destinationDocument.accountUtilization!!.payCurr) && !paymentInfo[0]?.isVoid!!) {
                     paymentInfo[0]?.amount!!
                 } else {
-                    val doc = settled?.find { it.sourceId == source.documentNo && it.isDraft!! }
+                    val doc = settled?.find { it.sourceId == source.documentNo && it.isVoid!! }
                     if (doc == null) {
                         paymentInfo[0]?.amount
                     } else {
-                        val maxAmountBorrowed = settled.filter { it.sourceId == source.documentNo && !it.isDraft!! }
+                        val maxAmountBorrowed = settled.filter { it.sourceId == source.documentNo && !it.isVoid!! }
                             .sumOf { it.amount ?: BigDecimal.ZERO }
                         doc.amount?.minus(maxAmountBorrowed)
                     }
@@ -197,15 +210,13 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
             ?: throw AresException(AresError.ERR_1000, "Settlement Not Found")
         val document = accountUtilization.find { it.accType == AccountType.PINV }
         val source = accountUtilization.find { it.accType != AccountType.PINV }
-        settlementRepository.updateDraftStatus(settlement.id!!, true)
+        settlementRepository.updateVoidStatus(settlement.id!!, true)
         accountUtilizationRepo.markPaymentUnutilized(source?.id!!, settlement.amount!!, (settlement.amount!! * (source.amountLoc.divide(source.amountCurr))))
-        accountUtilizationRepo.updateAccountUtilizations(document?.id!!, true)
 
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, source.id, AresConstants.UPDATE, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, document.id!!, AresConstants.DRAFT, null, reversePaymentRequest.updatedBy.toString(), reversePaymentRequest.performedByType)
 
         try {
-            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = document.organizationId))
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = document?.organizationId))
         } catch (e: Exception) {
             Sentry.captureException(e)
         }
