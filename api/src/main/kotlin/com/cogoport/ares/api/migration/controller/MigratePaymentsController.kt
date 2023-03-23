@@ -135,8 +135,8 @@ class MigratePaymentsController {
         paymentMigration.migrateSettlementNumWrapper(settlementIds)
     }
 
-    @Put("/payable-amount")
-    suspend fun migratePayableAmount(@Body req: List<PayableAmountReq>) {
+    @Put("/tds-amount")
+    suspend fun migrateTdsAmount(@Body req: List<PayableAmountReq>) {
         paymentMigration.migrateTdsAmount(req)
     }
 }

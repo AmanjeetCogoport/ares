@@ -15,5 +15,5 @@ data class RestoreUtrResponse(
     var paymentStatus: KnockOffStatus,
     var paymentUploadAuditId: Long,
     var updatedBy: UUID?,
-    var performedByType: String?
+    var performedByType: String?,
 )
