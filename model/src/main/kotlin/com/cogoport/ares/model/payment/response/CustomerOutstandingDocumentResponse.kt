@@ -48,12 +48,14 @@ data class CustomerOutstandingDocumentResponse(
     var ageingBucket: HashMap<String, AgeingBucketOutstanding>?,
     @JsonProperty("onAccountPayment")
     var onAccountPayment: AgeingBucketOutstanding?,
-    @JsonProperty("lastUpdatedAt")
-    var lastUpdatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
+    @JsonProperty("openInvoice")
+    var openInvoice: AgeingBucketOutstanding?,
     @JsonProperty("totalOutstanding")
     var totalOutstanding: AgeingBucketOutstanding?,
     @JsonProperty("openInvoiceCount")
     var openInvoiceCount: Int?,
     @JsonProperty("entityCode")
-    var entityCode: Int?
+    var entityCode: Int?,
+    @JsonProperty("lastUpdatedAt")
+    var lastUpdatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
 )
