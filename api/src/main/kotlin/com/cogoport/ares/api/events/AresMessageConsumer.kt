@@ -114,7 +114,7 @@ class AresMessageConsumer {
 
     @Queue("sage-jv-migration", prefetch = 1)
     fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
-        paymentMigration.migarteJournalVoucher(journalVoucherRecord)
+        paymentMigration.migrateJV(journalVoucherRecord)
     }
     @Queue("send-payment-details-for-autoKnockOff", prefetch = 1)
     fun settleWithSourceIdAndDestinationId(autoKnockOffRequest: AutoKnockOffRequest) = runBlocking {
