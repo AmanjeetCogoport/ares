@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
+import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
@@ -497,11 +498,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
-        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String, zone: String?, entityCode: Int?): List<OrgOutstanding>
     @NewSpan
     @Query(
         """
@@ -1455,9 +1456,194 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
+        WHERE acc_mode = :accMode AND organization_id IS NOT NULL 
         AND deleted_at IS NULL
         """
     )
-    suspend fun getSupplierOrgIds(): List<UUID>
+    suspend fun getTradePartyOrgIds(accMode: AccMode?): List<UUID>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                organization_id,
+                max(organization_name) as organization_name,
+                sum(
+                    CASE WHEN (acc_type in('SINV')
+                        and(due_date >= now()::date)) THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS not_due_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS today_amount,        
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS thirty_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS sixty_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS ninety_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS one_eighty_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) BETWEEN 181 AND 365  THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV')
+                        and(now()::date - due_date) > 365 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_amount,
+                sum(
+                    CASE WHEN acc_type in('SINV') THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS total_outstanding,
+                sum(
+                    CASE WHEN acc_type in('SCN') THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS total_credit_amount,
+                sum(
+                    CASE WHEN acc_type in('SDN') THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS total_debit_amount,
+                sum(
+                    CASE WHEN due_date >= now()::date AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS not_due_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS today_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS thirty_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS sixty_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS ninety_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS one_eighty_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS three_sixty_five_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) > 365 AND acc_type in('SINV') THEN
+                        1
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_count,
+                sum(
+                    CASE WHEN (acc_type in('SCN')) THEN
+                        1
+                    ELSE
+                        0
+                    END) AS credit_note_count,
+                sum(
+                    CASE WHEN (acc_type in('SDN')) THEN
+                        1
+                    ELSE
+                        0
+                    END) AS debit_note_count
+            FROM
+                account_utilizations
+            WHERE
+                organization_name ILIKE :query || '%'
+                AND (:entityCode IS NULL OR entity_code = :entityCode)
+                AND acc_mode = 'AR'
+                AND due_date IS NOT NULL
+                AND document_status in('FINAL')
+                AND organization_id IS NOT NULL
+                AND amount_curr - pay_curr > 0
+                AND (:orgId IS NULL OR organization_id = :orgId::uuid)
+                AND acc_type IN ('SINV', 'SCN', 'SDN')
+                AND deleted_at IS NULL
+            GROUP BY
+                organization_id
+            OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+            LIMIT :pageLimit        
+        """
+    )
+    suspend fun getInvoicesOutstandingAgeingBucket(query: String?, orgId: String?, entityCode: Int?, page: Int, pageLimit: Int): List<CustomerOutstandingAgeing>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                count(c.organization_id)
+            FROM (
+                SELECT
+                    organization_id
+                FROM
+                    account_utilizations
+                WHERE
+                    organization_name ILIKE :queryName || '%'
+                    AND acc_mode = 'AR'
+                    AND due_date IS NOT NULL
+                    AND document_status in('FINAL')
+                    AND organization_id IS NOT NULL
+                    AND acc_type = 'SINV'
+                    AND deleted_at IS NULL
+                GROUP BY
+                    organization_id) AS c
+        """
+    )
+    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
 }
