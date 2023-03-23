@@ -32,9 +32,7 @@ import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.AccTypeMode
-import com.cogoport.ares.api.settlement.model.FailedDocumentValues
 import com.cogoport.ares.api.settlement.model.PaymentInfo
-import com.cogoport.ares.api.settlement.model.PaymentValuesList
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -49,14 +47,17 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
+import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -67,6 +68,7 @@ import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
@@ -76,6 +78,7 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.sage.Client
 import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
@@ -91,8 +94,8 @@ import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -178,6 +181,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Value("\${sage.databaseName}")
+    var sageDatabase: String? = null
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -2064,7 +2070,8 @@ open class SettlementServiceImpl : SettlementService {
                 Timestamp.from(Instant.now()),
                 createdBy,
                 Timestamp.from(Instant.now()),
-                supportingDocUrl
+                supportingDocUrl,
+                SettlementStatus.CREATED
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
@@ -2514,50 +2521,112 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>): FailedDocumentValues {
-        var matchingSettlementRequest: MutableList<SageSettlementRequest> = mutableListOf()
-        var failedDocumentValues: MutableList<String> = mutableListOf()
+    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
-        val paymentEntriesList = settlementRepository.getAllPaymentDocumentValueForSettlementIds(settlementIds)
+        var failedDocumentValues: MutableList<Long>? = mutableListOf()
+        if (settlementIds.isNotEmpty()) {
+            settlementIds.forEach {
+                try {
 
-        paymentEntriesList?.forEach { it ->
-            val sageOrganizationResponse = cogoClient.getSageOrganization(
-                SageOrganizationRequest(
-                    it.orgSerialId.toString(),
-                    "SINV"
-                )
-            )
+                    val settlementDocuments = settlementRepository.getSettlementDocumentValueForSettlementId(it)
+                    val sageOrganizationFromSageId: String?
 
-            matchingSettlementRequest.add(
-                SageSettlementRequest(
-                    it.documentValue,
-                    sageOrganizationResponse.sageOrganizationId!!,
-                    it.totalAmount.toString(),
-                    ""
-                )
-            )
+                    if (settlementDocuments.organizationId != null) {
+                        val organization = railsClient.getListOrganizationTradePartyDetails(settlementDocuments.organizationId !!)
+                        val sageOrganizationQuery = if (settlementDocuments.accountType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+                        val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
+                        val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+                        sageOrganizationFromSageId = if (settlementDocuments.accountType == AccountType.SINV) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+                    } else {
+                        throw error("organizationId is not present")
+                    }
 
-            val paymentValues: List<PaymentValuesList> = ObjectMapper().readValue(it.paymentValues, object : TypeReference<List<PaymentValuesList>>() {})
-
-            paymentValues.forEach { it ->
-                matchingSettlementRequest.add(
-                    SageSettlementRequest(
-                        it.paymentValue,
-                        sageOrganizationResponse.sageOrganizationId!!,
-                        it.amount.toString(),
-                        it.flag
+                    val sageOrganizationResponse = cogoClient.getSageOrganization(
+                        SageOrganizationRequest(
+                            settlementDocuments.orgSerialId.toString(),
+                            settlementDocuments.accountType!!.name
+                        )
                     )
-                )
-            }
 
-            val result = SageClient.postSettlementToSage(matchingSettlementRequest)
-            val processedResponse = XML.toJSONObject(result.response)
-            val status = getZstatus(processedResponse)
-            if (status != "DONE") failedDocumentValues.add(it.documentValue)
+                    if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
+                        paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                        openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                        com.cogoport.brahma.opensearch.Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "PostPaymentToSage",
+                                "Payment",
+                                paymentId,
+                                "PAYMENT",
+                                "500",
+                                sageOrganization.toString(),
+                                "Sage organization not present",
+                                false
+                            )
+                        )
+                        return false
+                    }
+
+                    if (!isDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", settlementDocuments.documentValue) ||
+                        settlementDocuments.paymentDocumentStatus != PaymentDocumentStatus.POSTED
+                    ) {
+                        throw AresException(AresError.ERR_1527, "")
+                    }
+
+                    val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
+
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(
+                            settlementDocuments.documentValue!!,
+                            sageOrganizationResponse.sageOrganizationId!!,
+                            settlementDocuments.amount.toString(),
+                            ""
+                        )
+                    )
+
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(
+                            settlementDocuments.paymentNumValue!!,
+                            sageOrganizationResponse.sageOrganizationId!!,
+                            settlementDocuments.amount.toString(),
+                            settlementDocuments.flag
+                        )
+                    )
+
+                    val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+                    val processedResponse = XML.toJSONObject(result.response)
+                    val status = getZstatus(processedResponse)
+                    if (status != "DONE") failedDocumentValues?.add(it)
+                } catch (e: Exception) {
+
+                    ThirdPartyApiAudit(
+                        null,
+                        "MatchSettlementOnSage",
+                        "Settlement",
+                        it,
+                        "SETTLEMENT",
+                        "500",
+                        "",
+                        e.toString(),
+                        false
+                    )
+                    throw e
+                }
+            }
         }
 
-        return FailedDocumentValues(
+        return FailedSettlementIds(
             failedDocumentValues
         )
+    }
+
+    private fun isDataPresentOnSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
+        val query = "Select $key from $sageDatabase where $key='$invoiceNumber'"
+        val resultFromQuery = Client.sqlQuery(query)
+        val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
+            .get("recordset") as ArrayList<String>
+
+        return records.size != 0
     }
 }

@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.controller
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
-import com.cogoport.ares.api.settlement.model.FailedDocumentValues
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Util
@@ -14,6 +13,7 @@ import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
+import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
@@ -185,7 +185,7 @@ class SettlementController {
     }
 
     @Post("/matching-on-sage")
-    suspend fun matchingSettlementOnSage(settlementIds: List<Long>): FailedDocumentValues {
+    suspend fun matchingSettlementOnSage(settlementIds: List<Long> , performedBy: UUID): FailedSettlementIds {
         return settlementService.matchingSettlementOnSage(settlementIds)
     }
 }

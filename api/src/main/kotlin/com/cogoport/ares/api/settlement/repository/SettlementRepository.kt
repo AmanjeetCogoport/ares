@@ -3,7 +3,8 @@ package com.cogoport.ares.api.settlement.repository
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
-import com.cogoport.ares.api.settlement.model.SalesPaymentForDestinationId
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.settlement.SettlementDocuments
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
@@ -12,6 +13,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.sql.Timestamp
+import java.util.*
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
@@ -293,33 +295,41 @@ ORDER BY
     @NewSpan
     @Query(
         """
-        SELECT
-            au.document_value,
-            au.org_serial_id,
-            JSON_AGG(
-                JSON_BUILD_OBJECT(
-                    'paymentValue', p.payment_num_value,
-                    'amount', s.amount,
-                    'flag', CASE
-                                WHEN p.payment_num_value LIKE 'REC%' THEN 'P'
-                                ELSE NULL
-                            END
-                )
-            ) AS payment_values,
-            SUM(s.amount) AS total_amount
-        FROM
-            settlements s
-            INNER JOIN payments p ON s.source_id = p.payment_num
-            INNER JOIN account_utilizations au ON au.document_no = s.destination_id 
-        WHERE (
-            p.payment_document_status = 'POSTED'
-            AND s.destination_type = 'SINV'
-            AND s.id IN (:settlementIds)
-            AND au.acc_type = 'SINV')
-        GROUP BY
-            au.document_value,
-            au.org_serial_id
+            SELECT
+                au.document_value,
+                au.org_serial_id,
+                s.destination_type as account_type,
+                p.payment_document_status, 
+                s.amount,
+                p.payment_num_value,
+                p.organization_id,
+                CASE WHEN (p.payment_num_value LIKE 'REC%'
+                    OR p.payment_num_value LIKE 'PAY%') THEN
+                    'P'
+                ELSE
+                    NULL
+                END AS flag
+            FROM
+                settlements s
+                INNER JOIN account_utilizations au ON au.document_no = s.destination_id
+                INNER JOIN payments p ON p.payment_num = s.source_id
+            WHERE
+                s.destination_type in ('SINV','PINV') 
+                AND s.id = :id
         """
     )
-    suspend fun getAllPaymentDocumentValueForSettlementIds(settlementIds: List<Long>?): List<SalesPaymentForDestinationId>?
+    suspend fun getSettlementDocumentValueForSettlementId(id: Long): SettlementDocuments
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                settlements
+            SET 
+                payment_document_status = :paymentDocumentStatus, updated_at = NOW(), updated_by = :performedBy
+            WHERE 
+                id = :id
+            """
+    )
+    suspend fun updatePaymentDocumentStatus(id: Long, paymentDocumentStatus: PaymentDocumentStatus, performedBy: UUID)
 }

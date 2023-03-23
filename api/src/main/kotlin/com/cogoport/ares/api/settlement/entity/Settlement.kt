@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -27,5 +28,6 @@ data class Settlement(
     var createdAt: Timestamp?,
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
-    var supportingDocUrl: String? = null
+    var supportingDocUrl: String? = null,
+    var settlementStatus: SettlementStatus
 )
