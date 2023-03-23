@@ -520,7 +520,6 @@ class PaymentMigrationImpl : PaymentMigration {
         )
     }
 
-
     private fun getTypeForJV(accMode: String, signFlag: Short): String {
         if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
             return "credit"
