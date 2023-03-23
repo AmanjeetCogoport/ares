@@ -46,8 +46,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) utilization_status
             FROM
                 account_utilizations
-            WHERE (document_value LIKE :query
-                AND trade_party_mapping_id = :tradePartyMappingId)
+            WHERE (:query IS NULL OR document_value LIKE :query)
+                AND organization_id = :organizationId
+                AND acc_type = 'REC'
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
@@ -63,9 +64,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             END ASC,
             CASE WHEN :sortBy = 'paymentAmount'
                 THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
-            END DESC   
-        
+            END DESC
+            OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+            LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(tradePartyMappingId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
 }
