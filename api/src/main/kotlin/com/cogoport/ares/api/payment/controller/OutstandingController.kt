@@ -119,7 +119,6 @@ class OutstandingController {
     @Auth
     @Get("/by-customer{?request*}")
     suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
         return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
     }
 
