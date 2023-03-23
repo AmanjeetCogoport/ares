@@ -16,4 +16,6 @@ interface SageService {
     suspend fun getInvoicesPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?, invoiceNumbers: String?): ArrayList<InvoiceDetails>
 
     suspend fun getBillPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails>
+
+    suspend fun getAllJVLineItems(jvNum: String): List<JournalVoucherRecord>
 }
