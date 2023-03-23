@@ -458,7 +458,9 @@ class OutStandingServiceImpl : OutStandingService {
 
                 val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(request.organizationId!!, null, entity)
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
+                val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                 val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
+
                 customerOutstanding = CustomerOutstandingDocumentResponse(
                     lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
                     organizationId = request.organizationId,
@@ -479,6 +481,7 @@ class OutStandingServiceImpl : OutStandingService {
                     tradePartySerialId = request.tradePartySerialId,
                     tradePartyType = request.tradePartyType,
                     onAccountPayment = onAccountPayment,
+                    openInvoice = openInvoice,
                     totalOutstanding = totalOutstanding,
                     openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
                     entityCode = entity
@@ -503,15 +506,30 @@ class OutStandingServiceImpl : OutStandingService {
         return onAccountBucket
     }
 
+    private fun getOpenInvoiceDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+        val openInvoiceAgeingBucket: AgeingBucketOutstanding?
+        var openInvoiceLedAmount = 0.toBigDecimal()
+        var openInvoiceLedCount = 0
+        val openInvoiceBucket = mutableListOf<DueAmount>()
+        orgOutstandingData.forEach {
+            openInvoiceLedAmount += it.openInvoicesLedAmount * 1.0.toBigDecimal()
+            openInvoiceLedCount += it.openInvoicesCount
+            openInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
+        }
+        openInvoiceAgeingBucket = AgeingBucketOutstanding(openInvoiceLedAmount, openInvoiceLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, openInvoiceBucket)
+
+        return openInvoiceAgeingBucket
+    }
+
     private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val totalOutstandingBucket: AgeingBucketOutstanding?
         var totalOutstandingLedAmount = 0.toBigDecimal()
         var totalOutstandingLedCount = 0
         val totalOutstandingInvoiceBucket = mutableListOf<DueAmount>()
         orgOutstandingData.forEach {
-            totalOutstandingLedAmount += it.openInvoicesLedAmount * 1.0.toBigDecimal()
-            totalOutstandingLedCount += it.openInvoicesCount
-            totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
+            totalOutstandingLedAmount += it.outstandingLedAmount * 1.0.toBigDecimal()
+            totalOutstandingLedCount += 0
+            totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.outstandingAmount, 0))
         }
         totalOutstandingBucket = AgeingBucketOutstanding(totalOutstandingLedAmount, totalOutstandingLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, totalOutstandingInvoiceBucket)
 
@@ -666,6 +684,7 @@ class OutStandingServiceImpl : OutStandingService {
 
                         val orgOutstandingData = accountUtilizationRepository.generateOrgOutstanding(id, null, entity)
                         val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
+                        val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                         val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
 
                         val openSearchData = CustomerOutstandingDocumentResponse(
@@ -688,6 +707,7 @@ class OutStandingServiceImpl : OutStandingService {
                             tradePartySerialId = customerOutstanding?.tradePartySerialId,
                             tradePartyType = customerOutstanding?.tradePartyType,
                             onAccountPayment = onAccountPayment,
+                            openInvoice = openInvoice,
                             totalOutstanding = totalOutstanding,
                             openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
                             entityCode = entity

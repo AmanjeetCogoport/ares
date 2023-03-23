@@ -18,6 +18,5 @@ data class CustomerOutstandingRequest(
     var sortBy: String? = "totalOutstandingLedgerAmount",
     var sortType: String? = "Desc",
     var page: Int? = 1,
-    var limit: Int? = 10,
-    var performedBy: UUID? = null
+    var limit: Int? = 10
 )
