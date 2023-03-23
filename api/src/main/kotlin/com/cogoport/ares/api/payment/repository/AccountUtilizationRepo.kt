@@ -129,7 +129,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
 
-
     @NewSpan
     @Query(
         """
@@ -161,6 +160,4 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
-
-
 }
