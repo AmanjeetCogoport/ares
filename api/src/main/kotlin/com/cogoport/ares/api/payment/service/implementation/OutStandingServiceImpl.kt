@@ -723,7 +723,7 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
 
         var list: List<CustomerOutstandingPaymentResponse?>
-        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%")
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%", request.page, request.pageLimit)
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 
