@@ -44,16 +44,24 @@ data class CustomerOutstandingDocumentResponse(
     var organizationSerialId: String?,
     @JsonProperty("creditDays")
     var creditDays: String?,
-    @JsonProperty("ageingBucket")
-    var ageingBucket: HashMap<String, AgeingBucketOutstanding>?,
-    @JsonProperty("onAccountPayment")
-    var onAccountPayment: AgeingBucketOutstanding?,
     @JsonProperty("openInvoice")
     var openInvoice: AgeingBucketOutstanding?,
-    @JsonProperty("totalOutstanding")
-    var totalOutstanding: AgeingBucketOutstanding?,
     @JsonProperty("openInvoiceCount")
     var openInvoiceCount: Int?,
+    @JsonProperty("openInvoiceAgeingBucket")
+    var openInvoiceAgeingBucket: HashMap<String, AgeingBucketOutstanding>?,
+    @JsonProperty("onAccount")
+    var onAccount: AgeingBucketOutstanding?,
+    @JsonProperty("onAccountCount")
+    var onAccountCount: Int?,
+    @JsonProperty("onAccountAgeingBucket")
+    var onAccountAgeingBucket: HashMap<String, AgeingBucketOutstanding>?,
+    @JsonProperty("creditNote")
+    var creditNote: AgeingBucketOutstanding?,
+    @JsonProperty("creditNoteAgeingBucket")
+    var creditNoteAgeingBucket: HashMap<String, AgeingBucketOutstanding>?,
+    @JsonProperty("totalOutstanding")
+    var totalOutstanding: AgeingBucketOutstanding?,
     @JsonProperty("entityCode")
     var entityCode: Int?,
     @JsonProperty("lastUpdatedAt")
