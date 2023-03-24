@@ -28,7 +28,7 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
         }
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 * * *")
     fun updateCustomerOutstandingOnOpenSearch() {
         runBlocking {
             val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AR)
