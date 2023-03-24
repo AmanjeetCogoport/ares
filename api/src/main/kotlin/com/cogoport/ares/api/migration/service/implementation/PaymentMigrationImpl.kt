@@ -445,7 +445,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            taggedSettlementId = null
+            taggedBillId = null
         )
     }
 

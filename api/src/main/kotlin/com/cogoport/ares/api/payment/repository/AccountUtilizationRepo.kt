@@ -18,20 +18,20 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """
             UPDATE account_utilizations SET 
-            tagged_settlement_id = CASE WHEN tagged_settlement_id IS NULL THEN :taggedSettlementIds
-                                        ELSE CONCAT(tagged_settlement_id, ', ',:taggedSettlementIds)
+            tagged_bill_id = CASE WHEN tagged_bill_id IS NULL THEN :taggedBillIds
+                                        ELSE CONCAT(tagged_bill_id, ', ',:taggedBillIds)
                                    END
             WHERE document_no = :documentNo
             and acc_mode = 'AP' and is_void = false and deleted_at is null
         """
     )
-    suspend fun updateTaggedSettlementIds(documentNo: Long, taggedSettlementIds: String)
+    suspend fun updateTaggedBillIds(documentNo: Long, taggedBillIds: String)
 
     @NewSpan
     @Query(
         """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_settlement_id,  tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id,  tds_amount, tds_amount_loc
             from account_utilizations 
             where document_no in (:documentNo) and acc_type::varchar in (:accType) 
             and (:accMode is null or acc_mode=:accMode::account_mode)

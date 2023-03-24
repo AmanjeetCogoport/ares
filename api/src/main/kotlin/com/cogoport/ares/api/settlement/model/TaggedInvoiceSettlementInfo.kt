@@ -18,6 +18,6 @@ data class TaggedInvoiceSettlementInfo(
     val amount: BigDecimal,
     val transRefNumber: String?,
     val settlementDate: Timestamp?,
-    val taggedSettlementId: String?,
+    val taggedBillId: String?,
     val isVoid: Boolean
 )

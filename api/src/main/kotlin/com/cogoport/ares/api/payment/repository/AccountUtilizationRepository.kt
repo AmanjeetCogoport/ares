@@ -47,7 +47,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_settlement_id, tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_void = false"""
     )
@@ -57,7 +57,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_settlement_id, is_void, tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_bill_id, is_void, tds_amount, tds_amount_loc
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
     )
@@ -1123,7 +1123,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 trade_party_mapping_id,
                 tagged_organization_id,
                 is_void,
-                tagged_settlement_id,
+                tagged_bill_id,
                 migrated,
                  tds_amount, tds_amount_loc
                 FROM account_utilizations
@@ -1168,7 +1168,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 trade_party_mapping_id,
                 tagged_organization_id,
                 is_void,
-                tagged_settlement_id,
+                tagged_bill_id,
                 tds_amount, tds_amount_loc
                 migrated
                 FROM account_utilizations
@@ -1338,7 +1338,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
            au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
            au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at, au.is_void, au.tagged_settlement_id, au. tds_amount, au.tds_amount_loc
+           au.migrated,au.created_at, au.is_void, au.tagged_bill_id, au. tds_amount, au.tds_amount_loc
            FROM 
            payments p
            JOIN payment_invoice_mapping pim ON 

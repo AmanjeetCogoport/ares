@@ -6,6 +6,6 @@ import java.util.UUID
 @Introspected
 data class OnAccountPaymentRequest(
     var document: Long,
-    var taggedDocuments: List<Long>,
+    var taggedDocuments: List<Long>?,
     val createdBy: UUID?
 )

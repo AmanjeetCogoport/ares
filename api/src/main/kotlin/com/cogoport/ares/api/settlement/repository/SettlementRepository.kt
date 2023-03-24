@@ -304,7 +304,7 @@ ORDER BY
         """
             SELECT
                s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
-                s.settlement_date::TIMESTAMP, s.is_void, au.tagged_settlement_id
+                s.settlement_date::TIMESTAMP, s.is_void, au.tagged_bill_id
             FROM
                 settlements s
                 LEFT JOIN payments p ON p.payment_num = s.source_id
@@ -316,7 +316,7 @@ ORDER BY
                 AND s.destination_type in('PINV', 'PREIMB')
                 AND s.destination_type NOT in('VTDS')
                 and s.source_type NOT in ('VTDS')
-                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')  and s.is_void = false  and au.is_void = false
+                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
             ORDER BY
                 s.created_at DESC
 

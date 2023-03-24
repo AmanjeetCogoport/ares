@@ -5,6 +5,7 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import io.micronaut.messaging.annotation.MessageHeader
@@ -48,4 +49,6 @@ interface AresMessagePublisher {
 
     @Binding("update.settlement.bill.updated")
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
+    @Binding("tagged.bill.auto.knockoff")
+    suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
 }

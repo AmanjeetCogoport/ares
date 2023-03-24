@@ -46,7 +46,7 @@ data class AccountUtilizationMigration(
     var updatedAt: Timestamp?,
     var migrated: Boolean?,
     var isVoid: Boolean? = false,
-    var taggedSettlementId: String? = null,
+    var taggedBillId: String? = null,
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
     var tdsAmount: BigDecimal? = BigDecimal.ZERO
 )
