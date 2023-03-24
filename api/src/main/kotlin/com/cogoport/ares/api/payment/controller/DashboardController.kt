@@ -1,9 +1,18 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
@@ -33,6 +42,9 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.brahma.authentication.Auth
+import com.cogoport.brahma.authentication.AuthResponse
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -53,6 +65,9 @@ class DashboardController {
     lateinit var pushToClientService: OpenSearchService
     @Inject
     lateinit var exchangeRateHelper: ExchangeRateHelper
+
+    @Inject
+    lateinit var util: Util
     @Get("/overall-stats{?request*}")
     suspend fun getOverallStats(@Valid request: OverallStatsRequest): OverallStatsResponseData? {
         return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
@@ -127,6 +142,50 @@ class DashboardController {
     @Get("/exchange-rate/for/period{?request*}")
     suspend fun getExchangeRateForPeriod(@Valid request: ExchangeRateForPeriodRequest): HashMap<String, BigDecimal> {
         return exchangeRateHelper.getExchangeRateForPeriod(request.currencyList, request.dashboardCurrency)
+    }
+
+    // ** Business Finance DashBoard Apis */
+
+    @Auth
+    @Get("/bf-receivable{?request*}")
+    suspend fun getBfReceivableData(
+        @Valid request: BfPendingAmountsReq,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): BfReceivableAndPayable {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfReceivableData(request)
+    }
+    @Auth
+    @Get("/bf-income-expense{?request*}")
+    suspend fun getBfIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): BfIncomeExpenseResponse {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfIncomeExpense(request)
+    }
+
+    @Auth
+    @Get("/bf-today-stats{?request*}")
+    suspend fun getBfTodayStats(
+        @Valid request: BfTodayStatReq,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): BfTodayStatsResp {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfTodayStats(request)
+    }
+
+    @Auth
+    @Get("/bf-profitability-shipment{?request*}")
+    suspend fun getBfShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfShipmentProfit(request)
+    }
+
+    @Auth
+    @Get("/bf-profitability-customer{?request*}")
+    suspend fun getBfCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfCustomerProfit(request)
     }
 
     /** To be Deleted */

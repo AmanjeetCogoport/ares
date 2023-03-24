@@ -75,6 +75,7 @@ dependencies {
     implementation("com.cogoport.brahma.sage:sage-client:1.0.3")
     implementation("com.cogoport.brahma.authentication:authentication:1.0.6")
     implementation("com.cogoport.brahma.opensearch:client:0.1.4-beta")
+    implementation("com.cogoport.brahma.redis:client:1.0.0-beta")
     implementation("org.json:json:20220320")
 
     //Loki Model

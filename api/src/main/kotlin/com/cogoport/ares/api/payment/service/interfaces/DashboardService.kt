@@ -1,5 +1,13 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -47,4 +55,16 @@ interface DashboardService {
     suspend fun getStatsForTradeParties(request: TradePartyStatsRequest): ResponseList<OverallStatsForTradeParty?>
 
     suspend fun getInvoiceListForTradeParties(request: InvoiceListRequestForTradeParty): ResponseList<InvoiceListResponse?>
+
+    // Bf DashBoard Functions
+
+    suspend fun getBfReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable
+
+    suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): BfIncomeExpenseResponse
+
+    suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp
+
+    suspend fun getBfShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp
+
+    suspend fun getBfCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp
 }

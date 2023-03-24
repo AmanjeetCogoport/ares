@@ -5,11 +5,21 @@ import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedRepository
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -55,6 +65,7 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.Month
+import java.time.Year
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -78,6 +89,9 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
+
+    @Inject
+    private lateinit var unifiedRepository: UnifiedRepository
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -758,5 +772,116 @@ class DashboardServiceImpl : DashboardService {
         responseList.totalPages = if (responseList.totalRecords != 0L) (responseList.totalRecords!! / request.pageSize) + 1 else 1
         responseList.pageNo = request.pageIndex
         return responseList
+    }
+
+    override suspend fun getBfReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+        if (request.accountMode == AccMode.AP) {
+            return unifiedRepository.getBfPayable(request.serviceType, request.startDate, request.endDate, request.tradeType, request.entityCode)
+        }
+        var customerIds: List<String>? = null
+        var customerTypes = mapOf(
+            "cp" to listOf("channel_partner"),
+            "ie" to listOf("mid_size", "long_tail"),
+            "enterprise" to listOf("enterprise")
+        )
+        if (request.buyerType != null) {
+            customerIds = unifiedRepository.getCustomerIds(
+                customerTypes[request.buyerType]!!
+            )
+        }
+        return unifiedRepository.getBfReceivable(request.serviceType, request.startDate, request.endDate, request.tradeType, customerIds, request.entityCode)
+    }
+
+    override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): BfIncomeExpenseResponse {
+        val thisYear = Year.now().toString()
+        val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
+        var endYear = request.financeYearEnd ?: thisYear
+        if (request.calenderYear != null) {
+            endYear = startYear
+        }
+        val monthlyIncomes = unifiedRepository.getBfIncomeMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+        )
+        val monthlyExpenses = unifiedRepository.getBfExpenseMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+        )
+        return BfIncomeExpenseResponse(
+            logisticsMonthlyIncome = monthlyIncomes,
+            logisticsMonthlyExpense = monthlyExpenses
+        )
+    }
+
+    override suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
+        val todaySalesData = unifiedRepository.getTodaySalesStats(
+            request.serviceTypes,
+            request.entityCode
+        )
+        val todayPurchaseData = unifiedRepository.getTodayPurchaseStats(
+            request.serviceTypes,
+            request.entityCode
+        )
+        val response = BfTodayStatsResp(
+            todaySalesStats = todaySalesData,
+            todayPurchaseStats = todayPurchaseData,
+        )
+        response.totalCashFlow = todaySalesData.totalRevenue - todayPurchaseData.totalExpense
+        return response
+    }
+
+    override suspend fun getBfShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        val listResponse = unifiedRepository.listShipmentProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.jobStatus,
+            request.sortBy,
+            request.sortType,
+            request.entityCode
+        )
+        val totalRecords = unifiedRepository.findTotalCountShipment(
+            query,
+            request.jobStatus,
+            request.entityCode
+        )
+        return ShipmentProfitResp(
+            shipmentList = listResponse,
+            averageProfit = totalRecords.averageProfit,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
+    }
+
+    override suspend fun getBfCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        val listResponse = unifiedRepository.listCustomerProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.sortBy,
+            request.sortType,
+            request.entityCode
+        )
+        val totalRecords = unifiedRepository.findTotalCountCustomer(
+            query,
+            request.entityCode
+        )
+        return ShipmentProfitResp(
+            customerList = listResponse,
+            averageProfit = totalRecords.averageProfit,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
     }
 }
