@@ -190,7 +190,7 @@ class DashboardServiceImpl : DashboardService {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode
 
-        val ledgerCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
 
         val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
@@ -431,7 +431,7 @@ class DashboardServiceImpl : DashboardService {
         val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
-        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
 
@@ -704,7 +704,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getSalesFunnel(req: SalesFunnelRequest): SalesFunnelResponse {
         val entityCode = req.entityCode
-        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
+        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
         val serviceType = req.serviceType
         val month = req.month
         val companyType = req.companyType
@@ -766,7 +766,7 @@ class DashboardServiceImpl : DashboardService {
         var countIrnGeneratedEvent: Int? = 0
         val entityCode = req.entityCode
 
-        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
+        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
 
         val updatedStartDate = when (!startDate.isNullOrEmpty()) {
             true -> startDate
@@ -873,7 +873,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getOutstanding(date: String?, entityCode: Int?): OutstandingOpensearchResponse {
         val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
-        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
@@ -909,8 +909,8 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
         val entityCode = req.entityCode
-        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
-        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
@@ -1014,8 +1014,8 @@ class DashboardServiceImpl : DashboardService {
         val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
         val entityCode = req.entityCode
-        val cogoEntityId = UUID.fromString(AresModelConstants.COGO_ENTITY_ID_AND_CODE_MAPPING[entityCode])
-        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
 

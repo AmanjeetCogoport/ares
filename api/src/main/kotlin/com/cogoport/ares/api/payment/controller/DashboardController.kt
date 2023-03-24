@@ -76,6 +76,7 @@ class DashboardController {
         return Response<OverallStatsResponseData?>().ok(dashboardService.getOverallStats(request))
     }
 
+    @Auth
     @Get("/daily-sales-outstanding{?request*}")
     suspend fun getDailySalesOutstanding(
         @Valid request: DsoRequest,

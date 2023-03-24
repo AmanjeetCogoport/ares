@@ -43,21 +43,4 @@ object AresModelConstants {
     const val AP_ACCOUNT_CODE = 321000
     const val TDS_AR_ACCOUNT_CODE = 240000
     const val TDS_AP_ACCOUNT_CODE = 324001
-
-    var COGO_ENTITY_ID_AND_CODE_MAPPING = mapOf(
-        501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff",
-        401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
-        301 to "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1",
-        201 to "c7e1390d-ec41-477f-964b-55423ee84700",
-        101 to "6fd98605-9d5d-479d-9fac-cf905d292b88"
-    )
-
-    var COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING = mapOf(
-        101 to "INR",
-        201 to "EUR",
-        301 to "INR",
-        401 to "SGD",
-        501 to "VND"
-
-    )
 }

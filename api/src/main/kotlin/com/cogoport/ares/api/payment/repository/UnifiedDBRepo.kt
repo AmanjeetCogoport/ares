@@ -411,10 +411,10 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         with X as (
             SELECT 
             extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when aau.acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
-            abs(sum(case when aau.acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
-            sum(case when aau.acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
-            sum(case when aau.acc_type in ('SINV','SDN','SCN','SREIMB') AND transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
+            sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) as open_invoice_amount,
+            abs(sum(case when aau.acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'INTER') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end)) as on_account_payment,
+            sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'INTER') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstandings,
+            sum(case when aau.acc_type in ('SINV','SDN','SCN') AND transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_loc end) as total_sales,
             case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
             else date_part('days', now()::date) end as days,
             aau.led_currency as dashboard_currency
@@ -445,7 +445,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ),
             y as (
                 SELECT to_char(date_trunc('quarter',aau.transaction_date),'Q')::int as quarter,
-                sum(case when aau.acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when aau.acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
+                sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when aau.acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'INTER') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
                 aau.led_currency as dashboard_currency
                 from ares.account_utilizations aau
                 INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id

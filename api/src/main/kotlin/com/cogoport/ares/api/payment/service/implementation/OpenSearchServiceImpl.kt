@@ -27,7 +27,6 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerOutstanding
@@ -171,7 +170,7 @@ class OpenSearchServiceImpl : OpenSearchService {
 
     override suspend fun generateQuarterlyOutstanding(quarter: Int, year: Int, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: CompanyType?) {
         val quarterlyTrendZoneData = unifiedDBRepo.generateQuarterlyOutstanding(serviceType, defaultersOrgIds, entityCode, companyType?.value)
-        val dashboardCurrency = AresModelConstants.COGO_ENTITY_ID_AND_LED_CURRENCY_MAPPING[entityCode]
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         quarterlyTrendZoneData?.forEach { it ->
             if (it.dashboardCurrency.isNullOrEmpty()) {
                 it.dashboardCurrency = dashboardCurrency
