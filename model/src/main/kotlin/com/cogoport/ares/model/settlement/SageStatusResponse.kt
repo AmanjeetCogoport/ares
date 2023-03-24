@@ -7,6 +7,6 @@ import io.micronaut.data.annotation.MappedEntity
 @Introspected
 @MappedEntity
 data class SageStatusResponse(
-    var sageNumValue: String,
+    var sageNumValue: String?,
     var paymentDocumentStatus: PaymentDocumentStatus
 )

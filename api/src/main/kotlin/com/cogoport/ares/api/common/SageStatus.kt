@@ -18,8 +18,7 @@ class SageStatus {
             val response = XML.toJSONObject(content.toString())
             val status = response?.getJSONObject("RESULT")
                 ?.getJSONObject("GRP")
-                ?.getJSONArray("FLD")
-                ?.getJSONObject(1)
+                ?.getJSONObject("FLD")
                 ?.get("content")
 
             return status.toString()

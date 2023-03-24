@@ -2587,7 +2587,7 @@ open class SettlementServiceImpl : SettlementService {
                     }
 
                     val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(settlementDocuments.documentValue)
-                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocValue(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType)
+                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocNo(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType!!)
 
                     var boolean: Boolean
                     if (settlementDocuments.destinationType == AccountType.SINV) {
@@ -2669,7 +2669,6 @@ open class SettlementServiceImpl : SettlementService {
                         e.toString(),
                         false
                     )
-                    throw e
                 }
             }
         }
