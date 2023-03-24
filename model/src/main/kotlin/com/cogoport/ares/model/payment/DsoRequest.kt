@@ -13,5 +13,6 @@ data class DsoRequest(
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
     @QueryValue("entityCode") var entityCode: Int? = 301,
-    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType? = null
+    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType? = null,
+    @QueryValue("year") val year: Int? = null
 )

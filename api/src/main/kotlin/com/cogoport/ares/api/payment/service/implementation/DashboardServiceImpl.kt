@@ -11,6 +11,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
+import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
@@ -46,7 +47,6 @@ import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.CollectionResponse
 import com.cogoport.ares.model.payment.response.CollectionTrendResponse
-import com.cogoport.ares.model.payment.response.DailyOutstandingResponse
 import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
@@ -56,6 +56,7 @@ import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.OverallStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
+import com.cogoport.ares.model.payment.response.QsoResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
@@ -94,6 +95,9 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Inject
+    lateinit var dsoConverter: DailyOutstandingMapper
 
     private fun validateInput(zone: String?, role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
@@ -188,7 +192,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
         val defaultersOrgIds = getDefaultersOrgIds()
-        val entityCode = request.entityCode
+        val entityCode = request.entityCode ?: 301
 
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
@@ -206,38 +210,13 @@ class DashboardServiceImpl : DashboardService {
         }
 
         val data = mutableListOf<OverallAgeingStatsResponse>()
-        var formattedData = mutableListOf<OverallAgeingStatsResponse>()
 
         outstandingResponse.map { response ->
             response.amount = response.amount.setScale(4, RoundingMode.UP)
             data.add(overallAgeingConverter.convertToModel(response))
         }
 
-        data.map { item ->
-            val index = formattedData.indexOfFirst { (it.ageingDuration?.equals(item.ageingDuration))!! }
-            if (index == -1) {
-                formattedData.add(item)
-            } else {
-                formattedData[index].amount == formattedData[index].amount?.plus(item.amount!!)
-            }
-        }
-
-        val key = formattedData.map { it.ageingDuration }
-        durationKey.forEach {
-            if (!key.contains(it)) {
-                formattedData.add(
-                    OverallAgeingStatsResponse(
-                        it,
-                        0.toBigDecimal(),
-                        ledgerCurrency!!
-                    )
-                )
-            }
-        }
-        formattedData = formattedData.sortedBy { it.ageingDuration }.toMutableList()
-        formattedData.add(0, formattedData.removeAt(4))
-
-        return formattedData
+        return data
     }
 
     override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
@@ -374,139 +353,126 @@ class DashboardServiceImpl : DashboardService {
         return listOfCollectionTrend
     }
 
-    private fun getQuarterlyOutStandingData(data: QuarterlyOutstanding?): List<OutstandingResponse>? {
-        val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map {
-            return@map OutstandingResponse(
-                amount = it.sumOf { it.amount }.setScale(4, RoundingMode.UP),
-                duration = it.first().duration,
-                dashboardCurrency = it.first().dashboardCurrency
-            )
-        }
-        return listOfOutStanding
-    }
-
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
         val serviceType = request.serviceType
-        val quarter: Int = AresConstants.CURR_QUARTER
-        val year: Int = AresConstants.CURR_YEAR
         val entityCode = request.entityCode ?: 301
+        val year = request.year ?: AresConstants.CURR_YEAR
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val companyType = request.companyType
 
         validatingRoleAndEntityCode(request.role)
 
-        val defaultersOrgIds = getDefaultersOrgIds()
-
-        val serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-        val companyTypeKey = companyType?.name ?: "ALL"
-
-        val searchKey =
-            AresConstants.QUARTERLY_TREND_PREFIX + entityCode + AresConstants.KEY_DELIMITER + serviceTypeKey + AresConstants.KEY_DELIMITER + companyTypeKey
-
-        var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = QuarterlyOutstanding::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
+        val quarterMapping = mapOf(
+            1 to "JAN - MAR",
+            2 to "APR - JUN",
+            3 to "JUL - SEPT",
+            4 to "OCT - DEC"
         )
 
-        if (data == null) {
-            openSearchService.generateQuarterlyOutstanding(quarter, year, serviceType, defaultersOrgIds, entityCode, companyType)
-            data = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = QuarterlyOutstanding::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
+        val defaultersOrgIds = getDefaultersOrgIds()
+
+        val quarterOutstandingData = unifiedDBRepo.generateQuarterlyOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
+        val qsoResponseList = mutableListOf<QsoResponse>()
+
+        (1..4).toList().map { quarter ->
+            val data = quarterOutstandingData?.filter { it.duration == quarter.toString() }
+            if (!data.isNullOrEmpty()) {
+                val monthList = getMonthFromQuarter(quarter)
+                val updatedData = data[0]
+                var numberOfDays = 0
+                monthList.map { month ->
+                    val days = when (month.toInt() == AresConstants.CURR_MONTH) {
+                        true -> AresConstants.CURR_DATE.toLocalDate()?.dayOfMonth!!
+                        else -> YearMonth.of(year, month.toInt()).lengthOfMonth()
+                    }
+                    numberOfDays = numberOfDays.plus(days)
+                }
+                val qso = when (updatedData.totalSales != BigDecimal.ZERO) {
+                    true -> {
+                        updatedData.totalOutstandingAmount?.div(updatedData.totalSales!!)?.times(numberOfDays.toBigDecimal())!!
+                    }
+                    else -> {
+                        0.toBigDecimal()
+                    }
+                }
+                val qsoResponseData = QsoResponse(
+                    quarter = quarterMapping[quarter]!!,
+                    qsoForQuarter = qso,
+                    currency = dashboardCurrency
+                )
+                qsoResponseList.add(qsoResponseData)
+            } else {
+                val qsoResponseData = QsoResponse(
+                    quarter = quarterMapping[quarter]!!,
+                    qsoForQuarter = 0.toBigDecimal(),
+                    currency = dashboardCurrency
+                )
+                qsoResponseList.add(qsoResponseData)
+            }
         }
 
-        val newData = getQuarterlyOutStandingData(data)
-
         return QuarterlyOutstanding(
-            list = newData,
-            id = searchKey
+            list = qsoResponseList
         )
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
         validatingRoleAndEntityCode(request.role)
-        val dsoList = mutableListOf<DsoResponse>()
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
+        val year = request.year ?: AresConstants.CURR_YEAR
+        val serviceType = request.serviceType
+        val companyType = request.companyType
+        val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val quarterYearList = (1..4).toList().map { "Q" + it + "_" + AresModelConstants.CURR_YEAR }
+        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
 
-        val sortQuarterList = quarterYearList.sortedBy { it.split("_")[1] + it.split("_")[0][1] }
-        for (q in sortQuarterList) {
-            val salesResponseKey = searchKeyDailyOutstanding(
-                q.split("_")[0][1].toString().toInt(),
-                q.split("_")[1].toInt(),
-                AresConstants.DAILY_SALES_OUTSTANDING_PREFIX,
-                request.serviceType,
-                entityCode,
-                request.companyType
+        val dsoResponse = mutableListOf<DsoResponse>()
 
-            )
-            var salesResponse = clientResponse(salesResponseKey)
-
-            val quarter = q.split("_")[0][1].toString().toInt()
-            val year = q.split("_")[1].toInt()
-            val monthList = getMonthFromQuarter(quarter)
-
-            if (salesResponse?.hits()?.hits().isNullOrEmpty()) {
-                monthList.forEach {
-                    val date = "$year-$it-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    openSearchService.generateDailySalesOutstanding(
-                        q.split("_")[0][1].toString().toInt(),
-                        q.split("_")[1].toInt(),
-                        request.serviceType,
-                        date,
-                        defaultersOrgIds,
-                        entityCode,
-                        request.companyType
-                    )
+        (1..12).toList().map { month ->
+            val data = dailySalesZoneServiceTypeData.filter { it.month == month }
+            if (data.isNotEmpty()) {
+                val updatedData = data[0]
+                val dso = when (updatedData.totalSales != BigDecimal.ZERO) {
+                    true -> {
+                        val days = when (updatedData.month == AresConstants.CURR_MONTH) {
+                            true -> AresConstants.CURR_DATE.toLocalDate()?.dayOfMonth
+                            else -> YearMonth.of(year, updatedData.month).lengthOfMonth()
+                        }
+                        updatedData.outstandings?.div(updatedData.totalSales!!)?.times(days?.toBigDecimal()!!)!!
+                    }
+                    else -> {
+                        0.toBigDecimal()
+                    }
                 }
-                salesResponse = clientResponse(salesResponseKey)
-            }
-
-            for (hts in salesResponse?.hits()?.hits()!!) {
-                val data = hts.source()
-                val dsoResponse = DsoResponse(month = "", dsoForTheMonth = 0.toBigDecimal(), dashboardCurrency)
-                val uniqueCurrencyListSize = (hts.source()?.list?.map { it.dashboardCurrency!! })?.size
-                data?.list?.map {
-                    dsoResponse.month = it.month.toString()
-                    dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.plus(it.value)
-                }
-                dsoResponse.dsoForTheMonth = dsoResponse.dsoForTheMonth.div(uniqueCurrencyListSize?.toBigDecimal()!!)
-                dsoList.add(dsoResponse)
+                val dailyOutstandingResponseData = DsoResponse(
+                    month = monthList[month - 1],
+                    dsoForTheMonth = dso,
+                    currency = dashboardCurrency
+                )
+                dsoResponse.add(dailyOutstandingResponseData)
+            } else {
+                val dailyOutstandingResponseData = DsoResponse(
+                    month = monthList[month - 1],
+                    dsoForTheMonth = 0.toBigDecimal(),
+                    currency = dashboardCurrency
+                )
+                dsoResponse.add(dailyOutstandingResponseData)
             }
         }
 
-        val dsoResponseData = dsoList.map {
-            DsoResponse(Month.of(it.month.toInt()).toString().slice(0..2), it.dsoForTheMonth, dashboardCurrency)
-        }
-
-        dsoResponseData.sortedBy { it.month }
-
-        return DailySalesOutstanding(dsoResponse = dsoResponseData)
-    }
-
-    private fun clientResponse(key: List<String>): SearchResponse<DailyOutstandingResponse>? {
-        return OpenSearchClient().listApi(
-            index = AresConstants.SALES_DASHBOARD_INDEX,
-            classType = DailyOutstandingResponse::class.java,
-            values = key
+        return DailySalesOutstanding(
+            dsoResponse = dsoResponse
         )
-    }
-
-    private fun searchKeyDailyOutstanding(quarter: Int, year: Int, index: String, serviceType: ServiceType?, entityCode: Int?, companyType: CompanyType?): MutableList<String> {
-        return generateKeyByMonth(getMonthFromQuarter(quarter), year, index, serviceType, entityCode, companyType)
     }
 
     private fun getMonthFromQuarter(quarter: Int): List<String> {
         return when (quarter) {
-            1 -> { listOf("01", "02", "03") }
-            2 -> { listOf("04", "05", "06") }
-            3 -> { listOf("07", "08", "09") }
+            1 -> { listOf("1", "2", "3") }
+            2 -> { listOf("4", "5", "6") }
+            3 -> { listOf("7", "8", "9") }
             4 -> { listOf("10", "11", "12") }
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
@@ -703,13 +669,13 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getSalesFunnel(req: SalesFunnelRequest): SalesFunnelResponse {
-        val entityCode = req.entityCode
+        val entityCode = req.entityCode ?: 301
         val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
         val serviceType = req.serviceType
         val month = req.month
         val companyType = req.companyType
+        val year = req.year ?: AresModelConstants.CURR_YEAR
 
-        val year = AresModelConstants.CURR_YEAR
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
@@ -717,22 +683,9 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val monthKeyIndex = when (monthKey < 10) {
-            true -> "0$monthKey"
-            else -> monthKey.toString()
-        }
-
-        val startDate = "$year-$monthKeyIndex-01".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val convertedDate = LocalDate.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val durationOfMonth = convertedDate.month.length(convertedDate.isLeapYear)
-
-        val endDate =
-            "$year-$monthKeyIndex-$durationOfMonth".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(startDate, endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getFunnelData(cogoEntityId, companyType?.value, serviceType?.name?.lowercase(), year, monthKey)
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
@@ -759,26 +712,24 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getInvoiceTatStats(req: InvoiceTatStatsRequest): InvoiceTatStatsResponse {
-        val startDate = req.startDate
-        val endDate = req.endDate
         val serviceType = req.serviceType
         val companyType = req.companyType
         var countIrnGeneratedEvent: Int? = 0
-        val entityCode = req.entityCode
+        val entityCode = req.entityCode ?: 301
+
+        val month = req.month
+        val year = req.year ?: AresModelConstants.CURR_YEAR
+
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+
+        val monthKey = when (!month.isNullOrEmpty()) {
+            true -> months.indexOf(month) + 1
+            else -> AresModelConstants.CURR_MONTH
+        }
 
         val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
 
-        val updatedStartDate = when (!startDate.isNullOrEmpty()) {
-            true -> startDate
-            else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-01"
-        }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val updatedEndDate = when (!endDate.isNullOrEmpty()) {
-            true -> endDate
-            else -> "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${LocalDate.parse(updatedStartDate).month.length(LocalDate.parse(updatedStartDate).isLeapYear)}"
-        }.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val data = unifiedDBRepo.getInvoices(updatedStartDate, updatedEndDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoices(year, monthKey, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 

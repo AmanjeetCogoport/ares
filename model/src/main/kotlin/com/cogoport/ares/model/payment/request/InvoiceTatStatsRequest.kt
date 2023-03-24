@@ -7,8 +7,8 @@ import io.micronaut.http.annotation.QueryValue
 
 @Introspected
 data class InvoiceTatStatsRequest(
-    @QueryValue("startDate") val startDate: String? = null,
-    @QueryValue("endDate") val endDate: String? = null,
+    @QueryValue("month") val month: String? = null,
+    @QueryValue("year") val year: Int? = null,
     @QueryValue("entityCode") var entityCode: Int? = 301,
     @QueryValue("companyType") val companyType: CompanyType? = null,
     @QueryValue("serviceType") val serviceType: ServiceType? = null,

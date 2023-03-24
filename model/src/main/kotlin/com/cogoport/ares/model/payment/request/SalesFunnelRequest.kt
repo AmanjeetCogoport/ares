@@ -11,4 +11,5 @@ data class SalesFunnelRequest(
     @QueryValue("entityCode") var entityCode: Int? = 301,
     @QueryValue("companyType") val companyType: CompanyType? = null,
     @QueryValue("serviceType") val serviceType: ServiceType? = null,
+    @QueryValue("year") val year: Int? = null
 )

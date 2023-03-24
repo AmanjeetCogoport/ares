@@ -97,6 +97,7 @@ class DashboardController {
         return Response<MonthlyOutstanding?>().ok(dashboardService.getMonthlyOutstanding(request))
     }
 
+    @Auth
     @Get("/quarterly-outstanding{?request*}")
     suspend fun getQuarterlyOutstanding(
         @Valid request: QuarterlyOutstandingRequest,
