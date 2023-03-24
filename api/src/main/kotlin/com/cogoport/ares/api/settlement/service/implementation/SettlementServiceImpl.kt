@@ -2537,9 +2537,11 @@ open class SettlementServiceImpl : SettlementService {
                     val settlementDocuments = settlementRepository.getSettlementDocumentValueForSettlementId(it)
                     val sageOrganizationFromSageId: String?
 
+                    val registrationNumber: String?
                     if (settlementDocuments.organizationId != null) {
                         val organization = railsClient.getListOrganizationTradePartyDetails(settlementDocuments.organizationId !!)
-                        val sageOrganizationQuery = if (settlementDocuments.destinationType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+                        registrationNumber = organization.list[0]["registration_number"].toString()
+                        val sageOrganizationQuery = if (settlementDocuments.destinationType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
                         val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
                         val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
                         sageOrganizationFromSageId = if (settlementDocuments.destinationType == AccountType.SINV) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
@@ -2597,12 +2599,12 @@ open class SettlementServiceImpl : SettlementService {
 
                     var destinationPresentOnSage = isDataPresentOnSage(
                         accountUtilization.documentValue, SettlementType.valueOf(settlementDocuments.destinationType.toString()),
-                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId
+                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId, registrationNumber
                     )
 
                     var sourcePresentOnSage = isDataPresentOnSage(
                         settlementDocuments.documentValue, settlementDocuments.sourceType!!,
-                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId
+                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId, registrationNumber
                     )
 
                     if (!destinationPresentOnSage || !sourcePresentOnSage) {
@@ -2707,13 +2709,13 @@ open class SettlementServiceImpl : SettlementService {
         return records.size != 0
     }
 
-    open fun isBillDataPresentOnSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
+    open fun isBillDataPresentOnSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): Boolean {
         var query = """
             SELECT  * FROM $sageDatabase.PINVOICE P 
             	            INNER JOIN $sageDatabase.BPSUPPLIER BP ON (P.BPR_0 = BP.BPSNUM_0) 
             	            WHERE (P.BPRVCR_0 = '$billNumber'  
             	            OR P.BPRVCR_0 = '$billNumber&$organizationSerialId')
-            	            AND BP.BPSNUM_0 ='$sageOrganizationId'
+            	            AND BP.XX1P4PANNO_0 = '$registrationNumber'
         """.trimIndent()
         var resultFromQuery = Client.sqlQuery(query)
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
@@ -2721,7 +2723,7 @@ open class SettlementServiceImpl : SettlementService {
         return records.size != 0
     }
 
-    private suspend fun isDataPresentOnSage(documentValue: String?, settlementType: SettlementType, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
+    private suspend fun isDataPresentOnSage(documentValue: String?, settlementType: SettlementType, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): Boolean {
         var listOfRecOrPayCode = listOf<SettlementType>(SettlementType.PAY, SettlementType.REC, SettlementType.CTDS, SettlementType.VTDS)
         var listOfCreditOrDebitNoteOrReimbursementInvoiceCode = listOf<SettlementType>(SettlementType.SCN, SettlementType.SDN, SettlementType.SREIMB)
         var listOfCreditOrDebitNoteOrReimbursementBillCode = listOf<SettlementType>(SettlementType.PCN, SettlementType.PDN, SettlementType.PREIMB)
@@ -2736,7 +2738,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (settlementType in listOfCreditOrDebitNoteOrReimbursementInvoiceCode) {
             isInvoiceDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", documentValue)
         } else if (settlementType in listOfCreditOrDebitNoteOrReimbursementBillCode) {
-            isBillDataPresentOnSage(documentValue, organizationSerialId, sageOrganizationId)
+            isBillDataPresentOnSage(documentValue, organizationSerialId, sageOrganizationId, registrationNumber)
         } else if (settlementType in listOfJournalVoucherCode) {
             val status = journalVoucherRepository.getStatusByDocumentNumber(documentValue!!)
             if (status == JVStatus.POSTED) return true
