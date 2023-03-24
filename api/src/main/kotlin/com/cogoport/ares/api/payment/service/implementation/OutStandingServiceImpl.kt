@@ -499,7 +499,9 @@ class OutStandingServiceImpl : OutStandingService {
         orgOutstandingData.forEach {
             onAccountLedAmount += it.paymentsLedAmount * 1.0.toBigDecimal()
             onAccountLedCount += it.paymentsCount
-            onAccountInvoiceBucket.add(DueAmount(it.currency, it.paymentsAmount, it.paymentsCount))
+            if (it.paymentsAmount > 0.toBigDecimal()) {
+                onAccountInvoiceBucket.add(DueAmount(it.currency, it.paymentsAmount, it.paymentsCount))
+            }
         }
         onAccountBucket = AgeingBucketOutstanding(onAccountLedAmount, onAccountLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, onAccountInvoiceBucket)
 
@@ -514,7 +516,9 @@ class OutStandingServiceImpl : OutStandingService {
         orgOutstandingData.forEach {
             openInvoiceLedAmount += it.openInvoicesLedAmount * 1.0.toBigDecimal()
             openInvoiceLedCount += it.openInvoicesCount
-            openInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
+            if (it.openInvoicesAmount > 0.toBigDecimal()) {
+                openInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
+            }
         }
         openInvoiceAgeingBucket = AgeingBucketOutstanding(openInvoiceLedAmount, openInvoiceLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, openInvoiceBucket)
 
@@ -529,7 +533,9 @@ class OutStandingServiceImpl : OutStandingService {
         orgOutstandingData.forEach {
             totalOutstandingLedAmount += it.outstandingLedAmount * 1.0.toBigDecimal()
             totalOutstandingLedCount += 0
-            totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.outstandingAmount, 0))
+            if (it.outstandingAmount > 0.toBigDecimal()) {
+                totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.outstandingAmount, 0))
+            }
         }
         totalOutstandingBucket = AgeingBucketOutstanding(totalOutstandingLedAmount, totalOutstandingLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, totalOutstandingInvoiceBucket)
 
@@ -556,100 +562,120 @@ class OutStandingServiceImpl : OutStandingService {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["notDue"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(notDue.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.notDueAmount)
-                ageingBucket.invoiceBucket.add(notDue)
+                if (notDue.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(notDue)
+                }
                 ageingBucketsInInvoiceCurrency["notDue"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["notDue"] = AgeingBucketOutstanding(it.notDueAmount, it.notDueCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(notDue))
+                ageingBucketsInInvoiceCurrency["notDue"] = AgeingBucketOutstanding(it.notDueAmount, it.notDueCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (notDue.amount > 0.toBigDecimal()) mutableListOf(notDue) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("today")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["today"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(today.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.todayAmount)
-                ageingBucket.invoiceBucket.add(today)
+                if (today.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(today)
+                }
                 ageingBucketsInInvoiceCurrency["today"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["today"] = AgeingBucketOutstanding(it.todayAmount, it.todayCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(today))
+                ageingBucketsInInvoiceCurrency["today"] = AgeingBucketOutstanding(it.todayAmount, it.todayCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (today.amount > 0.toBigDecimal()) mutableListOf(today) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("thirty")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["thirty"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(thirty.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.thirtyAmount)
-                ageingBucket.invoiceBucket.add(thirty)
+                if (thirty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(thirty)
+                }
                 ageingBucketsInInvoiceCurrency["thirty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["thirty"] = AgeingBucketOutstanding(it.thirtyAmount, it.thirtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(thirty))
+                ageingBucketsInInvoiceCurrency["thirty"] = AgeingBucketOutstanding(it.thirtyAmount, it.thirtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (thirty.amount > 0.toBigDecimal()) mutableListOf(thirty) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("sixty")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["sixty"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(sixty.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.sixtyAmount)
-                ageingBucket.invoiceBucket.add(sixty)
+                if (sixty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(sixty)
+                }
                 ageingBucketsInInvoiceCurrency["sixty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["sixty"] = AgeingBucketOutstanding(it.sixtyAmount, it.sixtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(sixty))
+                ageingBucketsInInvoiceCurrency["sixty"] = AgeingBucketOutstanding(it.sixtyAmount, it.sixtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (sixty.amount > 0.toBigDecimal()) mutableListOf(sixty) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("ninety")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["ninety"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(ninety.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.ninetyAmount)
-                ageingBucket.invoiceBucket.add(ninety)
+                if (ninety.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(ninety)
+                }
                 ageingBucketsInInvoiceCurrency["ninety"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["ninety"] = AgeingBucketOutstanding(it.ninetyAmount, it.ninetyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(ninety))
+                ageingBucketsInInvoiceCurrency["ninety"] = AgeingBucketOutstanding(it.ninetyAmount, it.ninetyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (ninety.amount > 0.toBigDecimal()) mutableListOf(ninety) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("oneEighty")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["oneEighty"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(oneEighty.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.oneEightyAmount)
-                ageingBucket.invoiceBucket.add(oneEighty)
+                if (oneEighty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(oneEighty)
+                }
                 ageingBucketsInInvoiceCurrency["oneEighty"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["oneEighty"] = AgeingBucketOutstanding(it.oneEightyAmount, it.oneEightyCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(oneEighty))
+                ageingBucketsInInvoiceCurrency["oneEighty"] = AgeingBucketOutstanding(it.oneEightyAmount, it.oneEightyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (oneEighty.amount > 0.toBigDecimal()) mutableListOf(oneEighty) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFive")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFive"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFive.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFiveAmount)
-                ageingBucket.invoiceBucket.add(threeSixtyFive)
+                if (threeSixtyFive.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(threeSixtyFive)
+                }
                 ageingBucketsInInvoiceCurrency["threeSixtyFive"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = AgeingBucketOutstanding(it.threeSixtyFiveAmount, it.threeSixtyFiveCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(threeSixtyFive))
+                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = AgeingBucketOutstanding(it.threeSixtyFiveAmount, it.threeSixtyFiveCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (threeSixtyFive.amount > 0.toBigDecimal()) mutableListOf(threeSixtyFive) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFivePlus")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFivePlus.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFivePlusAmount)
-                ageingBucket.invoiceBucket.add(threeSixtyFivePlus)
+                if (threeSixtyFivePlus.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(threeSixtyFivePlus)
+                }
                 ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = AgeingBucketOutstanding(it.threeSixtyFivePlusAmount, it.threeSixtyFivePlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(threeSixtyFivePlus))
+                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = AgeingBucketOutstanding(it.threeSixtyFivePlusAmount, it.threeSixtyFivePlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (threeSixtyFivePlus.amount > 0.toBigDecimal()) mutableListOf(threeSixtyFivePlus) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("creditNote")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["creditNote"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(creditNote.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalCreditAmount)
-                ageingBucket.invoiceBucket.add(creditNote)
+                if (creditNote.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(creditNote)
+                }
                 ageingBucketsInInvoiceCurrency["creditNote"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["creditNote"] = AgeingBucketOutstanding(it.totalCreditAmount, it.creditNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(creditNote))
+                ageingBucketsInInvoiceCurrency["creditNote"] = AgeingBucketOutstanding(it.totalCreditAmount, it.creditNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (creditNote.amount > 0.toBigDecimal()) mutableListOf(creditNote) else mutableListOf())
             }
 
             if (ageingBucketsInInvoiceCurrency.contains("debitNote")) {
                 val ageingBucket = ageingBucketsInInvoiceCurrency["debitNote"]
                 ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(debitNote.invoicesCount)!!
                 ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalDebitAmount)
-                ageingBucket.invoiceBucket.add(debitNote)
+                if (debitNote.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(debitNote)
+                }
                 ageingBucketsInInvoiceCurrency["debitNote"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["debitNote"] = AgeingBucketOutstanding(it.totalDebitAmount, it.debitNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, mutableListOf(debitNote))
+                ageingBucketsInInvoiceCurrency["debitNote"] = AgeingBucketOutstanding(it.totalDebitAmount, it.debitNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (debitNote.amount > 0.toBigDecimal()) mutableListOf(debitNote) else mutableListOf())
             }
         }
 
