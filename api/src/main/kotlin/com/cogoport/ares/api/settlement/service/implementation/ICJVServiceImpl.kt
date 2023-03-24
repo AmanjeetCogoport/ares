@@ -275,7 +275,7 @@ open class ICJVServiceImpl : ICJVService {
             )
 
             // Insert JV in account_utilizations
-            val accMode = AccMode.valueOf(it.accMode.name)
+            val accMode = AccMode.valueOf(it.accMode!!.name)
             val signFlag = getSignFlag(it.type!!)
             val accUtilEntity = journalVoucherService.createJvAccUtil(it, accMode, signFlag)
         }
