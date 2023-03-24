@@ -3,18 +3,21 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
+import com.cogoport.ares.api.common.models.OutstandingDocument
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
+import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
+import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
+import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
@@ -71,19 +74,10 @@ class DashboardServiceImpl : DashboardService {
     lateinit var overallAgeingConverter: OverallAgeingMapper
 
     @Inject
-    lateinit var openSearchService: OpenSearchService
-
-    @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
-
-    private fun validatingRoleAndEntityCode(role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role) {
-            throw AresException(AresError.ERR_1003, "")
-        }
-    }
 
     private suspend fun getDefaultersOrgIds(): List<UUID>? {
         return businessPartnersServiceImpl.listTradePartyDetailIds()
@@ -133,8 +127,6 @@ class DashboardServiceImpl : DashboardService {
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val companyType = request.companyType
-
-        validatingRoleAndEntityCode(request.role)
 
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
@@ -191,7 +183,6 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding {
-        validatingRoleAndEntityCode(request.role)
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
@@ -372,7 +363,6 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getSalesFunnel(req: SalesFunnelRequest): SalesFunnelResponse {
         val entityCode = req.entityCode ?: 301
-        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
         val serviceType = req.serviceType
         val month = req.month
         val companyType = req.companyType
@@ -387,7 +377,7 @@ class DashboardServiceImpl : DashboardService {
 
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(cogoEntityId, companyType?.value, serviceType?.name?.lowercase(), year, monthKey)
+        val data = unifiedDBRepo.getFunnelData(entityCode, companyType?.value, serviceType?.name?.lowercase(), year, monthKey)
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
@@ -429,9 +419,7 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
-
-        val data = unifiedDBRepo.getInvoices(year, monthKey, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoices(year, monthKey, entityCode, companyType?.value, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 
@@ -523,35 +511,90 @@ class DashboardServiceImpl : DashboardService {
         return invoiceTatStatsResponse
     }
 
-    override suspend fun getOutstanding(date: String?, entityCode: Int?): OutstandingOpensearchResponse {
-        val asOnDate = date ?: AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-
-        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
-
-        val defaultersOrgIds = getDefaultersOrgIds()
-
-        val searchKey = AresConstants.OUTSTANDING_PREFIX + asOnDate + AresConstants.KEY_DELIMITER + entityCode
-
-        var openSearchData = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = OutstandingOpensearchResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-
-        if (openSearchData == null && (asOnDate == AresConstants.CURR_DATE.toLocalDate()?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
-            openSearchService.generateOutstandingData(searchKey, entityCode, defaultersOrgIds, dashboardCurrency)
-
-            openSearchData = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = OutstandingOpensearchResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
-        }
-
-        return openSearchData ?: OutstandingOpensearchResponse(
+    override suspend fun getOutstanding(entityCode: Int?): OutstandingOpensearchResponse {
+        val openSearchData = OutstandingOpensearchResponse(
             null,
             null
         )
+
+        val updatedEntityCode = entityCode ?: 301
+
+        val dashboardCurrency = AresConstants.LEDGER_CURRENCY[updatedEntityCode]
+
+        val defaultersOrgIds = getDefaultersOrgIds()
+
+        val data = unifiedDBRepo.getOutstandingData(updatedEntityCode, defaultersOrgIds)
+        val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
+
+        if (!data.isNullOrEmpty()) {
+            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
+            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+
+            data.map { it.tradeType = it.tradeType?.uppercase() }
+            data.map { it.serviceType = it.serviceType?.uppercase() }
+
+            data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
+                mapData[k.toString()] = ServiceLevelOutstanding(
+                    openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                    currency = dashboardCurrency,
+                    tradeType = getTradeAndServiceWiseData(v)
+                )
+            }
+
+            val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
+                true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
+                    ?.times(100.toBigDecimal())?.toLong()
+                else -> BigDecimal.ZERO
+            }
+
+            openSearchData.outstandingServiceWise = mapData
+            openSearchData.overallStats = OverallStats(
+                totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                customersCount = data.sumOf { it.customersCount!! },
+                dashboardCurrency = data.first().currency!!,
+                openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
+                openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+                onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
+                onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
+            )
+        }
+
+        return openSearchData
+    }
+    private fun getTradeAndServiceWiseData(value: List<OutstandingDocument>): List<TradeAndServiceLevelOutstanding> {
+        val updatedList = mutableListOf<TradeAndServiceLevelOutstanding>()
+        value.map { item ->
+            if (item.serviceType == null || item.tradeType == null) {
+                val document = updatedList.filter { it.key == "others" }
+                if (document.isNotEmpty()) {
+                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
+                } else {
+                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
+                        key = "others",
+                        name = "others",
+                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
+                        currency = item.currency
+                    )
+                    updatedList.add(tradeAndServiceWiseDocument)
+                }
+            } else {
+                val document = updatedList.filter { it.key == "${item.serviceType}_${item.tradeType}" }
+                if (document.isNotEmpty()) {
+                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
+                } else {
+                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
+                        key = "${item.serviceType}_${item.tradeType}",
+                        name = "${item.serviceType} ${item.tradeType}",
+                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
+                        currency = item.currency
+                    )
+                    updatedList.add(tradeAndServiceWiseDocument)
+                }
+            }
+        }
+        return updatedList
     }
 
     override suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>> {

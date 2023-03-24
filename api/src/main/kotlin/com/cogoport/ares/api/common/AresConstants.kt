@@ -25,14 +25,6 @@ object AresConstants {
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
 
-    const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
-    const val QUARTERLY_TREND_PREFIX = "QUARTERLY_OUTSTANDING_"
-    const val COLLECTIONS_TREND_PREFIX = "COLLECTION_TREND_"
-    const val OVERALL_STATS_PREFIX = "OVERALL_STATS_"
-    const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
-    const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
-    const val OUTSTANDING_PREFIX = "OUTSTANDING_"
-
     const val ZONE = "zone"
     const val QUARTER = "quarter"
     const val YEAR = "year"

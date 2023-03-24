@@ -55,9 +55,6 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
-import java.time.ZoneId
-import java.time.temporal.IsoFields
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional

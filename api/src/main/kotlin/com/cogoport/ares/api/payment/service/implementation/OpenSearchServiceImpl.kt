@@ -1,15 +1,10 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.OutstandingDocument
-import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
-import com.cogoport.ares.api.common.models.ServiceLevelOutstanding
-import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
-import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.model.OpenSearchListRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -21,16 +16,12 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
-import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -107,95 +98,6 @@ class OpenSearchServiceImpl : OpenSearchService {
             }
         }
     }
-
-    private fun generatingOpenSearchKey(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): Map<String, String?> {
-        var zoneKey: String? = null
-        val serviceTypeKey: String? = null
-        var invoiceCurrencyKey: String? = null
-        zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
-
-        invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
-        return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
-    }
-
-    override suspend fun generateOutstandingData(searchKey: String, entityCode: Int?, defaultersOrgIds: List<UUID>?, dashboardCurrency: String?) {
-        val data = unifiedDBRepo.getOutstandingData(entityCode, defaultersOrgIds)
-        val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
-
-        if (!data.isNullOrEmpty()) {
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(entityCode, defaultersOrgIds)
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(entityCode, defaultersOrgIds)
-
-            data.map { it.tradeType = it.tradeType?.uppercase() }
-            data.map { it.serviceType = it.serviceType?.uppercase() }
-
-            data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
-                mapData[k.toString()] = ServiceLevelOutstanding(
-                    openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                    currency = dashboardCurrency,
-                    tradeType = getTradeAndServiceWiseData(v)
-                )
-            }
-
-            val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
-                true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
-                    ?.times(100.toBigDecimal())?.toLong()
-                else -> BigDecimal.ZERO
-            }
-
-            val outstandingOpenSearchResponse = OutstandingOpensearchResponse(
-                overallStats = OverallStats(
-                    totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                    openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                    customersCount = data.sumOf { it.customersCount!! },
-                    dashboardCurrency = data.first().currency!!,
-                    openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                    openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
-                    onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
-                    onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
-                ),
-                outstandingServiceWise = mapData
-            )
-
-            OpenSearchClient().updateDocument(AresConstants.SALES_DASHBOARD_INDEX, searchKey, outstandingOpenSearchResponse)
-        }
-    }
-
-    private fun getTradeAndServiceWiseData(value: List<OutstandingDocument>): List<TradeAndServiceLevelOutstanding> {
-        val updatedList = mutableListOf<TradeAndServiceLevelOutstanding>()
-        value.map { item ->
-            if (item.serviceType == null || item.tradeType == null) {
-                val document = updatedList.filter { it.key == "others" }
-                if (document.isNotEmpty()) {
-                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
-                } else {
-                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
-                        key = "others",
-                        name = "others",
-                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
-                        currency = item.currency
-                    )
-                    updatedList.add(tradeAndServiceWiseDocument)
-                }
-            } else {
-                val document = updatedList.filter { it.key == "${item.serviceType}_${item.tradeType}" }
-                if (document.isNotEmpty()) {
-                    document.first().openInvoiceAmount = document.first().openInvoiceAmount.plus(item.openInvoiceAmount).setScale(4, RoundingMode.UP)
-                } else {
-                    val tradeAndServiceWiseDocument = TradeAndServiceLevelOutstanding(
-                        key = "${item.serviceType}_${item.tradeType}",
-                        name = "${item.serviceType} ${item.tradeType}",
-                        openInvoiceAmount = item.openInvoiceAmount.setScale(4, RoundingMode.UP),
-                        currency = item.currency
-                    )
-                    updatedList.add(tradeAndServiceWiseDocument)
-                }
-            }
-        }
-        return updatedList
-    }
-
     override suspend fun paymentDocumentStatusMigration() {
         val pdsRecords = paymentRepository.getPaymentDocumentStatusWiseIds()
         pdsRecords.forEach {

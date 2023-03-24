@@ -38,7 +38,6 @@ import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields

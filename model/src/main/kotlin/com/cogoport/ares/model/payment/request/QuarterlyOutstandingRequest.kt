@@ -17,5 +17,4 @@ data class QuarterlyOutstandingRequest(
     @QueryValue("entityCode") var entityCode: Int? = 301,
     @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType? = null,
     @QueryValue("year") val year: Int? = null
-
 )

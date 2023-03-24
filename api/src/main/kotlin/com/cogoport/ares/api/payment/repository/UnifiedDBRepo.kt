@@ -29,63 +29,67 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT 
-            pinv.id, 
-            pinv.status, 
-            pinv.payment_status
+            aau.document_no as id, 
+            sinv.status, 
+            sinv.payment_status
             FROM 
-            plutus.invoices pinv
-            INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
-            INNER JOIN loki.jobs lj on lj.id = pinv.job_id
+            ares.account_utilizations aau 
+            INNER JOIN plutus.invoices sinv on sinv.id = aau.document_no
+            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id
+            INNER JOIN loki.jobs lj on lj.id = sinv.job_id
             LEFT JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
             WHERE 
-            EXTRACT(YEAR FROM pinv.created_at) = :year
-            AND EXTRACT(MONTH FROM pinv.created_at) = :month
-            AND pinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (pa.entity_code_id = :cogoEntityId)
-            AND pinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
-            AND (pinv.migrated = false)
-            AND (pa.organization_type = 'SELLER')
+            EXTRACT(YEAR FROM aau.created_at) = :year
+            AND EXTRACT(MONTH FROM aau.created_at) = :month
+            AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
+            AND (aau.entity_code = :entityCode)
+            AND aau.acc_type in ('SINV', 'SCN')
+            AND (aau.migrated = false)
+            AND (pa.organization_type = 'BUYER')
             AND (:companyType is null OR los.id is null OR los.segment = :companyType )
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
         """
     )
-    fun getFunnelData(cogoEntityId: UUID?, companyType: String?, serviceType: String?, year: Int?, month: Int?): List<SalesInvoiceResponse>?
+    fun getFunnelData(entityCode: Int?, companyType: String?, serviceType: String?, year: Int?, month: Int?): List<SalesInvoiceResponse>?
 
     @NewSpan
     @Query(
         """
-            SELECT
-                i.id as id,
-                i.status as status,
-                i.payment_status as payment_status,
-                json_agg(
-                    json_build_object(
-                    'id',ie.id,
-                    'invoice_id' , ie.invoice_id, 
-                    'event_name', ie.event_name, 
-                    'occurred_at',ie.occurred_at
-                    )
-                )::text as events
-                FROM plutus.invoices i 
-                INNER JOIN plutus.invoice_events ie on i.id = ie.invoice_id 
-                INNER JOIN loki.jobs lj on lj.id = i.job_id
-                INNER JOIN plutus.addresses pa on pa.invoice_id = i.id
-                LEFT JOIN organizations o on o.registration_number = pa.registration_number
-                LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
-                WHERE 
-                EXTRACT(YEAR FROM i.created_at) = :year
-                AND EXTRACT(MONTH FROM i.created_at) = :month
-                AND i.invoice_type in ('INVOICE', 'CREDIT_NOTE')
-                AND i.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') and (migrated = false)
-                AND (pa.entity_code_id = :cogoEntityId)
-                AND (:companyType is null OR los.id is null OR los.segment = :companyType)
-                AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-                AND (pa.organization_type = 'SELLER')
-                GROUP BY i.id
+            SELECT 
+            aau.document_no as id, 
+            sinv.status, 
+            sinv.payment_status,
+            json_agg(
+                json_build_object(
+                'id',ie.id,
+                'invoice_id' , ie.invoice_id, 
+                'event_name', ie.event_name, 
+                'occurred_at',ie.occurred_at
+                )
+            )::text as events
+            FROM 
+            ares.account_utilizations aau 
+            INNER JOIN plutus.invoices sinv on sinv.id = aau.document_no
+            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id
+            INNER JOIN plutus.invoice_events ie on ie.invoice_id = sinv.id
+            INNER JOIN loki.jobs lj on lj.id = sinv.job_id
+            LEFT JOIN organizations o on o.registration_number = pa.registration_number
+            LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+            WHERE 
+            EXTRACT(YEAR FROM aau.created_at) = :year
+            AND EXTRACT(MONTH FROM aau.created_at) = :month
+            AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
+            AND (aau.entity_code = :entityCode)
+            AND aau.acc_type in ('SINV', 'SCN')
+            AND (aau.migrated = false)
+            AND (pa.organization_type = 'BUYER')
+            AND (:companyType is null OR los.id is null OR los.segment = :companyType )
+            AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
+            group by aau.document_no, sinv.status, sinv.payment_status
         """
     )
-    fun getInvoices(year: Int?, month: Int?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): List<SalesInvoiceTimelineResponse>
+    fun getInvoices(year: Int?, month: Int?, entityCode: Int?, companyType: String?, serviceType: String?): List<SalesInvoiceTimelineResponse>
     @NewSpan
     @Query(
         """
@@ -384,7 +388,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 WHEN (now()::date - due_date) between 91 AND 180 then '91-180'
                 WHEN (now()::date - due_date) between 181 AND 365 then '181-365'
                 WHEN (now()::date - due_date) > 365 then '>365' 
-                end, 'Unknown'
+                end
             ) as ageing_duration, 
             sum(sign_flag * (amount_loc- pay_loc)) as amount,
             led_currency as dashboard_currency
@@ -396,7 +400,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             due_date is not null 
             AND acc_mode = 'AR' 
             AND 
-            acc_type in ('SINV','SCN','SDN') 
+            acc_type in ('SINV','SDN') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
@@ -414,8 +418,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT 
         EXTRACT(MONTH FROM transaction_date) AS month,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'INTER') and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end),0) as outstandings,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as outstandings,
         coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
         0 as days,
         0 as value,
@@ -446,8 +450,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT to_char(date_trunc('quarter',aau.transaction_date),'Q')::int as duration,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-            sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_loc - pay_loc) else 0 end) + sum(case when aau.acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'INTER') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount,
             coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
             '' as dashboard_currency
             from ares.account_utilizations aau

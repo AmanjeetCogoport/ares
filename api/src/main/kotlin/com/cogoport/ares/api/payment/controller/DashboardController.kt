@@ -178,13 +178,12 @@ class DashboardController {
     @Auth
     @Get("/outstanding")
     suspend fun getOutstanding(
-        @QueryValue("date") date: String? = null,
         @QueryValue("entityCode") entityCode: Int? = 301,
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): OutstandingOpensearchResponse? {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
-        return dashboardService.getOutstanding(date, updatedEntityCode)
+        return dashboardService.getOutstanding(updatedEntityCode)
     }
 
     @Get("/kam-wise-outstanding")

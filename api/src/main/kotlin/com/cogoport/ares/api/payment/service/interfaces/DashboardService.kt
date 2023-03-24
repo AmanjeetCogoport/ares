@@ -52,7 +52,7 @@ interface DashboardService {
 
     suspend fun getDailySalesStatistics(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 
-    suspend fun getOutstanding(date: String?, entityCode: Int?): OutstandingOpensearchResponse?
+    suspend fun getOutstanding(entityCode: Int?): OutstandingOpensearchResponse?
 
     suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
 

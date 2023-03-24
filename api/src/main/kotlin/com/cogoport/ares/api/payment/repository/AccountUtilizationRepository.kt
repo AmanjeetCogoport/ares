@@ -2,11 +2,9 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
 import com.cogoport.ares.api.payment.entity.OrgSummary
-import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
