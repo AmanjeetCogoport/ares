@@ -541,7 +541,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             accMode = if (journalVoucher.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
             sageBPRNumber = "",
             description = "",
-            signFlag = getSignFlag(journalVoucher.accMode, journalVoucher.type.toString().uppercase()).toInt(),
+            signFlag = getSignFlag(journalVoucher.accMode!!, journalVoucher.type.toString().uppercase()).toInt(),
             amount = journalVoucher.amount!!,
             currency = journalVoucher.currency!!
         )
@@ -561,7 +561,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             "",
             "",
             "",
-            getSignFlag(journalVoucher.accMode, journalVoucher.type.toString().uppercase()).toInt() * -1,
+            getSignFlag(journalVoucher.accMode!!, journalVoucher.type.toString().uppercase()).toInt() * -1,
             amount = journalVoucher.amount!!,
             currency = journalVoucher.currency!!
         )
