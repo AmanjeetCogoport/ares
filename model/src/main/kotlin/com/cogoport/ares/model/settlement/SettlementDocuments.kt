@@ -13,6 +13,7 @@ data class SettlementDocuments(
     var documentValue: String,
     var destinationId: Long,
     var destinationType: AccountType?,
+    var sourceType: SettlementType?,
     var organizationId: UUID?,
     var orgSerialId: Long?,
     var flag: String?,

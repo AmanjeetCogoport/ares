@@ -35,6 +35,7 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -181,6 +182,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -2524,6 +2528,8 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         var failedSettlementIds: MutableList<Long>? = mutableListOf()
+        var listOfRecOrPayCode = listOf<SettlementType>(SettlementType.PAY, SettlementType.REC, SettlementType.CTDS, SettlementType.VTDS)
+
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
                 try {
@@ -2589,14 +2595,17 @@ open class SettlementServiceImpl : SettlementService {
                     val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(settlementDocuments.documentValue)
                     val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocNo(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType!!)
 
-                    var boolean: Boolean
-                    if (settlementDocuments.destinationType == AccountType.SINV) {
-                        boolean = isInvoiceDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", accountUtilization.documentValue)
-                    } else {
-                        boolean = isBillDataPresentOnSage(accountUtilization.documentValue, settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId)
-                    }
+                    var destinationPresentOnSage = isDataPresentOnSage(
+                        accountUtilization.documentValue, SettlementType.valueOf(settlementDocuments.destinationType.toString()),
+                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId
+                    )
 
-                    if (!boolean || sageDocument.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
+                    var sourcePresentOnSage = isDataPresentOnSage(
+                        settlementDocuments.documentValue, settlementDocuments.sourceType!!,
+                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId
+                    )
+
+                    if (!destinationPresentOnSage || !sourcePresentOnSage) {
                         throw AresException(AresError.ERR_1527, "")
                     }
 
@@ -2611,14 +2620,25 @@ open class SettlementServiceImpl : SettlementService {
                         )
                     )
 
-                    matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(
-                            sageDocument.sageNumValue!!,
-                            sageOrganizationResponse.sageOrganizationId!!,
-                            settlementDocuments.amount.toString(),
-                            settlementDocuments.flag
+                    if (settlementDocuments.sourceType in listOfRecOrPayCode)
+                        matchingSettlementOnSageRequest?.add(
+                            SageSettlementRequest(
+                                sageDocument.sageNumValue!!,
+                                sageOrganizationResponse.sageOrganizationId!!,
+                                settlementDocuments.amount.toString(),
+                                settlementDocuments.flag
+                            )
+                        ) else {
+                        matchingSettlementOnSageRequest?.add(
+                            SageSettlementRequest(
+                                settlementDocuments.documentValue,
+                                sageOrganizationResponse.sageOrganizationId!!,
+                                settlementDocuments.amount.toString(),
+                                settlementDocuments.flag
+
+                            )
                         )
-                    )
+                    }
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
                     val processedResponse = XML.toJSONObject(result.response)
@@ -2678,7 +2698,7 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private fun isInvoiceDataPresentOnSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
+    open fun isInvoiceDataPresentOnSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
         val query = "Select $key from $sageDatabase where $key='$invoiceNumber'"
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
@@ -2687,17 +2707,41 @@ open class SettlementServiceImpl : SettlementService {
         return records.size != 0
     }
 
-    private fun isBillDataPresentOnSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
+    open fun isBillDataPresentOnSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
         var query = """
             SELECT  * FROM $sageDatabase.PINVOICE P 
             	            INNER JOIN $sageDatabase.BPSUPPLIER BP ON (P.BPR_0 = BP.BPSNUM_0) 
             	            WHERE (P.BPRVCR_0 = '$billNumber'  
             	            OR P.BPRVCR_0 = '$billNumber&$organizationSerialId')
-            	            AND BPSNUM_0 ='$sageOrganizationId'
+            	            AND BP.BPSNUM_0 ='$sageOrganizationId'
         """.trimIndent()
         var resultFromQuery = Client.sqlQuery(query)
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
 
         return records.size != 0
+    }
+
+    private suspend fun isDataPresentOnSage(documentValue: String?, settlementType: SettlementType, organizationSerialId: Long?, sageOrganizationId: String?): Boolean {
+        var listOfRecOrPayCode = listOf<SettlementType>(SettlementType.PAY, SettlementType.REC, SettlementType.CTDS, SettlementType.VTDS)
+        var listOfCreditOrDebitNoteOrReimbursementInvoiceCode = listOf<SettlementType>(SettlementType.SCN, SettlementType.SDN, SettlementType.SREIMB)
+        var listOfCreditOrDebitNoteOrReimbursementBillCode = listOf<SettlementType>(SettlementType.PCN, SettlementType.PDN, SettlementType.PREIMB)
+        var listOfJournalVoucherCode = listOf<SettlementType>(
+            SettlementType.NOSTRO, SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH,
+            SettlementType.JVNOS, SettlementType.ICJV
+        )
+
+        if (settlementType in listOfRecOrPayCode) {
+            val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(documentValue!!)
+            if (sageDocument.paymentDocumentStatus == PaymentDocumentStatus.POSTED) return true
+        } else if (settlementType in listOfCreditOrDebitNoteOrReimbursementInvoiceCode) {
+            isInvoiceDataPresentOnSage("NUM_0", "$sageDatabase.SINVOICE", documentValue)
+        } else if (settlementType in listOfCreditOrDebitNoteOrReimbursementBillCode) {
+            isBillDataPresentOnSage(documentValue, organizationSerialId, sageOrganizationId)
+        } else if (settlementType in listOfJournalVoucherCode) {
+            val status = journalVoucherRepository.getStatusByDocumentNumber(documentValue!!)
+            if (status == JVStatus.POSTED) return true
+        }
+
+        return false
     }
 }

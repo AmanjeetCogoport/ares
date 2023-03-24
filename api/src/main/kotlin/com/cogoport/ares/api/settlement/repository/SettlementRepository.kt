@@ -300,6 +300,7 @@ ORDER BY
                 au.document_value,
                 s.destination_id,
                 s.destination_type,
+                s.source_type,
                 au.organization_id,
                 au.org_serial_id ,CASE WHEN (au.document_value LIKE 'REC%'
                     OR au.document_value LIKE 'PAY%') THEN
