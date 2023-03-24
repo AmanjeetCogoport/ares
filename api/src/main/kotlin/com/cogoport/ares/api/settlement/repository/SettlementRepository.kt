@@ -114,8 +114,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE au.amount_curr <> 0 
                 AND s.source_id = :sourceId
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
-                AND s.deleted_at is null
-                AND au.deleted_at is null
+                AND s.deleted_at is null  and s.is_void = false and
+                AND au.deleted_at is null  and au.is_void = false
             GROUP BY au.id, s.source_id, s.destination_id, s.destination_type, s.currency, s.led_currency
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         ),
@@ -128,7 +128,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
                 AND s.destination_type in (SELECT DISTINCT destination_type from INVOICES)
                 AND s.source_type IN ('NOSTRO','VTDS','CTDS')
-                AND s.deleted_at is null
+                AND s.deleted_at is null  and s.is_void = false
             GROUP BY s.destination_id, s.currency, s.source_id, s.source_type
         )
         SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
@@ -216,7 +216,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 And (p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in ('PINV','PREIMB')
                 AND s.source_type not in ('VTDS')
-                order by s.created_at desc
+                order by s.created_at desc and is_void = false
            LIMIT 1
         """
     )
@@ -239,7 +239,7 @@ WHERE
 	And(p.acc_mode = 'AR'
 		OR p.acc_mode IS NULL)
     AND s.destination_type in ('SINV','SREIMB')
-        AND s.source_type = 'REC'
+        AND s.source_type = 'REC' and is_void = false
 ORDER BY
 	s.created_at DESC
 	
@@ -264,7 +264,7 @@ WHERE
 	And(a.acc_mode = 'AR'
 		OR a.acc_mode IS NULL)
     AND s.destination_type in ('SINV','SREIMB')
-    AND s.source_type <> 'REC'
+    AND s.source_type <> 'REC' and is_void = false
 ORDER BY
 	s.created_at DESC
           
@@ -278,7 +278,7 @@ ORDER BY
               select source_id
               from 
               settlements WHERE 
-              destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB')
+              destination_id = :documentNo AND source_type not in ('CTDS') AND destination_type in ('SINV','SREIMB') and is_void = false
         """
     )
     suspend fun getSettlementDetails(documentNo: Long?): List<Long?>?
@@ -292,7 +292,7 @@ ORDER BY
                 settlements s where 
                 s.source_id = :documentNo
                 AND s.destination_type in ('PINV','PREIMB')
-                AND s.source_type not in ('VTDS')
+                AND s.source_type not in ('VTDS') and is_void = false
                 order by s.created_at desc
            LIMIT 1
         """
@@ -316,7 +316,7 @@ ORDER BY
                 AND s.destination_type in('PINV', 'PREIMB')
                 AND s.destination_type NOT in('VTDS')
                 and s.source_type NOT in ('VTDS')
-                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
+                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')  and s.is_void = false  and au.is_void = false
             ORDER BY
                 s.created_at DESC
 
@@ -338,7 +338,7 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements set is_void = :isVoid WHERE id = :id
+            UPDATE settlements set is_void = :isVoid WHERE id = :id and is_void = false
         """
     )
     suspend fun updateVoidStatus(id: Long, isVoid: Boolean)
@@ -346,7 +346,7 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            UPDATE settlements set settlement_num = :settlementNum WHERE id = :id
+            UPDATE settlements set settlement_num = :settlementNum WHERE id = :id  and is_void = false
         """
     )
     suspend fun updateSettlementNumber(id: Long, settlementNum: String)
@@ -375,7 +375,7 @@ ORDER BY
             settlement_num
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
-            and deleted_at IS NULL
+            and deleted_at IS NULL  and is_void = false
             order by created_at asc
         """
     )

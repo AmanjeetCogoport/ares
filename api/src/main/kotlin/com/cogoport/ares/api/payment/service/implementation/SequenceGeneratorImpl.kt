@@ -4,7 +4,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 @Singleton
 class SequenceGeneratorImpl() {
@@ -17,7 +17,14 @@ class SequenceGeneratorImpl() {
     }
     suspend fun getSettlementNumber(): String {
         val prefix = SequenceSuffix.SETTLEMENT.prefix
+        val financialYear = getFormattedYear()
         val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
-        return "${prefix}${ LocalDate.now().year}00000000$number"
+        return "${prefix}${financialYear}00000000$number"
+    }
+
+    private fun getFormattedYear(): String {
+        val currYear = LocalDateTime.now().toString().split("-")[0].substring(2, 4)
+        val lastYear = LocalDateTime.now().minusYears(1).toString().split("-")[0].substring(2, 4)
+        return lastYear.plus(currYear)
     }
 }

@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
-import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import io.micronaut.data.annotation.Query
@@ -56,7 +55,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             WHERE document_no = :documentNo and acc_mode = 'AP' AND deleted_at is null
         """
     )
-    suspend fun updatePayableAmount(documentNo: Long, tdsAmount: BigDecimal, tdsAmountLoc: BigDecimal)
+    suspend fun updateTdsAmount(documentNo: Long, tdsAmount: BigDecimal, tdsAmountLoc: BigDecimal)
 
     @NewSpan
     @Query(
@@ -132,14 +131,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP'
-        """
-    )
-    suspend fun getDataByPaymentNumForTaggedBill(paymentNum: Long?): PaymentUtilizationResponse
-
-    @NewSpan
-    @Query(
-        """
             SELECT
                 count(c.organization_id)
             FROM (
@@ -154,7 +145,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND document_status in('FINAL')
                     AND organization_id IS NOT NULL
                     AND acc_type = 'SINV'
-                    AND deleted_at IS NULL
+                    AND deleted_at IS NULL AND is_void IS false
                 GROUP BY
                     organization_id) AS c
         """

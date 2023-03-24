@@ -190,7 +190,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
-            accountUtilizationRepo.updatePayableAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
         }
     }
 }

@@ -920,6 +920,10 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty())
             return ResponseList()
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document!!.mappingId != null }
+            .map { document -> document!!.mappingId.toString() }
+            .distinct()
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         val total =
             accountUtilizationRepository.getTDSDocumentCount(
@@ -931,9 +935,10 @@ open class SettlementServiceImpl : SettlementService {
                 "%${request.query}%"
             )
         // Fetch Organization Tds Profile from mappingIds
-
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
         for (doc in documentModel) {
-
+            val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
+            val rate = getTdsRate(tdsProfile)
             // Fetch Rate From Profile
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)
             doc.status = settlementServiceHelper.getDocumentStatus(
@@ -941,7 +946,13 @@ open class SettlementServiceImpl : SettlementService {
                 balanceAmount = doc.balanceAmount,
                 docType = SettlementType.valueOf(doc.accountType)
             )
-
+            if (doc.accMode != AccMode.AP) {
+                doc.tds = calculateTds(
+                    rate = rate,
+                    settledTds = doc.settledTds!!,
+                    taxableAmount = doc.taxableAmount
+                )
+            }
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
         }
@@ -2387,8 +2398,22 @@ open class SettlementServiceImpl : SettlementService {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
             it.id = Hashids.encode(it.id.toLong())
         }
+        val tradePartyMappingIds = documentEntity
+            .filter { document -> document!!.mappingId != null }
+            .map { document -> document!!.mappingId.toString() }
+            .distinct()
+        val tdsProfiles = listOrgTdsProfile(tradePartyMappingIds)
 
         for (doc in documentModel) {
+            val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
+            val rate = getTdsRate(tdsProfile)
+            if (doc.accMode != AccMode.AP) {
+                doc.tds = calculateTds(
+                    rate = rate,
+                    settledTds = doc.settledTds!!,
+                    taxableAmount = doc.taxableAmount
+                )
+            }
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
             doc.documentType = settlementServiceHelper.getDocumentType(AccountType.valueOf(doc.documentType), doc.signFlag, doc.accMode)

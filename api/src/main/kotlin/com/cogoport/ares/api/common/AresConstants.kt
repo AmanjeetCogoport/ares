@@ -69,7 +69,7 @@ object AresConstants {
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"
     const val DELETE = "DELETE"
-    const val DRAFT = "DRAFT"
+    const val VOID = "VOID"
 
     const val ALL = "All"
 
