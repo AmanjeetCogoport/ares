@@ -452,17 +452,6 @@ class PaymentMigrationImpl : PaymentMigration {
      */
     private suspend fun emitDashboardAndOutstandingEvent(dueDate: Date, transactionDate: Date, zoneCode: String?, accMode: AccMode, organizationId: UUID, organizationName: String) {
         val date = dueDate ?: transactionDate
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
-                    accMode = accMode
-                )
-            )
-        )
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(

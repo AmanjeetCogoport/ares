@@ -5,13 +5,11 @@ import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
-import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
-import com.cogoport.ares.api.payment.mapper.DailyOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
@@ -20,41 +18,29 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.payment.AgeingBucketZone
-import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DocumentType
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.KamPaymentRequest
-import com.cogoport.ares.model.payment.MonthlyOutstanding
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
-import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.request.CollectionRequest
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
-import com.cogoport.ares.model.payment.request.MonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
-import com.cogoport.ares.model.payment.request.OverallStatsRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
-import com.cogoport.ares.model.payment.request.ReceivableRequest
 import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
-import com.cogoport.ares.model.payment.response.CollectionResponse
-import com.cogoport.ares.model.payment.response.CollectionTrendResponse
 import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
-import com.cogoport.ares.model.payment.response.OverallStatsResponse
-import com.cogoport.ares.model.payment.response.OverallStatsResponseData
 import com.cogoport.ares.model.payment.response.PayableOutstandingResponse
 import com.cogoport.ares.model.payment.response.QsoResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
@@ -88,36 +74,15 @@ class DashboardServiceImpl : DashboardService {
     lateinit var openSearchService: OpenSearchService
 
     @Inject
-    lateinit var exchangeRateHelper: ExchangeRateHelper
-
-    @Inject
     lateinit var businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
-    @Inject
-    lateinit var dsoConverter: DailyOutstandingMapper
-
-    private fun validateInput(zone: String?, role: String?) {
-        if (AresConstants.ROLE_ZONE_HEAD == role && zone.isNullOrBlank()) {
-            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
-        }
-    }
-
     private fun validatingRoleAndEntityCode(role: String?) {
         if (AresConstants.ROLE_ZONE_HEAD == role) {
             throw AresException(AresError.ERR_1003, "")
         }
-    }
-
-    private fun validateInput(zone: String?, role: String?, quarter: Int, year: Int) {
-        if (quarter > 4 || quarter < 1) {
-            throw AresException(AresError.ERR_1004, "")
-        } else if (year.toString().length != 4) {
-            throw AresException(AresError.ERR_1006, "")
-        }
-        validateInput(zone, role)
     }
 
     private suspend fun getDefaultersOrgIds(): List<UUID>? {
@@ -132,65 +97,7 @@ class DashboardServiceImpl : DashboardService {
         Client.createIndex(index)
     }
 
-    override suspend fun getOverallStats(request: OverallStatsRequest): OverallStatsResponseData {
-        val zone = request.zone
-        val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
-        val quarter: Int = AresConstants.CURR_QUARTER
-        val year: Int = AresConstants.CURR_YEAR
-
-        validateInput(zone, request.role)
-
-        val searchKey = searchKeyOverallStats(request)
-
-        val defaultersOrgIds = getDefaultersOrgIds()
-
-        var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = OverallStatsResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-
-        if (data?.list.isNullOrEmpty()) {
-            openSearchService.generateOverallStats(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
-
-            data = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = OverallStatsResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
-        }
-
-        val uniqueCurrencyList = data?.list?.map { it.dashboardCurrency }?.distinct()!!
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
-
-        val formattedData = OverallStatsResponseData(dashboardCurrency = request.dashboardCurrency!!)
-
-        data.list?.map {
-            val avgExchangeRate = exchangeRate[it.dashboardCurrency]
-            formattedData.totalOutstandingAmount = formattedData.totalOutstandingAmount.plus(it.totalOutstandingAmount.times(avgExchangeRate!!)).setScale(4, RoundingMode.UP)
-            formattedData.openInvoicesAmount = formattedData.openInvoicesAmount.plus(it.openInvoicesAmount.times(avgExchangeRate)).setScale(4, RoundingMode.UP)
-            formattedData.openOnAccountPaymentAmount = formattedData.openOnAccountPaymentAmount.plus(it.openOnAccountPaymentAmount.times(avgExchangeRate)).setScale(4, RoundingMode.UP)
-            formattedData.dashboardCurrency = request.dashboardCurrency!!
-            formattedData.openInvoicesCount = formattedData.openInvoicesCount.plus(it.openInvoicesCount)
-        }
-        formattedData.organizationCount = accountUtilizationRepository.getOrganizationCountForOverallStats(zone, serviceType, invoiceCurrency, defaultersOrgIds)
-        return formattedData
-    }
-
-    private fun searchKeyOverallStats(request: OverallStatsRequest): String {
-        val keyMap = generatingOpenSearchKey(request.zone, request.serviceType, request.invoiceCurrency)
-        return AresConstants.OVERALL_STATS_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
-    }
-
-    private fun generatingOpenSearchKey(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?): Map<String, String?> {
-        val zoneKey = if (zone.isNullOrBlank()) "ALL" else zone.uppercase()
-        val serviceTypeKey = if (serviceType?.name.equals(null)) "ALL" else serviceType.toString()
-        val invoiceCurrencyKey = if (invoiceCurrency.isNullOrBlank()) "ALL" else invoiceCurrency.uppercase()
-        return mapOf("zoneKey" to zoneKey, "serviceTypeKey" to serviceTypeKey, "invoiceCurrencyKey" to invoiceCurrencyKey)
-    }
-
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>? {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
@@ -217,140 +124,6 @@ class DashboardServiceImpl : DashboardService {
         }
 
         return data
-    }
-
-    override suspend fun getCollectionTrend(request: CollectionRequest): CollectionResponse {
-        val zone = request.zone
-        val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
-        val quarter = request.quarterYear.split("_")[0][1].toString().toInt()
-        val year = request.quarterYear.split("_")[1].toInt()
-
-        val defaultersOrgIds = getDefaultersOrgIds()
-        validateInput(zone, request.role, quarter, year)
-        val searchKey = searchKeyCollectionTrend(request)
-        var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = CollectionResponse::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-        if (data == null) {
-            openSearchService.generateCollectionTrend(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
-
-            data = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = CollectionResponse::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
-        }
-
-        val requestExchangeRate: List<String> = data?.trend?.map { it.dashboardCurrency }?.distinct()!!
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(requestExchangeRate, request.dashboardCurrency)
-        val avgExchangeRate = exchangeRate[data.dashboardCurrency]
-
-        data.totalReceivableAmount = data.totalReceivableAmount?.times(avgExchangeRate!!)
-        data.totalCollectedAmount = data.totalCollectedAmount?.times(avgExchangeRate!!)
-        data.dashboardCurrency = request.dashboardCurrency
-
-        data.trend?.forEach {
-            val avgTrendExchangeRate = exchangeRate[it.dashboardCurrency]
-            it.collectableAmount = it.collectableAmount.times(avgTrendExchangeRate!!)
-            it.receivableAmount = it.receivableAmount.times(avgTrendExchangeRate)
-            it.dashboardCurrency = request.dashboardCurrency
-        }
-
-        val formattedData = getCollectionTrendData(data)
-
-        return CollectionResponse(
-            id = searchKey,
-            totalReceivableAmount = data.totalReceivableAmount?.setScale(4, RoundingMode.UP),
-            totalCollectedAmount = data.totalCollectedAmount?.setScale(4, RoundingMode.UP),
-            trend = formattedData,
-            dashboardCurrency = request.dashboardCurrency
-        )
-    }
-
-    private fun searchKeyCollectionTrend(request: CollectionRequest): String {
-        val keyMap = generatingOpenSearchKey(request.zone, request.serviceType, request.invoiceCurrency)
-        return AresConstants.COLLECTIONS_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[1] + AresConstants.KEY_DELIMITER + request.quarterYear.split("_")[0]
-    }
-
-    override suspend fun getMonthlyOutstanding(request: MonthlyOutstandingRequest): MonthlyOutstanding {
-        val zone = request.zone
-        val serviceType = request.serviceType
-        val invoiceCurrency = request.invoiceCurrency
-        val quarter: Int = AresConstants.CURR_QUARTER
-        val year: Int = AresConstants.CURR_YEAR
-
-        validateInput(request.zone, request.role)
-
-        val keyMap = generatingOpenSearchKey(zone, serviceType, invoiceCurrency)
-
-        val searchKey = AresConstants.MONTHLY_TREND_PREFIX + keyMap["zoneKey"] + AresConstants.KEY_DELIMITER + keyMap["serviceTypeKey"] + AresConstants.KEY_DELIMITER + keyMap["invoiceCurrencyKey"]
-
-        val defaultersOrgIds = getDefaultersOrgIds()
-        var data = OpenSearchClient().search(
-            searchKey = searchKey,
-            classType = MonthlyOutstanding::class.java,
-            index = AresConstants.SALES_DASHBOARD_INDEX
-        )
-
-        if (data == null) {
-            openSearchService.generateMonthlyOutstanding(zone, quarter, year, serviceType, invoiceCurrency, defaultersOrgIds)
-
-            data = OpenSearchClient().search(
-                searchKey = searchKey,
-                classType = MonthlyOutstanding::class.java,
-                index = AresConstants.SALES_DASHBOARD_INDEX
-            )
-        }
-
-        val uniqueCurrencyList: List<String> = data?.list?.map { it.dashboardCurrency }?.distinct()!!
-
-        var exchangeRate = HashMap<String, BigDecimal>()
-        if (uniqueCurrencyList.isNotEmpty()) {
-            exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency!!)
-        }
-
-        data.list?.forEach { outstandingRes ->
-            if ((outstandingRes.dashboardCurrency != request.dashboardCurrency)) {
-                val avgExchangeRate = exchangeRate[outstandingRes.dashboardCurrency]
-                outstandingRes.amount = outstandingRes.amount.times(avgExchangeRate!!)
-                outstandingRes.dashboardCurrency = request.dashboardCurrency!!
-            }
-        }
-
-        val newData = getMonthlyOutStandingData(data)
-
-        return MonthlyOutstanding(
-            list = newData,
-            id = searchKey
-        )
-    }
-
-    private fun getMonthlyOutStandingData(data: MonthlyOutstanding?): List<OutstandingResponse>? {
-        val listOfOutStanding: List<OutstandingResponse>? = data?.list?.groupBy { it.duration }?.values?.map { it ->
-            return@map OutstandingResponse(
-                amount = it.sumOf { it.amount }.setScale(4, RoundingMode.UP),
-                duration = it.first().duration,
-                dashboardCurrency = it.first().dashboardCurrency,
-            )
-        }
-
-        return listOfOutStanding
-    }
-
-    private fun getCollectionTrendData(data: CollectionResponse?): List<CollectionTrendResponse>? {
-        val listOfCollectionTrend: List<CollectionTrendResponse>? = data?.trend?.groupBy { it.duration }?.values?.map { it ->
-            return@map CollectionTrendResponse(
-                receivableAmount = it.sumOf { it.receivableAmount }.setScale(4, RoundingMode.UP),
-                collectableAmount = it.sumOf { it.collectableAmount }.setScale(4, RoundingMode.UP),
-                duration = it.first().duration,
-                dashboardCurrency = it.first().dashboardCurrency,
-            )
-        }
-
-        return listOfCollectionTrend
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
@@ -476,77 +249,6 @@ class DashboardServiceImpl : DashboardService {
             4 -> { listOf("10", "11", "12") }
             else -> { throw AresException(AresError.ERR_1004, "") }
         }
-    }
-
-    private fun generateKeyByMonth(monthList: List<String>, year: Int, index: String, serviceType: ServiceType?, entityCode: Int?, companyType: CompanyType?): MutableList<String> {
-        val serviceTypeKey = serviceType?.name ?: "ALL"
-        val companyTypeKey = companyType?.name ?: "ALL"
-
-        val keyList = mutableListOf<String>()
-        for (item in monthList) {
-            keyList.add(index + serviceTypeKey + AresConstants.KEY_DELIMITER + entityCode + AresConstants.KEY_DELIMITER + companyTypeKey + AresConstants.KEY_DELIMITER + item + AresConstants.KEY_DELIMITER + year)
-        }
-        return keyList
-    }
-
-    override suspend fun getReceivableByAge(request: ReceivableRequest): HashMap<String, ArrayList<AgeingBucketZone>> {
-        val serviceType: ServiceType? = request.serviceType
-        val invoiceCurrency: String? = request.invoiceCurrency
-        val defaultersOrgIds = getDefaultersOrgIds()
-        val payments = accountUtilizationRepository.getReceivableByAge(request.zone, serviceType, invoiceCurrency, defaultersOrgIds)
-        val data = HashMap<String, ArrayList<AgeingBucketZone>>()
-        val zoneList = listOf<String>("NORTH", "EAST", "WEST", "SOUTH")
-        val ageingDurationList = listOf<String>("1-30", "31-60", "61-90", ">90", "91-180", "181-365", "365+", "Not Due")
-
-        if (payments.isEmpty()) {
-            zoneList.forEach {
-                val listData = ageingDurationList.map { duration ->
-                    AgeingBucketZone(
-                        ageingDuration = duration,
-                        amount = 0.toBigDecimal()
-                    )
-                }
-                data[it] = listData as ArrayList<AgeingBucketZone>
-            }
-            return data
-        }
-        val uniqueCurrencyList: List<String> = payments.map { it.dashboardCurrency!! }.distinct()
-
-        val exchangeRate = exchangeRateHelper.getExchangeRateForPeriod(uniqueCurrencyList, request.dashboardCurrency)
-
-        payments.forEach { payment ->
-            val zone = payment.zone
-            val arrayListAgeingBucketZone = ArrayList<AgeingBucketZone>()
-
-            if (payment.dashboardCurrency != request.dashboardCurrency) {
-                val avgExchangeRate = exchangeRate[payment.dashboardCurrency]
-                payment.amount = payment.amount.times(avgExchangeRate!!)
-                payment.dashboardCurrency = request.dashboardCurrency
-            }
-
-            val ageingBucketData = AgeingBucketZone(
-                ageingDuration = payment.ageingDuration,
-                amount = payment.amount.setScale(4, RoundingMode.UP),
-                dashboardCurrency = payment.dashboardCurrency
-            )
-
-            if (data.keys.contains(zone)) {
-                val zoneWiseData = data[zone]
-
-                val index = zoneWiseData?.indexOfFirst { it.ageingDuration == payment.ageingDuration }
-
-                if (index == -1) {
-                    zoneWiseData.add(ageingBucketData)
-                } else {
-                    zoneWiseData?.get(index!!)?.amount = zoneWiseData?.get(index!!)?.amount?.plus(payment.amount)?.setScale(4, RoundingMode.UP)
-                }
-            } else {
-                arrayListAgeingBucketZone.add(ageingBucketData)
-                data[payment.zone] = arrayListAgeingBucketZone
-            }
-        }
-
-        return data
     }
 
     override suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse> {

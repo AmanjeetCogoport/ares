@@ -370,17 +370,6 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     private suspend fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
-                )
-            )
-        )
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(

@@ -6,18 +6,8 @@ import com.cogoport.ares.model.payment.ServiceType
 import java.util.UUID
 
 interface OpenSearchService {
-
-    suspend fun pushDashboardData(request: OpenSearchRequest)
-
     suspend fun pushOutstandingData(request: OpenSearchRequest)
     suspend fun pushOutstandingListData(request: OpenSearchListRequest)
-    suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?)
-    suspend fun generateOverallStats(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?)
-
-    suspend fun generateMonthlyOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?)
-
-    suspend fun generateDailyPayableOutstanding(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, date: String, dashboardCurrency: String)
-
     suspend fun paymentDocumentStatusMigration()
 
     suspend fun generateOutstandingData(

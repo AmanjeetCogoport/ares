@@ -1988,29 +1988,9 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun emitDashboardAndOutstandingEvent(
         accUtilizationRequest: AccountUtilization
     ) {
-        emitDashboardData(accUtilizationRequest)
         if (accUtilizationRequest.accMode == AccMode.AR) {
             emitOutstandingData(accUtilizationRequest)
         }
-    }
-
-    private suspend fun emitDashboardData(accUtilizationRequest: AccountUtilization) {
-        val date: Date = accUtilizationRequest.transactionDate!!
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-                        .get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault())
-                        .toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode,
-                    serviceType = if (accUtilizationRequest.serviceType.isNullOrBlank()) null else ServiceType.valueOf(accUtilizationRequest.serviceType.uppercase()),
-                    invoiceCurrency = accUtilizationRequest.currency
-                )
-            )
-        )
     }
 
     private suspend fun emitOutstandingData(accUtilizationRequest: AccountUtilization) {
