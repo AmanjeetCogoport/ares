@@ -77,7 +77,6 @@ import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentType
-import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.UpdateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
 import com.cogoport.kuber.model.bills.BillDocResponse
@@ -1057,8 +1056,7 @@ open class SettlementServiceImpl : SettlementService {
                     id = request.orgId,
                     businessName = request.orgName,
                     tradePartyType = null,
-                    tradePartyName = null,
-                    category_types = null
+                    tradePartyName = null
                 ),
                 settlementRequest = com.cogoport.hades.model.incident.Settlement(
                     entityCode = request.entityCode!!,
@@ -1076,8 +1074,6 @@ open class SettlementServiceImpl : SettlementService {
                 type = IncidentType.SETTLEMENT_APPROVAL,
                 description = "Settlement Approval For Cross Currency Settle",
                 data = incidentData,
-                source = Source.SETTLEMENT,
-                entityId = null,
                 createdBy = request.createdBy!!
             )
         )
@@ -1879,7 +1875,6 @@ open class SettlementServiceImpl : SettlementService {
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
                     status = JVStatus.UTILIZED,
-                    accType = accountUtilization.accType,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType
                 )
