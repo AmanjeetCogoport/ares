@@ -44,9 +44,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
-        for (jvRecord in jvRecords) {
-            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
-        }
+//        for (jvRecord in jvRecords) {
+//            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
+//        }
         return jvRecords.size
     }
 
@@ -154,6 +154,28 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return billDetails.size
+    }
+
+    override suspend fun migrateJournalVoucherRecordNew(
+        startDate: String?,
+        endDate: String?,
+        jvNums: List<String>?
+    ): Int {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString)
+        jvParentRecords.forEach {
+            aresMessagePublisher.emitJournalVoucherMigration(it)
+        }
+        return jvParentRecords.size
     }
 
     private fun getPayLocRecord(paymentRecord: PaymentRecord): PayLocUpdateRequest {

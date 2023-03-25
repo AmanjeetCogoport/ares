@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
 import com.cogoport.ares.api.migration.model.InvoiceDetails
+import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -17,5 +18,5 @@ interface SageService {
 
     suspend fun getBillPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails>
 
-    suspend fun getAllJVLineItems(jvNum: String): List<JournalVoucherRecord>
+    suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails>
 }
