@@ -5,6 +5,8 @@ import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -15,9 +17,8 @@ import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AgeingBucket
+import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.CustomerOutstandingList
-import com.cogoport.ares.model.payment.CustomersOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -31,7 +32,6 @@ import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
-import com.cogoport.ares.model.payment.response.InvoicesOutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
@@ -437,54 +437,249 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun createCustomerDetails(request: CustomerOutstandingDocumentResponse) {
-        val searchResponse = Client.search({ s ->
-            s.index(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX)
-                .query { q ->
-                    q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
+        AresConstants.COGO_ENTITIES.forEach { entity ->
+            val index = "customer_outstanding_$entity"
+            val searchResponse = Client.search({ s ->
+                s.index(index)
+                    .query { q ->
+                        q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(request.organizationId)) }
+                    }
+            }, CustomerOutstandingDocumentResponse::class.java)
+
+            if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+                updateCustomerDetails(request.organizationId!!, flag = true, searchResponse?.hits()?.hits()?.map { it.source() }?.get(0))
+            } else {
+                val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket(entity, null, request.organizationId)
+                if (queryResponse.isNullOrEmpty()) {
+                    return@forEach
                 }
-        }, CustomerOutstandingDocumentResponse::class.java)
+                val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
+                val customerOutstanding: CustomerOutstandingDocumentResponse?
 
-        if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-            updateCustomerDetails(request.organizationId!!, flag = true, request)
-        } else {
+                val orgOutstandingData = accountUtilizationRepo.generateCustomerOutstanding(request.organizationId!!, entity)
+                val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
+                val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
+                val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
 
-            val customerOutstandingDocument = outstandingAgeingConverter.convertCustomerDetailsRequestToDocument(request)
-            customerOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
-            customerOutstandingDocument.onAccountPayment = listOf<DueAmount>()
-            customerOutstandingDocument.totalOutstanding = listOf<DueAmount>()
-            customerOutstandingDocument.openInvoice = listOf<DueAmount>()
-            customerOutstandingDocument.onAccountPaymentInvoiceCount = 0
-            customerOutstandingDocument.openInvoiceCount = 0
-            customerOutstandingDocument.totalOutstandingInvoiceCount = 0
-            customerOutstandingDocument.totalOutstandingInvoiceLedgerAmount = BigDecimal.ZERO
-            customerOutstandingDocument.onAccountPaymentInvoiceLedgerAmount = BigDecimal.ZERO
-            customerOutstandingDocument.openInvoiceLedgerAmount = BigDecimal.ZERO
-            customerOutstandingDocument.totalCreditNoteAmount = BigDecimal.ZERO
-            customerOutstandingDocument.totalDebitNoteAmount = BigDecimal.ZERO
-            customerOutstandingDocument.creditNoteCount = 0
-            customerOutstandingDocument.debitNoteCount = 0
-            customerOutstandingDocument.notDueAmount = BigDecimal.ZERO
-            customerOutstandingDocument.notDueCount = 0
-            customerOutstandingDocument.todayAmount = BigDecimal.ZERO
-            customerOutstandingDocument.todayCount = 0
-            customerOutstandingDocument.thirtyAmount = BigDecimal.ZERO
-            customerOutstandingDocument.thirtyCount = 0
-            customerOutstandingDocument.sixtyAmount = BigDecimal.ZERO
-            customerOutstandingDocument.sixtyCount = 0
-            customerOutstandingDocument.ninetyAmount = BigDecimal.ZERO
-            customerOutstandingDocument.ninetyCount = 0
-            customerOutstandingDocument.oneEightyAmount = BigDecimal.ZERO
-            customerOutstandingDocument.oneEightyCount = 0
-            customerOutstandingDocument.threeSixtyFiveAmount = BigDecimal.ZERO
-            customerOutstandingDocument.threeSixtyFiveCount = 0
-            customerOutstandingDocument.threeSixtyFivePlusAmount = BigDecimal.ZERO
-            customerOutstandingDocument.threeSixtyFivePlusCount = 0
-            Client.addDocument(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX, request.organizationId!!, customerOutstandingDocument, true)
-            AresConstants.COGO_ENTITIES.forEach {
-                val index = "customer_outstanding_$it"
-                Client.addDocument(index, request.organizationId!!, customerOutstandingDocument, true)
+                customerOutstanding = CustomerOutstandingDocumentResponse(
+                    lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    organizationId = request.organizationId,
+                    tradePartyId = request.tradePartyId,
+                    businessName = request.businessName,
+                    companyType = request.companyType,
+                    ageingBucket = ageingBucket,
+                    countryCode = request.countryCode,
+                    countryId = request.countryId,
+                    creditController = request.creditController,
+                    creditDays = request.creditDays,
+                    kam = request.kam,
+                    organizationSerialId = request.organizationSerialId,
+                    registrationNumber = request.registrationNumber,
+                    sageId = request.sageId,
+                    salesAgent = request.salesAgent,
+                    tradePartyName = request.tradePartyName,
+                    tradePartySerialId = request.tradePartySerialId,
+                    tradePartyType = request.tradePartyType,
+                    onAccountPayment = onAccountPayment,
+                    openInvoice = openInvoice,
+                    totalOutstanding = totalOutstanding,
+                    openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
+                    entityCode = entity
+                )
+                Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
             }
         }
+    }
+
+    private fun getOnAccountPaymentDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+        val onAccountBucket: AgeingBucketOutstanding?
+        var onAccountLedAmount = 0.toBigDecimal()
+        var onAccountLedCount = 0
+        val onAccountInvoiceBucket = mutableListOf<DueAmount>()
+        orgOutstandingData.forEach {
+            onAccountLedAmount += it.paymentsLedAmount * 1.0.toBigDecimal()
+            onAccountLedCount += it.paymentsCount
+            if (it.paymentsAmount > 0.toBigDecimal()) {
+                onAccountInvoiceBucket.add(DueAmount(it.currency, it.paymentsAmount, it.paymentsCount))
+            }
+        }
+        onAccountBucket = AgeingBucketOutstanding(onAccountLedAmount, onAccountLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, onAccountInvoiceBucket)
+
+        return onAccountBucket
+    }
+
+    private fun getOpenInvoiceDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+        val openInvoiceAgeingBucket: AgeingBucketOutstanding?
+        var openInvoiceLedAmount = 0.toBigDecimal()
+        var openInvoiceLedCount = 0
+        val openInvoiceBucket = mutableListOf<DueAmount>()
+        orgOutstandingData.forEach {
+            openInvoiceLedAmount += it.openInvoicesLedAmount * 1.0.toBigDecimal()
+            openInvoiceLedCount += it.openInvoicesCount
+            if (it.openInvoicesAmount > 0.toBigDecimal()) {
+                openInvoiceBucket.add(DueAmount(it.currency, it.openInvoicesAmount, it.openInvoicesCount))
+            }
+        }
+        openInvoiceAgeingBucket = AgeingBucketOutstanding(openInvoiceLedAmount, openInvoiceLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, openInvoiceBucket)
+
+        return openInvoiceAgeingBucket
+    }
+
+    private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+        val totalOutstandingBucket: AgeingBucketOutstanding?
+        var totalOutstandingLedAmount = 0.toBigDecimal()
+        var totalOutstandingLedCount = 0
+        val totalOutstandingInvoiceBucket = mutableListOf<DueAmount>()
+        orgOutstandingData.forEach {
+            totalOutstandingLedAmount += it.outstandingLedAmount * 1.0.toBigDecimal()
+            totalOutstandingLedCount += 0
+            if (it.outstandingAmount > 0.toBigDecimal()) {
+                totalOutstandingInvoiceBucket.add(DueAmount(it.currency, it.outstandingAmount, 0))
+            }
+        }
+        totalOutstandingBucket = AgeingBucketOutstanding(totalOutstandingLedAmount, totalOutstandingLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, totalOutstandingInvoiceBucket)
+
+        return totalOutstandingBucket
+    }
+
+    private fun getAgeingBucketForCustomerOutstanding(customerOutstanding: List<CustomerOutstandingAgeing>, entity: Int): HashMap<String, AgeingBucketOutstanding> {
+        val ageingBucketsInInvoiceCurrency = HashMap<String, AgeingBucketOutstanding>()
+        var invoiceCount = 0
+        customerOutstanding.forEach {
+            invoiceCount += it.notDueCount + it.thirtyCount + it.todayCount + it.sixtyCount + it.ninetyCount + it.oneEightyCount + it.threeSixtyFiveCount + it.threeSixtyFivePlusCount
+            val notDue = DueAmount(it.currency, it.notDueAmountInvoiceCurrency, it.notDueCount)
+            val today = DueAmount(it.currency, it.todayAmountInvoiceCurrency, it.todayCount)
+            val thirty = DueAmount(it.currency, it.thirtyAmountInvoiceCurrency, it.thirtyCount)
+            val sixty = DueAmount(it.currency, it.sixtyAmountInvoiceCurrency, it.sixtyCount)
+            val ninety = DueAmount(it.currency, it.ninetyAmountInvoiceCurrency, it.ninetyCount)
+            val oneEighty = DueAmount(it.currency, it.oneEightyAmountInvoiceCurrency, it.oneEightyCount)
+            val threeSixtyFive = DueAmount(it.currency, it.threeSixtyFiveAmountInvoiceCurrency, it.threeSixtyFiveCount)
+            val threeSixtyFivePlus = DueAmount(it.currency, it.threeSixtyFivePlusAmountInvoiceCurrency, it.threeSixtyFivePlusCount)
+            val creditNote = DueAmount(it.currency, it.totalCreditAmountInvoiceCurrency, it.creditNoteCount)
+            val debitNote = DueAmount(it.currency, it.totalDebitAmountInvoiceCurrency, it.debitNoteCount)
+
+            if (ageingBucketsInInvoiceCurrency.contains("notDue")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["notDue"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(notDue.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.notDueAmount)
+                if (notDue.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(notDue)
+                }
+                ageingBucketsInInvoiceCurrency["notDue"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["notDue"] = AgeingBucketOutstanding(it.notDueAmount, it.notDueCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (notDue.amount > 0.toBigDecimal()) mutableListOf(notDue) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("today")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["today"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(today.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.todayAmount)
+                if (today.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(today)
+                }
+                ageingBucketsInInvoiceCurrency["today"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["today"] = AgeingBucketOutstanding(it.todayAmount, it.todayCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (today.amount > 0.toBigDecimal()) mutableListOf(today) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("thirty")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["thirty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(thirty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.thirtyAmount)
+                if (thirty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(thirty)
+                }
+                ageingBucketsInInvoiceCurrency["thirty"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["thirty"] = AgeingBucketOutstanding(it.thirtyAmount, it.thirtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (thirty.amount > 0.toBigDecimal()) mutableListOf(thirty) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("sixty")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["sixty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(sixty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.sixtyAmount)
+                if (sixty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(sixty)
+                }
+                ageingBucketsInInvoiceCurrency["sixty"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["sixty"] = AgeingBucketOutstanding(it.sixtyAmount, it.sixtyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (sixty.amount > 0.toBigDecimal()) mutableListOf(sixty) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("ninety")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["ninety"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(ninety.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.ninetyAmount)
+                if (ninety.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(ninety)
+                }
+                ageingBucketsInInvoiceCurrency["ninety"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["ninety"] = AgeingBucketOutstanding(it.ninetyAmount, it.ninetyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (ninety.amount > 0.toBigDecimal()) mutableListOf(ninety) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("oneEighty")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["oneEighty"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(oneEighty.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.oneEightyAmount)
+                if (oneEighty.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(oneEighty)
+                }
+                ageingBucketsInInvoiceCurrency["oneEighty"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["oneEighty"] = AgeingBucketOutstanding(it.oneEightyAmount, it.oneEightyCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (oneEighty.amount > 0.toBigDecimal()) mutableListOf(oneEighty) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFive")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFive"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFive.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFiveAmount)
+                if (threeSixtyFive.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(threeSixtyFive)
+                }
+                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = AgeingBucketOutstanding(it.threeSixtyFiveAmount, it.threeSixtyFiveCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (threeSixtyFive.amount > 0.toBigDecimal()) mutableListOf(threeSixtyFive) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("threeSixtyFivePlus")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(threeSixtyFivePlus.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.threeSixtyFivePlusAmount)
+                if (threeSixtyFivePlus.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(threeSixtyFivePlus)
+                }
+                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["threeSixtyFivePlus"] = AgeingBucketOutstanding(it.threeSixtyFivePlusAmount, it.threeSixtyFivePlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (threeSixtyFivePlus.amount > 0.toBigDecimal()) mutableListOf(threeSixtyFivePlus) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("creditNote")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["creditNote"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(creditNote.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalCreditAmount)
+                if (creditNote.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(creditNote)
+                }
+                ageingBucketsInInvoiceCurrency["creditNote"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["creditNote"] = AgeingBucketOutstanding(it.totalCreditAmount, it.creditNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (creditNote.amount > 0.toBigDecimal()) mutableListOf(creditNote) else mutableListOf())
+            }
+
+            if (ageingBucketsInInvoiceCurrency.contains("debitNote")) {
+                val ageingBucket = ageingBucketsInInvoiceCurrency["debitNote"]
+                ageingBucket?.ledgerCount = ageingBucket?.ledgerCount?.plus(debitNote.invoicesCount)!!
+                ageingBucket.ledgerAmount = ageingBucket.ledgerAmount.plus(it.totalDebitAmount)
+                if (debitNote.amount > 0.toBigDecimal()) {
+                    ageingBucket.invoiceBucket.add(debitNote)
+                }
+                ageingBucketsInInvoiceCurrency["debitNote"] = ageingBucket
+            } else {
+                ageingBucketsInInvoiceCurrency["debitNote"] = AgeingBucketOutstanding(it.totalDebitAmount, it.debitNoteCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (debitNote.amount > 0.toBigDecimal()) mutableListOf(debitNote) else mutableListOf())
+            }
+        }
+
+        return ageingBucketsInInvoiceCurrency
     }
 
     override suspend fun updateCustomerDetails(id: String, flag: Boolean, document: CustomerOutstandingDocumentResponse?) {
@@ -494,32 +689,56 @@ class OutStandingServiceImpl : OutStandingService {
             if (flag) {
                 customerOutstanding = document
             } else {
-                val searchResponse = Client.search({ s ->
-                    s.index(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX)
-                        .query { q ->
-                            q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
+                AresConstants.COGO_ENTITIES.forEach { entity ->
+                    val index = "customer_outstanding_$entity"
+                    val searchResponse = Client.search({ s ->
+                        s.index(index)
+                            .query { q ->
+                                q.match { m -> m.field("organizationId.keyword").query(FieldValue.of(id)) }
+                            }
+                    }, CustomerOutstandingDocumentResponse::class.java)
+                    if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+                        customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+                    }
+
+                    if (customerOutstanding != null) {
+                        val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket(entity, null, id)
+                        if (queryResponse.isNullOrEmpty()) {
+                            return@forEach
                         }
-                }, CustomerOutstandingDocumentResponse::class.java)
-                if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
-                    customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
-                }
-            }
+                        val ageingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
 
-            if (customerOutstanding != null) {
-                var outstandingResponse: CustomerOutstandingDocumentResponse
+                        val orgOutstandingData = accountUtilizationRepo.generateCustomerOutstanding(id, entity)
+                        val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
+                        val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
+                        val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
 
-                val overallOutstanding = getCustomerOutstandingList(OutstandingListRequest(orgId = id))
-                if (!overallOutstanding.list.isNullOrEmpty()) {
-                    outstandingResponse = customerOutstandingResponseMapper(overallOutstanding, customerOutstanding)
-                    Client.updateDocument(AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX, id, outstandingResponse, true)
-                }
-
-                AresConstants.COGO_ENTITIES.forEach {
-                    val outstandingForEntity = getCustomerOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
-                    if (!outstandingForEntity.list.isNullOrEmpty()) {
-                        outstandingResponse = customerOutstandingResponseMapper(outstandingForEntity, customerOutstanding)
-                        val index = "customer_outstanding_$it"
-                        Client.updateDocument(index, id, outstandingResponse, true)
+                        val openSearchData = CustomerOutstandingDocumentResponse(
+                            lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                            organizationId = customerOutstanding?.organizationId ?: id,
+                            tradePartyId = customerOutstanding?.tradePartyId,
+                            businessName = customerOutstanding?.businessName,
+                            companyType = customerOutstanding?.companyType,
+                            ageingBucket = ageingBucket,
+                            countryCode = customerOutstanding?.countryCode,
+                            countryId = customerOutstanding?.countryId,
+                            creditController = customerOutstanding?.creditController,
+                            creditDays = customerOutstanding?.creditDays,
+                            kam = customerOutstanding?.kam,
+                            organizationSerialId = customerOutstanding?.organizationSerialId,
+                            registrationNumber = customerOutstanding?.registrationNumber,
+                            sageId = customerOutstanding?.sageId,
+                            salesAgent = customerOutstanding?.salesAgent,
+                            tradePartyName = customerOutstanding?.tradePartyName,
+                            tradePartySerialId = customerOutstanding?.tradePartySerialId,
+                            tradePartyType = customerOutstanding?.tradePartyType,
+                            onAccountPayment = onAccountPayment,
+                            openInvoice = openInvoice,
+                            totalOutstanding = totalOutstanding,
+                            openInvoiceCount = orgOutstandingData.sumOf { it.openInvoicesCount },
+                            entityCode = entity
+                        )
+                        Client.addDocument("customer_outstanding_$entity", id, openSearchData, true)
                     }
                 }
             }
@@ -529,61 +748,8 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    override suspend fun getCustomerOutstandingList(request: OutstandingListRequest): CustomerOutstandingList {
-        validateInput(request)
-        val queryResponse = accountUtilizationRepository.getInvoicesOutstandingAgeingBucket("%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
-        val totalRecords = accountUtilizationRepo.getInvoicesOutstandingAgeingBucketCount("%" + request.query + "%", request.orgId)
-        val ageingBucket = mutableListOf<InvoicesOutstandingAgeingResponse>()
-        val listOrganization: MutableList<CustomersOutstanding?> = mutableListOf()
-        val listOrganizationIds: MutableList<String?> = mutableListOf()
-        queryResponse.forEach { it ->
-            ageingBucket.add(outstandingAgeingConverter.convertToInvoiceOutstandingModel(it))
-            listOrganizationIds.add(it.organizationId)
-        }
-
-        ageingBucket.forEach { it ->
-            val data = accountUtilizationRepository.generateOrgOutstanding(it.organizationId!!, request.zone, request.entityCode)
-            val dataModel = data.map { orgOutstandingConverter.convertToModel(it) }
-            val invoicesDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.openInvoicesAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
-            val paymentsDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.paymentsAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.paymentsCount!! }) }.toMutableList()
-            val outstandingDues = dataModel.groupBy { it.currency }.map { DueAmount(it.key, it.value.sumOf { it.outstandingAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it.openInvoicesCount!! }) }.toMutableList()
-            val invoicesCount = dataModel.sumOf { it.openInvoicesCount!! }
-            val paymentsCount = dataModel.sumOf { it.paymentsCount!! }
-            val invoicesLedgerAmount = dataModel.sumOf { it.openInvoicesLedAmount?.abs()!! }
-            val paymentsLedgerAmount = dataModel.sumOf { it.paymentsLedAmount?.abs()!! }
-            val outstandingLedgerAmount = dataModel.sumOf { it.outstandingLedAmount?.abs()!! }
-            invoicesDues
-            paymentsDues
-            outstandingDues
-            val orgId = it.organizationId
-            val orgName = it.organizationName
-            val orgOutstanding = CustomersOutstanding(orgId, orgName, request.zone, InvoiceStats(invoicesCount, invoicesLedgerAmount, invoicesDues.sortedBy { it.currency }), InvoiceStats(paymentsCount, paymentsLedgerAmount, paymentsDues.sortedBy { it.currency }), InvoiceStats(invoicesCount, outstandingLedgerAmount, outstandingDues.sortedBy { it.currency }), null, it.creditNoteCount, it.totalCreditAmount, it.debitNoteCount, it.totalDebitAmount)
-            val zero = assignAgeingBucket("Not Due", it.notDueAmount?.abs(), it.notDueCount, "not_due")
-            val today = assignAgeingBucket("Today", it.todayAmount?.abs(), it.todayCount, "today")
-            val thirty = assignAgeingBucket("1-30", it.thirtyAmount?.abs(), it.thirtyCount, "1_30")
-            val sixty = assignAgeingBucket("31-60", it.sixtyAmount?.abs(), it.sixtyCount, "31_60")
-            val ninety = assignAgeingBucket("61-90", it.ninetyAmount?.abs(), it.ninetyCount, "61_90")
-            val oneEighty = assignAgeingBucket("91-180", it.oneEightyAmount?.abs(), it.oneEightyCount, "91_180")
-            val threeSixtyFive = assignAgeingBucket("181-365", it.threeSixtyFiveAmount?.abs(), it.threeSixtyFiveCount, "181_365")
-            val threeSixtyFivePlus = assignAgeingBucket("365+", it.threeSixtyFivePlusAmount?.abs(), it.threeSixtyFivePlusCount, "365")
-            orgOutstanding.ageingBucket = listOf(zero, today, thirty, sixty, ninety, oneEighty, threeSixtyFive, threeSixtyFivePlus)
-            listOrganization.add(orgOutstanding)
-        }
-
-        return CustomerOutstandingList(
-            list = listOrganization.sortedBy { it?.organizationName?.uppercase() },
-            totalPage = ceil(totalRecords / request.pageLimit.toDouble()).toInt(),
-            totalRecords = totalRecords,
-            page = request.page
-        )
-    }
-
     override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
-        var index: String = AresConstants.CUSTOMERS_OUTSTANDING_OVERALL_INDEX
-
-        if (request.entityCode != "overall") {
-            index = "customer_outstanding_${request.entityCode}"
-        }
+        val index = "customer_outstanding_${request.entityCode}"
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)
         var list: List<CustomerOutstandingDocumentResponse?> = listOf()
@@ -600,66 +766,10 @@ class OutStandingServiceImpl : OutStandingService {
         return responseList
     }
 
-    private fun customerOutstandingResponseMapper(outstanding: CustomerOutstandingList, customerOutstanding: CustomerOutstandingDocumentResponse): CustomerOutstandingDocumentResponse {
-        var customerOutstandingDocument: CustomerOutstandingDocumentResponse? = null
-
-        outstanding.list!!.forEach { customer ->
-            customerOutstandingDocument = CustomerOutstandingDocumentResponse(
-                organizationId = customerOutstanding.organizationId,
-                businessName = customerOutstanding.businessName,
-                tradePartyName = customerOutstanding.tradePartyName,
-                tradePartyId = customerOutstanding.tradePartyId,
-                tradePartyType = customerOutstanding.tradePartyType,
-                registrationNumber = customerOutstanding.registrationNumber,
-                tradePartySerialId = customerOutstanding.tradePartySerialId,
-                organizationSerialId = customerOutstanding.organizationSerialId,
-                sageId = customerOutstanding.sageId,
-                countryCode = customerOutstanding.countryCode,
-                countryId = customerOutstanding.countryId,
-                companyType = customerOutstanding.companyType,
-                creditController = customerOutstanding.creditController,
-                kam = customerOutstanding.kam,
-                salesAgent = customerOutstanding.salesAgent,
-                creditDays = customerOutstanding.creditDays,
-                updatedAt = Timestamp.valueOf(LocalDateTime.now()),
-                onAccountPayment = customer?.onAccountPayment!!.amountDue,
-                totalOutstanding = customer.totalOutstanding!!.amountDue,
-                openInvoice = customer.openInvoices!!.amountDue,
-                onAccountPaymentInvoiceCount = customer.onAccountPayment!!.invoicesCount,
-                openInvoiceCount = customer.openInvoices!!.invoicesCount,
-                totalOutstandingInvoiceCount = customer.totalOutstanding!!.invoicesCount,
-                totalOutstandingInvoiceLedgerAmount = customer.totalOutstanding!!.invoiceLedAmount,
-                onAccountPaymentInvoiceLedgerAmount = customer.onAccountPayment!!.invoiceLedAmount,
-                openInvoiceLedgerAmount = customer.openInvoices!!.invoiceLedAmount,
-                totalCreditNoteAmount = customer.totalCreditAmount,
-                totalDebitNoteAmount = customer.totalDebitAmount,
-                creditNoteCount = customer.creditNoteCount,
-                debitNoteCount = customer.debitNoteCount,
-                notDueAmount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.amount,
-                notDueCount = customer.ageingBucket?.filter { it.ageingDuration == "Not Due" }?.get(0)?.count,
-                todayAmount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.amount,
-                todayCount = customer.ageingBucket?.filter { it.ageingDuration == "Today" }?.get(0)?.count,
-                thirtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.amount,
-                thirtyCount = customer.ageingBucket?.filter { it.ageingDuration == "1-30" }?.get(0)?.count,
-                sixtyAmount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.amount,
-                sixtyCount = customer.ageingBucket?.filter { it.ageingDuration == "31-60" }?.get(0)?.count,
-                ninetyAmount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.amount,
-                ninetyCount = customer.ageingBucket?.filter { it.ageingDuration == "61-90" }?.get(0)?.count,
-                oneEightyAmount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.amount,
-                oneEightyCount = customer.ageingBucket?.filter { it.ageingDuration == "91-180" }?.get(0)?.count,
-                threeSixtyFiveAmount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.amount,
-                threeSixtyFiveCount = customer.ageingBucket?.filter { it.ageingDuration == "181-365" }?.get(0)?.count,
-                threeSixtyFivePlusAmount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.amount,
-                threeSixtyFivePlusCount = customer.ageingBucket?.filter { it.ageingDuration == "365+" }?.get(0)?.count
-            )
-        }
-        return customerOutstandingDocument!!
-    }
-
     override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
 
         var list: List<CustomerOutstandingPaymentResponse?>
-        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%")
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%", request.page, request.pageLimit)
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 

@@ -96,4 +96,12 @@ object AresConstants {
         401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
         501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff"
     )
+
+    val LEDGER_CURRENCY = mapOf(
+        101 to "INR",
+        201 to "EUR",
+        301 to "INR",
+        401 to "SGD",
+        501 to "VND",
+    )
 }

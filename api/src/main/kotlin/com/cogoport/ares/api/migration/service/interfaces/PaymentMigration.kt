@@ -7,10 +7,12 @@ import com.cogoport.ares.api.migration.model.SettlementRecord
 
 interface PaymentMigration {
     suspend fun migratePayment(paymentRecord: PaymentRecord): Int
-    suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int
+    suspend fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord)
 
     suspend fun migrateSettlements(settlementRecord: SettlementRecord)
     suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest)
 
     suspend fun migrateSettlementNum(ids: Long)
+
+    suspend fun migrateJV(journalVoucherRecord: JournalVoucherRecord)
 }

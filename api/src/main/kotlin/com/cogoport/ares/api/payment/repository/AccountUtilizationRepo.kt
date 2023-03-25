@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
@@ -91,8 +92,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) utilization_status
             FROM
                 account_utilizations
-            WHERE (document_value LIKE :query
-                AND trade_party_mapping_id = :tradePartyMappingId)
+            WHERE (:query IS NULL OR document_value LIKE :query)
+                AND organization_id = :organizationId
+                AND acc_type = 'REC'
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
@@ -108,11 +110,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             END ASC,
             CASE WHEN :sortBy = 'paymentAmount'
                 THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
-            END DESC   
-        
+            END DESC
+            OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+            LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(tradePartyMappingId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -151,4 +154,24 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
+
+    @NewSpan
+    @Query(
+        """
+            select organization_id::varchar, currency,
+            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
+            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
+            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
+            group by organization_id, currency
+        """
+    )
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
 }

@@ -14,6 +14,7 @@ import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
+import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.MigrationLogsSettlements
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
@@ -89,6 +90,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var plutusMessagePublisher: PlutusMessagePublisher
 
+    @Inject lateinit var sageServiceImpl: SageServiceImpl
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
@@ -134,17 +137,27 @@ class PaymentMigrationImpl : PaymentMigration {
         return 1
     }
 
-    override suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int {
+    override suspend fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkJVExists(
-                    journalVoucherRecord.paymentNum!!,
-                    journalVoucherRecord.accMode!!,
-                    AccountType.valueOf(journalVoucherRecord.accountType!!).name
-                )
-            ) {
-                throw AresException(AresError.ERR_1010, "JV record is already present")
+            val jvResponse: JvResponse? = paymentMigrationRepository.checkJVExists(
+                journalVoucherRecord.paymentNum!!,
+                journalVoucherRecord.accMode!!,
+                AccountType.valueOf(journalVoucherRecord.accountType!!).name,
+                journalVoucherRecord.sageUniqueId!!
+            )
+            if (jvResponse != null) {
+                if (jvResponse.amountLedger != journalVoucherRecord.accountUtilAmtLed ||
+                    jvResponse.payLedger != journalVoucherRecord.accountUtilPayLed ||
+                    jvResponse.ledgerCurrency != journalVoucherRecord.ledgerCurrency
+                ) {
+                    journalVoucherRepository.deleteById(jvResponse.jvId)
+                    accountUtilizationRepositoryMigration.deleteById(jvResponse.accountUtilizationId)
+                } else {
+                    return
+                }
             }
+
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
@@ -159,7 +172,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     null, null, journalVoucherRecord.paymentNum, null, null,
                     null, null, null, null, message
                 )
-                return 0
+                return
             }
 
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
@@ -186,7 +199,6 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
             migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum, MigrationStatus.FAILED)
         }
-        return 1
     }
 
     private fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
@@ -511,10 +523,11 @@ class PaymentMigrationImpl : PaymentMigration {
             description = null
         )
     }
+
     private fun getTypeForJV(accMode: String, signFlag: Short): String {
         if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
             return "credit"
-        } else if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
+        } else if (accMode.equals("AR") && signFlag.compareTo(1) == 0) {
             return "debit"
         } else if (accMode.equals("AP") && signFlag.compareTo(1) == 0) {
             return "debit"
@@ -526,6 +539,8 @@ class PaymentMigrationImpl : PaymentMigration {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
+        jv.sageUniqueId = journalVoucherRecord.sageUniqueId
+        jv.migrated = true
         return jv
     }
 
@@ -724,6 +739,22 @@ class PaymentMigrationImpl : PaymentMigration {
                 payLocUpdateRequest.documentValue, MigrationStatus.PAYLOC_NOT_UPDATED
             )
         }
+    }
+
+    override suspend fun migrateJV(journalVoucherRecord: JournalVoucherRecord) {
+        val jvRecords = sageServiceImpl.getAllJVLineItems(journalVoucherRecord.paymentNum!!)
+        var sum = BigDecimal.ZERO
+        jvRecords.forEach {
+            sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+        }
+        if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
+            migrationLogService.saveMigrationLogs(
+                null, null, journalVoucherRecord.paymentNum, null, null,
+                null, null, null, null, "jv Sum is not zero"
+            )
+            return
+        }
+        jvRecords.forEach { this.migrateJournalVoucher(it) }
     }
 
     override suspend fun migrateSettlementNum(id: Long) {
