@@ -1469,11 +1469,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
             sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
             sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as credit_note_amount,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as credit_note_led_amount,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
             sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  sign_flag * (amount_curr - pay_curr) else 0 end) as payments_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  sign_flag * (amount_loc - pay_loc) else 0 end) as payments_led_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
             sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
             sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
             from account_utilizations
