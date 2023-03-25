@@ -1455,7 +1455,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = :accMode AND organization_id IS NOT NULL 
+        WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
         AND deleted_at IS NULL
         """
     )
