@@ -452,7 +452,7 @@ class OutStandingServiceImpl : OutStandingService {
             } else {
                 val queryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SINV, request.organizationId)
                 val creditNoteQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SCN, request.organizationId)
-                val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.REC, request.organizationId)
+                val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, request.organizationId)
                 if (queryResponse.isNullOrEmpty()) {
                     return@forEach
                 }
@@ -692,7 +692,7 @@ class OutStandingServiceImpl : OutStandingService {
                     if (customerOutstanding != null) {
                         val queryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SINV, id)
                         val creditNoteQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SCN, id)
-                        val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.REC, id)
+                        val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, id)
                         if (queryResponse.isNullOrEmpty()) {
                             return@forEach
                         }
