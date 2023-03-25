@@ -625,7 +625,7 @@ class OpenSearchClient {
             "creditNoteLedgerAmount" -> creditNote = true
             "openInvoiceNotDueLedgerAmount" -> notDue = true
             "openInvoiceThirtyLedgerAmount" -> thirty = true
-            "openInvoiceFortyFiveLedgerAmount" -> thirty = true
+            "openInvoiceFortyFiveLedgerAmount" -> fortyFive = true
             "openInvoiceSixtyLedgerAmount" -> sixty = true
             "openInvoiceNinetyLedgerAmount" -> ninety = true
             "openInvoiceOneEightyLedgerAmount" -> oneEighty = true
