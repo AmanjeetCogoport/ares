@@ -604,8 +604,7 @@ class DashboardServiceImpl : DashboardService {
         val serviceType = req.serviceType
         val companyType = req.companyType
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
-        val entityCode = req.entityCode
-        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
+        val entityCode = req.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
@@ -628,7 +627,7 @@ class DashboardServiceImpl : DashboardService {
                     serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
             }
         } else {
             if ((month != null && year != null) || (month != null && year == null)) {
@@ -649,7 +648,7 @@ class DashboardServiceImpl : DashboardService {
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterEnd, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterEnd, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             } else {
                 val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${generateMonthKeyIndex(AresConstants.CURR_DATE.toLocalDateTime().dayOfMonth)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -664,7 +663,7 @@ class DashboardServiceImpl : DashboardService {
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, cogoEntityId, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
                 }
             }
         }
@@ -709,8 +708,7 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         val asOnDate = (req.asOnDate ?: AresConstants.CURR_DATE.toString()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         val documentType = req.documentType ?: DocumentType.SALES_INVOICE
-        val entityCode = req.entityCode
-        val cogoEntityId = UUID.fromString(AresConstants.ENTITY_ID[entityCode])
+        val entityCode = req.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
         val defaultersOrgIds = getDefaultersOrgIds()
@@ -728,7 +726,7 @@ class DashboardServiceImpl : DashboardService {
                 serviceType
             )!!
         } else {
-            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, cogoEntityId, req.companyType?.value, req.serviceType?.name?.lowercase())!!
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, entityCode, req.companyType?.value, req.serviceType?.name?.lowercase())!!
         }
 
         if (dailySalesStats.size > 0) {

@@ -165,7 +165,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ares.account_utilizations aau 
             WHERE
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
-            AND ( :entityCode is null or aau.entity_code = :entityCode)
+            AND aau.acc_mode ='AR'
+            AND acc_type in ('SINV','SCN')
+            AND (aau.entity_code = :entityCode)
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
             GROUP BY led_currency
@@ -263,75 +265,77 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
             date_trunc('day',lj.created_at) as duration,
-            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
-            pinv.currency as dashboard_currency
-            from loki.jobs lj
+            pinv.ledger_currency as dashboard_currency
+            FROM loki.jobs lj
             INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
             INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
             AND date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            AND (:companyType is null OR los.id is null OR los.segment = :companyType)
+            AND (pa.entity_code = :entityCode)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'SELLER')
-            GROUP BY date_trunc('day',lj.created_at),dashboard_currency
+            AND (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'BUYER')
+            AND o.status = 'active'
+            GROUP BY date_trunc('day',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateDailyShipmentCreatedAt(asOnDate: String?, entityCode: Int?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
             SELECT 
             to_char(date_trunc('month',lj.created_at),'Mon') as duration,
-            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
-            pinv.currency as dashboard_currency
+            pinv.ledger_currency as dashboard_currency
             FROM loki.jobs lj
             INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
             INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE 
-            date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
-            and date_trunc('month', lj.created_at) <= date_trunc('month', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            WHERE date_trunc('month', lj.created_at) >= date_trunc('month', :asOnDate:: date - '3 month'::interval)
+            AND date_trunc('month', lj.created_at) <= date_trunc('month', :asOnDate:: date)
+            AND (:companyType is null OR  los.id is null OR los.segment = :companyType)
+            AND (pa.entity_code = :entityCode)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'SELLER')
-            GROUP BY date_trunc('month',lj.created_at),dashboard_currency
+            AND (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'BUYER')
+            AND o.status = 'active'
+            GROUP BY date_trunc('month',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: LocalDateTime?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlyShipmentCreatedAt(asOnDate: LocalDateTime?, entityCode: Int?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            SELECT date_trunc('year',lj.created_at) as duration,
-            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
+            SELECT extract('year',lj.created_at) as duration,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
-            pinv.currency as dashboard_currency
-            from loki.jobs lj
+            pinv.ledger_currency as dashboard_currency
+            FROM loki.jobs lj
             INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
             INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
-            and date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            AND date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
+            AND (:companyType is null OR los.id is null OR los.segment = :companyType )
+            AND ( pa.entity_code = :entityCode)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'SELLER')
-            GROUP BY date_trunc('year',lj.created_at), dashboard_currency
+            AND (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'BUYER')
+            AND o.status = 'active'
+            GROUP BY extract('year',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, entityCode: Int?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
@@ -404,7 +408,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND document_status in ('FINAL') 
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND (:companyType is null OR los.segment =:companyType OR los.id is null)
+            AND (:companyType is null OR los.id is null OR los.segment =:companyType)
             AND (:serviceType is null OR aau.service_type = :serviceType)
             AND ( aau.entity_code = :entityCode)
             GROUP BY ageing_duration, dashboard_currency
@@ -475,7 +479,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            SELECT date_trunc('day',aau.transaction_date) as duration,
+            SELECT 
+            date_trunc('day',aau.transaction_date) as duration,
             coalesce(sum((aau.amount_loc)) ,0) as amount,
             aau.led_currency as dashboard_currency,
             COUNT(aau.id) as count
@@ -490,7 +495,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (:accType is null or aau.acc_type = :accType)
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND (:entityCode is null or aau.entity_code = :entityCode)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
+            AND (:companyType is null OR los.id is null OR los.segment = :companyType)
             AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
             GROUP BY date_trunc('day',transaction_date), dashboard_currency
         """
@@ -502,22 +507,24 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
             SELECT 
             date_trunc('day',lj.created_at) as duration,
-            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.grand_total else -1 * (pinv.grand_total) end), 0) as amount,
+            coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
-            pinv.currency as dashboard_currency
-            from loki.jobs lj
+            pinv.ledger_currency as dashboard_currency
+            FROM loki.jobs lj
             INNER JOIN plutus.invoices pinv on lj.id = pinv.job_id
             INNER JOIN plutus.addresses pa on pa.invoice_id = pinv.id
             INNER JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '29 day'::interval)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:cogoEntityId is null or pa.entity_code_id = :cogoEntityId)
+            WHERE date_trunc('day', lj.created_at) >= date_trunc('day', now():: date - '29 day'::interval)
+            AND date_trunc('day', lj.created_at) <= date_trunc('day', now():: date)
+            AND (:companyType is null OR los.id is null OR los.segment = :companyType )
+            AND (pa.entity_code = :entityCode)
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            ANd (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'SELLER')
-            GROUP BY date_trunc('day',lj.created_at),dashboard_currency
+            AND (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
+            AND (pa.organization_type = 'BUYER')
+            AND o.status = 'active'
+            GROUP BY date_trunc('day',lj.created_at), dashboard_currency
         """
     )
-    suspend fun generateLineGraphViewShipmentCreated(asOnDate: String?, cogoEntityId: UUID?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
+    suspend fun generateLineGraphViewShipmentCreated(asOnDate: String?, entityCode: Int?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
 }
