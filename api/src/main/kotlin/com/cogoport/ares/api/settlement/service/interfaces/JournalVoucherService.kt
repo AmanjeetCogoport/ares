@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.model.JournalVoucherApproval
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherReject
@@ -14,7 +15,7 @@ import java.util.UUID
 
 interface JournalVoucherService {
 
-    suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse>
+    suspend fun getJournalVouchersWrapper(jvListRequest: JvListRequest): ResponseList<JournalVoucherResponse>
 
     suspend fun createJournalVoucher(request: JournalVoucherRequest): String
 
@@ -22,8 +23,8 @@ interface JournalVoucherService {
 
     suspend fun rejectJournalVoucher(request: JournalVoucherReject): String
 
-    suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?)
+    suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, accType: AccountType, performedByUserType: String?)
     suspend fun postJVToSage(jvId: Long, performedBy: UUID): Boolean
     suspend fun createJV(jv: JournalVoucher): JournalVoucher
-    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization
+    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode?, signFlag: Short): AccountUtilization
 }

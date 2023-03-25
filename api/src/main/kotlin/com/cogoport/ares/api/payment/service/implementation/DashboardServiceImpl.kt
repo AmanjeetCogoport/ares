@@ -704,7 +704,7 @@ class DashboardServiceImpl : DashboardService {
         return data?.aggregations()?.get("currency")?.sterms()?.buckets()?.array()?.map {
             DueAmount(
                 currency = it.key(),
-                amount = it.aggregations()["currAmount"]?.sum()?.value()?.toBigDecimal(),
+                amount = it.aggregations()["currAmount"]?.sum()?.value()?.toBigDecimal()!!,
                 invoicesCount = it.docCount().toInt()
             )
         }

@@ -43,7 +43,7 @@ class JournalVoucherController {
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<JournalVoucherResponse> {
         jvListRequest.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: jvListRequest.entityCode
-        return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchers(jvListRequest))
+        return Response<ResponseList<JournalVoucherResponse>>().ok(journalVoucherService.getJournalVouchersWrapper(jvListRequest))
     }
 
     @Post("/approve")

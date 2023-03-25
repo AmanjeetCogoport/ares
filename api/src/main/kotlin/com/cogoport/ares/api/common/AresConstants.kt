@@ -19,6 +19,7 @@ object AresConstants {
     const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
+    const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
@@ -85,5 +86,21 @@ object AresConstants {
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
         "get_payments_service_discovery_kuber_reachability"
+    )
+
+    val ENTITY_ID = mapOf(
+        101 to "6fd98605-9d5d-479d-9fac-cf905d292b88",
+        201 to "c7e1390d-ec41-477f-964b-55423ee84700",
+        301 to "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1",
+        401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
+        501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff"
+    )
+
+    val LEDGER_CURRENCY = mapOf(
+        101 to "INR",
+        201 to "EUR",
+        301 to "INR",
+        401 to "SGD",
+        501 to "VND",
     )
 }

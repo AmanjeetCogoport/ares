@@ -7,7 +7,8 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JvListRequest
-import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
+import com.cogoport.ares.model.settlement.request.ParentICJVRequest
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -15,6 +16,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.UUID
 import javax.validation.Valid
 
 @Validated
@@ -25,8 +27,8 @@ class ICJVController {
     lateinit var icjvService: ICJVService
 
     @Post
-    suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Request Sent", icjvService.createJournalVoucher(request))
+    suspend fun createJv(@Body request: ParentICJVRequest): Response<String> {
+        return Response<String>().ok("Request Sent", icjvService.createICJV(request))
     }
 
     @Get("/list{?jvListRequest*}")
@@ -35,12 +37,20 @@ class ICJVController {
     }
 
     @Get
-    suspend fun getJournalVoucherByParentJVId(@QueryValue("parentId") parentId: String): List<JournalVoucherResponse> {
+    suspend fun getJournalVoucherByParentJVId(@QueryValue("parentId") parentId: Long): List<JournalVoucherResponse> {
         return icjvService.getJournalVoucherByParentJVId(parentId)
     }
 
     @Post("/update")
     suspend fun updateICJV(@Valid @Body request: ICJVUpdateRequest): String {
         return icjvService.updateICJV(request)
+    }
+
+    @Post("/post-to-sage")
+    suspend fun postICJVToSage(id: Long, performedBy: UUID): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            if (icjvService.postICJVToSage(id, performedBy)) "Success." else "Failed."
+        )
     }
 }
