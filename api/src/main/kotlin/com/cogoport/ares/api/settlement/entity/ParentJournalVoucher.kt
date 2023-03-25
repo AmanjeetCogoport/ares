@@ -2,7 +2,9 @@ package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -23,7 +25,7 @@ data class ParentJournalVoucher(
     var updatedBy: UUID?,
     var migrated: Boolean? = false,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var createdAt: Timestamp?,
+    @DateCreated var createdAt: Timestamp? = null,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var updatedAt: Timestamp?,
+    @DateCreated var updatedAt: Timestamp? = null,
 )
