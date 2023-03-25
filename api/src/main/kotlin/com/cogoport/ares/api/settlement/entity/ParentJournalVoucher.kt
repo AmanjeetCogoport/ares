@@ -25,7 +25,7 @@ data class ParentJournalVoucher(
     var updatedBy: UUID?,
     var migrated: Boolean? = false,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var createdAt: Timestamp?,
+    @DateCreated var createdAt: Timestamp? = null,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var updatedAt: Timestamp?,
+    @DateCreated var updatedAt: Timestamp? = null,
 )
