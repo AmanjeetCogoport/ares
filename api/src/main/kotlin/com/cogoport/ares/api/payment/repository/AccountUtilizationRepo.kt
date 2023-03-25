@@ -82,112 +82,112 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 currency,
                 max(organization_name) as organization_name,
                 sum(
-                    CASE WHEN (acc_type = :accType::account_type
-                        and(due_date >= now()::date)) THEN
-                        sign_flag * (amount_loc - pay_loc)
+                    CASE WHEN acc_type = :accType::account_type
+                        and(due_date >= now()::date) THEN
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 0 AND 30 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS thirty_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 46 AND 60 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS sixty_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS ninety_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) > 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS total_led_outstanding,
                 sum(
-                    CASE WHEN (acc_type = :accType::account_type
-                        and(due_date >= now()::date)) THEN
-                        sign_flag * (amount_curr - pay_curr)
+                    CASE WHEN acc_type = :accType::account_type
+                        and(due_date >= now()::date) THEN
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS not_due_curr_amount,      
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 0 AND 30 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS thirty_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 46 AND 60 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS sixty_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS ninety_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS one_eighty_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type
                         and(now()::date - due_date) > 180 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
                     CASE WHEN acc_type = :accType::account_type THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS total_curr_outstanding,
@@ -260,112 +260,112 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 currency,
                 max(organization_name) as organization_name,
                 sum(
-                    CASE WHEN (acc_type = 'REC'
-                        and(transaction_date >= now()::date)) THEN
-                        sign_flag * (amount_loc - pay_loc)
+                    CASE WHEN acc_type = 'REC'
+                        and(transaction_date >= now()::date) THEN
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 0 AND 30 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS thirty_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS sixty_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS ninety_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) > 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
                     CASE WHEN acc_type = 'REC' THEN
-                        sign_flag * (amount_loc - pay_loc)
+                        amount_loc - pay_loc
                     ELSE
                         0
                     END) AS total_led_outstanding,
                 sum(
                     CASE WHEN (acc_type = 'REC'
                         and(transaction_date >= now()::date)) THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS not_due_curr_amount,      
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 0 AND 30 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS thirty_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS sixty_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS ninety_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS one_eighty_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC'
                         and(now()::date - transaction_date) > 180 THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
                     CASE WHEN acc_type = 'REC' THEN
-                        sign_flag * (amount_curr - pay_curr)
+                        amount_curr - pay_curr
                     ELSE
                         0
                     END) AS total_curr_outstanding,
