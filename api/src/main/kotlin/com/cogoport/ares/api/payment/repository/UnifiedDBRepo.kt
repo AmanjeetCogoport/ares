@@ -29,7 +29,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT 
-            aau.document_no as id, 
+            distinct (sinv.id) as id, 
             sinv.status, 
             sinv.payment_status
             FROM 
@@ -45,6 +45,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (aau.entity_code = :entityCode)
             AND aau.acc_type in ('SINV', 'SCN')
+            AND o.status = 'active'
             AND (aau.migrated = false)
             AND (pa.organization_type = 'BUYER')
             AND (:companyType is null OR los.id is null OR los.segment = :companyType )
@@ -57,7 +58,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT 
-            aau.document_no as id, 
+            distinct(aau.document_no) as id, 
             sinv.status, 
             sinv.payment_status,
             json_agg(
@@ -179,87 +180,95 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-        SELECT 
-        date_trunc('month',aau.transaction_date) as duration,
-        coalesce(sum((aau.amount_loc)) ,0) as amount,
-        aau.led_currency as dashboard_currency,
-        COUNT(aau.id) as count
-        from ares.account_utilizations aau
-        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
-        INNER JOIN organizations o on o.registration_number = otpd.registration_number
-        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-        WHERE aau.acc_mode = 'AR' 
-        AND aau.document_status in (:docStatus)  
-        AND  aau.transaction_date > :quarterStart::DATE
-        AND aau.transaction_date < :quarterEnd::DATE
-        AND aau.deleted_at is null 
-        AND (:accType is null or  aau.acc_type = :accType)
-        AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-        AND (:entityCode is null or aau.entity_code = :entityCode)
-        AND (:companyType is null or los.segment = :companyType OR los.id is null)
-        AND (:serviceType is null or aau.service_type::varchar = :serviceType)
-        GROUP BY date_trunc('month',aau.transaction_date), dashboard_currency
-        ORDER BY duration DESC
+        with x as (
+            SELECT 
+            distinct(aau.document_no) as id,
+            date_trunc('month',aau.transaction_date) as duration,
+            aau.amount_loc as amount,
+            aau.led_currency as dashboard_currency
+            from ares.account_utilizations aau
+            INNER JOIN organizations o on o.id = aau.tagged_organization_id
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+            WHERE 
+            aau.acc_mode = 'AR' 
+            AND 
+            aau.document_status = 'FINAL'
+            AND aau.transaction_date > :quarterStart::DATE
+            AND aau.transaction_date < :quarterEnd::DATE
+            AND aau.deleted_at is null 
+            AND (aau.acc_type::VARCHAR = :accType)
+            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
+            AND ( aau.entity_code = :entityCode)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
+            AND (:serviceType is null or aau.service_type = :serviceType) 
+            ) SELECT x.duration, sum(x.amount) as amount, count(x.id) as count, x.dashboard_currency from x
+            GROUP BY x.duration, x.dashboard_currency
+            ORDER BY x.duration DESC
         """
     )
-    suspend fun generateMonthlySalesStats(quarterStart: LocalDateTime, quarterEnd: LocalDateTime, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(quarterStart: LocalDateTime, quarterEnd: LocalDateTime, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            SELECT date_trunc('day',aau.transaction_date) as duration,
-            coalesce(sum((aau.amount_loc)) ,0) as amount,
-            aau.led_currency as dashboard_currency,
-            COUNT(aau.id) as count
+            with x as (
+            SELECT 
+            distinct(aau.document_no) as id,
+            date_trunc('day',aau.transaction_date) as duration,
+            aau.amount_loc as amount,
+            aau.led_currency as dashboard_currency
             from ares.account_utilizations aau
-            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
-            INNER JOIN organizations o on o.registration_number = otpd.registration_number
+            INNER JOIN organizations o on o.id = aau.tagged_organization_id
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE aau.acc_mode = 'AR' 
-            AND aau.document_status in (:docStatus) 
+            WHERE 
+            aau.acc_mode = 'AR' 
+            AND 
+            aau.document_status = 'FINAL'
             AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
             AND date_trunc('day', aau.transaction_date) < date_trunc('day', :asOnDate:: date + '1 day'::interval)
             AND aau.deleted_at is null 
-            AND (:accType is null or aau.acc_type = :accType)
+            AND (aau.acc_type::VARCHAR = :accType)
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND (:entityCode is null or aau.entity_code = :entityCode)
+            AND ( aau.entity_code = :entityCode)
             AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-            GROUP BY date_trunc('day',aau.transaction_date), dashboard_currency
-            ORDER BY duration DESC
+            AND (:serviceType is null or aau.service_type = :serviceType) 
+            ) SELECT x.duration, sum(x.amount) as amount, count(x.id) as count, x.dashboard_currency from x
+            GROUP BY x.duration, x.dashboard_currency
+            ORDER BY x.duration DESC
         """
     )
-    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
+        with x as (
         SELECT 
+        distinct(aau.document_no) as id,
         date_trunc('year',aau.transaction_date) as duration,
-        coalesce(sum((aau.amount_loc)) ,0) as amount,
-        aau.led_currency as dashboard_currency,
-        count(aau.id) as count
+        aau.amount_loc as amount,
+        aau.led_currency as dashboard_currency
         from ares.account_utilizations aau
-        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
-        INNER JOIN organizations o on o.registration_number = otpd.registration_number
+        INNER JOIN organizations o on o.id = aau.tagged_organization_id
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE 
-            aau.acc_mode = 'AR' 
-            AND 
-            aau.document_status in (:docStatus)  
-            AND date_trunc('year', aau.transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
-            AND date_trunc('year', aau.transaction_date) < date_trunc('year', :asOnDate:: date + '1 year'::interval)
-            AND aau.deleted_at is null 
-            AND (:accType is null or aau.acc_type = :accType)
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND (:entityCode is null or aau.entity_code = :entityCode)
-            AND (:companyType is null or los.segment = :companyType OR los.id is null)
-            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-        GROUP BY date_trunc('year',aau.transaction_date), dashboard_currency
-        ORDER BY duration DESC
+        aau.acc_mode = 'AR' 
+        AND 
+        aau.document_status = 'FINAL'
+        AND date_trunc('year', aau.transaction_date) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
+        AND date_trunc('year', aau.transaction_date) < date_trunc('year', :asOnDate:: date + '1 year'::interval)
+        AND aau.deleted_at is null 
+        AND (aau.acc_type = :accType)
+        AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
+        AND ( aau.entity_code = :entityCode)
+        AND (:companyType is null or los.segment = :companyType OR los.id is null)
+        AND (:serviceType is null or aau.service_type = :serviceType) 
+        ) SELECT x.duration, sum(x.amount) as amount, count(x.id) as count, x.dashboard_currency from x
+        GROUP BY x.duration, x.dashboard_currency
+        ORDER BY x.duration DESC
         """
     )
-    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
     @NewSpan
     @Query(
         """
@@ -464,7 +473,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE 
             aau.acc_mode = 'AR' 
-            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
+            AND (:serviceType is null or aau.service_type = :serviceType) 
             AND document_status in ('FINAL') 
             AND EXTRACT(YEAR FROM transaction_date) = :year
             AND deleted_at is null
@@ -479,28 +488,33 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
+            with x as (
             SELECT 
+            distinct(aau.document_no) as id,
             date_trunc('day',aau.transaction_date) as duration,
-            coalesce(sum((aau.amount_loc)) ,0) as amount,
-            aau.led_currency as dashboard_currency,
-            COUNT(aau.id) as count
+            aau.amount_loc as amount,
+            aau.led_currency as dashboard_currency
             from ares.account_utilizations aau
-            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
-            INNER JOIN organizations o on o.registration_number = otpd.registration_number
+            INNER JOIN organizations o on o.id = aau.tagged_organization_id
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE aau.acc_mode = 'AR' 
-            AND aau.document_status in (:docStatus) 
-            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '29 day'::interval) 
+            WHERE 
+            aau.acc_mode = 'AR' 
+            AND 
+            aau.document_status = 'FINAL'
+            AND date_trunc('day', aau.transaction_date) >= date_trunc('day', :asOnDate:: date - '29 day'::interval)
+            AND date_trunc('day', aau.transaction_date) < date_trunc('day', :asOnDate:: date + '1 day'::interval)
             AND aau.deleted_at is null 
-            AND (:accType is null or aau.acc_type = :accType)
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            AND (:entityCode is null or aau.entity_code = :entityCode)
-            AND (:companyType is null OR los.id is null OR los.segment = :companyType)
-            AND (:serviceType is null or aau.service_type::varchar = :serviceType) 
-            GROUP BY date_trunc('day',transaction_date), dashboard_currency
+            AND (aau.acc_type::VARCHAR = :accType)
+            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
+            AND ( aau.entity_code = :entityCode)
+            AND (:companyType is null or los.segment = :companyType OR los.id is null)
+            AND (:serviceType is null or aau.service_type = :serviceType) 
+            ) SELECT x.duration, sum(x.amount) as amount, count(x.id) as count, x.dashboard_currency from x
+            GROUP BY x.duration, x.dashboard_currency
+            ORDER BY x.duration DESC
         """
     )
-    suspend fun generateLineGraphViewDailyStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, docStatus: List<String>, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateLineGraphViewDailyStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: String?, serviceType: ServiceType?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(

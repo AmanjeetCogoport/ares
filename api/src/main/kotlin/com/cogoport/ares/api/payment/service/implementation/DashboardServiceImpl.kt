@@ -621,7 +621,6 @@ class DashboardServiceImpl : DashboardService {
                     endDate,
                     getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                     defaultersOrgIds,
-                    getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                     entityCode,
                     companyType?.value,
                     serviceType
@@ -642,7 +641,6 @@ class DashboardServiceImpl : DashboardService {
                         quarterEnd,
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
-                        getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                         entityCode,
                         companyType?.value,
                         serviceType
@@ -657,7 +655,6 @@ class DashboardServiceImpl : DashboardService {
                         endDate,
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
-                        getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                         entityCode,
                         companyType?.value,
                         serviceType
@@ -720,7 +717,6 @@ class DashboardServiceImpl : DashboardService {
                 asOnDate,
                 getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                 defaultersOrgIds,
-                getAccTypeAnDocStatus(documentType)?.get("docStatus") as List<String>,
                 entityCode,
                 companyType?.value,
                 serviceType
@@ -756,9 +752,9 @@ class DashboardServiceImpl : DashboardService {
 
     private fun getAccTypeAnDocStatus(documentType: DocumentType): Map<String, Any>? {
         val accTypeDocStatusMapping = mapOf(
-            DocumentType.SALES_INVOICE to mapOf("accType" to "SINV", "docStatus" to listOf("FINAL", "PROFORMA")),
-            DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN", "docStatus" to listOf("FINAL")),
-            DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC", "docStatus" to listOf("FINAL"))
+            DocumentType.SALES_INVOICE to mapOf("accType" to "SINV"),
+            DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN"),
+            DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC")
         )
         return accTypeDocStatusMapping[documentType]
     }
