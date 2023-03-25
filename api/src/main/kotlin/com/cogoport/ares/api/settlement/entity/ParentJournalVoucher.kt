@@ -2,12 +2,13 @@ package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
+import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
-import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
