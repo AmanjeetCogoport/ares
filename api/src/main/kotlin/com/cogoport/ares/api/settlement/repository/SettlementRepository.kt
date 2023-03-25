@@ -296,14 +296,14 @@ ORDER BY
     @Query(
         """
             SELECT
-                s.amount,
+                au.amount,
                 au.document_value,
                 s.destination_id,
                 s.destination_type,
                 s.source_type,
                 au.organization_id,
-                au.org_serial_id ,CASE WHEN (au.document_value LIKE 'REC%'
-                    OR au.document_value LIKE 'PAY%') THEN
+                au.org_serial_id ,CASE WHEN (s.source_type = 'REC'
+                    OR OR s.source_type = 'PAY') THEN
                     'P'
                 ELSE
                     NULL
