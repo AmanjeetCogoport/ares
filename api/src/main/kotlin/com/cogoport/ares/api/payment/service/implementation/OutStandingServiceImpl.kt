@@ -559,9 +559,9 @@ class OutStandingServiceImpl : OutStandingService {
         val creditNoteInvoiceBucket = mutableListOf<DueAmount>()
         orgOutstandingData.forEach {
             creditNoteLedAmount += it.creditNoteLedAmount * 1.0.toBigDecimal()
-            creditNoteLedCount += 0
+            creditNoteLedCount += it.creditNoteCount
             if (it.creditNoteAmount != 0.toBigDecimal()) {
-                creditNoteInvoiceBucket.add(DueAmount(it.currency, it.outstandingAmount, 0))
+                creditNoteInvoiceBucket.add(DueAmount(it.currency, it.creditNoteAmount, it.creditNoteCount))
             }
         }
         creditNoteBucket = AgeingBucketOutstanding(creditNoteLedAmount, creditNoteLedCount, AresConstants.LEDGER_CURRENCY[entity]!!, creditNoteInvoiceBucket)
@@ -661,9 +661,9 @@ class OutStandingServiceImpl : OutStandingService {
                 if (oneEightyPlus.amount != 0.toBigDecimal()) {
                     ageingBucket.invoiceBucket.add(oneEightyPlus)
                 }
-                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = ageingBucket
+                ageingBucketsInInvoiceCurrency["oneEightyPlus"] = ageingBucket
             } else {
-                ageingBucketsInInvoiceCurrency["threeSixtyFive"] = AgeingBucketOutstanding(it.oneEightyPlusLedAmount, it.oneEightyPlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (oneEightyPlus.amount != 0.toBigDecimal()) mutableListOf(oneEightyPlus) else mutableListOf())
+                ageingBucketsInInvoiceCurrency["oneEightyPlus"] = AgeingBucketOutstanding(it.oneEightyPlusLedAmount, it.oneEightyPlusCount, AresConstants.LEDGER_CURRENCY[entity]!!, if (oneEightyPlus.amount != 0.toBigDecimal()) mutableListOf(oneEightyPlus) else mutableListOf())
             }
         }
 
