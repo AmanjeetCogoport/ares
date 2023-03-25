@@ -10,7 +10,6 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.Date
 import java.util.UUID
-
 @Introspected
 @MappedEntity(value = "parent_journal_vouchers")
 data class ParentJournalVoucher(
@@ -23,5 +22,6 @@ data class ParentJournalVoucher(
     var createdBy: UUID?,
     var updatedBy: UUID?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-    var updatedAt: Timestamp? = Timestamp.from(Instant.now())
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var migrated: Boolean? = false
 )

@@ -54,7 +54,7 @@ class MigratePaymentsController {
 
     @Post("/JVNum-migrate")
     suspend fun migrateJVNum(@Body jvNums: List<String>): Response<String> {
-        val size = paymentMigration.migrateJournalVoucher(null, null, jvNums)
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request for journal voucher migration received, total number of jv to migrate is $size"

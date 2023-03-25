@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.events
 
-import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -37,5 +37,5 @@ interface AresMessagePublisher {
     suspend fun emitPaymentMigration(paymentRecord: PaymentRecord)
 
     @Binding("sage.jv.migration")
-    suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
+    suspend fun emitJournalVoucherMigration(journalVoucherRecord: JVParentDetails)
 }
