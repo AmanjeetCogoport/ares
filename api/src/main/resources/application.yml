@@ -34,17 +34,7 @@ r2dbc:
       dialect: POSTGRES
 
 services:
-  service:
-    - id: kuber
-      url: http://localhost:8084
-      enabledLocally: false
-    - id: hades
-      url: http://localhost:8093
-      enabledLocally: false
-    - id: plutus
-      url: http://localhost:8083
-      enabledLocally: false
-  staging: https://api.stage.cogoport.io
+  service: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
