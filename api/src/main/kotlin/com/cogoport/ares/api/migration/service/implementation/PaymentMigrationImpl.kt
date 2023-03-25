@@ -827,7 +827,8 @@ class PaymentMigrationImpl : PaymentMigration {
                     accMode = AccMode.OTHER,
                     parentJvId = parentJvId,
                     sageUniqueId = it.sageUniqueId,
-                    migrated = true
+                    migrated = true,
+                    glCode = null,
                 )
             )
         }
