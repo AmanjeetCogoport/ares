@@ -7,7 +7,7 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class TodayPurchaseStats(
-    var totalExpense: BigDecimal,
-    var totalBills: Long,
-    var totalPurchaseOrgs: Long
+    var totalExpense: BigDecimal? = 0.toBigDecimal(),
+    var totalBills: Long? = 0,
+    var totalPurchaseOrgs: Long? = 0
 )

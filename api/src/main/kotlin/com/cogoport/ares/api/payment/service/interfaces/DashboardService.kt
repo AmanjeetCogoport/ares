@@ -60,7 +60,7 @@ interface DashboardService {
 
     suspend fun getBfReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable
 
-    suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): BfIncomeExpenseResponse
+    suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse>
 
     suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp
 

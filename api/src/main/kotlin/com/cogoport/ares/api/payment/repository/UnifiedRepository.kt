@@ -3,8 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.BfCustomerProfitabilityResp
 import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.entity.BfShipmentProfitabilityResp
-import com.cogoport.ares.api.payment.entity.LogisticsMonthlyExpense
-import com.cogoport.ares.api.payment.entity.LogisticsMonthlyIncome
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.entity.PaymentFile
 import com.cogoport.ares.api.payment.entity.ProfitCountResp
 import com.cogoport.ares.api.payment.entity.TodayPurchaseStats
@@ -16,6 +15,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
+import java.time.LocalDate
 import java.util.Date
 
 @TransactionalAdvice("dms")
@@ -167,7 +167,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_jan,
+		ELSE 0 END) AS january,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:endYear, '-02-01')::DATE
 			AND CONCAT(:endYear, '-02-28')::DATE THEN
@@ -176,7 +176,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_feb,
+		ELSE 0 END) AS february,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:endYear, '-03-01')::DATE
 			AND CONCAT(:endYear, '-03-30')::DATE THEN
@@ -185,7 +185,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_march,
+		ELSE 0 END) AS march,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-04-01')::DATE
 			AND CONCAT(:startYear, '-04-30')::DATE THEN
@@ -194,7 +194,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_april,
+		ELSE 0 END) AS april,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-05-01')::DATE
 			AND CONCAT(:startYear, '-05-30')::DATE THEN
@@ -203,7 +203,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_may,
+		ELSE 0 END) AS may,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-06-01')::DATE
 			AND CONCAT(:startYear, '-06-30')::DATE THEN
@@ -212,7 +212,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_june,
+		ELSE 0 END) AS june,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-07-01')::DATE
 			AND CONCAT(:startYear, '-07-30')::DATE THEN
@@ -221,7 +221,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_july,
+		ELSE 0 END) AS july,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-08-01')::DATE
 			AND CONCAT(:startYear, '-08-30')::DATE THEN
@@ -230,7 +230,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_august,
+		ELSE 0 END) AS august,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-09-01')::DATE
 			AND CONCAT(:startYear, '-09-30')::DATE THEN
@@ -239,7 +239,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_september,
+		ELSE 0 END) AS september,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-10-01')::DATE
 			AND CONCAT(:startYear, '-10-30')::DATE THEN
@@ -248,7 +248,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_october,
+		ELSE 0 END) AS october,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-11-01')::DATE
 			AND CONCAT(:startYear, '-11-30')::DATE THEN
@@ -257,7 +257,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_november,
+		ELSE 0 END) AS november,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-12-01')::DATE
 			AND CONCAT(:startYear, '-12-30')::DATE THEN
@@ -266,7 +266,7 @@ WHERE
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
                 CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
             ELSE 0 END
-		ELSE 0 END) AS total_income_december
+		ELSE 0 END) AS december
 FROM
 	plutus.invoices inv
 	INNER JOIN ares.account_utilizations au ON au.document_no = inv.id
@@ -277,7 +277,7 @@ FROM
         AND inv.status NOT IN ('DRAFT','FINANCE_REJECTED','IRN_CANCELLED','CONSOLIDATED')
         """
     )
-    fun getBfIncomeMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyIncome
+    fun getBfIncomeMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyData
 
     @NewSpan
     @Query(
@@ -293,7 +293,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_jan,
+		END) AS january,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-02-01')::DATE
 			AND CONCAT(:endYear, '-02-28')::DATE THEN
@@ -304,7 +304,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_feb,
+		END) AS february,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-03-01')::DATE
 			AND CONCAT(:endYear, '-03-30')::DATE THEN
@@ -315,7 +315,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_march,
+		END) AS march,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-04-01')::DATE
 			AND CONCAT(:startYear, '-04-30')::DATE THEN
@@ -326,7 +326,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_april,
+		END) AS april,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-05-01')::DATE
 			AND CONCAT(:startYear, '-05-30')::DATE THEN
@@ -337,7 +337,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_may,
+		END) AS may,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-06-01')::DATE
 			AND CONCAT(:startYear, '-06-30')::DATE THEN
@@ -348,7 +348,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_june,
+		END) AS june,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-07-01')::DATE
 			AND CONCAT(:startYear, '-07-30')::DATE THEN
@@ -359,7 +359,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_july,
+		END) AS july,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-08-01')::DATE
 			AND CONCAT(:startYear, '-08-30')::DATE THEN
@@ -370,7 +370,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_august,
+		END) AS august,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-09-01')::DATE
 			AND CONCAT(:startYear, '-09-30')::DATE THEN
@@ -381,7 +381,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_september,
+		END) AS september,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-10-01')::DATE
 			AND CONCAT(:startYear, '-10-30')::DATE THEN
@@ -392,7 +392,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_october,
+		END) AS october,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-11-01')::DATE
 			AND CONCAT(:startYear, '-11-30')::DATE THEN
@@ -403,7 +403,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_november,
+		END) AS november,
 	sum(
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-12-01')::DATE
 			AND CONCAT(:startYear, '-12-30')::DATE THEN
@@ -414,7 +414,7 @@ FROM
                 ELSE 0 END
 		ELSE
 			0
-		END) AS total_expense_december
+		END) AS december
 FROM
 	kuber.bills bill
 	LEFT JOIN ares.account_utilizations au ON au.document_no = bill.id
@@ -425,14 +425,14 @@ FROM
         AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
         """
     )
-    fun getBfExpenseMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyExpense
+    fun getBfExpenseMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyData
 
     @NewSpan
     @Query(
         """
     SELECT
 	sum(
-		CASE WHEN iv.invoice_date::date = now()::date THEN
+		CASE WHEN iv.invoice_date::date = :date::date THEN
 			CASE WHEN iv.invoice_type = 'INVOICE' THEN
 				iv.ledger_total
 			WHEN iv.invoice_type = 'CREDIT_NOTE' THEN
@@ -440,7 +440,7 @@ FROM
 			ELSE 0 END
 		ELSE 0 END) AS total_revenue,
 	sum(
-		CASE WHEN iv.invoice_date::date = now()::date
+		CASE WHEN iv.invoice_date::date = :date::date
 			AND iv.invoice_type = 'INVOICE' THEN
 			1
 		ELSE 0 END) AS total_invoices,
@@ -455,18 +455,18 @@ FROM
     AND au.acc_type IN ('SINV','SCN')
     AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
     AND (:entityCode is null or au.entity_code = :entityCode)
-	AND iv.invoice_date::date = now()::date
+	AND iv.invoice_date::date = :date::date
     AND iv.status NOT IN ('DRAFT','FINANCE_REJECTED','IRN_CANCELLED','CONSOLIDATED')       
      """
     )
-    fun getTodaySalesStats(serviceTypes: List<ServiceType>?, entityCode: Int?): TodaySalesStat
+    fun getTodaySalesStats(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodaySalesStat
 
     @NewSpan
     @Query(
         """
     SELECT
 	sum(
-		CASE WHEN bill.bill_date::date = now()::date THEN
+		CASE WHEN bill.bill_date::date = :date::date THEN
 			CASE WHEN bill.bill_type = 'BILL' THEN
 				bill.ledger_total
 			WHEN bill.bill_type = 'CREDIT_NOTE' THEN
@@ -474,7 +474,7 @@ FROM
 			ELSE 0 END
 		ELSE 0 END) AS total_expense,
 	sum(
-		CASE WHEN bill.bill_date::date = now()::date
+		CASE WHEN bill.bill_date::date = :date::date
 			AND bill.bill_type = 'BILL' THEN
 			1
 		ELSE 0 END) AS total_bills,
@@ -488,12 +488,12 @@ FROM
     au.acc_mode = 'AP'
     AND au.acc_type IN ('PINV','PCN')
     AND (:entityCode is null or au.entity_code = :entityCode)
-	AND bill.bill_date::date = now()::date	
+	AND bill.bill_date::date = :date::date	
     AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
 	AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
      """
     )
-    fun getTodayPurchaseStats(serviceTypes: List<ServiceType>?, entityCode: Int?): TodayPurchaseStats
+    fun getTodayPurchaseStats(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodayPurchaseStats
 
     @NewSpan
     @Query(

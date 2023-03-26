@@ -158,7 +158,7 @@ class DashboardController {
     }
     @Auth
     @Get("/bf-income-expense{?request*}")
-    suspend fun getBfIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): BfIncomeExpenseResponse {
+    suspend fun getBfIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getBfIncomeExpense(request)
     }

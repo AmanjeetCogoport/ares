@@ -6,6 +6,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
 import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
@@ -64,10 +65,12 @@ import java.math.RoundingMode
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDate.now
 import java.time.Month
 import java.time.Year
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -792,7 +795,7 @@ class DashboardServiceImpl : DashboardService {
         return unifiedRepository.getBfReceivable(request.serviceType, request.startDate, request.endDate, request.tradeType, customerIds, request.entityCode)
     }
 
-    override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): BfIncomeExpenseResponse {
+    override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
         val thisYear = Year.now().toString()
         val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
         var endYear = request.financeYearEnd ?: thisYear
@@ -811,26 +814,54 @@ class DashboardServiceImpl : DashboardService {
             endYear,
             request.isPostTax!!,
         )
-        return BfIncomeExpenseResponse(
-            logisticsMonthlyIncome = monthlyIncomes,
-            logisticsMonthlyExpense = monthlyExpenses
-        )
+        var response = mutableListOf<BfIncomeExpenseResponse>()
+        for (monthIndex in 1..12) {
+            var monthName = Month.of(monthIndex)
+            response.add(
+                BfIncomeExpenseResponse(
+                    month = monthName,
+                    income = getMonthData(monthlyIncomes, monthName),
+                    expense = getMonthData(monthlyExpenses, monthName)
+                )
+            )
+        }
+
+        return response
+    }
+
+    private fun getMonthData(data: LogisticsMonthlyData, month: Month): BigDecimal? {
+        return when (month) {
+            Month.JANUARY -> data.january
+            Month.FEBRUARY -> data.february
+            Month.MARCH -> data.march
+            Month.APRIL -> data.april
+            Month.MAY -> data.may
+            Month.JUNE -> data.june
+            Month.JULY -> data.july
+            Month.AUGUST -> data.august
+            Month.SEPTEMBER -> data.september
+            Month.OCTOBER -> data.october
+            Month.NOVEMBER -> data.november
+            Month.DECEMBER -> data.december
+            else -> null
+        }
     }
 
     override suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
-        val todaySalesData = unifiedRepository.getTodaySalesStats(
-            request.serviceTypes,
-            request.entityCode
-        )
-        val todayPurchaseData = unifiedRepository.getTodayPurchaseStats(
-            request.serviceTypes,
-            request.entityCode
-        )
+        val todaySalesData = unifiedRepository.getTodaySalesStats(request.serviceTypes, request.entityCode, now())
+        val todayPurchaseData = unifiedRepository.getTodayPurchaseStats(request.serviceTypes, request.entityCode, now())
         val response = BfTodayStatsResp(
             todaySalesStats = todaySalesData,
             todayPurchaseStats = todayPurchaseData,
         )
-        response.totalCashFlow = todaySalesData.totalRevenue - todayPurchaseData.totalExpense
+        var yesterday = now().minus(1, ChronoUnit.DAYS)
+        val yesterdaySalesData = unifiedRepository.getTodaySalesStats(request.serviceTypes, request.entityCode, yesterday)
+        val yesterdayPurchaseData = unifiedRepository.getTodayPurchaseStats(request.serviceTypes, request.entityCode, yesterday)
+        val todayCashFlow = todaySalesData.totalRevenue?.minus(todayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val cashFlowChange = (todayCashFlow?.minus(yesterdayCashFlow ?: 0.toBigDecimal())?.div(100.toBigDecimal()))
+        response.totalCashFlow = todayCashFlow
+        response.cashFlowDiffFromYesterday = cashFlowChange
         return response
     }
 
