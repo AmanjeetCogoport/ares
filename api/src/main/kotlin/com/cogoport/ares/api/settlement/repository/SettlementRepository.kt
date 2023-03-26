@@ -296,7 +296,7 @@ ORDER BY
     @Query(
         """
             SELECT
-                au.amount,
+                s.amount,
                 au.document_value,
                 s.destination_id,
                 s.destination_type,
