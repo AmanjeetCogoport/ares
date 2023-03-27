@@ -33,6 +33,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
                 ,au.amount_loc as amountLedger
                 ,pay_loc as payLedger
                 , j.led_currency as ledgerCurrency
+                ,j.updated_at as updatedAt
                 from journal_vouchers j 
                 inner join account_utilizations au on (au.document_value = j.jv_num and j.acc_mode=au.acc_mode) 
                 where j.created_by = '2f5e5152-03f4-4ea8-a3db-a6eff388161b' 
@@ -114,4 +115,14 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         accCode: String,
         sageOrganizationId: String
     ): Long
+
+    @Query(
+        """
+            select id from journal_vouchers where sage_unique_id = :sageUniqueId and jv_num = :jvNum
+        """
+    )
+    suspend fun checkJVWithNoBpr(
+        sageUniqueId: String,
+        jvNum: String
+    ): Long?
 }

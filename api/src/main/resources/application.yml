@@ -33,9 +33,9 @@ r2dbc:
       password: A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5
       dialect: POSTGRES
     dms:
-      url: r2dbc:postgresql://${DB_HOST:`52.66.190.93`}:${DB_PORT:6432}/${DB_NAME:dms}?preparedStatementCacheQueries=0
-      username: readuser_unifieddb
-      password: 72fe0630c542cc9ac415bf12a6002149
+      url: r2dbc:postgresql://${UNIFIEDDB_HOST:`52.66.190.93`}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME:dms}?preparedStatementCacheQueries=0
+      username: ${UNIFIEDDB_USER:readuser_unifieddb}
+      password: ${UNIFIEDDB_PASSWORD:72fe0630c542cc9ac415bf12a6002149}
       dialect: POSTGRES
 
 services:
