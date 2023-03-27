@@ -8,6 +8,7 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.migration.constants.AccountTypeMapping
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.constants.MigrationStatus
@@ -146,7 +147,7 @@ class PaymentMigrationImpl : PaymentMigration {
             val jvResponse: JvResponse? = paymentMigrationRepository.checkJVExists(
                 journalVoucherRecord.paymentNum!!,
                 journalVoucherRecord.accMode!!,
-                AccountType.valueOf(journalVoucherRecord.accountType!!).name,
+                // AccountType.valueOf(journalVoucherRecord.accountType!!).name, //need to change
                 journalVoucherRecord.sageUniqueId!!
             )
             if (jvResponse != null) {
@@ -441,7 +442,7 @@ class PaymentMigrationImpl : PaymentMigration {
             organizationName = receivableRequest.organizationName,
             accMode = AccMode.valueOf(receivableRequest.accMode!!),
             accCode = receivableRequest.accCode!!,
-            accType = AccountType.valueOf(receivableRequest.accountType!!),
+            accType = AccountType.valueOf(AccountTypeMapping.getAccountType(receivableRequest.accountType!!)),
             signFlag = receivableRequest.signFlag!!,
             currency = receivableRequest.currency!!,
             ledCurrency = receivableRequest.ledgerCurrency!!,
@@ -540,7 +541,6 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.updatedAt = journalVoucherRecord.updatedAt
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
         jv.migrated = true
-        jv.category = JVCategory.JVNOS // need to change
         jv.parentJvId = parentJvId
         return jv
     }
