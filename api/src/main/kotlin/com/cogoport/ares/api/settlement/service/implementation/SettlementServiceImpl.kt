@@ -610,7 +610,7 @@ open class SettlementServiceImpl : SettlementService {
             listBillRequest = ListBillRequest(
                 jobNumbers = null,
                 jobType = null,
-                status = "FINANCE_ACCEPTED",
+                status = listOf("FINANCE_ACCEPTED"),
                 excludeStatus = null,
                 organizationId = null,
                 serviceProviderOrgId = null,

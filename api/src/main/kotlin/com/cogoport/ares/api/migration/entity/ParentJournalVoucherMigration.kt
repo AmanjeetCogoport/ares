@@ -1,20 +1,20 @@
-package com.cogoport.ares.api.settlement.entity
+package com.cogoport.ares.api.migration.entity
 
 import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import java.math.BigDecimal
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
 @Introspected
 @MappedEntity(value = "parent_journal_vouchers")
-data class ParentJournalVoucher(
+data class ParentJournalVoucherMigration(
     @field:Id @GeneratedValue
     var id: Long?,
     var status: JVStatus,
@@ -23,9 +23,12 @@ data class ParentJournalVoucher(
     var validityDate: Date?,
     var createdBy: UUID?,
     var updatedBy: UUID?,
-    var migrated: Boolean? = false,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var createdAt: Timestamp? = null,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var updatedAt: Timestamp? = null,
+    var createdAt: Timestamp? = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var currency: String?,
+    var led_currency: String?,
+    var amount: BigDecimal?,
+    var exchangeRate: BigDecimal,
+    var description: String?,
+    var migrated: Boolean? = false
 )

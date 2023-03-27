@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.events
 
-import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -119,7 +119,7 @@ class AresMessageConsumer {
     }
 
     @Queue("sage-jv-migration", prefetch = 1)
-    fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord) = runBlocking {
+    fun migrateJournalVoucher(journalVoucherRecord: JVParentDetails) = runBlocking {
         paymentMigration.migrateJV(journalVoucherRecord)
     }
     @Queue("send-payment-details-for-autoKnockOff", prefetch = 1)

@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
-import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
@@ -1465,8 +1464,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = :accMode AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL  and is_void = false
+        WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL and is_void = false
         """
     )
     suspend fun getTradePartyOrgIds(accMode: AccMode?): List<UUID>
@@ -1474,235 +1473,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            SELECT
-                organization_id,
-                entity_code,
-                currency,
-                max(organization_name) as organization_name,
-                sum(
-                    CASE WHEN (acc_type in('SINV')
-                        and(due_date >= now()::date)) THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS not_due_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS today_amount,        
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 1 AND 30 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS thirty_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS sixty_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS ninety_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS one_eighty_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 181 AND 365  THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS three_sixty_five_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) > 365 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS three_sixty_five_plus_amount,
-                sum(
-                    CASE WHEN acc_type in('SINV') THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS total_outstanding,
-                sum(
-                    CASE WHEN acc_type in('SCN') THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS total_credit_amount,
-                sum(
-                    CASE WHEN acc_type in('SDN') THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS total_debit_amount,
-                    sum(
-                    CASE WHEN (acc_type in('SINV')
-                        and(due_date >= now()::date)) THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS not_due_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS today_amount_invoice_currency,        
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 1 AND 30 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS thirty_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS sixty_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS ninety_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS one_eighty_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) BETWEEN 181 AND 365  THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS three_sixty_five_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV')
-                        and(now()::date - due_date) > 365 THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS three_sixty_five_plus_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SINV') THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS total_outstanding_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SCN') THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS total_credit_amount_invoice_currency,
-                sum(
-                    CASE WHEN acc_type in('SDN') THEN
-                        sign_flag * (amount_curr - pay_curr)
-                    ELSE
-                        0
-                    END) AS total_debit_amount_invoice_currency,
-                sum(
-                    CASE WHEN due_date >= now()::date AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS not_due_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS today_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS thirty_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS sixty_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS ninety_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS one_eighty_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS three_sixty_five_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) > 365 AND acc_type in('SINV') THEN
-                        1
-                    ELSE
-                        0
-                    END) AS three_sixty_five_plus_count,
-                sum(
-                    CASE WHEN (acc_type in('SCN')) THEN
-                        1
-                    ELSE
-                        0
-                    END) AS credit_note_count,
-                sum(
-                    CASE WHEN (acc_type in('SDN')) THEN
-                        1
-                    ELSE
-                        0
-                    END) AS debit_note_count
-            FROM
-                account_utilizations
-            WHERE
-                (:query is null OR organization_name ILIKE :query || '%')
-                AND acc_mode = 'AR'
-                AND due_date IS NOT NULL
-                AND document_status in('FINAL')
-                AND organization_id IS NOT NULL
-                AND amount_curr - pay_curr > 0
-                AND entity_code = :entityCode
-                AND (:orgId IS NULL OR organization_id = :orgId::uuid)
-                AND acc_type IN ('SINV', 'SCN', 'SDN')
-                AND deleted_at IS NULL and is_void = false
-            GROUP BY
-                organization_id, entity_code, currency 
+            select organization_id::varchar, currency,
+            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
+            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
+            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
+            group by organization_id, currency
         """
     )
-    suspend fun getInvoicesOutstandingAgeingBucket(entityCode: Int, query: String?, orgId: String?): List<CustomerOutstandingAgeing>
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
 }
