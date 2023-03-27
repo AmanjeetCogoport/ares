@@ -6,7 +6,6 @@ import java.math.BigDecimal
 data class DailyOutstanding(
     var month: Int,
     var openInvoiceAmount: BigDecimal?,
-    var onAccountPayment: BigDecimal?,
     var outstandings: BigDecimal?,
     var totalSales: BigDecimal?,
     var days: Int,
