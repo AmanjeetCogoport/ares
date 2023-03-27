@@ -11,13 +11,16 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
@@ -44,6 +47,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var accountUtilService: AccountUtilizationService
+
+    @Inject
+    lateinit var taggedSettlementService: TaggedSettlementService
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -118,5 +124,20 @@ class AresMessageConsumer {
     @Queue("update-customer-details", prefetch = 1)
     fun updateCustomerOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
         outstandingService.updateCustomerDetails(request.orgId.toString(), false, null)
+    }
+
+    @Queue("migrate-settlement-number", prefetch = 1)
+    fun migrateSettlementNum(id: Long) = runBlocking {
+        paymentMigration.migrateSettlementNum(id)
+    }
+
+    @Queue("update-settlement-bill-updated", prefetch = 1)
+    fun editSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent) = runBlocking {
+        knockoffService.editSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent)
+    }
+
+    @Queue("tagged-bill-auto-knockoff", prefetch = 1)
+    fun taggedBillAutoKnockOff(req: OnAccountPaymentRequest) = runBlocking {
+        taggedSettlementService.settleOnAccountInvoicePayment(req)
     }
 }

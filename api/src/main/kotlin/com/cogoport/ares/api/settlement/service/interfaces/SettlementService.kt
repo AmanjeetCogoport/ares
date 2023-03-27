@@ -39,7 +39,7 @@ interface SettlementService {
 
     suspend fun editCheck(request: CheckRequest): CheckResponse
 
-    suspend fun settle(request: CheckRequest): List<CheckDocument>
+    suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean = false): List<CheckDocument>
 
     suspend fun edit(request: CheckRequest): List<CheckDocument>
 

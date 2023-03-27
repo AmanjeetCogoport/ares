@@ -14,5 +14,6 @@ data class AccountPayableFileResponse(
     var isSuccess: Boolean,
     var paymentStatus: String?,
     var failureReason: String?,
-    var performedBy: UUID?
+    var performedBy: UUID?,
+    var settlementNum: String?
 )
