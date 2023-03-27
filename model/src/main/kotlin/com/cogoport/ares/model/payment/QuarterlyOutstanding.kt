@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.payment
 
-import com.cogoport.ares.model.payment.response.OutstandingResponse
+import com.cogoport.ares.model.payment.response.QsoResponse
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -15,7 +15,5 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class QuarterlyOutstanding(
     @JsonProperty("list")
-    var list: List<OutstandingResponse>? = null,
-    @JsonProperty("id")
-    var id: String
+    var list: List<QsoResponse>? = null
 )

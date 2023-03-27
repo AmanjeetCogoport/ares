@@ -29,6 +29,11 @@ r2dbc:
           url: r2dbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?preparedStatementCacheQueries=0
           username: ${DB_USER}
           password: ${DB_PASSWORD}
+    dms:
+      url: r2dbc:postgresql://${UNIFIEDDB_HOST}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME}?preparedStatementCacheQueries=0
+      username: ${UNIFIEDDB_USER}
+      password: ${UNIFIEDDB_PASSWORD}
+      dialect: POSTGRES
 
 services:
   namespace: ${DNS_NAMESPACE:cogoport.stage}

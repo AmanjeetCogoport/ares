@@ -32,6 +32,11 @@ r2dbc:
       username: postgres
       password: A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5
       dialect: POSTGRES
+    dms:
+      url: r2dbc:postgresql://${UNIFIEDDB_HOST}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME}?preparedStatementCacheQueries=0
+      username: ${UNIFIEDDB_USER}
+      password: ${UNIFIEDDB_PASSWORD}
+      dialect: POSTGRES
 
 services:
   service: https://api.stage.cogoport.io

@@ -38,7 +38,6 @@ import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.sql.SQLException
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.IsoFields
@@ -395,10 +394,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accUtilizationRequest: AccUtilizationRequest,
         proformaDate: Date? = null
     ) {
-        if (proformaDate != null) {
-            emitDashboardData(accUtilizationRequest, proformaDate)
-        }
-        emitDashboardData(accUtilizationRequest)
         if (accUtilizationRequest.accMode == AccMode.AR) {
             emitOutstandingData(accUtilizationRequest)
         }
@@ -415,29 +410,6 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                     zone = accUtilizationRequest.zoneCode,
                     orgId = accUtilizationRequest.organizationId.toString(),
                     orgName = accUtilizationRequest.organizationName,
-                    serviceType = accUtilizationRequest.serviceType,
-                    invoiceCurrency = accUtilizationRequest.currency
-                )
-            )
-        )
-    }
-
-    /**
-     * Emit message to Kafka topic receivables-dashboard-data
-     * @param accUtilizationRequest
-     */
-    private suspend fun emitDashboardData(accUtilizationRequest: AccUtilizationRequest, proformaDate: Date? = null) {
-        val date: Date = proformaDate ?: accUtilizationRequest.transactionDate!!
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-                        .get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault())
-                        .toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode,
                     serviceType = accUtilizationRequest.serviceType,
                     invoiceCurrency = accUtilizationRequest.currency
                 )
