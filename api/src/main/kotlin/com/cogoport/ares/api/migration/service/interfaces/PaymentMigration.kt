@@ -14,4 +14,6 @@ interface PaymentMigration {
     suspend fun updatePayment(payLocUpdateRequest: PayLocUpdateRequest)
 
     suspend fun migrateJV(journalVoucherRecord: JVParentDetails)
+
+    suspend fun migrateSettlementNum(ids: Long)
 }

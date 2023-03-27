@@ -7,7 +7,9 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.TdsAmountReq
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -21,6 +23,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -197,5 +202,17 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             payLoc = invoiceDetails.ledgerAmountPaid,
             accMode = invoiceDetails.accMode
         )
+    }
+
+    override suspend fun migrateSettlementNumWrapper(ids: List<Long>) {
+        ids.forEach {
+            aresMessagePublisher.emitMigrateSettlementNumber(it)
+        }
+    }
+
+    override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
+        req.forEach {
+            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+        }
     }
 }

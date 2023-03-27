@@ -2,6 +2,7 @@ package com.cogoport.ares.client
 
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -19,6 +20,7 @@ import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
@@ -154,4 +156,10 @@ interface AresClient {
     suspend fun getInvoiceListForTradeParties(
         @Valid @Body request: InvoiceListRequestForTradeParty
     ): ResponseList<InvoiceListResponse?>
+
+    @Post("/payments/accounts/settle-tagged-invoice-payment")
+    suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
+
+    @Put("/payments/tds-amount")
+    suspend fun migrateTdsAmount(@Body req: List<TdsAmountReq>)
 }

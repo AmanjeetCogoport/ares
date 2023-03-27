@@ -23,7 +23,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
     @NewSpan
     @Query(
         """
-            UPDATE payment_invoice_mapping SET deleted_at = NOW() WHERE id = :id
+            UPDATE payment_invoice_mapping SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id
         """
     )
     suspend fun deletePaymentMappings(id: Long?)
