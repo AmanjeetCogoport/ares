@@ -1,15 +1,12 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
 import com.cogoport.ares.api.payment.entity.OrgSummary
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
@@ -19,6 +16,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CollectionTrend
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
@@ -72,52 +70,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
               pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id and deleted_at is null"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
-
-    @NewSpan
-    @Query(
-        """
-            select coalesce(case when due_date  >= now()::date then 'Not Due'
-             when (now()::date - due_date ) between 1 and 30 then '1-30'
-             when (now()::date - due_date ) between 31 and 60 then '31-60'
-             when (now()::date - due_date ) between 61 and 90 then '61-90'
-             when (now()::date - due_date ) between 91 and 180 then '91-180'
-             when (now()::date - due_date ) between 181 and 365 then '181-365'
-             when (now()::date - due_date ) > 365 then '365+'
-             end, 'Unknown') as ageing_duration,
-             zone_code as zone,
-             currency as dashboard_currency,
-             sum(sign_flag * (amount_curr - pay_curr)) as amount
-             from account_utilizations
-             where ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-             AND (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
-             and document_status in ('FINAL', 'PROFORMA')  and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null  and is_void = false
-             group by ageing_duration, zone, dashboard_currency
-             order by 1
-          """
-    )
-    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<AgeingBucketZone>
-
-    @NewSpan
-    @Query(
-        """
-            select coalesce(case when due_date >= now()::date then 'Not Due'
-            when (now()::date - due_date) between 1 and 30 then '1-30'
-            when (now()::date - due_date) between 31 and 60 then '31-60'
-            when (now()::date - due_date) between 61 and 90 then '61-90'
-            when (now()::date - due_date) > 90 then '>90' 
-            end, 'Unknown') as ageing_duration, 
-            sum(sign_flag * (amount_curr - pay_curr)) as amount,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-            group by ageing_duration, dashboard_currency
-            order by ageing_duration
-        """
-
-    )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): List<OverallAgeingStats>
-
     @NewSpan
     @Query(
         """
@@ -251,31 +203,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<DailyOutstanding>
-
-    @NewSpan
-    @Query(
-        """
-        with X as (
-            select 
-            extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_curr end) as total_sales,
-            case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null  and is_void = false
-            group by dashboard_currency
-        )
-        select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END)* X.days,0) as value, 
-        dashboard_currency
-        from X
-        """
-    )
-    suspend fun generateDailyPayableOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
 
     @NewSpan
     @Query(

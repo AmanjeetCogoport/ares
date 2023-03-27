@@ -79,8 +79,8 @@ class OutStandingServiceImpl : OutStandingService {
         } catch (exception: IllegalArgumentException) {
             throw AresException(AresError.ERR_1009, AresConstants.ORG_ID + " : " + request.orgId)
         }
-        if (AresConstants.ROLE_ZONE_HEAD == request.role && request.zone.isNullOrBlank()) {
-            throw AresException(AresError.ERR_1003, AresConstants.ZONE)
+        if (AresConstants.ROLE_ZONE_HEAD == request.role) {
+            throw AresException(AresError.ERR_1003, "")
         }
     }
 
