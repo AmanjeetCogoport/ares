@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
@@ -30,6 +31,7 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
@@ -133,5 +135,10 @@ class OutstandingController {
     suspend fun getCustomerOutstandingPaymentDetails(@Valid request: CustomerOutstandingPaymentRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingPaymentResponse?> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
         return Response<ResponseList<CustomerOutstandingPaymentResponse?>>().ok(outStandingService.getCustomerOutstandingPaymentDetails(request))
+    }
+
+    @Get("/paybles-info")
+    suspend fun getPayblesInfo(@QueryValue entity: Int?): PayblesInfoRes {
+        return outStandingService.getPayablesInfo(entity)
     }
 }

@@ -13,7 +13,7 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -65,17 +65,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
               pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id and deleted_at is null"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
-
-    @NewSpan
-    @Query(
-        """
-        SELECT count(distinct organization_id) 
-        FROM account_utilizations 
-        WHERE acc_type IN ('SINV','SDN','SCN') AND amount_curr - pay_curr <> 0 AND (:zone IS NULL OR zone_code = :zone) AND document_status in ('FINAL', 'PROFORMA') AND acc_mode = 'AR' 
-        AND (:serviceType IS NULL OR service_type::varchar = :serviceType) AND  (:invoiceCurrency IS NULL OR currency = :invoiceCurrency) AND deleted_at IS NULL AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-        """
-    )
-    suspend fun getOrganizationCountForOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): Int
 
     @NewSpan
     @Query(
@@ -1117,6 +1106,29 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
+            select organization_id::varchar, currency,
+            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
+            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
+            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
+            group by organization_id, currency
+        """
+    )
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+
+    @NewSpan
+    @Query(
+        """
             SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
         """
     )
@@ -1256,7 +1268,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
+        WHERE acc_mode = :accMode AND organization_id IS NOT NULL 
         AND deleted_at IS NULL
         """
     )
@@ -1265,23 +1277,33 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            select organization_id::varchar, currency,
-            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
-            sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
-            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
-            from account_utilizations
-            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
-            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
-            group by organization_id, currency
-        """
+        SELECT sum(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
     )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+    suspend fun getAccountPayables(entity: Int?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
+        SELECT SUM(CASE WHEN acc_type IN ('PINV','PREIMB') THEN (amount_loc-pay_loc) ELSE 0 END) AS open_invoice_amount,
+        SUM(CASE WHEN acc_type in ('PINV','PREIMB') THEN 1 ELSE 0 END) AS open_invoice_count,
+        SUM(CASE WHEN acc_type IN ('PAY') THEN (amount_loc-pay_loc) ELSE 0 END) AS on_account_amount,
+        SUM(CASE WHEN acc_type IN ('PCN') THEN (amount_loc-pay_loc) ELSE 0 END) AS credit_note_amount
+        FROM account_utilizations WHERE acc_mode = 'AP' AND deleted_at IS NULL AND migrated = false AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getAccountPayablesStats(entity: Int?): AccountPayablesStats
+
+    @NewSpan
+    @Query(
+        """
+        SELECT  COUNT(distinct trade_party_mapping_id) FROM account_utilizations
+        WHERE acc_mode = 'AP' AND acc_type IN ('PINV','PREIMB') AND deleted_at IS NULL AND migrated = false AND amount_curr > pay_curr AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getOrganizationCount(entity: Int?): Long?
 }

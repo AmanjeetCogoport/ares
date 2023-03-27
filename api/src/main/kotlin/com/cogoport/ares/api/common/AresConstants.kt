@@ -20,6 +20,7 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
