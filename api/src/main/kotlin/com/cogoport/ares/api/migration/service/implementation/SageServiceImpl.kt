@@ -342,7 +342,7 @@ class SageServiceImpl : SageService {
             ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description from COGO2.GACCENTRY
         """.trimIndent()
         sqlQuery += if (startDate != null && endDate != null) {
-            """ where CREDAT_0 between "'$startDate'" and "'$endDate'"""".trimIndent()
+            """ where CREDAT_0 between '$startDate' and '$endDate'"""
         } else {
             """ where NUM_0 in ($jvNum)"""
         }
