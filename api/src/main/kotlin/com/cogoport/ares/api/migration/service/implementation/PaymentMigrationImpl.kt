@@ -520,7 +520,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyName = tradePartyResponse[0]?.tradePartyBusinessName!!,
             createdBy = MigrationConstants.createdUpdatedBy,
             accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
-            description = null
+            description = null,
+            glCode = journalVoucherRecord.accCode.toString()
         )
     }
 
@@ -542,6 +543,7 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
         jv.migrated = true
         jv.parentJvId = parentJvId
+        jv.glCode = request.glCode
         return jv
     }
 
@@ -746,6 +748,22 @@ class PaymentMigrationImpl : PaymentMigration {
         var jvRecords: List<JournalVoucherRecord>? = null
         var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
         try {
+            jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
+            var sum = BigDecimal.ZERO
+            jvRecords.forEach {
+                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+            }
+            val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+            jvRecordsWithoutBpr.forEach {
+                sum += (it.amount * it.signFlag)
+            }
+            if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, null, null,
+                    null, null, null, null, "jv Sum is not zero"
+                )
+                return
+            }
             if (parentJVId == null) {
                 jvParentRecord = parentJournalVoucherRepo.save(
                     ParentJournalVoucherMigration(
@@ -767,22 +785,6 @@ class PaymentMigrationImpl : PaymentMigration {
                     )
                 )
                 parentJVId = jvParentRecord.id!!
-            }
-            jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
-            var sum = BigDecimal.ZERO
-            jvRecords.forEach {
-                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
-            }
-            val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
-            jvRecordsWithoutBpr.forEach {
-                sum += (it.amount * it.signFlag)
-            }
-            if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
-                migrationLogService.saveMigrationLogs(
-                    null, null, jvParentDetail.jvNum, null, null,
-                    null, null, null, null, "jv Sum is not zero"
-                )
-                return
             }
             storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
         } catch (ex: Exception) {
