@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
@@ -102,5 +103,31 @@ object AresConstants {
         301 to "INR",
         401 to "SGD",
         501 to "VND",
+    )
+
+    val OCEAN_SERVICES = listOf(
+        ServiceType.FCL_FREIGHT,
+        ServiceType.LCL_FREIGHT,
+        ServiceType.FCL_CUSTOMS,
+        ServiceType.LCL_CUSTOMS,
+        ServiceType.FCL_CUSTOMS_FREIGHT,
+        ServiceType.LCL_CUSTOMS_FREIGHT,
+        ServiceType.FCL_CFS,
+        ServiceType.FCL_FREIGHT_LOCAL
+    )
+    val AIR_SERVICES = listOf(
+        ServiceType.AIR_CUSTOMS,
+        ServiceType.AIR_FREIGHT,
+        ServiceType.AIR_CUSTOMS_FREIGHT,
+        ServiceType.AIR_FREIGHT_LOCAL,
+        ServiceType.DOMESTIC_AIR_FREIGHT
+    )
+    val SURFACE_SERVICES = listOf(
+        ServiceType.FTL_FREIGHT,
+        ServiceType.LTL_FREIGHT,
+        ServiceType.HAULAGE_FREIGHT,
+        ServiceType.TRAILER_FREIGHT,
+        ServiceType.RAIL_DOMESTIC_FREIGHT,
+        ServiceType.TRUCKING
     )
 }

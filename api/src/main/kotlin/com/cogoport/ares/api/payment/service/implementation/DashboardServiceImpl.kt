@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.AresConstants.AIR_SERVICES
+import com.cogoport.ares.api.common.AresConstants.OCEAN_SERVICES
+import com.cogoport.ares.api.common.AresConstants.SURFACE_SERVICES
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -11,9 +14,12 @@ import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
 import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedRepository
@@ -21,6 +27,7 @@ import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucketZone
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
@@ -779,7 +786,11 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getBfReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
-            return unifiedRepository.getBfPayable(request.serviceType, request.startDate, request.endDate, request.tradeType, request.entityCode)
+            return unifiedRepository.getBfPayable(
+                request.serviceType, request.startDate,
+                request.endDate, request.tradeType, request.entityCode,
+                OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES
+            )
         }
         var customerIds: List<String>? = null
         var customerTypes = mapOf(
@@ -792,7 +803,10 @@ class DashboardServiceImpl : DashboardService {
                 customerTypes[request.buyerType]!!
             )
         }
-        return unifiedRepository.getBfReceivable(request.serviceType, request.startDate, request.endDate, request.tradeType, customerIds, request.entityCode)
+        return unifiedRepository.getBfReceivable(
+            request.serviceType, request.startDate, request.endDate,
+            request.tradeType, customerIds, request.entityCode, OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES
+        )
     }
 
     override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
@@ -914,5 +928,64 @@ class DashboardServiceImpl : DashboardService {
             pageSize = request.pageSize,
             totalRecord = totalRecords.totalCount
         )
+    }
+
+    override suspend fun getBfServiceWiseRecPay(entityCode: Int?): MutableList<ServiceWiseRecPayResp> {
+        val response = mutableListOf<ServiceWiseRecPayResp>()
+        val oceanReceivable = unifiedRepository.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode)
+        val oceanPayable = unifiedRepository.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode)
+        val airReceivable = unifiedRepository.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode)
+        val airPayable = unifiedRepository.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode)
+        val surfaceReceivable = unifiedRepository.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode)
+        val surfacePayable = unifiedRepository.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode)
+
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Ocean",
+                accountPay = oceanPayable,
+                accountRec = oceanReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Air",
+                accountPay = airPayable,
+                accountRec = airReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Surface",
+                accountPay = surfacePayable,
+                accountRec = surfaceReceivable
+            )
+        )
+        return response
+    }
+
+    override suspend fun getServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp {
+        val tradeTypes = when (request.tradeType) {
+            "import" -> listOf("import", "IMPORT")
+            "export" -> listOf("export", "EXPORT")
+            "other" -> listOf("domestic", "DOMESTIC", "LOCAL", "local")
+            "domestic" -> listOf("domestic", "DOMESTIC")
+            "local" -> listOf("LOCAL", "local")
+            else -> null
+        }
+        return when (request.interfaceType) {
+            "ocean" -> ServiceWiseOverdueResp(
+                arData = getBfReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
+                apData = getBfReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+            )
+            "air" -> ServiceWiseOverdueResp(
+                arData = getBfReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
+                apData = getBfReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+            )
+            "surface" -> ServiceWiseOverdueResp(
+                arData = getBfReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
+                apData = getBfReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+            )
+            else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
+        }
     }
 }

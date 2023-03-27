@@ -14,6 +14,6 @@ data class BfPendingAmountsReq(
     var buyerType: String?,
     var startDate: Date?,
     var endDate: Date?,
-    var tradeType: String?,
+    var tradeType: List<String>?,
     var entityCode: Int?
 )

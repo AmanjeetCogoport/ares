@@ -6,9 +6,12 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
 import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -186,6 +189,20 @@ class DashboardController {
     suspend fun getBfCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getBfCustomerProfit(request)
+    }
+
+    @Auth
+    @Get("bf-service-wise-rec-pay")
+    suspend fun getBfServiceWiseRecPay(@QueryValue("entityCode") entityCode: Int? = null, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
+        val computedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+        return dashboardService.getBfServiceWiseRecPay(computedEntityCode)
+    }
+
+    @Auth
+    @Get("bf-service-wise-overdue{?request*}")
+    suspend fun getBfServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getServiceWiseOverdue(request)
     }
 
     /** To be Deleted */

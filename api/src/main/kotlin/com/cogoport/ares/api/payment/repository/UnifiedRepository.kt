@@ -8,6 +8,8 @@ import com.cogoport.ares.api.payment.entity.PaymentFile
 import com.cogoport.ares.api.payment.entity.ProfitCountResp
 import com.cogoport.ares.api.payment.entity.TodayPurchaseStats
 import com.cogoport.ares.api.payment.entity.TodaySalesStat
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -15,6 +17,7 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.Date
 
@@ -62,7 +65,35 @@ interface UnifiedRepository : CoroutineCrudRepository<PaymentFile, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('import','IMPORT')
+               AND au.service_type in (:oceanServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_ocean_import_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('export','EXPORT')
+            AND au.service_type in (:oceanServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_ocean_export_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('export','EXPORT')
+           AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_export_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('import','IMPORT')
+             AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_import_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('domestic','LOCAL')
+           AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_others_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('domestic')
+            AND au.service_type in (:surfaceServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_surface_domestic_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('LOCAL')
+            AND au.service_type in (:surfaceServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_surface_local_due
 	FROM
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
@@ -77,10 +108,20 @@ interface UnifiedRepository : CoroutineCrudRepository<PaymentFile, Long> {
         AND (COALESCE(:customerIds) is null or au.tagged_organization_id::varchar in (:customerIds))
          AND (:entityCode is null or au.entity_code = :entityCode)
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate AND :endDate)
-        AND (:tradeType is null or j.job_details->>'tradeType' = :tradeType)
+        AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
-    fun getBfReceivable(serviceTypes: List<ServiceType>?, startDate: Date?, endDate: Date?, tradeType: String?, customerIds: List<String>?, entityCode: Int?): BfReceivableAndPayable
+    fun getBfReceivable(
+        serviceTypes: List<ServiceType>?,
+        startDate: Date?,
+        endDate: Date?,
+        tradeType: List<String>?,
+        customerIds: List<String>?,
+        entityCode: Int?,
+        oceanServices: List<ServiceType>?,
+        airServices: List<ServiceType>?,
+        surfaceServices: List<ServiceType>?
+    ): BfReceivableAndPayable
 
     @NewSpan
     @Query(
@@ -136,7 +177,35 @@ WHERE
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				au.sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('import','IMPORT')
+            AND au.service_type in (:oceanServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_ocean_import_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('export','EXPORT')
+            AND au.service_type in (:oceanServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_ocean_export_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('export','EXPORT')
+           AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_export_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('import','IMPORT')
+            AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_import_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('domestic','LOCAL')
+            AND au.service_type in (:airServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_air_others_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('domestic')
+             AND au.service_type in (:surfaceServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_surface_domestic_due,
+        sum(
+            CASE WHEN j.job_details->>'tradeType' IN ('LOCAL')
+            AND au.service_type in (:surfaceServices) THEN
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_surface_local_due
 	FROM
 		ares.account_utilizations au JOIN 
         kuber.bills bill ON au.document_no = bill.id JOIN
@@ -150,10 +219,19 @@ WHERE
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (:entityCode is null or au.entity_code = :entityCode)
         AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
-        AND (:tradeType is null or j.job_details->>'tradeType' = :tradeType)
+        AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
-    fun getBfPayable(serviceTypes: List<ServiceType>?, startDate: Date?, endDate: Date?, tradeType: String?, entityCode: Int?): BfReceivableAndPayable
+    fun getBfPayable(
+        serviceTypes: List<ServiceType>?,
+        startDate: Date?,
+        endDate: Date?,
+        tradeType: List<String>?,
+        entityCode: Int?,
+        oceanServices: List<ServiceType>?,
+        airServices: List<ServiceType>?,
+        surfaceServices: List<ServiceType>?
+    ): BfReceivableAndPayable
 
     @NewSpan
     @Query(
@@ -612,4 +690,22 @@ WHERE
         """
     )
     fun findTotalCountCustomer(query: String?, entityCode: Int?): ProfitCountResp
+
+    @Query(
+        """
+             SELECT
+		sum(au.sign_flag * (au.amount_loc - au.pay_loc)) 
+	FROM
+		ares.account_utilizations au 
+	WHERE
+		au.acc_mode = :accMode
+		AND au.due_date IS NOT NULL
+		AND au.document_status in('FINAL')
+		AND au.deleted_at IS NULL
+		AND au.acc_type IN (:accType)
+        AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
+        AND (:entityCode IS NULL OR au.entity_code = :entityCode)
+        """
+    )
+    fun getTotalRemainingAmount(accMode: AccMode, accType: List<AccountType>, serviceTypes: List<ServiceType>, entityCode: Int?): BigDecimal?
 }
