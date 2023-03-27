@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AgeingBucketZone
 import com.cogoport.ares.api.payment.entity.CollectionTrend
+import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
@@ -1482,5 +1483,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             group by organization_id, currency
         """
     )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<CustomerOrgOutstanding>
 }
