@@ -355,7 +355,8 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
             select FCYLIN_0 as entityCode,GD.NUM_0 as jvNum, GD.TYP_0 as type,G.VALDAT_0 as validityDate,AMTCUR_0 as amount, AMTLED_0 as ledger_amount
             ,GD.CUR_0 as currency, GD.CURLED_0 as ledgerCurrency,'APPROVED' as status, G.RATMLT_0 as exchange_rate, GD.CREDATTIM_0 as created_at, GD.UPDDATTIM_0 as updated_at,
-            G.DESVCR_0 as description, GD.ROWID as sage_unique_id, GD.SNS_0 as sign_flag from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) and SAC_0 = '' and BPR_0 = '' and GD.NUM_0 = '$jvNum'
+            G.DESVCR_0 as description, GD.ROWID as sage_unique_id, GD.SNS_0 as sign_flag, GD.ACC_0 as gl_code from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) 
+            and SAC_0 = '' and BPR_0 = '' and GD.NUM_0 = '$jvNum'
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
