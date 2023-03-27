@@ -23,7 +23,7 @@ data class JournalVoucher(
     val entityCode: Int?,
     var jvNum: String,
     var type: String?,
-    val category: JVCategory,
+    var category: JVCategory,
     val validityDate: Date?,
     val amount: BigDecimal?,
     val currency: String?,

@@ -540,6 +540,7 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.updatedAt = journalVoucherRecord.updatedAt
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
         jv.migrated = true
+        jv.category = JVCategory.JVNOS // need to change
         jv.parentJvId = parentJvId
         return jv
     }
