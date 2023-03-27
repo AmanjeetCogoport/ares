@@ -10,10 +10,9 @@ import io.micronaut.http.annotation.QueryValue
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class DsoRequest(
-    @QueryValue(AresModelConstants.ZONE) val zone: String? = null,
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
-    @QueryValue(AresModelConstants.QUARTER_YEAR) val quarterYear: List<String> = listOf("Q" + AresModelConstants.CURR_QUARTER + "_" + AresModelConstants.CURR_YEAR),
     @QueryValue(AresModelConstants.SERVICE_TYPE) val serviceType: ServiceType?,
-    @QueryValue(AresModelConstants.INVOICE_CURRENCY) val invoiceCurrency: String?,
-    @QueryValue(AresModelConstants.DASHBOARD_CURRENCY) val dashboardCurrency: String = "INR"
+    @QueryValue("entityCode") var entityCode: Int? = 301,
+    @QueryValue(AresModelConstants.COMPANY_TYPE) val companyType: CompanyType? = null,
+    @QueryValue("year") val year: Int? = null
 )

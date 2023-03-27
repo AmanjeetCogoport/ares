@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -21,9 +22,6 @@ interface AresMessagePublisher {
     @Binding("unfreeze.credit.consumption")
     suspend fun emitUnfreezeCreditConsumption(request: Settlement)
 
-    @Binding("receivables.dashboard.data")
-    suspend fun emitDashboardData(openSearchEvent: OpenSearchEvent)
-
     @Binding("receivables.outstanding.data")
     suspend fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
 
@@ -37,6 +35,7 @@ interface AresMessagePublisher {
     suspend fun emitPaymentMigration(paymentRecord: PaymentRecord)
 
     @Binding("sage.jv.migration")
+    suspend fun emitJournalVoucherMigration(journalVoucherRecord: JVParentDetails)
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 
     @Binding("customer.outstanding")
