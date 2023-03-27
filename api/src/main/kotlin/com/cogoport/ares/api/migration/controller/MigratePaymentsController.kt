@@ -130,7 +130,7 @@ class MigratePaymentsController {
 
     @Get("/migrate-jv")
     suspend fun migrateJvByDate(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
-        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null);
+        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
