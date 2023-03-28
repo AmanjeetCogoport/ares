@@ -116,11 +116,11 @@ class SageServiceImpl : SageService {
             (
             select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
             ,MAX(SNS_0) as sign_flag
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') -- and TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC') 
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV','PAY','REC','RPI','SPINV','SPMEM','ZDN','ZSDN','ZSINV','ZSMEM','ZSMEP','ZSMFR') 
             GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
-            where G.SAC_0 in('AR','SC') -- and G.TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC')
+            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV','PAY','REC','RPI','SPINV','SPMEM','ZDN','ZSDN','ZSINV','ZSMEM','ZSMEP','ZSMFR')
             and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         if (startDate == null && endDate == null) {
@@ -339,12 +339,12 @@ class SageServiceImpl : SageService {
     override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails> {
         var sqlQuery = """
             select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, LED_0 as ledger_currency
-            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description from COGO2.GACCENTRY
+            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description from COGO2.GACCENTRY where TYP_0 <> 'NEWPR'
         """.trimIndent()
         sqlQuery += if (startDate != null && endDate != null) {
-            """ where CREDAT_0 between '$startDate' and '$endDate'"""
+            """ and CREDAT_0 between '$startDate' and '$endDate'"""
         } else {
-            """ where NUM_0 in ($jvNum)"""
+            """ and NUM_0 in ($jvNum)"""
         }
         val result = Client.sqlQuery(sqlQuery)
         val parentDetails = ObjectMapper().readValue(result, JVParentRecordManger::class.java)
