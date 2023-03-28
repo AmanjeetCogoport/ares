@@ -217,7 +217,7 @@ class DashboardController {
     // ** Business Finance DashBoard Apis */
 
     @Auth
-    @Get("/finance-receivable{?request*}")
+    @Get("/finance-receivable-payable{?request*}")
     suspend fun getBfReceivableData(
         @Valid request: BfPendingAmountsReq,
         user: AuthResponse?,

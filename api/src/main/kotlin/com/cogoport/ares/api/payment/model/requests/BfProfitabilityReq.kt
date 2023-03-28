@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.model.requests
 
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.plutus.model.common.Pagination
 import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
@@ -15,5 +16,5 @@ data class BfProfitabilityReq(
     var endDate: String? = null,
     var sortBy: String? = "createdAt",
     var entityCode: Int? = null,
-    var serviceType: List<String>? = null
+    var serviceType: List<ServiceType>? = null
 ) : Pagination()

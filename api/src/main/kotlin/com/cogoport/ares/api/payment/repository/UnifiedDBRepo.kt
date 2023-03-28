@@ -1111,7 +1111,7 @@ WHERE
 	j.income != 0
 	AND j.expense != 0
     AND (:query IS NULL OR (o.business_name ILIKE :query OR j.job_number ILIKE :query))
-    AND (COALESCE(:serviceType) is null or j.job_details->>'shipmentType' in (:serviceType))
+    AND (COALESCE(:serviceType) is null or UPPER(j.job_details->>'shipmentType') in (:serviceType))
     AND (:taggedEntityId IS NULL OR j.tagged_entity_id::VARCHAR = :taggedEntityId::varchar)
     AND (:startDate is null or :endDate is null or s.created_at::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
     AND (:jobStatus IS NULL OR j.state = :jobStatus)
@@ -1141,7 +1141,7 @@ WHERE
         taggedEntityId: String?,
         startDate: String?,
         endDate: String?,
-        serviceType: List<String>?
+        serviceType: List<ServiceType>?
     ): List<BfShipmentProfitabilityResp>
 
     @NewSpan
@@ -1155,14 +1155,14 @@ WHERE
     WHERE
 	j.income != 0
 	AND j.expense != 0
-    AND (COALESCE(:serviceType) is null or j.job_details->>'shipmentType' in (:serviceType))
+    AND (COALESCE(:serviceType) is null or UPPER(j.job_details->>'shipmentType') in (:serviceType))
     AND (:startDate is null or :endDate is null or s.created_at::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
     AND (:taggedEntityId IS NULL OR j.tagged_entity_id::VARCHAR = :taggedEntityId::varchar)
     AND (:query IS NULL OR (o.business_name ILIKE :query OR j.job_number ILIKE :query))
     AND (:jobStatus IS NULL OR j.state = :jobStatus)     
         """
     )
-    fun findTotalCountShipment(query: String?, jobStatus: String?, taggedEntityId: String?, startDate: String?, endDate: String?, serviceType: List<String>?): ProfitCountResp
+    fun findTotalCountShipment(query: String?, jobStatus: String?, taggedEntityId: String?, startDate: String?, endDate: String?, serviceType: List<ServiceType>?): ProfitCountResp
 
     @NewSpan
     @Query(
