@@ -119,8 +119,6 @@ import java.nio.file.StandardCopyOption
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.ZoneId
-import java.time.temporal.IsoFields
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.abs
@@ -316,6 +314,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -367,17 +368,6 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     private suspend fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
-                )
-            )
-        )
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(
@@ -474,6 +464,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -589,6 +582,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
             val accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+
             auditService.createAudit(
                 AuditRequest(
                     objectType = AresConstants.ACCOUNT_UTILIZATIONS,

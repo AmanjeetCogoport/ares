@@ -19,17 +19,11 @@ object AresConstants {
     const val ACCOUNT_UTILIZATION_INDEX = "index_account_utilization"
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
+    const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
-
-    const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
-    const val QUARTERLY_TREND_PREFIX = "QUARTERLY_OUTSTANDING_"
-    const val COLLECTIONS_TREND_PREFIX = "COLLECTION_TREND_"
-    const val OVERALL_STATS_PREFIX = "OVERALL_STATS_"
-    const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
-    const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
 
     const val ZONE = "zone"
     const val QUARTER = "quarter"
@@ -43,6 +37,7 @@ object AresConstants {
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
     const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val COGO_ENTITY_ID = "cogoEntityId"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 
@@ -68,7 +63,7 @@ object AresConstants {
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"
     const val DELETE = "DELETE"
-
+    const val VOID = "VOID"
     const val ALL = "All"
 
     // Settlement Constants
@@ -76,6 +71,8 @@ object AresConstants {
     const val INVOICE = "INVOICE"
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
+
+    const val UNIFIED = "dms"
 
     const val LIMIT = 10000
 
@@ -93,5 +90,13 @@ object AresConstants {
         301 to "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1",
         401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
         501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff"
+    )
+
+    val LEDGER_CURRENCY = mapOf(
+        101 to "INR",
+        201 to "EUR",
+        301 to "INR",
+        401 to "SGD",
+        501 to "VND",
     )
 }

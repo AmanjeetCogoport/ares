@@ -70,11 +70,8 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
     }
 
     private fun getServiceForLocalEnvironment(serviceId: String?): List<ServiceInstance>? {
-        val serviceMap = services.service!!.firstOrNull { it?.id == serviceId && it?.enabledLocally!! }
-        if (serviceMap != null)
-            return listOf<ServiceInstance>(ServiceInstance.of(serviceId, URI(serviceMap.url!!)))
-
-        return listOf<ServiceInstance>(ServiceInstance.of(serviceId, URI(services.staging!!)))
+        val serviceMap = mapOf("service" to URI(services.service))
+        return listOf(ServiceInstance.of(serviceId, serviceMap["service"]))
     }
 
     private fun buildRequest(serviceName: String?): DiscoverInstancesRequest {

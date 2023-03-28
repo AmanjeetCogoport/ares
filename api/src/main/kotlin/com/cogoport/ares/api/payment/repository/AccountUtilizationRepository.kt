@@ -1,15 +1,12 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.api.payment.entity.AgeingBucketZone
-import com.cogoport.ares.api.payment.entity.CollectionTrend
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
 import com.cogoport.ares.api.payment.entity.OrgSummary
 import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OverallAgeingStats
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
@@ -19,6 +16,8 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CollectionTrend
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
@@ -45,9 +44,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
-            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
+            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_void = false"""
     )
     suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
@@ -55,7 +54,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_bill_id, is_void, tds_amount, tds_amount_loc
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
     )
@@ -71,52 +70,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
               pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id and deleted_at is null"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
-
-    @NewSpan
-    @Query(
-        """
-            select coalesce(case when due_date  >= now()::date then 'Not Due'
-             when (now()::date - due_date ) between 1 and 30 then '1-30'
-             when (now()::date - due_date ) between 31 and 60 then '31-60'
-             when (now()::date - due_date ) between 61 and 90 then '61-90'
-             when (now()::date - due_date ) between 91 and 180 then '91-180'
-             when (now()::date - due_date ) between 181 and 365 then '181-365'
-             when (now()::date - due_date ) > 365 then '365+'
-             end, 'Unknown') as ageing_duration,
-             zone_code as zone,
-             currency as dashboard_currency,
-             sum(sign_flag * (amount_curr - pay_curr)) as amount
-             from account_utilizations
-             where ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-             AND (:zone is null or zone_code = :zone) and zone_code is not null and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') 
-             and document_status in ('FINAL', 'PROFORMA')  and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-             group by ageing_duration, zone, dashboard_currency
-             order by 1
-          """
-    )
-    suspend fun getReceivableByAge(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<AgeingBucketZone>
-
-    @NewSpan
-    @Query(
-        """
-            select coalesce(case when due_date >= now()::date then 'Not Due'
-            when (now()::date - due_date) between 1 and 30 then '1-30'
-            when (now()::date - due_date) between 31 and 60 then '31-60'
-            when (now()::date - due_date) between 61 and 90 then '61-90'
-            when (now()::date - due_date) > 90 then '>90' 
-            end, 'Unknown') as ageing_duration, 
-            sum(sign_flag * (amount_curr - pay_curr)) as amount,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and due_date is not null and acc_mode = 'AR' and acc_type in ('SINV','SCN','SDN') and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by ageing_duration, dashboard_currency
-            order by ageing_duration
-        """
-
-    )
-    suspend fun getAgeingBucket(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): List<OverallAgeingStats>
-
     @NewSpan
     @Query(
         """
@@ -129,7 +82,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         null as id
         from account_utilizations
         where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
         group by dashboard_currency
     """
     )
@@ -141,7 +94,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT count(distinct organization_id) 
         FROM account_utilizations 
         WHERE acc_type IN ('SINV','SDN','SCN') AND amount_curr - pay_curr <> 0 AND (:zone IS NULL OR zone_code = :zone) AND document_status in ('FINAL', 'PROFORMA') AND acc_mode = 'AR' 
-        AND (:serviceType IS NULL OR service_type::varchar = :serviceType) AND  (:invoiceCurrency IS NULL OR currency = :invoiceCurrency) AND deleted_at IS NULL AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (:serviceType IS NULL OR service_type::varchar = :serviceType) AND  (:invoiceCurrency IS NULL OR currency = :invoiceCurrency) AND deleted_at IS NULL AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
         """
     )
     suspend fun getOrganizationCountForOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): Int
@@ -167,7 +120,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
             group by date_trunc('month',transaction_date), dashboard_currency
             order by date_trunc('month',transaction_date)
         )
@@ -187,7 +140,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
             group by date_trunc('month',transaction_date), dashboard_currency
         )
         select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
@@ -209,7 +162,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 currency as dashboard_currency
                 from account_utilizations
                 where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
-                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
                 group by date_trunc('quarter',transaction_date), dashboard_currency
             )
             select case when x.quarter = 1 then 'Jan - Mar'
@@ -239,7 +192,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             currency as dashboard_currency
             from account_utilizations
             where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
             group by dashboard_currency
             )
             select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
@@ -250,31 +203,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<DailyOutstanding>
-
-    @NewSpan
-    @Query(
-        """
-        with X as (
-            select 
-            extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
-            sum(case when acc_type in ('PINV','PDN','PCN','PREIMB') and transaction_date >= date_trunc('month',transaction_date) then sign_flag*amount_curr end) as total_sales,
-            case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AP' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
-            group by dashboard_currency
-        )
-        select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment, coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-        coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END)* X.days,0) as value, 
-        dashboard_currency
-        from X
-        """
-    )
-    suspend fun generateDailyPayableOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?): MutableList<DailyOutstanding>
 
     @NewSpan
     @Query(
@@ -295,7 +223,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR' 
+        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR'  and is_void = false
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
         AND ((:orgId) is NULL OR organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
         AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
@@ -449,7 +377,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             and(:orgId IS NULL
                 OR organization_id = :orgId::uuid)
             AND acc_type in('PINV', 'PCN')
-            AND deleted_at IS NULL
+            AND deleted_at IS NULL  and is_void = false
         GROUP BY
             organization_id
         OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
@@ -476,7 +404,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status in('FINAL', 'PROFORMA')
                     AND organization_id IS NOT NULL
                     AND acc_type = 'PINV'
-                    AND deleted_at IS NULL
+                    AND deleted_at IS NULL  and is_void = false
                 GROUP BY
                     organization_id) AS t 
         """
@@ -497,11 +425,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
         where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
-        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and deleted_at is null
+        and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
     )
-    suspend fun generateOrgOutstanding(orgId: String, zone: String?): List<OrgOutstanding>
+    suspend fun generateOrgOutstanding(orgId: String, zone: String?, entityCode: Int?): List<OrgOutstanding>
     @NewSpan
     @Query(
         """
@@ -727,6 +655,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
+            COALESCE(tds_amount, 0) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
@@ -757,7 +686,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
             AND au.deleted_at is null
             AND s.deleted_at is null
-            AND p.deleted_at is null
+            AND p.deleted_at is null  and au.is_void = false
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
@@ -834,6 +763,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
             COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
+            COALESCE(tds_amount, 0) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
@@ -862,7 +792,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WHERE au.id in (
                 SELECT id from FILTERS
             )
-             AND au.deleted_at is null
+             AND au.deleted_at is null  and au.is_void = false
             AND p.deleted_at is null
             AND s.deleted_at is null
             ORDER BY
@@ -909,7 +839,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
-                    AND deleted_at is null
+                    AND deleted_at is null  and is_void = false
     """
     )
     suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
@@ -936,7 +866,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                         END
                         )
                     AND (:query is null OR document_value ilike :query)
-                    AND deleted_at is null
+                    AND deleted_at is null  and is_void = false
     """
     )
     suspend fun getInvoiceDocumentCount(accType: AccountType?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, status: String?): Long?
@@ -956,7 +886,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
-                    AND deleted_at is null
+                    AND deleted_at is null and is_void = false
     """
     )
     suspend fun getTDSDocumentCount(accType: AccountType?, orgId: List<UUID>, accMode: AccMode?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
@@ -973,7 +903,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:endDate is null or transaction_date <= :endDate)
                     AND acc_type::varchar in (:accType)
                     AND (:accMode is null OR acc_mode::varchar = :accMode)
-                    AND deleted_at is null
+                    AND deleted_at is null  and is_void = false
         """
     )
     suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
@@ -1118,11 +1048,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 taxable_amount,
                 trade_party_mapping_id,
                 tagged_organization_id,
-                migrated
+                is_void,
+                tagged_bill_id,
+                migrated,
+                 tds_amount, tds_amount_loc
                 FROM account_utilizations
                 WHERE document_value = :documentValue
                 AND   acc_type = :accType::account_type
-                AND deleted_at is null
+                AND deleted_at is null and is_void = false
             """
     )
     suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
@@ -1160,11 +1093,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 taxable_amount,
                 trade_party_mapping_id,
                 tagged_organization_id,
+                is_void,
+                tagged_bill_id,
+                tds_amount, tds_amount_loc
                 migrated
                 FROM account_utilizations
                 WHERE document_no = :documentNo
                 AND   acc_type = :accType::account_type
-                AND deleted_at is null
+                AND deleted_at is null and is_void = false
             """
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
@@ -1194,7 +1130,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
         COALESCE(sum(case when (now()::date - due_date) >90 AND (amount_loc - pay_loc <> 0) AND due_date is NOT NULL THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
-        WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND tagged_organization_id IS NOT NULL AND deleted_at is null
+        WHERE acc_mode = 'AR' AND document_value in (:documentValues) AND tagged_organization_id IS NOT NULL AND deleted_at is null  and is_void = false
         """
     )
     suspend fun getOverallStats(documentValues: List<String>): StatsForKamResponse
@@ -1223,7 +1159,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND ((:documentValues) is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
-        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null
+        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null  and is_void = false
         GROUP BY tagged_organization_id) output
         ORDER BY
             CASE WHEN :sortBy = 'Desc' THEN
@@ -1277,7 +1213,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND ((:documentValues) is NULL OR document_value in (:documentValues)) AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
-        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null
+        AND (:bookingPartyId is NULL OR tagged_organization_id = :bookingPartyId::uuid) AND deleted_at is null  and is_void = false
         GROUP BY tagged_organization_id) as output
         """
     )
@@ -1289,7 +1225,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            DELETE FROM account_utilizations WHERE document_value IN (:docValues) and acc_type IN ('SINV', 'SDN') and acc_mode='AR' and document_status='PROFORMA'
+            DELETE FROM account_utilizations WHERE document_value IN (:docValues) and acc_type IN ('SINV', 'SDN') and acc_mode='AR' and document_status='PROFORMA' 
         """
     )
     suspend fun deleteConsolidatedInvoices(docValues: List<String>)
@@ -1309,14 +1245,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """UPDATE account_utilizations SET 
-              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id =:id AND deleted_at is null"""
+              pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE id =:id AND deleted_at is null  and is_void = false"""
     )
-    suspend fun updateAccountUtilization(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal)
+    suspend fun updateAccountUtilization(id: Long, status: DocumentStatus, currencyPay: BigDecimal, ledgerPay: BigDecimal)
 
     @NewSpan
     @Query(
         """
-            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null
+            SELECT id,pay_curr,pay_loc FROM account_utilizations WHERE document_no = :paymentNum AND acc_mode = 'AP' AND deleted_at is null and is_void = false
         """
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
@@ -1329,13 +1265,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
            au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
            au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at         
+           au.migrated,au.created_at, au.is_void, au.tagged_bill_id, au. tds_amount, au.tds_amount_loc
            FROM 
            payments p
            JOIN payment_invoice_mapping pim ON 
            pim.payment_id = p.id AND pim.document_no = :documentNo
            JOIN account_utilizations au ON 
-           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP'
+           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP'  and is_void = false
            ORDER by au.created_at desc
         """
     )
@@ -1357,7 +1293,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL
+        AND deleted_at IS NULL and is_void = false
         GROUP BY organization_id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         """
@@ -1385,7 +1321,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         COALESCE(SUM(CASE WHEN (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND due_date IS NOT NULL AND  amount_curr <> 0 AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL
+        AND deleted_at IS NULL  and is_void = false
         GROUP BY organization_id) as output
         """
     )
@@ -1405,7 +1341,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sign_flag*(amount_loc - pay_loc) as outstanding_amount
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL) output
+        AND deleted_at IS NULL  and is_void = false ) output
         ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'invoice_amount' THEN output.invoice_amount
@@ -1443,7 +1379,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sign_flag*(amount_loc - pay_loc) as outstanding_amount
         FROM account_utilizations
         WHERE acc_mode = 'AR' AND document_value IN (:documentValues) AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL) as output
+        AND deleted_at IS NULL and is_void = false) as output
         """
     )
     suspend fun getInvoicesCountForTradeParty(
@@ -1455,9 +1391,32 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """ 
         SELECT DISTINCT organization_id
         FROM account_utilizations
-        WHERE acc_mode = 'AP' AND organization_id IS NOT NULL 
-        AND deleted_at IS NULL
+        WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
+        AND deleted_at IS NULL and is_void = false
         """
     )
-    suspend fun getSupplierOrgIds(): List<UUID>
+    suspend fun getTradePartyOrgIds(accMode: AccMode?): List<UUID>
+
+    @NewSpan
+    @Query(
+        """
+            select organization_id::varchar, currency,
+            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
+            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
+            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
+            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
+            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
+            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
+            group by organization_id, currency
+        """
+    )
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
 }

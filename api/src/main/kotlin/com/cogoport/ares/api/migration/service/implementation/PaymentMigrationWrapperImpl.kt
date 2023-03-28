@@ -7,7 +7,9 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.TdsAmountReq
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -21,6 +23,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -44,9 +49,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
-        for (jvRecord in jvRecords) {
-            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
-        }
+//        for (jvRecord in jvRecords) {
+//            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
+//        }
         return jvRecords.size
     }
 
@@ -156,6 +161,28 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return billDetails.size
     }
 
+    override suspend fun migrateJournalVoucherRecordNew(
+        startDate: String?,
+        endDate: String?,
+        jvNums: List<String>?
+    ): Int {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString)
+        jvParentRecords.forEach {
+            aresMessagePublisher.emitJournalVoucherMigration(it)
+        }
+        return jvParentRecords.size
+    }
+
     private fun getPayLocRecord(paymentRecord: PaymentRecord): PayLocUpdateRequest {
         return PayLocUpdateRequest(
             sageOrganizationId = paymentRecord.sageOrganizationId,
@@ -175,5 +202,17 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             payLoc = invoiceDetails.ledgerAmountPaid,
             accMode = invoiceDetails.accMode
         )
+    }
+
+    override suspend fun migrateSettlementNumWrapper(ids: List<Long>) {
+        ids.forEach {
+            aresMessagePublisher.emitMigrateSettlementNumber(it)
+        }
+    }
+
+    override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
+        req.forEach {
+            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+        }
     }
 }

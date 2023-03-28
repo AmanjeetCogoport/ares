@@ -3,11 +3,13 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.TdsAmountReq
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import jakarta.inject.Inject
 
@@ -54,7 +56,7 @@ class MigratePaymentsController {
 
     @Post("/JVNum-migrate")
     suspend fun migrateJVNum(@Body jvNums: List<String>): Response<String> {
-        val size = paymentMigration.migrateJournalVoucher(null, null, jvNums)
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -126,5 +128,15 @@ class MigratePaymentsController {
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
         )
+    }
+
+    @Post("/settlementNum-migrate")
+    suspend fun migrateSettlementNum(@Body settlementIds: List<Long>) {
+        paymentMigration.migrateSettlementNumWrapper(settlementIds)
+    }
+
+    @Put("/tds-amount")
+    suspend fun migrateTdsAmount(@Body req: List<TdsAmountReq>) {
+        paymentMigration.migrateTdsAmount(req)
     }
 }

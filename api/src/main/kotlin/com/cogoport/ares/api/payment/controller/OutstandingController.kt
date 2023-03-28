@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
+import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -11,10 +13,12 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
+import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
@@ -99,5 +103,35 @@ class OutstandingController {
     @Put("/supplier-outstanding-migrate")
     suspend fun migrateSupplierOutstanding() {
         return scheduler.updateSupplierOutstandingOnOpenSearch()
+    }
+
+    @Post("/customer")
+    suspend fun createCustomerDetails(@Valid @Body request: CustomerOutstandingDocumentResponse): Response<String> {
+        outStandingService.createCustomerDetails(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Put("/customer")
+    suspend fun updateCustomerDetails(request: UpdateSupplierOutstandingRequest) {
+        return outStandingService.updateCustomerDetails(request.orgId.toString(), flag = false, document = null)
+    }
+
+    @Auth
+    @Get("/by-customer{?request*}")
+    suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
+    }
+
+    @Put("/customer-outstanding-migrate")
+    suspend fun migrateCustomerOutstanding() {
+        return scheduler.updateCustomerOutstandingOnOpenSearch()
+    }
+
+    @Auth
+    @Get("/customer-payment{?request*}")
+    suspend fun getCustomerOutstandingPaymentDetails(@Valid request: CustomerOutstandingPaymentRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingPaymentResponse?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
+        return Response<ResponseList<CustomerOutstandingPaymentResponse?>>().ok(outStandingService.getCustomerOutstandingPaymentDetails(request))
     }
 }
