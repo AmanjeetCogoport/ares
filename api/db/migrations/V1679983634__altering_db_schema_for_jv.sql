@@ -36,7 +36,4 @@ updated_by UUID
 );
 
 ALTER TABLE parent_journal_vouchers
-ADD COLUMN  jv_code_num VARCHAR;
-
-ALTER TABLE journal_vouchers
-ALTER COLUMN category VARCHAR;
+ADD COLUMN jv_code_num VARCHAR;
