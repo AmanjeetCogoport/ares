@@ -116,11 +116,11 @@ class SageServiceImpl : SageService {
             (
             select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
             ,MAX(SNS_0) as sign_flag
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV','PAY','REC','RPI','SPINV','SPMEM','ZDN','ZSDN','ZSINV','ZSMEM','ZSMEP','ZSMFR') 
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV') 
             GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
-            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV','PAY','REC','RPI','SPINV','SPMEM','ZDN','ZSDN','ZSINV','ZSMEM','ZSMEP','ZSMFR')
+            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
             and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         if (startDate == null && endDate == null) {
@@ -339,7 +339,7 @@ class SageServiceImpl : SageService {
     override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails> {
         var sqlQuery = """
             select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, LED_0 as ledger_currency
-            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description from COGO2.GACCENTRY where TYP_0 <> 'NEWPR'
+            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
         """.trimIndent()
         sqlQuery += if (startDate != null && endDate != null) {
             """ and CREDAT_0 between '$startDate' and '$endDate'"""
@@ -356,7 +356,7 @@ class SageServiceImpl : SageService {
             select FCYLIN_0 as entityCode,GD.NUM_0 as jvNum, GD.TYP_0 as type,G.VALDAT_0 as validityDate,AMTCUR_0 as amount, AMTLED_0 as ledger_amount
             ,GD.CUR_0 as currency, GD.CURLED_0 as ledgerCurrency,'APPROVED' as status, G.RATMLT_0 as exchange_rate, GD.CREDATTIM_0 as created_at, GD.UPDDATTIM_0 as updated_at,
             G.DESVCR_0 as description, GD.ROWID as sage_unique_id, GD.SNS_0 as sign_flag, GD.ACC_0 as gl_code from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) 
-            and SAC_0 = '' and BPR_0 = '' and GD.NUM_0 = '$jvNum'
+            and SAC_0 = '' and BPR_0 = '' and GD.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV') and GD.NUM_0 = '$jvNum'
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
