@@ -29,5 +29,6 @@ data class JournalVoucherRequest(
     var parentJvId: String? = null,
     var sageUniqueId: String? = null,
     var migrated: Boolean? = false,
-    var glCode: String?
+    var glCode: String?,
+    var signFlag: Short
 )

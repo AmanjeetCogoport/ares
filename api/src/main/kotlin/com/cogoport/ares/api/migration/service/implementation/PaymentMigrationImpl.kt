@@ -520,7 +520,8 @@ class PaymentMigrationImpl : PaymentMigration {
             createdBy = MigrationConstants.createdUpdatedBy,
             accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
             description = null,
-            glCode = journalVoucherRecord.accCode.toString()
+            glCode = journalVoucherRecord.accCode.toString(),
+            signFlag = journalVoucherRecord.signFlag.toShort()
         )
     }
 
@@ -543,6 +544,7 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.migrated = true
         jv.parentJvId = parentJvId
         jv.glCode = request.glCode
+        jv.signFlag = request.signFlag
         return jv
     }
 
