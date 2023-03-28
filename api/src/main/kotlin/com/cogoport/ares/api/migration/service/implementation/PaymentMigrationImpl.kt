@@ -813,7 +813,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     entityCode = it.entityCode.toInt(),
                     jvNum = it.jvNum,
                     type = "credit",
-                    category = JVCategory.JVNOS, // /JVCategory.valueOf(it.type), //need to change
+                    category = JVCategory.JVNOS.name, // /JVCategory.valueOf(it.type), //need to change
                     validityDate = it.validityDate,
                     amount = it.amount,
                     currency = it.currency,
@@ -832,6 +832,8 @@ class PaymentMigrationImpl : PaymentMigration {
                     sageUniqueId = it.sageUniqueId,
                     migrated = true,
                     glCode = it.glcode,
+                    ledAmount = it.ledgerAmount,
+                    signFlag = it.signFlag.toShort()
                 )
             )
         }
