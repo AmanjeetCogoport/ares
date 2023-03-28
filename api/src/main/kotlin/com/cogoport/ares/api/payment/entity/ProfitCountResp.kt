@@ -7,6 +7,6 @@ import java.math.BigDecimal
 @MappedEntity
 @Introspected
 data class ProfitCountResp(
-    var totalCount: Long,
-    var averageProfit: BigDecimal
+    var totalCount: Long? = 0,
+    var averageProfit: BigDecimal? = 0.toBigDecimal()
 )

@@ -9,6 +9,6 @@ data class BfIncomeExpenseReq(
     var financeYearStart: String? = null,
     var financeYearEnd: String? = null,
     var serviceTypes: List<ServiceType>? = null,
-    var isPostTax: Boolean? = false,
+    var isPostTax: Boolean? = true,
     var entityCode: Int? = null
 )

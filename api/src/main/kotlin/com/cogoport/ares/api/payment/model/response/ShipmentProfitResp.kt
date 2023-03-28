@@ -9,8 +9,8 @@ import java.math.BigDecimal
 data class ShipmentProfitResp(
     var shipmentList: List<BfShipmentProfitabilityResp>? = null,
     var customerList: List<BfCustomerProfitabilityResp>? = null,
-    var averageProfit: BigDecimal,
-    var pageIndex: Int,
-    var pageSize: Int,
-    var totalRecord: Long
+    var averageProfit: BigDecimal? = 0.toBigDecimal(),
+    var pageIndex: Int? = 1,
+    var pageSize: Int? = 10,
+    var totalRecord: Long? = 0
 )

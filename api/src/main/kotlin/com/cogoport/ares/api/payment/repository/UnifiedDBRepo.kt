@@ -29,7 +29,6 @@ import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Date
 import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
@@ -626,44 +625,32 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
         loki.jobs j on j.id = iv.job_id 
+        JOIN organizations o ON au.tagged_organization_id = o.id
+        JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
 	WHERE
 		au.acc_mode = 'AR'
 		AND au.due_date IS NOT NULL
 		AND au.document_status in('FINAL')
+        AND (COALESCE(:customerTypes) is null OR los.segment in(:customerTypes))
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN ('SINV','SCN','SREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
-        AND (COALESCE(:customerIds) is null or au.tagged_organization_id::varchar in (:customerIds))
-         AND (:entityCode is null or au.entity_code = :entityCode)
-        AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate AND :endDate)
+        AND (:entityCode is null or au.entity_code = :entityCode)
+        AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
     fun getBfReceivable(
         serviceTypes: List<ServiceType>?,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: String?,
+        endDate: String?,
         tradeType: List<String>?,
-        customerIds: List<String>?,
         entityCode: Int?,
         oceanServices: List<ServiceType>?,
         airServices: List<ServiceType>?,
-        surfaceServices: List<ServiceType>?
+        surfaceServices: List<ServiceType>?,
+        customerTypes: List<String>?
     ): BfReceivableAndPayable
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-	o.id
-FROM
-	organizations o
-	JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
-WHERE
-	los.segment in(:customerTypes)
-        """
-    )
-    fun getCustomerIds(customerTypes: List<String>): List<String>
 
     @NewSpan
     @Query(
@@ -752,8 +739,8 @@ WHERE
     )
     fun getBfPayable(
         serviceTypes: List<ServiceType>?,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: String?,
+        endDate: String?,
         tradeType: List<String>?,
         entityCode: Int?,
         oceanServices: List<ServiceType>?,
@@ -879,11 +866,11 @@ FROM
 		AND au.acc_mode = 'AR'
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes))
         AND au.document_status = 'FINAL'
-        AND au.entity_code IN ('101','301')
+        AND (:entityCode is null or au.entity_code = :entityCode)
         AND inv.status NOT IN ('DRAFT','FINANCE_REJECTED','IRN_CANCELLED','CONSOLIDATED')
         """
     )
-    fun getBfIncomeMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyData
+    fun getBfIncomeMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean, entityCode: Int?): LogisticsMonthlyData
 
     @NewSpan
     @Query(
@@ -1027,11 +1014,11 @@ FROM
 		where au.acc_mode = 'AP'
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes))
         AND au.document_status = 'FINAL'
-        AND au.entity_code IN ('101','301')
+        AND (:entityCode is null or au.entity_code = :entityCode)
         AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
         """
     )
-    fun getBfExpenseMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean): LogisticsMonthlyData
+    fun getBfExpenseMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean, entityCode: Int?): LogisticsMonthlyData
 
     @NewSpan
     @Query(
@@ -1145,7 +1132,7 @@ WHERE
     @NewSpan
     @Query(
         """
-    SELECT COUNT(*) AS total_count ,sum(j.profit_percent)/100 AS average_profit
+    SELECT COUNT(*) AS total_count ,sum(j.profit_percent)/COUNT(*) AS average_profit
     FROM
 	loki.jobs j
 	JOIN shipments s ON j.job_number::VARCHAR = s.serial_id::VARCHAR
@@ -1203,7 +1190,7 @@ GROUP BY
         """
              SELECT
              COUNT(DISTINCT s.importer_exporter_id) AS total_count,
-             (SUM(j.income) - SUM(j.expense)) / 100 AS average_profit
+             (SUM(j.income) - SUM(j.expense)) /  COUNT(DISTINCT s.importer_exporter_id) AS average_profit
 FROM
 	loki.jobs j
 	JOIN shipments s ON j.job_number::VARCHAR = s.serial_id::VARCHAR

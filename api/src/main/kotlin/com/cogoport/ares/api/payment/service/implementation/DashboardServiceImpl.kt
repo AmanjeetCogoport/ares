@@ -787,41 +787,38 @@ class DashboardServiceImpl : DashboardService {
                 OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES
             )
         }
-        var customerIds: List<String>? = null
-        var customerTypes = mapOf(
+        val customerTypes = mapOf(
             "cp" to listOf("channel_partner"),
             "ie" to listOf("mid_size", "long_tail"),
             "enterprise" to listOf("enterprise")
         )
-        if (request.buyerType != null) {
-            customerIds = unifiedDBRepo.getCustomerIds(
-                customerTypes[request.buyerType]!!
-            )
-        }
         return unifiedDBRepo.getBfReceivable(
             request.serviceType, request.startDate, request.endDate,
-            request.tradeType, customerIds, request.entityCode, OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES
+            request.tradeType, request.entityCode, OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES, customerTypes[request.buyerType]
         )
     }
 
     override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
         val thisYear = Year.now().toString()
-        val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
-        var endYear = request.financeYearEnd ?: thisYear
-        if (request.calenderYear != null) {
-            endYear = startYear
+        if ((request.financeYearStart == null && request.financeYearEnd != null) || (request.financeYearStart != null && request.financeYearEnd == null)) {
+            throw AresException(AresError.ERR_1006, "One of the finance Year is null")
         }
+        val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
+        var endYear = request.financeYearEnd ?: request.calenderYear ?: thisYear
+
         val monthlyIncomes = unifiedDBRepo.getBfIncomeMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
+            request.entityCode
         )
         val monthlyExpenses = unifiedDBRepo.getBfExpenseMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
+            request.entityCode
         )
         var response = mutableListOf<BfIncomeExpenseResponse>()
         for (monthIndex in 1..12) {

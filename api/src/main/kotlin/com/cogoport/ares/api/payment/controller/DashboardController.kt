@@ -258,14 +258,14 @@ class DashboardController {
     }
 
     @Auth
-    @Get("bf-service-wise-rec-pay")
+    @Get("/bf-service-wise-rec-pay")
     suspend fun getBfServiceWiseRecPay(@QueryValue("entityCode") entityCode: Int? = null, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
         val computedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
         return dashboardService.getBfServiceWiseRecPay(computedEntityCode)
     }
 
     @Auth
-    @Get("bf-service-wise-overdue{?request*}")
+    @Get("/bf-service-wise-overdue{?request*}")
     suspend fun getBfServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getServiceWiseOverdue(request)

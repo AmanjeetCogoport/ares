@@ -2,8 +2,8 @@ package com.cogoport.ares.api.payment.model.requests
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.ServiceType
+import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
-import java.util.Date
 import javax.validation.constraints.NotNull
 
 @Introspected
@@ -12,8 +12,10 @@ data class BfPendingAmountsReq(
     @NotNull
     var accountMode: AccMode,
     var buyerType: String?,
-    var startDate: Date?,
-    var endDate: Date?,
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    var startDate: String?,
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    var endDate: String?,
     var tradeType: List<String>?,
     var entityCode: Int?
 )

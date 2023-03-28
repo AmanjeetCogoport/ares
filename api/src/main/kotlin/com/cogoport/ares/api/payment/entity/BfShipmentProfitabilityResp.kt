@@ -7,13 +7,13 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class BfShipmentProfitabilityResp(
-    var jobNumber: String,
-    var shipmentType: String,
-    var businessName: String,
-    var entity: String,
-    var shipmentMilestone: String,
-    var income: BigDecimal,
-    var expense: BigDecimal,
-    var profitability: BigDecimal,
-    var jobStatus: String
+    var jobNumber: String? = null,
+    var shipmentType: String? = null,
+    var businessName: String? = null,
+    var entity: String? = null,
+    var shipmentMilestone: String? = null,
+    var income: BigDecimal? = 0.toBigDecimal(),
+    var expense: BigDecimal? = 0.toBigDecimal(),
+    var profitability: BigDecimal? = 0.toBigDecimal(),
+    var jobStatus: String? = null
 )
