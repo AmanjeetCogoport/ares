@@ -54,7 +54,6 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
@@ -510,7 +509,7 @@ class PaymentMigrationImpl : PaymentMigration {
             jvNum = journalVoucherRecord.paymentNum,
             type = getTypeForJV(journalVoucherRecord.accMode!!, journalVoucherRecord.signFlag!!),
             status = JVStatus.APPROVED,
-            category = JVCategory.JVNOS,
+            category = AccountTypeMapping.getAccountType(journalVoucherRecord.accountType!!),
             validityDate = journalVoucherRecord.transactionDate!!,
             amount = journalVoucherRecord.accountUtilPayLed,
             currency = journalVoucherRecord.currency!!,
@@ -743,7 +742,6 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
-
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
         var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
@@ -769,7 +767,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     ParentJournalVoucherMigration(
                         id = null,
                         status = JVStatus.valueOf(jvParentDetail.jvStatus),
-                        category = JVCategory.JVNOS, // JVCategory.valueOf(jvParentDetail.jvType), // need to change
+                        category = AccountTypeMapping.getAccountType(jvParentDetail.jvType),
                         jvNum = jvParentDetail.jvNum,
                         validityDate = jvParentDetail.validityDate,
                         createdAt = jvParentDetail.createdAt,
@@ -812,8 +810,8 @@ class PaymentMigrationImpl : PaymentMigration {
                     entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
                     entityCode = it.entityCode.toInt(),
                     jvNum = it.jvNum,
-                    type = "credit",
-                    category = JVCategory.JVNOS.name, // /JVCategory.valueOf(it.type), //need to change
+                    type = "",
+                    category = AccountTypeMapping.getAccountType(it.type),
                     validityDate = it.validityDate,
                     amount = it.amount,
                     currency = it.currency,
