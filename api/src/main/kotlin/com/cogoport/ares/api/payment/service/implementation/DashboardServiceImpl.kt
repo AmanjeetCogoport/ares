@@ -18,7 +18,6 @@ import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
-import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
@@ -432,7 +431,6 @@ class DashboardServiceImpl : DashboardService {
 
         mapOfData.entries.map { (status, invoices) ->
             invoices.map { invoice ->
-                logger().info(invoice.id.toString())
                 val eventData = objectMapper.readValue(invoice.events, Array<InvoiceEventResponse>::class.java)
                 when (status) {
                     "finance_accepted" -> {
