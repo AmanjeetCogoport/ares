@@ -40,13 +40,14 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
             WHERE 
-            EXTRACT(YEAR FROM aau.created_at) = :year
-            AND EXTRACT(MONTH FROM aau.created_at) = :month
+            EXTRACT(YEAR FROM aau.transaction_date) = :year
+            AND EXTRACT(MONTH FROM aau.transaction_date) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (aau.entity_code = :entityCode)
             AND aau.acc_type in ('SINV', 'SCN')
             AND o.status = 'active'
             AND (aau.migrated = false)
+            AND (sinv.migrated = false)
             AND (pa.organization_type = 'BUYER')
             AND (:companyType is null OR los.id is null OR los.segment = :companyType )
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
@@ -78,12 +79,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN organizations o on o.registration_number = pa.registration_number
             LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
             WHERE 
-            EXTRACT(YEAR FROM aau.created_at) = :year
-            AND EXTRACT(MONTH FROM aau.created_at) = :month
+            EXTRACT(YEAR FROM aau.transaction_date) = :year
+            AND EXTRACT(MONTH FROM aau.transaction_date) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (aau.entity_code = :entityCode)
             AND aau.acc_type in ('SINV', 'SCN')
             AND (aau.migrated = false)
+            AND (sinv.migrated = false)
             AND (pa.organization_type = 'BUYER')
             AND (:companyType is null OR los.id is null OR los.segment = :companyType )
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
@@ -299,7 +301,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT 
-            to_char(date_trunc('month',lj.created_at),'Mon') as duration,
+            date_trunc('month',lj.created_at) as duration,
             coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.ledger_currency as dashboard_currency
@@ -324,7 +326,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            SELECT extract('year',lj.created_at) as duration,
+            SELECT 
+            date_trunc('year',lj.created_at) as duration,
             coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) as amount,
             count(distinct(lj.id)) as count,
             pinv.ledger_currency as dashboard_currency
@@ -341,7 +344,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (pinv.status not in ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'BUYER')
             AND o.status = 'active'
-            GROUP BY extract('year',lj.created_at), dashboard_currency
+            GROUP BY date_trunc('year',lj.created_at), dashboard_currency
         """
     )
     suspend fun generateYearlyShipmentCreatedAt(asOnDate: String?, entityCode: Int?, companyType: String?, serviceType: String?): MutableList<DailySalesStats>?
@@ -447,7 +450,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND
         aau.entity_code = :entityCode
         AND
-        EXTRACT(YEAR FROM transaction_date) = :year
+        EXTRACT(YEAR FROM aau.transaction_date) = :year
         AND 
         (:serviceType is null or aau.service_type = :serviceType) 
         AND document_status in ('FINAL') 
@@ -475,12 +478,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             aau.acc_mode = 'AR' 
             AND (:serviceType is null or aau.service_type = :serviceType) 
             AND document_status in ('FINAL') 
-            AND EXTRACT(YEAR FROM transaction_date) = :year
+            AND EXTRACT(YEAR FROM aau.transaction_date) = :year
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             AND (aau.entity_code = :entityCode)
             AND (:companyType is null OR los.id is null OR los.segment = :companyType )
-            GROUP BY date_trunc('quarter',transaction_date)
+            GROUP BY date_trunc('quarter',aau.transaction_date)
         """
     )
     suspend fun generateQuarterlyOutstanding(year: Int?, serviceType: ServiceType?, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: String?): MutableList<Outstanding>?
