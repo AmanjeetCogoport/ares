@@ -36,4 +36,4 @@ updated_by UUID
 );
 
 ALTER TABLE parent_journal_vouchers
-ADD COLUMN  jv_code_num VARCHAR NOT NULL REFERENCES journal_voucher_codes (number) ON DELETE CASCADE;
+ADD COLUMN  jv_code_num VARCHAR;
