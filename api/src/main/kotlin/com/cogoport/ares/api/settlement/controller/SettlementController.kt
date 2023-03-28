@@ -4,10 +4,12 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
+import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -59,6 +61,9 @@ class SettlementController {
     lateinit var cpSettlementService: CpSettlementService
     @Inject
     lateinit var util: Util
+
+    @Inject
+    lateinit var taggedSettlementService: TaggedSettlementService
 
     @Auth
     @Get("/documents{?request*}")
@@ -181,5 +186,10 @@ class SettlementController {
     @Post("/unfreeze-credit-consumption")
     suspend fun unfreezeCreditConsumption(@Valid @Body request: Settlement) {
         return settlementService.sendKnockOffDataToCreditConsumption(request)
+    }
+
+    @Post("/settle-tagged-invoice-payment")
+    suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest) {
+        return taggedSettlementService.settleOnAccountInvoicePayment(req)
     }
 }

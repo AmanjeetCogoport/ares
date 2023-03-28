@@ -45,5 +45,9 @@ data class AccountUtilization(
     var transactionDate: Date?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var isVoid: Boolean? = false,
+    var taggedBillId: String? = null,
+    var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
+    var tdsAmount: BigDecimal? = BigDecimal.ZERO
 )
