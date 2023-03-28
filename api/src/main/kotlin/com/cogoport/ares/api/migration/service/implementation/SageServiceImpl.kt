@@ -29,7 +29,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -138,7 +138,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -196,7 +196,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
              SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -254,7 +254,7 @@ class SageServiceImpl : SageService {
         var sqlQuery = """
             SELECT  P.FCYLIN_0 as entity_code
             ,P.BPRLIN_0 as sage_organization_id
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.VCRTYP_0 as destination_type
             ,P.VCRNUM_0 as invoice_id
             ,GC.CUR_0 as currency
