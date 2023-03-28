@@ -756,114 +756,115 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
 		CASE WHEN invoice_date BETWEEN CONCAT(:endYear, '-01-01')::DATE
 			AND CONCAT(:endYear, '-01-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS january,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:endYear, '-02-01')::DATE
 			AND CONCAT(:endYear, '-02-28')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS february,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:endYear, '-03-01')::DATE
 			AND CONCAT(:endYear, '-03-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS march,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-04-01')::DATE
 			AND CONCAT(:startYear, '-04-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS april,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-05-01')::DATE
 			AND CONCAT(:startYear, '-05-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS may,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-06-01')::DATE
 			AND CONCAT(:startYear, '-06-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS june,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-07-01')::DATE
 			AND CONCAT(:startYear, '-07-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-               CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+               CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS july,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-08-01')::DATE
 			AND CONCAT(:startYear, '-08-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS august,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-09-01')::DATE
 			AND CONCAT(:startYear, '-09-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS september,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-10-01')::DATE
 			AND CONCAT(:startYear, '-10-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS october,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-11-01')::DATE
 			AND CONCAT(:startYear, '-11-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS november,
 	sum(
 		CASE WHEN invoice_date BETWEEN CONCAT(:startYear, '-12-01')::DATE
 			AND CONCAT(:startYear, '-12-30')::DATE THEN
             CASE WHEN inv.invoice_type = 'INVOICE' THEN
-                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN inv.ledger_total ELSE (inv.ledger_total/inv.grand_total) * inv.sub_total END
                 WHEN inv.invoice_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * inv.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * inv.ledger_total ELSE -1 * (inv.ledger_total/inv.grand_total) * inv.sub_total END
             ELSE 0 END
 		ELSE 0 END) AS december
 FROM
 	plutus.invoices inv
 	INNER JOIN ares.account_utilizations au ON au.document_no = inv.id
 		AND au.acc_mode = 'AR'
+        AND au.acc_type IN ('SINV','SCN')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes))
         AND au.document_status = 'FINAL'
         AND (:entityCode is null or au.entity_code = :entityCode)
@@ -880,9 +881,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-01-01')::DATE
 			AND CONCAT(:endYear, '-01-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -891,9 +892,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-02-01')::DATE
 			AND CONCAT(:endYear, '-02-28')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -902,9 +903,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-03-01')::DATE
 			AND CONCAT(:endYear, '-03-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -913,9 +914,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-04-01')::DATE
 			AND CONCAT(:startYear, '-04-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -924,9 +925,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-05-01')::DATE
 			AND CONCAT(:startYear, '-05-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -935,9 +936,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-06-01')::DATE
 			AND CONCAT(:startYear, '-06-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -946,9 +947,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-07-01')::DATE
 			AND CONCAT(:startYear, '-07-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -957,9 +958,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-08-01')::DATE
 			AND CONCAT(:startYear, '-08-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -968,9 +969,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-09-01')::DATE
 			AND CONCAT(:startYear, '-09-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -979,9 +980,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-10-01')::DATE
 			AND CONCAT(:startYear, '-10-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -990,9 +991,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-11-01')::DATE
 			AND CONCAT(:startYear, '-11-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -1001,9 +1002,9 @@ FROM
 		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-12-01')::DATE
 			AND CONCAT(:startYear, '-12-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
-                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 WHEN bill.bill_type = 'CREDIT_NOTE' THEN
-                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * bill.sub_total END
+                CASE WHEN :isPostTax = TRUE THEN - 1 * bill.ledger_total ELSE -1 * (bill.ledger_total/bill.grand_total) * bill.sub_total END
                 ELSE 0 END
 		ELSE
 			0
@@ -1014,6 +1015,7 @@ FROM
 		where au.acc_mode = 'AP'
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes))
         AND au.document_status = 'FINAL'
+        AND au.acc_type IN ('PINV','PCN')
         AND (:entityCode is null or au.entity_code = :entityCode)
         AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
         """
@@ -1052,7 +1054,7 @@ FROM
     AND iv.status NOT IN ('DRAFT','FINANCE_REJECTED','IRN_CANCELLED','CONSOLIDATED')       
      """
     )
-    fun getTodaySalesStats(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodaySalesStat
+    fun getSalesStatsByDate(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodaySalesStat
 
     @NewSpan
     @Query(
@@ -1086,20 +1088,20 @@ FROM
 	AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
      """
     )
-    fun getTodayPurchaseStats(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodayPurchaseStats
+    fun getPurchaseStatsByDate(serviceTypes: List<ServiceType>?, entityCode: Int?, date: LocalDate): TodayPurchaseStats
 
     @NewSpan
     @Query(
         """
             SELECT
 	j.job_number,
-	s.shipment_type,
+	j.job_details->>'shipmentType' AS shipment_type,
 	o.business_name,
-	o.sage_company_id::varchar AS entity,
-	s.state shipment_milestone,
+	j.tagged_entity_id AS tagged_entity_id,
+	s.state AS shipment_milestone,
 	j.income AS income,
 	j.expense AS expense,
-    j.profit_percent as profitability,
+    j.profit_percent AS profitability,
     LOWER(j.state) AS job_status
 FROM
 	loki.jobs j
@@ -1109,7 +1111,9 @@ WHERE
 	j.income != 0
 	AND j.expense != 0
     AND (:query IS NULL OR (o.business_name ILIKE :query OR j.job_number ILIKE :query))
-    AND (:entityCode IS NULL OR o.sage_company_id = :entityCode::varchar)
+    AND (COALESCE(:serviceType) is null or j.job_details->>'shipmentType' in (:serviceType))
+    AND (:taggedEntityId IS NULL OR j.tagged_entity_id::VARCHAR = :taggedEntityId::varchar)
+    AND (:startDate is null or :endDate is null or s.created_at::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
     AND (:jobStatus IS NULL OR j.state = :jobStatus)
     ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
@@ -1127,7 +1131,18 @@ WHERE
     OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
     """
     )
-    fun listShipmentProfitability(page: Int, pageLimit: Int, query: String?, jobStatus: String?, sortBy: String?, sortType: String?, entityCode: Int?): List<BfShipmentProfitabilityResp>
+    fun listShipmentProfitability(
+        page: Int,
+        pageLimit: Int,
+        query: String?,
+        jobStatus: String?,
+        sortBy: String?,
+        sortType: String?,
+        taggedEntityId: String?,
+        startDate: String?,
+        endDate: String?,
+        serviceType: List<String>?
+    ): List<BfShipmentProfitabilityResp>
 
     @NewSpan
     @Query(
@@ -1140,12 +1155,14 @@ WHERE
     WHERE
 	j.income != 0
 	AND j.expense != 0
-    AND (:entityCode IS NULL OR o.sage_company_id = :entityCode::varchar)
+    AND (COALESCE(:serviceType) is null or j.job_details->>'shipmentType' in (:serviceType))
+    AND (:startDate is null or :endDate is null or s.created_at::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+    AND (:taggedEntityId IS NULL OR j.tagged_entity_id::VARCHAR = :taggedEntityId::varchar)
     AND (:query IS NULL OR (o.business_name ILIKE :query OR j.job_number ILIKE :query))
     AND (:jobStatus IS NULL OR j.state = :jobStatus)     
         """
     )
-    fun findTotalCountShipment(query: String?, jobStatus: String?, entityCode: Int?): ProfitCountResp
+    fun findTotalCountShipment(query: String?, jobStatus: String?, taggedEntityId: String?, startDate: String?, endDate: String?, serviceType: List<String>?): ProfitCountResp
 
     @NewSpan
     @Query(
@@ -1212,15 +1229,51 @@ WHERE
 		sum(au.sign_flag * (au.amount_loc - au.pay_loc)) 
 	FROM
 		ares.account_utilizations au 
+        JOIN plutus.invoices inv ON au.document_no = inv.id
 	WHERE
 		au.acc_mode = :accMode
 		AND au.due_date IS NOT NULL
 		AND au.document_status in('FINAL')
+        AND (:startDate is null or :endDate is null or inv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (:entityCode IS NULL OR au.entity_code = :entityCode)
         """
     )
-    fun getTotalRemainingAmount(accMode: AccMode, accType: List<AccountType>, serviceTypes: List<ServiceType>, entityCode: Int?): BigDecimal?
+    fun getTotalRemainingAmountAR(
+        accMode: AccMode,
+        accType: List<AccountType>,
+        serviceTypes: List<ServiceType>,
+        entityCode: Int?,
+        startDate: String?,
+        endDate: String?
+    ): BigDecimal?
+    @Query(
+        """
+             SELECT
+		sum(au.sign_flag * (au.amount_loc - au.pay_loc)) 
+	FROM
+		ares.account_utilizations au 
+        JOIN kuber.bills bill ON au.document_no = bill.id
+
+	WHERE
+		au.acc_mode = :accMode
+		AND au.due_date IS NOT NULL
+		AND au.document_status in('FINAL')
+        AND (:startDate is null or :endDate is null or bill.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+		AND au.deleted_at IS NULL
+		AND au.acc_type IN (:accType)
+        AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
+        AND (:entityCode IS NULL OR au.entity_code = :entityCode)
+        """
+    )
+    fun getTotalRemainingAmountAP(
+        accMode: AccMode,
+        accType: List<AccountType>,
+        serviceTypes: List<ServiceType>,
+        entityCode: Int?,
+        startDate: String?,
+        endDate: String?
+    ): BigDecimal?
 }

@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.serviceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
@@ -216,24 +217,24 @@ class DashboardController {
     // ** Business Finance DashBoard Apis */
 
     @Auth
-    @Get("/bf-receivable{?request*}")
+    @Get("/finance-receivable{?request*}")
     suspend fun getBfReceivableData(
         @Valid request: BfPendingAmountsReq,
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): BfReceivableAndPayable {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfReceivableData(request)
+        return dashboardService.getBfReceivableAndPayable(request)
     }
     @Auth
-    @Get("/bf-income-expense{?request*}")
+    @Get("/finance-income-expense{?request*}")
     suspend fun getBfIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getBfIncomeExpense(request)
     }
 
     @Auth
-    @Get("/bf-today-stats{?request*}")
+    @Get("/finance-today-stats{?request*}")
     suspend fun getBfTodayStats(
         @Valid request: BfTodayStatReq,
         user: AuthResponse?,
@@ -244,28 +245,28 @@ class DashboardController {
     }
 
     @Auth
-    @Get("/bf-profitability-shipment{?request*}")
+    @Get("/finance-profitability-shipment{?request*}")
     suspend fun getBfShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getBfShipmentProfit(request)
     }
 
     @Auth
-    @Get("/bf-profitability-customer{?request*}")
+    @Get("/finance-profitability-customer{?request*}")
     suspend fun getBfCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getBfCustomerProfit(request)
     }
 
     @Auth
-    @Get("/bf-service-wise-rec-pay")
-    suspend fun getBfServiceWiseRecPay(@QueryValue("entityCode") entityCode: Int? = null, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
-        val computedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
-        return dashboardService.getBfServiceWiseRecPay(computedEntityCode)
+    @Get("/finance-service-wise-rec-pay{?request*}")
+    suspend fun getBfServiceWiseRecPay(@Valid request: serviceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return dashboardService.getBfServiceWiseRecPay(request)
     }
 
     @Auth
-    @Get("/bf-service-wise-overdue{?request*}")
+    @Get("/finance-service-wise-overdue{?request*}")
     suspend fun getBfServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getServiceWiseOverdue(request)

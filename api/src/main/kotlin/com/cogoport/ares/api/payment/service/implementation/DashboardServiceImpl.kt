@@ -2,8 +2,10 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.AIR_SERVICES
+import com.cogoport.ares.api.common.AresConstants.ENTITY_ID
 import com.cogoport.ares.api.common.AresConstants.OCEAN_SERVICES
 import com.cogoport.ares.api.common.AresConstants.SURFACE_SERVICES
+import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
@@ -25,6 +27,7 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.serviceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
@@ -779,7 +782,7 @@ class DashboardServiceImpl : DashboardService {
         return accTypeDocStatusMapping[documentType]
     }
 
-    override suspend fun getBfReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+    override suspend fun getBfReceivableAndPayable(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
                 request.serviceType, request.startDate,
@@ -854,15 +857,15 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
-        val todaySalesData = unifiedDBRepo.getTodaySalesStats(request.serviceTypes, request.entityCode, now())
-        val todayPurchaseData = unifiedDBRepo.getTodayPurchaseStats(request.serviceTypes, request.entityCode, now())
+        val todaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, now())
+        val todayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, now())
         val response = BfTodayStatsResp(
             todaySalesStats = todaySalesData,
             todayPurchaseStats = todayPurchaseData,
         )
         var yesterday = now().minus(1, ChronoUnit.DAYS)
-        val yesterdaySalesData = unifiedDBRepo.getTodaySalesStats(request.serviceTypes, request.entityCode, yesterday)
-        val yesterdayPurchaseData = unifiedDBRepo.getTodayPurchaseStats(request.serviceTypes, request.entityCode, yesterday)
+        val yesterdaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, yesterday)
+        val yesterdayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, yesterday)
         val todayCashFlow = todaySalesData.totalRevenue?.minus(todayPurchaseData.totalExpense ?: 0.toBigDecimal())
         val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
         val cashFlowChange = (todayCashFlow?.minus(yesterdayCashFlow ?: 0.toBigDecimal())?.div(100.toBigDecimal()))
@@ -875,6 +878,7 @@ class DashboardServiceImpl : DashboardService {
 
         var query: String? = null
         if (request.q != null) query = "%${request.q}%"
+        val taggedEntityCode = ENTITY_ID[request.entityCode]
         val listResponse = unifiedDBRepo.listShipmentProfitability(
             request.pageIndex!!,
             request.pageSize!!,
@@ -882,12 +886,21 @@ class DashboardServiceImpl : DashboardService {
             request.jobStatus,
             request.sortBy,
             request.sortType,
-            request.entityCode
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceType
         )
+        listResponse.forEach {
+            it.entity = TAGGED_ENTITY_ID_MAPPINGS[it.taggedEntityId].toString()
+        }
         val totalRecords = unifiedDBRepo.findTotalCountShipment(
             query,
             request.jobStatus,
-            request.entityCode
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceType
         )
         return ShipmentProfitResp(
             shipmentList = listResponse,
@@ -922,14 +935,15 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getBfServiceWiseRecPay(entityCode: Int?): MutableList<ServiceWiseRecPayResp> {
+    override suspend fun getBfServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
         val response = mutableListOf<ServiceWiseRecPayResp>()
-        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode)
-        val oceanPayable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode)
-        val airReceivable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode)
-        val airPayable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode)
-        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode)
-        val surfacePayable = unifiedDBRepo.getTotalRemainingAmount(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode)
+        val entityCode = request.entityCode
+        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val oceanPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val airPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfacePayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
 
         response.add(
             ServiceWiseRecPayResp(
@@ -966,16 +980,16 @@ class DashboardServiceImpl : DashboardService {
         }
         return when (request.interfaceType) {
             "ocean" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
-                apData = getBfReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+                arData = getBfReceivableAndPayable(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getBfReceivableAndPayable(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             "air" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
-                apData = getBfReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+                arData = getBfReceivableAndPayable(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getBfReceivableAndPayable(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             "surface" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, null, null, tradeTypes, request.entityCode)),
-                apData = getBfReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, null, null, tradeTypes, request.entityCode))
+                arData = getBfReceivableAndPayable(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getBfReceivableAndPayable(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
         }
