@@ -91,16 +91,16 @@ class DashboardServiceImpl : DashboardService {
         Client.createIndex(index)
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String,OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String, OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
 
-        val durationKey = listOf( "Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
+        val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
 
-        val formattedData = LinkedHashMap<String,OverallAgeingStatsResponse>()
+        val formattedData = LinkedHashMap<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
             durationKey.map {
@@ -120,11 +120,11 @@ class DashboardServiceImpl : DashboardService {
             data.add(overallAgeingConverter.convertToModel(response))
         }
 
-        durationKey.map {key ->
+        durationKey.map { key ->
             val durationData = data.filter { it.ageingDuration == key }
-            if (!durationData.isNullOrEmpty()){
+            if (!durationData.isNullOrEmpty()) {
                 formattedData.put(key, durationData[0])
-            }else {
+            } else {
                 formattedData[key] = OverallAgeingStatsResponse(
                     ageingDuration = key,
                     amount = 0.toBigDecimal(),
