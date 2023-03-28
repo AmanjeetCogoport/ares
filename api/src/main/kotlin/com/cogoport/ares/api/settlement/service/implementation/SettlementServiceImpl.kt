@@ -1858,6 +1858,10 @@ open class SettlementServiceImpl : SettlementService {
         }
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
+        if (paymentUtilization.accMode == AccMode.AR) {
+            paymentUtilization.tdsAmount = paymentUtilization.tdsAmount!! + paidTds
+            paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
+        }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
