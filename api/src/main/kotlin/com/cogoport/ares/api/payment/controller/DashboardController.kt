@@ -90,9 +90,9 @@ class DashboardController {
         @Valid request: OutstandingAgeingRequest,
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
-    ): List<OverallAgeingStatsResponse>? {
+    ): LinkedHashMap<String,OverallAgeingStatsResponse> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return Response<List<OverallAgeingStatsResponse>?>().ok(dashboardService.getOutStandingByAge(request))
+        return Response<LinkedHashMap<String,OverallAgeingStatsResponse>>().ok(dashboardService.getOutStandingByAge(request))
     }
 
     @Get("/org-collection{?request*}")
