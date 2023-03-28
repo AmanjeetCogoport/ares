@@ -782,7 +782,7 @@ class DashboardServiceImpl : DashboardService {
         return accTypeDocStatusMapping[documentType]
     }
 
-    override suspend fun getBfReceivableAndPayable(request: BfPendingAmountsReq): BfReceivableAndPayable {
+    override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
                 request.serviceType, request.startDate,
@@ -801,7 +801,7 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
+    override suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
         val thisYear = Year.now().toString()
         if ((request.financeYearStart == null && request.financeYearEnd != null) || (request.financeYearStart != null && request.financeYearEnd == null)) {
             throw AresException(AresError.ERR_1006, "One of the finance Year is null")
@@ -856,7 +856,7 @@ class DashboardServiceImpl : DashboardService {
         }
     }
 
-    override suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
+    override suspend fun getFinanceTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
         val todaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, now())
         val todayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, now())
         val response = BfTodayStatsResp(
@@ -874,7 +874,7 @@ class DashboardServiceImpl : DashboardService {
         return response
     }
 
-    override suspend fun getBfShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+    override suspend fun getFinanceShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp {
 
         var query: String? = null
         if (request.q != null) query = "%${request.q}%"
@@ -911,7 +911,7 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getBfCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+    override suspend fun getFinanceCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp {
         var query: String? = null
         if (request.q != null) query = "%${request.q}%"
         val listResponse = unifiedDBRepo.listCustomerProfitability(
@@ -935,7 +935,7 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getBfServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
+    override suspend fun getFinanceServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
         val response = mutableListOf<ServiceWiseRecPayResp>()
         val entityCode = request.entityCode
         val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
@@ -969,7 +969,7 @@ class DashboardServiceImpl : DashboardService {
         return response
     }
 
-    override suspend fun getServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp {
+    override suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp {
         val tradeTypes = when (request.tradeType) {
             "import" -> listOf("import", "IMPORT")
             "export" -> listOf("export", "EXPORT")
@@ -980,16 +980,16 @@ class DashboardServiceImpl : DashboardService {
         }
         return when (request.interfaceType) {
             "ocean" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableAndPayable(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                apData = getBfReceivableAndPayable(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+                arData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             "air" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableAndPayable(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                apData = getBfReceivableAndPayable(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+                arData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             "surface" -> ServiceWiseOverdueResp(
-                arData = getBfReceivableAndPayable(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                apData = getBfReceivableAndPayable(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+                arData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
         }

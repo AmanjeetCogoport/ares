@@ -72,17 +72,17 @@ interface DashboardService {
 
     // Bf DashBoard Functions
 
-    suspend fun getBfReceivableAndPayable(request: BfPendingAmountsReq): BfReceivableAndPayable
+    suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable
 
-    suspend fun getBfIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse>
+    suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse>
 
-    suspend fun getBfTodayStats(request: BfTodayStatReq): BfTodayStatsResp
+    suspend fun getFinanceTodayStats(request: BfTodayStatReq): BfTodayStatsResp
 
-    suspend fun getBfShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp
+    suspend fun getFinanceShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp
 
-    suspend fun getBfCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp
+    suspend fun getFinanceCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp
 
-    suspend fun getBfServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp>
+    suspend fun getFinanceServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp>
 
-    suspend fun getServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp
+    suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp
 }

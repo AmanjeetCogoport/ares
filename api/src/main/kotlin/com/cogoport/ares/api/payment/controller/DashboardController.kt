@@ -218,57 +218,57 @@ class DashboardController {
 
     @Auth
     @Get("/finance-receivable-payable{?request*}")
-    suspend fun getBfReceivableData(
+    suspend fun getFinanceReceivableData(
         @Valid request: BfPendingAmountsReq,
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): BfReceivableAndPayable {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfReceivableAndPayable(request)
+        return dashboardService.getFinanceReceivableData(request)
     }
     @Auth
     @Get("/finance-income-expense{?request*}")
-    suspend fun getBfIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
+    suspend fun getFinanceIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfIncomeExpense(request)
+        return dashboardService.getFinanceIncomeExpense(request)
     }
 
     @Auth
     @Get("/finance-today-stats{?request*}")
-    suspend fun getBfTodayStats(
+    suspend fun getFinanceTodayStats(
         @Valid request: BfTodayStatReq,
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): BfTodayStatsResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfTodayStats(request)
+        return dashboardService.getFinanceTodayStats(request)
     }
 
     @Auth
     @Get("/finance-profitability-shipment{?request*}")
-    suspend fun getBfShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+    suspend fun getFinanceShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfShipmentProfit(request)
+        return dashboardService.getFinanceShipmentProfit(request)
     }
 
     @Auth
     @Get("/finance-profitability-customer{?request*}")
-    suspend fun getBfCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+    suspend fun getFinanceCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfCustomerProfit(request)
+        return dashboardService.getFinanceCustomerProfit(request)
     }
 
     @Auth
     @Get("/finance-service-wise-rec-pay{?request*}")
-    suspend fun getBfServiceWiseRecPay(@Valid request: serviceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
+    suspend fun getFinanceServiceWiseRecPay(@Valid request: serviceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getBfServiceWiseRecPay(request)
+        return dashboardService.getFinanceServiceWiseRecPay(request)
     }
 
     @Auth
     @Get("/finance-service-wise-overdue{?request*}")
-    suspend fun getBfServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
+    suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
-        return dashboardService.getServiceWiseOverdue(request)
+        return dashboardService.getFinanceServiceWiseOverdue(request)
     }
 }
