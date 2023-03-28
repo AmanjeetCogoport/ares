@@ -685,8 +685,13 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val paymentNumValue = accountUtilizationRepositoryMigration.getPaymentDetails(
+                sageRefNumber = payLocUpdateRequest.documentValue!!,
+                accMode = payLocUpdateRequest.accMode!!,
+                organizationId = tradePartyDetailId
+            )
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
+                paymentNumValue, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -696,14 +701,14 @@ class PaymentMigrationImpl : PaymentMigration {
             } else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
-                        payLocUpdateRequest.documentValue,
+                        paymentNumValue,
                         payLocUpdateRequest.payLoc!!,
                         payLocUpdateRequest.payCurr!!,
                         payLocUpdateRequest.accMode,
                         tradePartyDetailId
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
-                    payLocUpdateRequest.documentValue,
+                    paymentNumValue,
                     payLocUpdateRequest.accMode,
                     tradePartyDetailId
                 )
@@ -714,29 +719,29 @@ class PaymentMigrationImpl : PaymentMigration {
                 } else {
                     "PAID"
                 }
-                if (AccountType.SINV.name.equals(response.accType) ||
+                if (AccountType.SINV.name == response.accType ||
                     AccountType.SCN.equals(response.accType)
                 ) {
                     plutusMessagePublisher.emitInvoiceStatus(
                         PaidUnpaidStatus(
-                            documentValue = payLocUpdateRequest.documentValue,
+                            documentValue = paymentNumValue,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
                     )
                 }
 
-                if (AccountType.PCN.name.equals(response.accType) ||
-                    AccountType.PINV.name.equals(response.accType)
+                if (AccountType.PCN.name == response.accType ||
+                    AccountType.PINV.name == response.accType
                 ) {
-                    if (status.equals("PARTIAL_PAID")) {
+                    if (status == "PARTIAL_PAID") {
                         status = "PARTIAL"
-                    } else if (status.equals("PAID")) {
+                    } else if (status == "PAID") {
                         status = "FULL"
                     }
                     kuberMessagePublisher.emitBIllStatus(
                         PaidUnpaidStatus(
-                            documentValue = payLocUpdateRequest.documentValue,
+                            documentValue = paymentNumValue,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -744,7 +749,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 }
             }
 
-            migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue, migrationStatus)
+            migrationLogService.saveMigrationLogs(null, null, null, paymentNumValue, migrationStatus)
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
             if (errorMessage.length > 5000) {

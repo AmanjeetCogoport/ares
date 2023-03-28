@@ -67,4 +67,21 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         accMode: String,
         organizationId: UUID
     ): PayLocUpdateResponse
+
+    @NewSpan
+    @Query(
+        """
+            select payment_num_value from payments 
+            WHERE 
+            sage_ref_number = :documentValue
+            AND
+            acc_mode = :accMode::account_mode
+            AND organization_id = :organizationId
+        """
+    )
+    fun getPaymentDetails(
+        sageRefNumber: String,
+        accMode: String,
+        organizationId: UUID
+    ): String
 }
