@@ -91,23 +91,26 @@ class DashboardServiceImpl : DashboardService {
         Client.createIndex(index)
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String, OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
 
-        val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
+        val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
+
+        val formattedData = LinkedHashMap<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
-            return durationKey.map {
-                OverallAgeingStatsResponse(
-                    ageingDuration = it,
-                    amount = 0.toBigDecimal(),
-                    dashboardCurrency = ledgerCurrency!!
+            durationKey.map {
+                formattedData[it] = OverallAgeingStatsResponse(
+                        ageingDuration = it,
+                        amount = 0.toBigDecimal(),
+                        dashboardCurrency = ledgerCurrency!!
                 )
             }
+            return formattedData
         }
 
         val data = mutableListOf<OverallAgeingStatsResponse>()
@@ -117,7 +120,22 @@ class DashboardServiceImpl : DashboardService {
             data.add(overallAgeingConverter.convertToModel(response))
         }
 
-        return data
+        durationKey.map { key ->
+            val durationData = data.filter { it.ageingDuration == key }
+            if (!durationData.isNullOrEmpty()) {
+                formattedData.put(key, durationData[0])
+            } else {
+                formattedData[key] = OverallAgeingStatsResponse(
+                        ageingDuration = key,
+                        amount = 0.toBigDecimal(),
+                        dashboardCurrency = ledgerCurrency!!
+                )
+            }
+        }
+
+        formattedData.values.sortedBy { it.ageingDuration }
+
+        return formattedData
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {

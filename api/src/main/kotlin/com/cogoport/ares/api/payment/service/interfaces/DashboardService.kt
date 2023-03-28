@@ -34,7 +34,7 @@ interface DashboardService {
 
     suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
     suspend fun getDailySalesOutstanding(request: DsoRequest): DailySalesOutstanding?
-    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
+    suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String, OverallAgeingStatsResponse>
     suspend fun deleteIndex(index: String)
     suspend fun createIndex(index: String)
     suspend fun getOrgCollection(request: OrganizationReceivablesRequest): List<OutstandingResponse>
