@@ -813,7 +813,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     entityCode = it.entityCode.toInt(),
                     jvNum = it.jvNum,
                     type = "credit",
-                    category = "JVNOS", // /JVCategory.valueOf(it.type), //need to change
+                    category = JVCategory.JVNOS.name, // /JVCategory.valueOf(it.type), //need to change
                     validityDate = it.validityDate,
                     amount = it.amount,
                     currency = it.currency,
