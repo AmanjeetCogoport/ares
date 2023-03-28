@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -39,6 +40,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
@@ -96,11 +98,13 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var parentJournalVoucherRepo: ParentJVRepoMigration
 
+    @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
             if (paymentMigrationRepository.checkPaymentExists(
-                    paymentRecord.paymentNum!!,
+                    paymentRecord.sageRefNumber!!,
                     AccMode.valueOf(paymentRecord.accMode!!).name,
                     PaymentCode.valueOf(paymentRecord.paymentCode!!).name,
                     AccountType.valueOf(paymentRecord.accountType!!).name
@@ -112,13 +116,13 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = paymentRecord.sageOrganizationId,
-                    organizationType = if (paymentRecord.accMode.equals("AR")) "income" else "expense"
+                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense"
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
-                val message = "Organization id is null, not migrating payment ${paymentRecord.paymentNum}"
+                val message = "Organization id is null, not migrating payment ${paymentRecord.sageRefNumber}"
                 logger().info(message)
-                migrationLogService.saveMigrationLogs(null, null, paymentRecord.paymentNum, null, null, null, null, null, null, message)
+                migrationLogService.saveMigrationLogs(null, null, paymentRecord.sageRefNumber, null, null, null, null, null, null, message)
                 return 0
             }
             paymentRequest = getPaymentRequest(paymentRecord, response)
@@ -132,11 +136,11 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().info("Payment with paymentId ${paymentRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
-            if (errorMessage.length> 5000) {
+            if (errorMessage.length > 5000) {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum, MigrationStatus.FAILED)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.sageRefNumber, MigrationStatus.FAILED)
         }
         return 1
     }
@@ -194,7 +198,7 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().info("Journal Voucher with ID ${journalVoucherRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
-            if (errorMessage.length> 5000) {
+            if (errorMessage.length > 5000) {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
@@ -202,8 +206,9 @@ class PaymentMigrationImpl : PaymentMigration {
         }
     }
 
-    private fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
+    private suspend fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
 
+        val paymentSeq = setPaymentEntity(paymentRecord)
         return PaymentMigrationModel(
             id = null,
             entityCode = paymentRecord.entityCode!!,
@@ -233,8 +238,8 @@ class PaymentMigrationImpl : PaymentMigration {
             paymentCode = PaymentCode.valueOf(paymentRecord.paymentCode!!),
             bankName = getCogoBankName(paymentRecord.bankShortCode) ?: paymentRecord.bankShortCode,
             exchangeRate = paymentRecord.exchangeRate!!,
-            paymentNum = getPaymentNum(paymentRecord.paymentNum)!!,
-            paymentNumValue = paymentRecord.paymentNum!!,
+            paymentNum = paymentSeq.paymentNum!!,
+            paymentNumValue = paymentSeq.paymentNumValue!!,
             bankId = getCogoBankId(paymentRecord.bankShortCode),
             accountType = AccountType.valueOf(paymentRecord.accountType!!),
             accountUtilCurrAmount = paymentRecord.accountUtilAmtCurr,
@@ -242,7 +247,8 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilPayCurr = paymentRecord.accountUtilPayCurr,
             accountUtilPayLed = paymentRecord.accountUtilPayLed,
             bankPayAmount = paymentRecord.bankPayAmount,
-            tradePartySerialId = rorOrgDetails.tradePartySerialId
+            tradePartySerialId = rorOrgDetails.tradePartySerialId,
+            sageRefNumber = paymentRecord.paymentNumValue
         )
     }
 
@@ -298,6 +304,18 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error(e.stackTraceToString())
         }
         return 0
+    }
+
+    private suspend fun setPaymentEntity(paymentRecord: PaymentRecord): PaymentRecord {
+        if (AccMode.valueOf(paymentRecord.accMode!!) == AccMode.AR) {
+            paymentRecord.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+            paymentRecord.paymentNumValue = SequenceSuffix.RECEIVED.prefix + paymentRecord.paymentNum
+        } else {
+            paymentRecord.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
+            paymentRecord.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentRecord.paymentNum
+        }
+
+        return paymentRecord
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
