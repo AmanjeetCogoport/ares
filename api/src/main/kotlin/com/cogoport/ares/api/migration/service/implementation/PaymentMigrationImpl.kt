@@ -691,7 +691,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 organizationId = tradePartyDetailId
             )
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                paymentNumValue, payLocUpdateRequest.accMode!!, tradePartyDetailId
+                paymentNumValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return

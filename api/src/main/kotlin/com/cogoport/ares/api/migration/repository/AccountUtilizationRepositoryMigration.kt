@@ -73,7 +73,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         """
             select payment_num_value from payments 
             WHERE 
-            sage_ref_number = :documentValue
+            sage_ref_number = :sageRefNumber
             AND
             acc_mode = :accMode::account_mode
             AND organization_id = :organizationId
@@ -83,5 +83,5 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         sageRefNumber: String,
         accMode: String,
         organizationId: UUID
-    ): String
+    ): String?
 }
