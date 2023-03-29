@@ -904,7 +904,8 @@ class DashboardServiceImpl : DashboardService {
         )
         return ShipmentProfitResp(
             shipmentList = listResponse,
-            averageProfit = totalRecords.averageProfit,
+            averageShipmentProfit = totalRecords.averageProfit,
+            averageCustomerProfit = null,
             pageIndex = request.pageIndex,
             pageSize = request.pageSize,
             totalRecord = totalRecords.totalCount
@@ -928,7 +929,8 @@ class DashboardServiceImpl : DashboardService {
         )
         return ShipmentProfitResp(
             customerList = listResponse,
-            averageProfit = totalRecords.averageProfit,
+            averageShipmentProfit = null,
+            averageCustomerProfit = totalRecords.averageProfit,
             pageIndex = request.pageIndex,
             pageSize = request.pageSize,
             totalRecord = totalRecords.totalCount

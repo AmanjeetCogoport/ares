@@ -1182,7 +1182,6 @@ WHERE
 	AND j.income != 0
 	AND j.expense != 0
 	AND (:entityCode IS NULL OR o.sage_company_id = :entityCode::varchar)
-	AND s.state != 'cancelled'
     AND (:query IS NULL OR o.business_name ILIKE :query)
 GROUP BY
 	s.importer_exporter_id,
