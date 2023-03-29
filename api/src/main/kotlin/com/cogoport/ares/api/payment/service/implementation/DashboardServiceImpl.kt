@@ -41,6 +41,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DocumentType
@@ -118,8 +119,16 @@ class DashboardServiceImpl : DashboardService {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
+        val updatedCompanyType = when (request.companyType != null) {
+            true -> when (request.companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(request.companyType!!.value)
+            }
+            else -> null
+        }
+
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
-        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
+        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, updatedCompanyType, entityCode)
 
         val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
 
@@ -169,6 +178,14 @@ class DashboardServiceImpl : DashboardService {
 
         val companyType = request.companyType
 
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
             2 to "APR - JUN",
@@ -178,7 +195,7 @@ class DashboardServiceImpl : DashboardService {
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val quarterOutstandingData = unifiedDBRepo.generateQuarterlyOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
+        val quarterOutstandingData = unifiedDBRepo.generateQuarterlyOutstanding(year, serviceType, defaultersOrgIds, entityCode, updatedCompanyType)
         val qsoResponseList = mutableListOf<QsoResponse>()
 
         (1..4).toList().map { quarter ->
@@ -232,7 +249,15 @@ class DashboardServiceImpl : DashboardService {
         val companyType = request.companyType
         val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
+        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, updatedCompanyType)
 
         val dsoResponse = mutableListOf<DsoResponse>()
 
@@ -409,6 +434,14 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
@@ -418,7 +451,7 @@ class DashboardServiceImpl : DashboardService {
 
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(entityCode, companyType?.value, serviceType?.name?.lowercase(), year, monthKey)
+        val data = unifiedDBRepo.getFunnelData(entityCode, updatedCompanyType, serviceType?.name?.lowercase(), year, monthKey)
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
@@ -453,6 +486,14 @@ class DashboardServiceImpl : DashboardService {
         val month = req.month
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
@@ -460,7 +501,7 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val data = unifiedDBRepo.getInvoices(year, monthKey, entityCode, companyType?.value, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoices(year, monthKey, entityCode, updatedCompanyType, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 
@@ -676,6 +717,14 @@ class DashboardServiceImpl : DashboardService {
         val entityCode = req.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
         val defaultersOrgIds = getDefaultersOrgIds()
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
@@ -691,11 +740,11 @@ class DashboardServiceImpl : DashboardService {
                     getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                     defaultersOrgIds,
                     entityCode,
-                    companyType?.value,
+                    updatedCompanyType,
                     serviceType
                 )!!
             } else {
-                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
             }
         } else {
             if ((month != null && year != null) || (month != null && year == null)) {
@@ -711,11 +760,11 @@ class DashboardServiceImpl : DashboardService {
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         entityCode,
-                        companyType?.value,
+                        updatedCompanyType,
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterEnd, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterStart, quarterEnd, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
                 }
             } else {
                 val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${generateMonthKeyIndex(AresConstants.CURR_DATE.toLocalDateTime().dayOfMonth)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -725,11 +774,11 @@ class DashboardServiceImpl : DashboardService {
                         getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                         defaultersOrgIds,
                         entityCode,
-                        companyType?.value,
+                        updatedCompanyType,
                         serviceType
                     )!!
                 } else {
-                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
                 }
             }
         }
@@ -755,6 +804,8 @@ class DashboardServiceImpl : DashboardService {
                 }
             }
         }
+
+//        hashMap.values.sortedBy { it.sortedBy { v -> v.duration } }
         return hashMap
     }
 
@@ -781,17 +832,25 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
+        val updatedCompanyType = when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
+
         val dailySalesStats = if (req.documentType != DocumentType.SHIPMENT_CREATED) {
             unifiedDBRepo.generateLineGraphViewDailyStats(
                 asOnDate,
                 getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
                 defaultersOrgIds,
                 entityCode,
-                companyType?.value,
+                updatedCompanyType,
                 serviceType
             )!!
         } else {
-            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, entityCode, req.companyType?.value, req.serviceType?.name?.lowercase())!!
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, entityCode, updatedCompanyType, req.serviceType?.name?.lowercase())!!
         }
 
         if (dailySalesStats.size > 0) {
