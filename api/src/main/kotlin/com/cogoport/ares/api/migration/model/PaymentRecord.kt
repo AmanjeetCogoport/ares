@@ -125,5 +125,5 @@ data class PaymentRecord(
     var paymentNumValue: String? = null,
 
     @JsonProperty("sage_ref_number")
-    var sageRefNumber: String?
+    var sageRefNumber: String? = null
 )
