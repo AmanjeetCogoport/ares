@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
@@ -91,6 +92,13 @@ object AresConstants {
         401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
         501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff"
     )
+    val TAGGED_ENTITY_ID_MAPPINGS = mapOf(
+        "6fd98605-9d5d-479d-9fac-cf905d292b88" to 101,
+        "c7e1390d-ec41-477f-964b-55423ee84700" to 201,
+        "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1" to 301,
+        "04bd1037-c110-4aad-8ecc-fc43e9d4069d" to 401,
+        "b67d40b1-616c-4471-b77b-de52b4c9f2ff" to 501,
+    )
 
     val LEDGER_CURRENCY = mapOf(
         101 to "INR",
@@ -98,5 +106,31 @@ object AresConstants {
         301 to "INR",
         401 to "SGD",
         501 to "VND",
+    )
+
+    val OCEAN_SERVICES = listOf(
+        ServiceType.FCL_FREIGHT,
+        ServiceType.LCL_FREIGHT,
+        ServiceType.FCL_CUSTOMS,
+        ServiceType.LCL_CUSTOMS,
+        ServiceType.FCL_CUSTOMS_FREIGHT,
+        ServiceType.LCL_CUSTOMS_FREIGHT,
+        ServiceType.FCL_CFS,
+        ServiceType.FCL_FREIGHT_LOCAL
+    )
+    val AIR_SERVICES = listOf(
+        ServiceType.AIR_CUSTOMS,
+        ServiceType.AIR_FREIGHT,
+        ServiceType.AIR_CUSTOMS_FREIGHT,
+        ServiceType.AIR_FREIGHT_LOCAL,
+        ServiceType.DOMESTIC_AIR_FREIGHT
+    )
+    val SURFACE_SERVICES = listOf(
+        ServiceType.FTL_FREIGHT,
+        ServiceType.LTL_FREIGHT,
+        ServiceType.HAULAGE_FREIGHT,
+        ServiceType.TRAILER_FREIGHT,
+        ServiceType.RAIL_DOMESTIC_FREIGHT,
+        ServiceType.TRUCKING
     )
 }

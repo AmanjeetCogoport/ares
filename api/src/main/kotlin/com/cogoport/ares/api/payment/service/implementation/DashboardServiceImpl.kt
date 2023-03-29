@@ -1,6 +1,11 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.AresConstants.AIR_SERVICES
+import com.cogoport.ares.api.common.AresConstants.ENTITY_ID
+import com.cogoport.ares.api.common.AresConstants.OCEAN_SERVICES
+import com.cogoport.ares.api.common.AresConstants.SURFACE_SERVICES
+import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
@@ -11,16 +16,31 @@ import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DocumentType
@@ -59,9 +79,12 @@ import java.math.RoundingMode
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDate.now
 import java.time.Month
+import java.time.Year
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Singleton
@@ -803,5 +826,220 @@ class DashboardServiceImpl : DashboardService {
             DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC")
         )
         return accTypeDocStatusMapping[documentType]
+    }
+
+    override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+        if (request.accountMode == AccMode.AP) {
+            return unifiedDBRepo.getBfPayable(
+                request.serviceType, request.startDate,
+                request.endDate, request.tradeType, request.entityCode,
+                OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES
+            )
+        }
+        val customerTypes = mapOf(
+            "cp" to listOf("channel_partner"),
+            "ie" to listOf("mid_size", "long_tail"),
+            "enterprise" to listOf("enterprise")
+        )
+        return unifiedDBRepo.getBfReceivable(
+            request.serviceType, request.startDate, request.endDate,
+            request.tradeType, request.entityCode, OCEAN_SERVICES, AIR_SERVICES, SURFACE_SERVICES, customerTypes[request.buyerType]
+        )
+    }
+
+    override suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
+        val thisYear = Year.now().toString()
+        if ((request.financeYearStart == null && request.financeYearEnd != null) || (request.financeYearStart != null && request.financeYearEnd == null)) {
+            throw AresException(AresError.ERR_1006, "One of the finance Year is null")
+        }
+        val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
+        var endYear = request.financeYearEnd ?: request.calenderYear ?: thisYear
+
+        val monthlyIncomes = unifiedDBRepo.getBfIncomeMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+            request.entityCode
+        )
+        val monthlyExpenses = unifiedDBRepo.getBfExpenseMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+            request.entityCode
+        )
+        var response = mutableListOf<BfIncomeExpenseResponse>()
+        for (monthIndex in 1..12) {
+            var monthName = Month.of(monthIndex)
+            response.add(
+                BfIncomeExpenseResponse(
+                    month = monthName,
+                    income = getMonthData(monthlyIncomes, monthName),
+                    expense = getMonthData(monthlyExpenses, monthName)
+                )
+            )
+        }
+
+        return response
+    }
+
+    private fun getMonthData(data: LogisticsMonthlyData, month: Month): BigDecimal? {
+        return when (month) {
+            Month.JANUARY -> data.january
+            Month.FEBRUARY -> data.february
+            Month.MARCH -> data.march
+            Month.APRIL -> data.april
+            Month.MAY -> data.may
+            Month.JUNE -> data.june
+            Month.JULY -> data.july
+            Month.AUGUST -> data.august
+            Month.SEPTEMBER -> data.september
+            Month.OCTOBER -> data.october
+            Month.NOVEMBER -> data.november
+            Month.DECEMBER -> data.december
+            else -> null
+        }
+    }
+
+    override suspend fun getFinanceTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
+        val todaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, now())
+        val todayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, now())
+        val response = BfTodayStatsResp(
+            todaySalesStats = todaySalesData,
+            todayPurchaseStats = todayPurchaseData,
+        )
+        var yesterday = now().minus(1, ChronoUnit.DAYS)
+        val yesterdaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, yesterday)
+        val yesterdayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, yesterday)
+        val todayCashFlow = todaySalesData.totalRevenue?.minus(todayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val cashFlowChange = (todayCashFlow?.minus(yesterdayCashFlow ?: 0.toBigDecimal())?.div(100.toBigDecimal()))
+        response.totalCashFlow = todayCashFlow
+        response.cashFlowDiffFromYesterday = cashFlowChange
+        return response
+    }
+
+    override suspend fun getFinanceShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        val taggedEntityCode = ENTITY_ID[request.entityCode]
+        val listResponse = unifiedDBRepo.listShipmentProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.jobStatus,
+            request.sortBy,
+            request.sortType,
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceType
+        )
+        listResponse.forEach {
+            it.entity = TAGGED_ENTITY_ID_MAPPINGS[it.taggedEntityId].toString()
+        }
+        val totalRecords = unifiedDBRepo.findTotalCountShipment(
+            query,
+            request.jobStatus,
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceType
+        )
+        return ShipmentProfitResp(
+            shipmentList = listResponse,
+            averageShipmentProfit = totalRecords.averageProfit,
+            averageCustomerProfit = null,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
+    }
+
+    override suspend fun getFinanceCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        val listResponse = unifiedDBRepo.listCustomerProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.sortBy,
+            request.sortType,
+            request.entityCode
+        )
+        val totalRecords = unifiedDBRepo.findTotalCountCustomer(
+            query,
+            request.entityCode
+        )
+        return ShipmentProfitResp(
+            customerList = listResponse,
+            averageShipmentProfit = null,
+            averageCustomerProfit = totalRecords.averageProfit,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
+    }
+
+    override suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
+        val response = mutableListOf<ServiceWiseRecPayResp>()
+        val entityCode = request.entityCode
+        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val oceanPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val airPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfacePayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Ocean",
+                accountPay = oceanPayable,
+                accountRec = oceanReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Air",
+                accountPay = airPayable,
+                accountRec = airReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Surface",
+                accountPay = surfacePayable,
+                accountRec = surfaceReceivable
+            )
+        )
+        return response
+    }
+
+    override suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp {
+        val tradeTypes = when (request.tradeType) {
+            "import" -> listOf("import", "IMPORT")
+            "export" -> listOf("export", "EXPORT")
+            "other" -> listOf("domestic", "DOMESTIC", "LOCAL", "local")
+            "domestic" -> listOf("domestic", "DOMESTIC")
+            "local" -> listOf("LOCAL", "local")
+            else -> null
+        }
+        return when (request.interfaceType) {
+            "ocean" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+            )
+            "air" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+            )
+            "surface" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
+            )
+            else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
+        }
     }
 }
