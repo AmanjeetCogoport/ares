@@ -12,7 +12,7 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
-import com.cogoport.ares.api.payment.model.requests.serviceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
@@ -260,7 +260,7 @@ class DashboardController {
 
     @Auth
     @Get("/finance-service-wise-rec-pay{?request*}")
-    suspend fun getFinanceServiceWiseRecPay(@Valid request: serviceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
+    suspend fun getFinanceServiceWiseRecPay(@Valid request: ServiceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return dashboardService.getFinanceServiceWiseRecPay(request)
     }

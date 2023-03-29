@@ -1260,7 +1260,7 @@ WHERE
 		au.acc_mode = :accMode
 		AND au.due_date IS NOT NULL
 		AND au.document_status in('FINAL')
-        AND (:startDate is null or :endDate is null or bill.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 

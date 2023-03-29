@@ -27,7 +27,7 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
-import com.cogoport.ares.api.payment.model.requests.serviceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
@@ -937,7 +937,7 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun getFinanceServiceWiseRecPay(request: serviceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
+    override suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
         val response = mutableListOf<ServiceWiseRecPayResp>()
         val entityCode = request.entityCode
         val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)

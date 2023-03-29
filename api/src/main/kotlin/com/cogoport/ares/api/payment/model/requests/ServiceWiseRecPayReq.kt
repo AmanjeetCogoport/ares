@@ -1,8 +1,10 @@
 package com.cogoport.ares.api.payment.model.requests
 
 import com.fasterxml.jackson.annotation.JsonFormat
+import io.micronaut.core.annotation.Introspected
 
-data class serviceWiseRecPayReq(
+@Introspected
+data class ServiceWiseRecPayReq(
     var entityCode: Int? = null,
     @JsonFormat(pattern = "yyyy-MM-dd")
     var startDate: String?,
