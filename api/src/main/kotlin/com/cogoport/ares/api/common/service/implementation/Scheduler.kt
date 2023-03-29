@@ -2,6 +2,7 @@ package com.cogoport.ares.api.common.service.implementation
 
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -11,7 +12,11 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 
 @Singleton
-class Scheduler(private var emitter: AresMessagePublisher, private var accountUtilizationRepository: AccountUtilizationRepository) {
+class Scheduler(
+    private var emitter: AresMessagePublisher,
+    private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var unifiedDBRepo: UnifiedDBRepo
+) {
 
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
@@ -38,6 +43,18 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
                 } catch (e: Exception) {
                     logger().error(e.message)
                     Sentry.captureException(e)
+                }
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 0 * * *")
+    fun deleteInvoicesNotPresentInPlutus() {
+        runBlocking {
+            val ids = unifiedDBRepo.getInvoicesNotPresentInPlutus()
+            if (!ids.isNullOrEmpty()) {
+                for (id in ids) {
+                    emitter.emitDeleteInvoicesNotPresentInPlutus(id)
                 }
             }
         }

@@ -174,4 +174,10 @@ interface AresClient {
     suspend fun getInvoiceListForTradeParties(
         @Valid @Body request: InvoiceListRequestForTradeParty
     ): ResponseList<InvoiceListResponse?>
+
+    @Get("/payments/invoice/amount-mismatch")
+    suspend fun getInvoicesAmountMismatch(): List<Long>?
+
+    @Get("/payments/invoice/missing-invoices")
+    suspend fun getInvoicesNotPresentInAres(): List<Long>?
 }

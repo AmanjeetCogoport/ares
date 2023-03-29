@@ -124,4 +124,9 @@ class AresMessageConsumer {
     fun updateCustomerOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
         outstandingService.updateCustomerDetails(request.orgId.toString(), false, null)
     }
+
+    @Queue("delete-invoices-not-present-in-plutus", prefetch = 1)
+    fun deleteInvoicesNotPresentInPlutus(id: Long) = runBlocking {
+        accountUtilService.deleteInvoicesNotPresentInPlutus(id)
+    }
 }

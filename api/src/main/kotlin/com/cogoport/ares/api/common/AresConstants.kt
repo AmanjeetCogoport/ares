@@ -78,6 +78,8 @@ object AresConstants {
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
 
+    const val UNIFIED = "dms"
+
     const val LIMIT = 10000
 
     var WHITE_LISTED_PATHS = mutableListOf(
