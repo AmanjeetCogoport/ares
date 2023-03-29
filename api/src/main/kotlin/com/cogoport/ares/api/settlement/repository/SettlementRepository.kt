@@ -295,32 +295,6 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            SELECT
-                s.amount,
-                au.document_value,
-                s.destination_id,
-                s.destination_type,
-                s.source_type,
-                au.organization_id,
-                au.org_serial_id ,CASE WHEN (s.source_type = 'REC'
-                    OR OR s.source_type = 'PAY') THEN
-                    'P'
-                ELSE
-                    NULL
-                END AS flag
-            FROM
-                settlements s
-                INNER JOIN account_utilizations au ON au.document_no = s.source_id
-            WHERE
-                au.acc_type::VARCHAR = s.source_type::VARCHAR
-                AND s.id = :id
-        """
-    )
-    suspend fun getSettlementDocumentValueForSettlementId(id: Long): SettlementDocuments
-
-    @NewSpan
-    @Query(
-        """
             UPDATE 
                 settlements
             SET 

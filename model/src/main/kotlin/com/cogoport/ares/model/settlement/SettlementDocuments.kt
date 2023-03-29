@@ -16,6 +16,5 @@ data class SettlementDocuments(
     var sourceType: SettlementType?,
     var organizationId: UUID?,
     var orgSerialId: Long?,
-    var flag: String?,
-
+    var flag: String?
 )

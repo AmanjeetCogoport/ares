@@ -51,7 +51,8 @@ enum class AresError(
     ERR_1524("ERR_1524", "Payment is not approved", HttpStatus.BAD_REQUEST),
     ERR_1525("ERR_1525", "Payment entry already exist on sage", HttpStatus.NOT_ACCEPTABLE),
     ERR_1526("ERR_1526", "Unauthorised", HttpStatus.UNAUTHORIZED),
-    ERR_1527("ERR_1527", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST);
+    ERR_1527("ERR_1527", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
+    ERR_1528("ERR_1528", "Posting failed because of following org issue:", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
