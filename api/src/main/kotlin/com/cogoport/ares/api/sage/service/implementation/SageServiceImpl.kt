@@ -28,8 +28,8 @@ class SageServiceImpl : SageService {
             return isPaymentPostedFromSage(documentValue)
         }
 
-        return false
         // Others are JV check if it is present in sage
+        return false
     }
 
     private fun isBillDataPostedFromSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): Boolean {

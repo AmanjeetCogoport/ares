@@ -50,7 +50,6 @@ data class Payment(
     var bankPayAmount: BigDecimal?,
     var migrated: Boolean?,
     var paymentDocumentStatus: PaymentDocumentStatus?,
-    var sageNumValue: String?,
     var createdBy: UUID? = null,
     var updatedBy: UUID? = null,
     var sageRefNumber: String?

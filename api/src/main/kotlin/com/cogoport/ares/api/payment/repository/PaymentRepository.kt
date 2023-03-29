@@ -4,7 +4,6 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
-import com.cogoport.ares.model.settlement.SageStatusResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
