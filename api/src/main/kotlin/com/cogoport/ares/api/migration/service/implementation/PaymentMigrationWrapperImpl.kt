@@ -181,7 +181,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     private fun getPayLocRecord(paymentRecord: PaymentRecord): PayLocUpdateRequest {
         return PayLocUpdateRequest(
             sageOrganizationId = paymentRecord.sageOrganizationId,
-            documentValue = paymentRecord.paymentNum,
+            documentValue = paymentRecord.sageRefNumber,
             amtLoc = paymentRecord.accountUtilAmtLed,
             payCurr = paymentRecord.accountUtilPayCurr,
             payLoc = paymentRecord.accountUtilPayLed,
