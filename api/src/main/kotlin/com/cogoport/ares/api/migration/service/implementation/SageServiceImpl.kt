@@ -84,7 +84,7 @@ class SageServiceImpl : SageService {
         jvNums: String?
     ): ArrayList<JournalVoucherRecord> {
         var sqlQuery = """
-         SELECT   G.FCY_0 as entity_code 
+         SELECT G.FCY_0 as entity_code 
             ,G.BPR_0 as sage_organization_id 
             ,G.NUM_0 as payment_num
             ,case when G.SAC_0='AR' then 
@@ -110,7 +110,7 @@ class SageServiceImpl : SageService {
             ,G.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,G.TYP_0 as account_type
-            ,GC.ROWID as sage_unique_id
+            ,GD.ROWID as sage_unique_id
             from  COGO2.GACCENTRY GC 
             INNER JOIN           
             (
@@ -120,6 +120,7 @@ class SageServiceImpl : SageService {
             GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
+            INNER JOIN COGO2.GACCENTRYD GD on (GD.NUM_0 = GC.NUM_0 and GD.TYP_0 = G.TYP_0 and GD.SAC_0 = G.SAC_0 and GD.AMTCUR_0 = G.AMTCUR_0 and GD.BPR_0 = G.BPR_0)
             where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
             and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
@@ -371,6 +372,7 @@ class SageServiceImpl : SageService {
             ,GD.BPR_0 as sage_organization_id
             ,case when SAC_0 = 'SC' then 'AP' else SAC_0 end as acc_mode
             from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) 
+            where BPR_0 = '' and SAC_0 = ''
             and GD.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
             and GD.NUM_0 = '$jvNum'
         """.trimIndent()
