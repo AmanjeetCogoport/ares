@@ -119,13 +119,7 @@ class DashboardServiceImpl : DashboardService {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
-        val updatedCompanyType = when (request.companyType != null) {
-            true -> when (request.companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(request.companyType!!.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(request.companyType)
 
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, updatedCompanyType, entityCode)
@@ -176,15 +170,7 @@ class DashboardServiceImpl : DashboardService {
         val year = request.year ?: AresConstants.CURR_YEAR
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
-        val companyType = request.companyType
-
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(request.companyType)
 
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
@@ -249,13 +235,7 @@ class DashboardServiceImpl : DashboardService {
         val companyType = request.companyType
         val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(companyType)
 
         val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, updatedCompanyType)
 
@@ -434,13 +414,7 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(companyType)
 
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
@@ -486,13 +460,7 @@ class DashboardServiceImpl : DashboardService {
         val month = req.month
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(companyType)
 
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
@@ -717,13 +685,7 @@ class DashboardServiceImpl : DashboardService {
         val entityCode = req.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(companyType)
 
         val defaultersOrgIds = getDefaultersOrgIds()
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
@@ -805,7 +767,6 @@ class DashboardServiceImpl : DashboardService {
             }
         }
 
-//        hashMap.values.sortedBy { it.sortedBy { v -> v.duration } }
         return hashMap
     }
 
@@ -832,13 +793,7 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
-        val updatedCompanyType = when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
+        val updatedCompanyType = getCompanyType(companyType)
 
         val dailySalesStats = if (req.documentType != DocumentType.SHIPMENT_CREATED) {
             unifiedDBRepo.generateLineGraphViewDailyStats(
@@ -1099,6 +1054,16 @@ class DashboardServiceImpl : DashboardService {
                 apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode))
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
+        }
+    }
+
+    private fun getCompanyType(companyType: CompanyType?): List<String>? {
+        return when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
         }
     }
 }
