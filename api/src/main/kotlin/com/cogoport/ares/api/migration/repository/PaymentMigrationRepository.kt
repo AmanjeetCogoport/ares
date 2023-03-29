@@ -28,21 +28,12 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @NewSpan
     @Query(
         """
-            select j.id as jvId
-                ,au.id as accountUtilizationId
-                ,au.amount_loc as amountLedger
-                ,pay_loc as payLedger
-                , j.led_currency as ledgerCurrency
-                ,j.updated_at as updated_at
-                from journal_vouchers j 
-                inner join account_utilizations au on (au.document_value = j.jv_num and j.acc_mode=au.acc_mode) 
-                where j.created_by = '2f5e5152-03f4-4ea8-a3db-a6eff388161b' 
-                and j.jv_num =:jvNum
-                and j.acc_mode =:accMode::account_mode
-                and j.sage_unique_id = :sageUniqueId
+            select document_no as jvId,id as accountUtilizationId, amount_loc as amountLedger,pay_loc as payLedger,
+            led_currency as ledgerCurrency, updated_at as updated_at from account_utilizations au 
+            where document_no = :jvId and document_value = :jvNum
         """
     )
-    suspend fun checkJVExists(jvNum: String, accMode: String, sageUniqueId: String): JvResponse?
+    suspend fun checkJVExists(jvNum: String, jvId: Long): JvResponse?
 
     @NewSpan
     @Query(

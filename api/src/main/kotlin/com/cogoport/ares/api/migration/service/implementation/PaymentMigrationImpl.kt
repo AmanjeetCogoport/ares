@@ -30,7 +30,6 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
-import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
@@ -144,12 +143,17 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord, parentJvId: Long) {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            val jvResponse: JvResponse? = paymentMigrationRepository.checkJVExists(
-                journalVoucherRecord.paymentNum!!,
-                journalVoucherRecord.accMode!!,
-                // AccountType.valueOf(journalVoucherRecord.accountType!!).name, //need to change
-                journalVoucherRecord.sageUniqueId!!
+            val jvId = paymentMigrationRepository.checkJVWithNoBpr(
+                journalVoucherRecord.sageUniqueId!!,
+                journalVoucherRecord.paymentNum!!
             )
+            var jvResponse: JvResponse? = null
+            if (jvId != null) {
+                jvResponse = paymentMigrationRepository.checkJVExists(
+                    journalVoucherRecord.paymentNum!!,
+                    jvId
+                )
+            }
             if (jvResponse != null) {
                 if (jvResponse.updatedAt < journalVoucherRecord.updatedAt) {
                     journalVoucherRepository.deleteById(jvResponse.jvId)
@@ -175,11 +179,10 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
                 return
             }
-
-            val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
+            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
+            val jvRecord = journalVoucherRepository.save(jv)
+            val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response, jvRecord.id!!)
             val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-            //            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
-            //            journalVoucherRepository.save(jv)
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
                 emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -410,7 +413,7 @@ class PaymentMigrationImpl : PaymentMigration {
         )
     }
 
-    private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse): AccountUtilizationMigration {
+    private suspend fun setAccountUtilizationsForJV(receivableRequest: JournalVoucherRecord, orgDetailsResponse: GetOrgDetailsResponse, jvId: Long): AccountUtilizationMigration {
         // need to call ROR API for org_serial_id
         val organizationSerialId = cogoClient.getCogoOrganization(
             CogoOrganizationRequest(
@@ -429,7 +432,7 @@ class PaymentMigrationImpl : PaymentMigration {
 
         return AccountUtilizationMigration(
             id = null,
-            documentNo = getPaymentNum(receivableRequest.paymentNum),
+            documentNo = jvId,
             documentValue = receivableRequest.paymentNum,
             zoneCode = if (orgDetailsResponse.zone == null) "WEST" else orgDetailsResponse.zone.uppercase(),
             serviceType = ServiceType.NA.name,
@@ -749,13 +752,13 @@ class PaymentMigrationImpl : PaymentMigration {
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
         var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
         try {
             jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
             var sum = BigDecimal.ZERO
-//            jvRecords.forEach {
-//                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
-//            }
-            val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+            jvRecords.forEach {
+                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+            }
             jvRecordsWithoutBpr.forEach {
                 sum += (it.amount * it.signFlag)
             }
@@ -788,16 +791,21 @@ class PaymentMigrationImpl : PaymentMigration {
                     )
                 )
                 parentJVId = jvParentRecord.id!!
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, jvParentDetail.currency,
+                    jvParentDetail.amount, null, null,
+                    null, null, null
+                )
             }
-            storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
         } catch (ex: Exception) {
             logger().error("$ex")
             migrationLogService.saveMigrationLogs(
                 null, null, jvParentDetail.jvNum, null, null,
-                null, null, null, null, "Error while storing jv header and line items"
+                null, null, null, null, "Error while storing jv header: ${ex.message}"
             )
             return
         }
+        storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
         jvRecords.forEach {
             this.migrateJournalVoucher(it, parentJVId)
         }
@@ -805,75 +813,53 @@ class PaymentMigrationImpl : PaymentMigration {
 
     private suspend fun storeJVLineItems(jvRecordsWithoutBpr: List<JVLineItemNoBPR>, parentJvId: Long) {
         jvRecordsWithoutBpr.forEach {
-            val jvId = paymentMigrationRepository.checkJVWithNoBpr(it.sageUniqueId, it.jvNum)
-            var tradePartyResponse: List<SerialIdDetailsResponse>? = null
-            if ((it.sageOrganizationId?.trim()?.length != 0) &&
-                (it.accMode?.trim()?.length != 0)
-            ) {
-                val response = cogoClient.getOrgDetailsBySageOrgId(
-                    GetOrgDetailsRequest(
-                        sageOrganizationId = it.sageOrganizationId,
-                        organizationType = if (it.accMode.equals("AR")) "income" else "expense"
-                    )
-                )
-                if (response == null || response.organizationId.isNullOrEmpty()) {
-                    val message = "Organization id is null, not migrating journal voucher ${it.jvNum}"
-                    logger().info(message)
-                    migrationLogService.saveMigrationLogs(
-                        null, null, it.jvNum, null, null,
-                        null, null, null, null, message
-                    )
-                    return
+            try {
+                val jvId = paymentMigrationRepository.checkJVWithNoBpr(it.sageUniqueId, it.jvNum)
+                if (jvId != null) {
+                    journalVoucherRepository.deleteById(jvId)
                 }
-
-                val organizationSerialId = cogoClient.getCogoOrganization(
-                    CogoOrganizationRequest(
-                        organizationSerialId = null,
-                        organizationId = response.organizationId
+                journalVoucherRepository.save(
+                    JournalVoucher(
+                        id = null,
+                        entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
+                        entityCode = it.entityCode.toInt(),
+                        jvNum = it.jvNum,
+                        type = "",
+                        category = AccountTypeMapping.getAccountType(it.type),
+                        validityDate = it.validityDate,
+                        amount = it.amount,
+                        currency = it.currency,
+                        ledCurrency = it.ledgerCurrency,
+                        status = JVStatus.valueOf(it.status),
+                        exchangeRate = it.exchangeRate,
+                        tradePartyId = null,
+                        tradePartyName = "",
+                        createdBy = MigrationConstants.createdUpdatedBy,
+                        createdAt = it.createdAt,
+                        updatedBy = MigrationConstants.createdUpdatedBy,
+                        updatedAt = it.updatedAt,
+                        description = it.description,
+                        accMode = if (it.accMode?.trim()?.length != 0) AccMode.valueOf(it.accMode!!) else AccMode.OTHER,
+                        parentJvId = parentJvId,
+                        sageUniqueId = it.sageUniqueId,
+                        migrated = true,
+                        glCode = it.glcode,
+                        ledAmount = it.ledgerAmount,
+                        signFlag = it.signFlag.toShort()
                     )
-                ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
-
-                // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
-                val serialIdInputs = SerialIdsInput(organizationSerialId!!, response.tradePartySerialId!!.toLong())
-
-                val serialIdRequest = SerialIdDetailsRequest(
-                    organizationTradePartyMappings = arrayListOf(serialIdInputs)
                 )
-                tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest) as List<SerialIdDetailsResponse>?
-            }
-            if (jvId != null) {
-                journalVoucherRepository.deleteById(jvId)
-            }
-            journalVoucherRepository.save(
-                JournalVoucher(
-                    id = null,
-                    entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
-                    entityCode = it.entityCode.toInt(),
-                    jvNum = it.jvNum,
-                    type = "",
-                    category = AccountTypeMapping.getAccountType(it.type),
-                    validityDate = it.validityDate,
-                    amount = it.amount,
-                    currency = it.currency,
-                    ledCurrency = it.ledgerCurrency,
-                    status = JVStatus.valueOf(it.status),
-                    exchangeRate = it.exchangeRate,
-                    tradePartyId = if (tradePartyResponse == null) null else tradePartyResponse[0].organizationTradePartyDetailId,
-                    tradePartyName = if (tradePartyResponse == null) "" else tradePartyResponse[0].tradePartyBusinessName,
-                    createdBy = MigrationConstants.createdUpdatedBy,
-                    createdAt = it.createdAt,
-                    updatedBy = MigrationConstants.createdUpdatedBy,
-                    updatedAt = it.updatedAt,
-                    description = it.description,
-                    accMode = if (it.accMode?.trim()?.length != 0) AccMode.valueOf(it.accMode!!) else AccMode.OTHER,
-                    parentJvId = parentJvId,
-                    sageUniqueId = it.sageUniqueId,
-                    migrated = true,
-                    glCode = it.glcode,
-                    ledAmount = it.ledgerAmount,
-                    signFlag = it.signFlag.toShort()
+                migrationLogService.saveMigrationLogs(
+                    null, null, it.sageUniqueId, it.currency,
+                    it.amount, it.ledgerAmount, null,
+                    null, null, null
                 )
-            )
+            } catch (ex: Exception) {
+                logger().error("$ex")
+                migrationLogService.saveMigrationLogs(
+                    null, null, it.sageUniqueId, null, null,
+                    null, null, null, null, "Error while stroing line items: ${it.sageUniqueId}"
+                )
+            }
         }
     }
 }
