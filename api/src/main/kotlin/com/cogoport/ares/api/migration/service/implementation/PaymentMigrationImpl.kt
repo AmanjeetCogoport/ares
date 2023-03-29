@@ -2,22 +2,28 @@ package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.migration.constants.AccountTypeMapping
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
+import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.MigrationLogsSettlements
+import com.cogoport.ares.api.migration.entity.ParentJournalVoucherMigration
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
+import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
+import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
 import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
@@ -25,14 +31,17 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
+import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
+import com.cogoport.ares.api.migration.repository.ParentJVRepoMigration
 import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
@@ -48,7 +57,6 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
@@ -87,11 +95,17 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var plutusMessagePublisher: PlutusMessagePublisher
 
+    @Inject lateinit var sageServiceImpl: SageServiceImpl
+
+    @Inject lateinit var parentJournalVoucherRepo: ParentJVRepoMigration
+
+    @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
         try {
             if (paymentMigrationRepository.checkPaymentExists(
-                    paymentRecord.paymentNum!!,
+                    paymentRecord.sageRefNumber!!,
                     AccMode.valueOf(paymentRecord.accMode!!).name,
                     PaymentCode.valueOf(paymentRecord.paymentCode!!).name,
                     AccountType.valueOf(paymentRecord.accountType!!).name
@@ -103,13 +117,13 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = paymentRecord.sageOrganizationId,
-                    organizationType = if (paymentRecord.accMode.equals("AR")) "income" else "expense"
+                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense"
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
-                val message = "Organization id is null, not migrating payment ${paymentRecord.paymentNum}"
+                val message = "Organization id is null, not migrating payment ${paymentRecord.sageRefNumber}"
                 logger().info(message)
-                migrationLogService.saveMigrationLogs(null, null, paymentRecord.paymentNum, null, null, null, null, null, null, message)
+                migrationLogService.saveMigrationLogs(null, null, paymentRecord.sageRefNumber, null, null, null, null, null, null, message)
                 return 0
             }
             paymentRequest = getPaymentRequest(paymentRecord, response)
@@ -123,26 +137,33 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().info("Payment with paymentId ${paymentRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
-            if (errorMessage.length> 5000) {
+            if (errorMessage.length > 5000) {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating payment with paymentId ${paymentRecord.paymentNum} " + ex.stackTraceToString())
-            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.paymentNum, MigrationStatus.FAILED)
+            migrationLogService.saveMigrationLogs(null, null, errorMessage, paymentRecord.sageRefNumber, MigrationStatus.FAILED)
         }
         return 1
     }
 
-    override suspend fun migarteJournalVoucher(journalVoucherRecord: JournalVoucherRecord): Int {
+    override suspend fun migrateJournalVoucher(journalVoucherRecord: JournalVoucherRecord, parentJvId: Long) {
         var paymentRequest: PaymentMigrationModel? = null
         try {
-            if (paymentMigrationRepository.checkJVExists(
-                    journalVoucherRecord.paymentNum!!,
-                    journalVoucherRecord.accMode!!,
-                    AccountType.valueOf(journalVoucherRecord.accountType!!).name
-                )
-            ) {
-                throw AresException(AresError.ERR_1010, "JV record is already present")
+            val jvResponse: JvResponse? = paymentMigrationRepository.checkJVExists(
+                journalVoucherRecord.paymentNum!!,
+                journalVoucherRecord.accMode!!,
+                // AccountType.valueOf(journalVoucherRecord.accountType!!).name, //need to change
+                journalVoucherRecord.sageUniqueId!!
+            )
+            if (jvResponse != null) {
+                if (jvResponse.updatedAt < journalVoucherRecord.updatedAt) {
+                    journalVoucherRepository.deleteById(jvResponse.jvId)
+                    accountUtilizationRepositoryMigration.deleteById(jvResponse.accountUtilizationId)
+                } else {
+                    return
+                }
             }
+
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
@@ -157,13 +178,13 @@ class PaymentMigrationImpl : PaymentMigration {
                     null, null, journalVoucherRecord.paymentNum, null, null,
                     null, null, null, null, message
                 )
-                return 0
+                return
             }
 
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
             val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord)
-            journalVoucherRepository.save(jv)
+            //            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
+            //            journalVoucherRepository.save(jv)
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
                 emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -178,17 +199,17 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().info("Journal Voucher with ID ${journalVoucherRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
-            if (errorMessage.length> 5000) {
+            if (errorMessage.length > 5000) {
                 errorMessage = errorMessage.substring(0, 4998)
             }
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
             migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum, MigrationStatus.FAILED)
         }
-        return 1
     }
 
-    private fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
+    private suspend fun getPaymentRequest(paymentRecord: PaymentRecord, rorOrgDetails: GetOrgDetailsResponse): PaymentMigrationModel {
 
+        val paymentSeq = setPaymentEntity(paymentRecord)
         return PaymentMigrationModel(
             id = null,
             entityCode = paymentRecord.entityCode!!,
@@ -218,8 +239,8 @@ class PaymentMigrationImpl : PaymentMigration {
             paymentCode = PaymentCode.valueOf(paymentRecord.paymentCode!!),
             bankName = getCogoBankName(paymentRecord.bankShortCode) ?: paymentRecord.bankShortCode,
             exchangeRate = paymentRecord.exchangeRate!!,
-            paymentNum = getPaymentNum(paymentRecord.paymentNum)!!,
-            paymentNumValue = paymentRecord.paymentNum!!,
+            paymentNum = paymentSeq.paymentNum!!,
+            paymentNumValue = paymentSeq.paymentNumValue!!,
             bankId = getCogoBankId(paymentRecord.bankShortCode),
             accountType = AccountType.valueOf(paymentRecord.accountType!!),
             accountUtilCurrAmount = paymentRecord.accountUtilAmtCurr,
@@ -227,7 +248,8 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilPayCurr = paymentRecord.accountUtilPayCurr,
             accountUtilPayLed = paymentRecord.accountUtilPayLed,
             bankPayAmount = paymentRecord.bankPayAmount,
-            tradePartySerialId = rorOrgDetails.tradePartySerialId
+            tradePartySerialId = rorOrgDetails.tradePartySerialId,
+            sageRefNumber = paymentRecord.paymentNumValue
         )
     }
 
@@ -283,6 +305,18 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error(e.stackTraceToString())
         }
         return 0
+    }
+
+    private suspend fun setPaymentEntity(paymentRecord: PaymentRecord): PaymentRecord {
+        if (AccMode.valueOf(paymentRecord.accMode!!) == AccMode.AR) {
+            paymentRecord.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
+            paymentRecord.paymentNumValue = SequenceSuffix.RECEIVED.prefix + paymentRecord.paymentNum
+        } else {
+            paymentRecord.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
+            paymentRecord.paymentNumValue = SequenceSuffix.PAYMENT.prefix + paymentRecord.paymentNum
+        }
+
+        return paymentRecord
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
@@ -427,7 +461,7 @@ class PaymentMigrationImpl : PaymentMigration {
             organizationName = receivableRequest.organizationName,
             accMode = AccMode.valueOf(receivableRequest.accMode!!),
             accCode = receivableRequest.accCode!!,
-            accType = AccountType.valueOf(receivableRequest.accountType!!),
+            accType = AccountType.valueOf(AccountTypeMapping.getAccountType(receivableRequest.accountType!!)),
             signFlag = receivableRequest.signFlag!!,
             currency = receivableRequest.currency!!,
             ledCurrency = receivableRequest.ledgerCurrency!!,
@@ -495,7 +529,7 @@ class PaymentMigrationImpl : PaymentMigration {
             jvNum = journalVoucherRecord.paymentNum,
             type = getTypeForJV(journalVoucherRecord.accMode!!, journalVoucherRecord.signFlag!!),
             status = JVStatus.APPROVED,
-            category = JVCategory.JVNOS,
+            category = AccountTypeMapping.getAccountType(journalVoucherRecord.accountType!!),
             validityDate = journalVoucherRecord.transactionDate!!,
             amount = journalVoucherRecord.accountUtilPayLed,
             currency = journalVoucherRecord.currency!!,
@@ -505,13 +539,16 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyName = tradePartyResponse[0]?.tradePartyBusinessName!!,
             createdBy = MigrationConstants.createdUpdatedBy,
             accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
-            description = null
+            description = null,
+            glCode = journalVoucherRecord.accCode.toString(),
+            signFlag = journalVoucherRecord.signFlag.toShort()
         )
     }
+
     private fun getTypeForJV(accMode: String, signFlag: Short): String {
         if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
             return "credit"
-        } else if (accMode.equals("AR") && signFlag.compareTo(-1) == 0) {
+        } else if (accMode.equals("AR") && signFlag.compareTo(1) == 0) {
             return "debit"
         } else if (accMode.equals("AP") && signFlag.compareTo(1) == 0) {
             return "debit"
@@ -519,10 +556,16 @@ class PaymentMigrationImpl : PaymentMigration {
         return "credit"
     }
 
-    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest, journalVoucherRecord: JournalVoucherRecord): JournalVoucher {
+    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest, journalVoucherRecord: JournalVoucherRecord, parentJvId: Long): JournalVoucher {
         val jv = journalVoucherConverter.convertRequestToEntity(request)
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
+        jv.sageUniqueId = journalVoucherRecord.sageUniqueId
+        jv.ledAmount = journalVoucherRecord.accountUtilAmtLed
+        jv.migrated = true
+        jv.parentJvId = parentJvId
+        jv.glCode = request.glCode
+        jv.signFlag = request.signFlag
         return jv
     }
 
@@ -649,8 +692,13 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val paymentNumValue = accountUtilizationRepositoryMigration.getPaymentDetails(
+                sageRefNumber = payLocUpdateRequest.documentValue!!,
+                accMode = payLocUpdateRequest.accMode!!,
+                organizationId = tradePartyDetailId
+            )
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
+                paymentNumValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -660,14 +708,14 @@ class PaymentMigrationImpl : PaymentMigration {
             } else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
-                        payLocUpdateRequest.documentValue,
+                        paymentNumValue,
                         payLocUpdateRequest.payLoc!!,
                         payLocUpdateRequest.payCurr!!,
                         payLocUpdateRequest.accMode,
                         tradePartyDetailId
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
-                    payLocUpdateRequest.documentValue,
+                    paymentNumValue,
                     payLocUpdateRequest.accMode,
                     tradePartyDetailId
                 )
@@ -678,29 +726,29 @@ class PaymentMigrationImpl : PaymentMigration {
                 } else {
                     "PAID"
                 }
-                if (AccountType.SINV.name.equals(response.accType) ||
+                if (AccountType.SINV.name == response.accType ||
                     AccountType.SCN.equals(response.accType)
                 ) {
                     plutusMessagePublisher.emitInvoiceStatus(
                         PaidUnpaidStatus(
-                            documentValue = payLocUpdateRequest.documentValue,
+                            documentValue = paymentNumValue,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
                     )
                 }
 
-                if (AccountType.PCN.name.equals(response.accType) ||
-                    AccountType.PINV.name.equals(response.accType)
+                if (AccountType.PCN.name == response.accType ||
+                    AccountType.PINV.name == response.accType
                 ) {
-                    if (status.equals("PARTIAL_PAID")) {
+                    if (status == "PARTIAL_PAID") {
                         status = "PARTIAL"
-                    } else if (status.equals("PAID")) {
+                    } else if (status == "PAID") {
                         status = "FULL"
                     }
                     kuberMessagePublisher.emitBIllStatus(
                         PaidUnpaidStatus(
-                            documentValue = payLocUpdateRequest.documentValue,
+                            documentValue = paymentNumValue,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -708,7 +756,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 }
             }
 
-            migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue, migrationStatus)
+            migrationLogService.saveMigrationLogs(null, null, null, paymentNumValue, migrationStatus)
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
             if (errorMessage.length > 5000) {
@@ -718,6 +766,138 @@ class PaymentMigrationImpl : PaymentMigration {
             migrationLogService.saveMigrationLogs(
                 null, null, errorMessage,
                 payLocUpdateRequest.documentValue, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
+        }
+    }
+
+    override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
+        var jvParentRecord: ParentJournalVoucherMigration? = null
+        var jvRecords: List<JournalVoucherRecord>? = null
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
+        try {
+            jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
+            var sum = BigDecimal.ZERO
+//            jvRecords.forEach {
+//                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+//            }
+            val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+            jvRecordsWithoutBpr.forEach {
+                sum += (it.amount * it.signFlag)
+            }
+            if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, null, null,
+                    null, null, null, null, "jv Sum is not zero"
+                )
+                return
+            }
+            if (parentJVId == null) {
+                jvParentRecord = parentJournalVoucherRepo.save(
+                    ParentJournalVoucherMigration(
+                        id = null,
+                        status = JVStatus.valueOf(jvParentDetail.jvStatus),
+                        category = AccountTypeMapping.getAccountType(jvParentDetail.jvType),
+                        jvNum = jvParentDetail.jvNum,
+                        validityDate = jvParentDetail.validityDate,
+                        createdAt = jvParentDetail.createdAt,
+                        updatedAt = jvParentDetail.updatedAt,
+                        createdBy = MigrationConstants.createdUpdatedBy,
+                        updatedBy = MigrationConstants.createdUpdatedBy,
+                        migrated = true,
+                        currency = jvParentDetail.currency,
+                        led_currency = jvParentDetail.ledgerCurrency,
+                        amount = jvParentDetail.amount,
+                        exchangeRate = jvParentDetail.exchangeRate,
+                        description = jvParentDetail.description,
+                        jvCodeNum = jvParentDetail.jvCodeNum
+                    )
+                )
+                parentJVId = jvParentRecord.id!!
+            }
+            storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
+        } catch (ex: Exception) {
+            logger().error("$ex")
+            migrationLogService.saveMigrationLogs(
+                null, null, jvParentDetail.jvNum, null, null,
+                null, null, null, null, "Error while storing jv header and line items"
+            )
+            return
+        }
+        jvRecords.forEach {
+            this.migrateJournalVoucher(it, parentJVId)
+        }
+    }
+
+    private suspend fun storeJVLineItems(jvRecordsWithoutBpr: List<JVLineItemNoBPR>, parentJvId: Long) {
+        jvRecordsWithoutBpr.forEach {
+            val jvId = paymentMigrationRepository.checkJVWithNoBpr(it.sageUniqueId, it.jvNum)
+            var tradePartyResponse: List<SerialIdDetailsResponse>? = null
+            if ((it.sageOrganizationId?.trim()?.length != 0) &&
+                (it.accMode?.trim()?.length != 0)
+            ) {
+                val response = cogoClient.getOrgDetailsBySageOrgId(
+                    GetOrgDetailsRequest(
+                        sageOrganizationId = it.sageOrganizationId,
+                        organizationType = if (it.accMode.equals("AR")) "income" else "expense"
+                    )
+                )
+                if (response == null || response.organizationId.isNullOrEmpty()) {
+                    val message = "Organization id is null, not migrating journal voucher ${it.jvNum}"
+                    logger().info(message)
+                    migrationLogService.saveMigrationLogs(
+                        null, null, it.jvNum, null, null,
+                        null, null, null, null, message
+                    )
+                    return
+                }
+
+                val organizationSerialId = cogoClient.getCogoOrganization(
+                    CogoOrganizationRequest(
+                        organizationSerialId = null,
+                        organizationId = response.organizationId
+                    )
+                ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
+
+                // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
+                val serialIdInputs = SerialIdsInput(organizationSerialId!!, response.tradePartySerialId!!.toLong())
+
+                val serialIdRequest = SerialIdDetailsRequest(
+                    organizationTradePartyMappings = arrayListOf(serialIdInputs)
+                )
+                tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest) as List<SerialIdDetailsResponse>?
+            }
+            if (jvId != null) {
+                journalVoucherRepository.deleteById(jvId)
+            }
+            journalVoucherRepository.save(
+                JournalVoucher(
+                    id = null,
+                    entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
+                    entityCode = it.entityCode.toInt(),
+                    jvNum = it.jvNum,
+                    type = "",
+                    category = AccountTypeMapping.getAccountType(it.type),
+                    validityDate = it.validityDate,
+                    amount = it.amount,
+                    currency = it.currency,
+                    ledCurrency = it.ledgerCurrency,
+                    status = JVStatus.valueOf(it.status),
+                    exchangeRate = it.exchangeRate,
+                    tradePartyId = if (tradePartyResponse == null) null else tradePartyResponse[0].organizationTradePartyDetailId,
+                    tradePartyName = if (tradePartyResponse == null) "" else tradePartyResponse[0].tradePartyBusinessName,
+                    createdBy = MigrationConstants.createdUpdatedBy,
+                    createdAt = it.createdAt,
+                    updatedBy = MigrationConstants.createdUpdatedBy,
+                    updatedAt = it.updatedAt,
+                    description = it.description,
+                    accMode = if (it.accMode?.trim()?.length != 0) AccMode.valueOf(it.accMode!!) else AccMode.OTHER,
+                    parentJvId = parentJvId,
+                    sageUniqueId = it.sageUniqueId,
+                    migrated = true,
+                    glCode = it.glcode,
+                    ledAmount = it.ledgerAmount,
+                    signFlag = it.signFlag.toShort()
+                )
             )
         }
     }

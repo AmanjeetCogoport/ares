@@ -608,6 +608,30 @@ class OpenSearchClient {
     @NewSpan
     fun listCustomerOutstanding(request: CustomerOutstandingRequest, index: String): SearchResponse<CustomerOutstandingDocumentResponse>? {
         val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        var totalOutstanding = false
+        var onAccountPayment = false
+        var creditNote = false
+        var notDue = false
+        var thirty = false
+        var fortyFive = false
+        var sixty = false
+        var ninety = false
+        var oneEighty = false
+        var oneEightyPlus = false
+
+        when (request.sortBy) {
+            "totalOutstandingLedgerAmount" -> totalOutstanding = true
+            "onAccountPaymentLedgerAmount" -> onAccountPayment = true
+            "creditNoteLedgerAmount" -> creditNote = true
+            "openInvoiceNotDueLedgerAmount" -> notDue = true
+            "openInvoiceThirtyLedgerAmount" -> thirty = true
+            "openInvoiceFortyFiveLedgerAmount" -> fortyFive = true
+            "openInvoiceSixtyLedgerAmount" -> sixty = true
+            "openInvoiceNinetyLedgerAmount" -> ninety = true
+            "openInvoiceOneEightyLedgerAmount" -> oneEighty = true
+            "openInvoiceOneEightyPlusLedgerAmount" -> oneEightyPlus = true
+        }
+
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
         val response = Client.search({ t ->
             t.index(index)
@@ -734,15 +758,19 @@ class OpenSearchClient {
                     q
                 }
                 .sort { t ->
-                    if (!request.sortBy.isNullOrBlank()) {
-                        if (!request.sortType.isNullOrBlank()) {
-                            t.field { f -> f.field(request.sortBy).order(SortOrder.valueOf(request.sortType.toString())) }
-                        } else {
-                            t.field { f -> f.field(request.sortBy).order(SortOrder.Desc) }
-                        }
-                    } else {
-                        t.field { f -> f.field("businessName.keyword").order(SortOrder.Asc) }
+                    when {
+                        totalOutstanding -> t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        onAccountPayment -> t.field { f -> f.field("onAccount.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        creditNote -> t.field { f -> f.field("creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        notDue -> t.field { f -> f.field("openInvoiceAgeingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        thirty -> t.field { f -> f.field("openInvoiceAgeingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        fortyFive -> t.field { f -> f.field("openInvoiceAgeingBucket.fortyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        sixty -> t.field { f -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        ninety -> t.field { f -> f.field("openInvoiceAgeingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        oneEighty -> t.field { f -> f.field("openInvoiceAgeingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                        oneEightyPlus -> t.field { f -> f.field("openInvoiceAgeingBucket.oneEightyPlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
                     }
+                    t
                 }
                 .from(offset).size(request.limit)
         }, CustomerOutstandingDocumentResponse::class.java)

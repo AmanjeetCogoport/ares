@@ -14,5 +14,5 @@ data class OrgOutstanding(
     val paymentsAmount: BigDecimal?,
     val paymentsLedAmount: BigDecimal?,
     val outstandingAmount: BigDecimal?,
-    val outstandingLedAmount: BigDecimal?,
+    val outstandingLedAmount: BigDecimal?
 )

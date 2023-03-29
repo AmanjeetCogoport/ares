@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
@@ -23,15 +22,15 @@ data class JournalVoucher(
     val entityCode: Int?,
     var jvNum: String,
     var type: String?,
-    var category: JVCategory,
-    var validityDate: Date?,
-    var amount: BigDecimal?,
-    var currency: String?,
-    var ledCurrency: String,
+    var category: String,
+    val validityDate: Date?,
+    val amount: BigDecimal?,
+    val currency: String?,
+    val ledCurrency: String,
     var status: JVStatus,
-    var exchangeRate: BigDecimal?,
+    val exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
-    val tradePartyName: String?,
+    val tradePartyName: String,
     var createdBy: UUID?,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?,
@@ -41,5 +40,9 @@ data class JournalVoucher(
     var description: String?,
     var accMode: AccMode?,
     var glCode: String?,
-    var parentJvId: Long? = null
+    var parentJvId: Long? = null,
+    var sageUniqueId: String? = null,
+    var migrated: Boolean? = false,
+    var ledAmount: BigDecimal?,
+    var signFlag: Short?
 )

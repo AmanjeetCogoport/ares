@@ -1,8 +1,6 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
-import com.cogoport.ares.model.settlement.JournalVoucherResponse
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -38,14 +36,16 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
+            j.parent_jv_id,
+            j.sage_unique_id,
+            j.migrated,
             j.gl_code,
-            NULL as bank_name,
-            NULL as account_number ,
-            j.parent_jv_id
+            j.led_amount,
+            j.sign_flag
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
-                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:category is null OR  category = :category::varchar) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%') AND
                 (:entityCode IS NULL OR :entityCode = entity_code) AND
@@ -68,7 +68,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     suspend fun getListVouchers(
         status: JVStatus?,
-        category: JVCategory?,
+        category: String?,
         type: String?,
         query: String?,
         page: Int,
@@ -76,7 +76,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         sortType: String?,
         sortBy: String?,
         entityCode: Int?
-    ): List<JournalVoucherResponse>
+    ): List<JournalVoucher>
 
     @NewSpan
     @Query(
@@ -85,14 +85,14 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
-                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:category is null OR  category = :category::VARCHAR) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%') AND
                 (:entityCode IS NULL OR :entityCode = entity_code) AND
                 (parent_jv_id is null)
         """
     )
-    fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?, entityCode: Int?): Long
+    fun countDocument(status: JVStatus?, category: String?, type: String?, query: String?, entityCode: Int?): Long
 
     @NewSpan
     @Query(
@@ -139,28 +139,17 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.description as description,
             j.acc_mode,
             j.parent_jv_id,
+            j.sage_unique_id,
+            j.migrated,
             j.gl_code,
-            gl.bank_name,
-            gl.account_number
+            j.led_amount,
+            j.sign_flag
             FROM journal_vouchers j 
-            LEFT JOIN gl_codes gl on j.gl_code = gl.gl_code
             Where 
                 j.parent_jv_id = :parentId
         """
     )
-    suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucherResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT *
-            FROM journal_vouchers j 
-            LEFT JOIN gl_codes gl on j.gl_code = gl.gl_code
-            Where 
-                j.parent_jv_id = :parentId
-        """
-    )
-    suspend fun getJVModelByParentJVId(parentId: Long): List<JournalVoucher>
+    suspend fun getJournalVoucherByParentJVId(parentId: Long): List<JournalVoucher>
 
     @NewSpan
     @Query(

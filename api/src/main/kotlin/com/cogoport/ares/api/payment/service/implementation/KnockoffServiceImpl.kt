@@ -285,6 +285,9 @@ open class KnockoffServiceImpl : KnockoffService {
             migrated = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -424,6 +427,8 @@ open class KnockoffServiceImpl : KnockoffService {
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+
+        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
 
         kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(

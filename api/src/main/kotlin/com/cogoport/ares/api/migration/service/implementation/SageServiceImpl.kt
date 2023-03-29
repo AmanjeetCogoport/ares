@@ -1,7 +1,12 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
 import com.cogoport.ares.api.migration.model.InvoiceDetails
+import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
+import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVParentRecordManger
+import com.cogoport.ares.api.migration.model.JVRecordsWithoutBprManager
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -24,7 +29,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -64,6 +69,7 @@ class SageServiceImpl : SageService {
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
             where P.BPRSAC_0 = '$mode'  and P.BPR_0 = '$bpr'
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
              """
         //  -- and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC
@@ -96,7 +102,7 @@ class SageServiceImpl : SageService {
             ,GC.UPDDATTIM_0 as updated_at
             ,GC.RATMLT_0 as exchange_rate
             ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
-            ,G.AMTCUR_0 as account_util_amt_curr
+            ,G.AMTCUR_0 as account_util_amt_curr    
             ,G.AMTLOC_0 as account_util_amt_led
             ,G.PAYCUR_0 as account_util_pay_curr
             ,G.PAYLOC_0 as account_util_pay_led
@@ -104,16 +110,18 @@ class SageServiceImpl : SageService {
             ,G.CUR_0 as currency
             ,GC.CURLED_0 as led_currency
             ,G.TYP_0 as account_type
+            ,GC.ROWID as sage_unique_id
             from  COGO2.GACCENTRY GC 
             INNER JOIN           
             (
             select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0,SUM(AMTCUR_0) as AMTCUR_0,SUM(AMTLOC_0) as AMTLOC_0,SUM(PAYCUR_0) as PAYCUR_0,SUM(PAYLOC_0) as PAYLOC_0
             ,MAX(SNS_0) as sign_flag
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC') 
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV') 
             GROUP BY TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
-            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MTC','MTCCV','OPDIV','MISC')
+            where G.SAC_0 in('AR','SC') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         if (startDate == null && endDate == null) {
             sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
@@ -130,7 +138,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -171,7 +179,8 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in ('AR','SC')
+            where P.BPRSAC_0 in ('AR','SC') 
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         sqlQuery += if (updatedAt == null) {
             """  and P.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by P.ACCDAT_0 ASC """
@@ -187,7 +196,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
              SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -226,7 +235,9 @@ class SageServiceImpl : SageService {
              group by NUM_0,TYP_0,FCY_0,SAC_0,BPR_0,DUDDAT_0,PAM_0
             ) G            
             on (GC.NUM_0 = G.NUM_0 and  G.SAC_0 = P.BPRSAC_0 and G.BPR_0 = P.BPR_0 and G.BPR_0<>'' and G.FCY_0=P.FCY_0)
-            where P.BPRSAC_0 in ('AR','SC') and GC.NUM_0 in ($paymentNums) order by P.ACCDAT_0 ASC;
+            where P.BPRSAC_0 in ('AR','SC') 
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
+            and GC.NUM_0 in ($paymentNums) order by P.ACCDAT_0 ASC;
         """
 
         val paymentRecords = Client.sqlQuery(sqlQuery)
@@ -243,7 +254,7 @@ class SageServiceImpl : SageService {
         var sqlQuery = """
             SELECT  P.FCYLIN_0 as entity_code
             ,P.BPRLIN_0 as sage_organization_id
-            ,GC.NUM_0 as payment_num
+            ,GC.NUM_0 as sage_ref_number
             ,P.VCRTYP_0 as destination_type
             ,P.VCRNUM_0 as invoice_id
             ,GC.CUR_0 as currency
@@ -323,5 +334,48 @@ class SageServiceImpl : SageService {
         val result = Client.sqlQuery(sqlQuery)
         val invoiceDetails = ObjectMapper().readValue(result, InvoiceDetailRecordManager::class.java)
         return invoiceDetails.recordSets!![0]
+    }
+
+    override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails> {
+        var sqlQuery = """
+            select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, LED_0 as ledger_currency
+            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+        """.trimIndent()
+        sqlQuery += if (startDate != null && endDate != null) {
+            """ and CREDAT_0 between '$startDate' and '$endDate'"""
+        } else {
+            """ and NUM_0 in ($jvNum)"""
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val parentDetails = ObjectMapper().readValue(result, JVParentRecordManger::class.java)
+        return parentDetails.recordSets!![0]
+    }
+
+    suspend fun getJVLineItemWithNoBPR(jvNum: String): List<JVLineItemNoBPR> {
+        val sqlQuery = """
+            select FCYLIN_0 as entityCode
+            ,GD.NUM_0 as jvNum
+            , GD.TYP_0 as type
+            ,G.VALDAT_0 as validityDate
+            ,AMTCUR_0 as amount
+            , AMTLED_0 as ledger_amount
+            ,GD.CUR_0 as currency
+            , GD.CURLED_0 as ledgerCurrency,'APPROVED' as status
+            , G.RATMLT_0 as exchange_rate
+            , GD.CREDATTIM_0 as created_at
+            , GD.UPDDATTIM_0 as updated_at
+            , GD.DES_0 as description
+            , GD.ROWID as sage_unique_id
+            , GD.SNS_0 as sign_flag
+            , GD.ACC_0 as gl_code 
+            ,GD.BPR_0 as sage_organization_id
+            ,case when SAC_0 = 'SC' then 'AP' else SAC_0 end as acc_mode
+            from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) 
+            and GD.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+            and GD.NUM_0 = '$jvNum'
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
+        return jvLineItemNoBPR.recordSets!![0]
     }
 }

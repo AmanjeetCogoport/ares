@@ -150,5 +150,8 @@ data class Payment(
     var paymentDocumentStatus: PaymentDocumentStatus? = null,
 
     @JsonProperty("tradePartyDocument")
-    val tradePartyDocument: String? = null
+    val tradePartyDocument: String? = null,
+
+    @JsonProperty("sageRefNumber")
+    var sageRefNumber: String? = null
 )
