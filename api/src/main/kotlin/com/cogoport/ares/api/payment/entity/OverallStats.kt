@@ -7,11 +7,11 @@ import java.math.BigDecimal
 @MappedEntity
 data class OverallStats(
     @JsonProperty("totalOutstandingAmount")
-    var totalOutstandingAmount: BigDecimal?,
+    var totalOutstandingAmount: BigDecimal? = BigDecimal.ZERO,
     @JsonProperty("openInvoicesCount")
-    var openInvoicesCount: Int?,
+    var openInvoicesCount: Int? = 0,
     @JsonProperty("openInvoicesAmount")
-    var openInvoicesAmount: BigDecimal?,
+    var openInvoicesAmount: BigDecimal? = BigDecimal.ZERO,
     @JsonProperty("dashboardCurrency")
     var dashboardCurrency: String,
     @JsonProperty("customersCount")
