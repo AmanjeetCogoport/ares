@@ -43,6 +43,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @NewSpan
+    @Query("SELECT * FROM account_utilizations WHERE id IN (:ids)")
+    suspend fun findByIds(ids: List<Long>): List<AccountUtilization>
+
+    @NewSpan
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr

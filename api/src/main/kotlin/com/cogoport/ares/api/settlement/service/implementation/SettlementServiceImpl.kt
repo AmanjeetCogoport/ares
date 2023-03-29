@@ -23,6 +23,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -61,6 +62,7 @@ import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
+import com.cogoport.ares.model.settlement.SettlementDocuments
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -94,6 +96,7 @@ import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -185,6 +188,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var journalVoucherRepository: JournalVoucherRepository
+
+    @Inject
+    lateinit var sageService: SageService
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -2528,169 +2534,68 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         var failedSettlementIds: MutableList<Long>? = mutableListOf()
-        var listOfRecOrPayCode = listOf<SettlementType>(SettlementType.PAY, SettlementType.REC, SettlementType.CTDS, SettlementType.VTDS)
+        var listOfRecOrPayCode = listOf<AccountType>(AccountType.PAY, AccountType.REC)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
                 try {
+                    // Fetch source and destination details
+                    val settlement = settlementRepository.findById(it)
+                    if (settlement == null) {
+                        // throw some error
+                    }
+                    val documents = accountUtilizationRepository.findByIds(arrayListOf(settlement?.sourceId!!, settlement?.destinationId!!))
+                    // Check if it is posted and also posted from sage which includes (SINV, PINV, SCN, PCN, REC, PAY)
+                    // If not post from sage for post to sage
 
-                    val settlementDocuments = settlementRepository.getSettlementDocumentValueForSettlementId(it)
-                    val sageOrganizationFromSageId: String?
-
-                    val registrationNumber: String?
-                    if (settlementDocuments.organizationId != null) {
-                        val organization = railsClient.getListOrganizationTradePartyDetails(settlementDocuments.organizationId !!)
-                        registrationNumber = organization.list[0]["registration_number"].toString()
-                        val sageOrganizationQuery = if (settlementDocuments.destinationType == AccountType.SINV) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
-                        val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
-                        val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
-                        sageOrganizationFromSageId = if (settlementDocuments.destinationType == AccountType.SINV) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
-                    } else {
-                        throw error("organizationId is not present")
+                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(it, documents.first().accMode, documents[0])
+                    if (sageOrganizationResponse[0] == null) {
+                        // throw error
                     }
 
-                    val sageOrganizationResponse = cogoClient.getSageOrganization(
-                        SageOrganizationRequest(
-                            settlementDocuments.orgSerialId.toString(),
-                            if (settlementDocuments.destinationType == AccountType.SINV) {
-                                "importer_exporter"
-                            } else {
-                                "service_provider"
-                            }
-                        )
-                    )
-
-                    if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-                        thirdPartyApiAuditService.createAudit(
-                            ThirdPartyApiAudit(
-                                null,
-                                "MatchSettlementOnSage",
-                                "Settlement",
-                                it,
-                                "SETTLEMENT",
-                                "500",
-                                sageOrganizationResponse.toString(),
-                                "Sage organization not present",
-                                false
-                            )
-                        )
-                        throw Exception("sage organizationId is not present in table")
-                    }
-
-                    if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-                        thirdPartyApiAuditService.createAudit(
-                            ThirdPartyApiAudit(
-                                null,
-                                "MatchSettlementOnSage",
-                                "Settlement",
-                                it,
-                                "SETTLEMENT",
-                                "500",
-                                sageOrganizationResponse.toString(),
-                                "sage serial organization id different in sage db and cogoport db",
-                                false
-                            )
-                        )
-                        throw error("sage serial organization id different in sage db and cogoport db")
-                    }
-
-                    val sageDocument = paymentRepo.getSageDocumentNumberAndStatusByPaymentNumValue(settlementDocuments.documentValue)
-                    val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocNo(settlementDocuments.destinationId.toString(), settlementDocuments.destinationType!!)
-
-                    var destinationPresentOnSage = isDataPresentOnSage(
-                        accountUtilization.documentValue, SettlementType.valueOf(settlementDocuments.destinationType.toString()),
-                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId, registrationNumber
-                    )
-
-                    var sourcePresentOnSage = isDataPresentOnSage(
-                        settlementDocuments.documentValue, settlementDocuments.sourceType!!,
-                        settlementDocuments.orgSerialId, sageOrganizationResponse.sageOrganizationId, registrationNumber
-                    )
+                    val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(documents[0].documentValue!!, sageOrganizationResponse[0]!!, documents[0].orgSerialId, documents[0].accType, sageOrganizationResponse[1]!!)
+                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(documents[1].documentValue!!, sageOrganizationResponse[0]!!, documents[1].orgSerialId, documents[1].accType, sageOrganizationResponse[1]!!)
 
                     if (!destinationPresentOnSage || !sourcePresentOnSage) {
                         throw AresException(AresError.ERR_1527, "")
                     }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
-
+                    var flag = if (listOfRecOrPayCode.contains(documents[0].accType))  "P" else ""
                     matchingSettlementOnSageRequest?.add(
                         SageSettlementRequest(
-                            accountUtilization.documentValue!!,
-                            sageOrganizationResponse.sageOrganizationId!!,
-                            settlementDocuments.amount.toString(),
-                            ""
+                            documents[0].documentValue!!,
+                            sageOrganizationResponse[0]!!,
+                            settlement.amount.toString(),
+                            flag
                         )
                     )
 
-                    if (settlementDocuments.sourceType in listOfRecOrPayCode)
-                        matchingSettlementOnSageRequest?.add(
-                            SageSettlementRequest(
-                                sageDocument.sageNumValue!!,
-                                sageOrganizationResponse.sageOrganizationId!!,
-                                settlementDocuments.amount.toString(),
-                                settlementDocuments.flag
-                            )
-                        ) else {
-                        matchingSettlementOnSageRequest?.add(
-                            SageSettlementRequest(
-                                settlementDocuments.documentValue,
-                                sageOrganizationResponse.sageOrganizationId!!,
-                                settlementDocuments.amount.toString(),
-                                settlementDocuments.flag
-
-                            )
+                    flag = if (listOfRecOrPayCode.contains(documents[0].accType))  "P" else ""
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(
+                            documents[1].documentValue!!,
+                            sageOrganizationResponse[0]!!,
+                            settlement.amount.toString(),
+                            flag
                         )
-                    }
+                    )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
                         settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTED, performedBy)
-                        thirdPartyApiAuditService.createAudit(
-                            ThirdPartyApiAudit(
-                                null,
-                                "MatchSettlementOnSage",
-                                "Settlement",
-                                it,
-                                "SETTLEMENT",
-                                "200",
-                                result.requestString,
-                                result.response,
-                                true
-                            )
-                        )
+                        recordAudits(it, result.requestString, result.response, true)
                     } else {
                         settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
                         failedSettlementIds?.add(it)
-                        thirdPartyApiAuditService.createAudit(
-                            ThirdPartyApiAudit(
-                                null,
-                                "MatchSettlementOnSage",
-                                "Settlement",
-                                it,
-                                "SETTLEMENT",
-                                "200",
-                                result.requestString,
-                                result.response,
-                                false
-                            )
-                        )
+                        recordAudits(it, result.requestString, result.response, false)
                     }
                 } catch (e: Exception) {
                     settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
                     failedSettlementIds?.add(it)
-                    ThirdPartyApiAudit(
-                        null,
-                        "MatchSettlementOnSage",
-                        "Settlement",
-                        it,
-                        "SETTLEMENT",
-                        "500",
-                        "",
-                        e.toString(),
-                        false
-                    )
+                    recordAudits(it, "", e.toString(), false)
                 }
             }
         }
@@ -2745,5 +2650,60 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return false
+    }
+
+    private suspend fun recordAudits(id: Long, request: String, response: String, isSuccess: Boolean) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                "MatchSettlementOnSage",
+                "Settlement",
+                id,
+                "SETTLEMENT",
+                "200",
+                request,
+                response,
+                isSuccess
+            )
+        )
+    }
+
+    private suspend fun checkIfOrganizationIdIsValid(settlementId: Long, accMode: AccMode, accountUtilization: AccountUtilization): List<String?> {
+        val sageOrganizationFromSageId: String?
+
+        val registrationNumber: String?
+        if (accountUtilization.organizationId != null) {
+            val organization = railsClient.getListOrganizationTradePartyDetails(accountUtilization.organizationId!!)
+            registrationNumber = organization.list[0]["registration_number"].toString()
+            val sageOrganizationQuery = if (accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='$registrationNumber'"
+            val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
+            val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            sageOrganizationFromSageId = if (accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+        } else {
+            throw error("organizationId is not present")
+        }
+
+        val sageOrganizationResponse = cogoClient.getSageOrganization(
+            SageOrganizationRequest(
+                accountUtilization.orgSerialId.toString(),
+                if (accMode == AccMode.AR) {
+                    "importer_exporter"
+                } else {
+                    "service_provider"
+                }
+            )
+        )
+
+        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
+            throw Exception("sage organizationId is not present in table")
+        }
+
+        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            throw error("sage serial organization id different in sage db and cogoport db")
+        }
+
+        return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
     }
 }
