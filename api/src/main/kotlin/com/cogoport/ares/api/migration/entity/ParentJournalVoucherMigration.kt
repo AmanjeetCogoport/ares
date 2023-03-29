@@ -29,5 +29,6 @@ data class ParentJournalVoucherMigration(
     var amount: BigDecimal?,
     var exchangeRate: BigDecimal,
     var description: String?,
-    var migrated: Boolean? = false
+    var migrated: Boolean? = false,
+    var jvCodeNum: String?
 )

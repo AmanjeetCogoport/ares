@@ -30,6 +30,7 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentMigrationModel
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
+import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
@@ -177,8 +178,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response)
             val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
-            journalVoucherRepository.save(jv)
+            //            val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
+            //            journalVoucherRepository.save(jv)
             try {
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
                 emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -541,6 +542,7 @@ class PaymentMigrationImpl : PaymentMigration {
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
+        jv.ledAmount = journalVoucherRecord.accountUtilAmtLed
         jv.migrated = true
         jv.parentJvId = parentJvId
         jv.glCode = request.glCode
@@ -750,9 +752,9 @@ class PaymentMigrationImpl : PaymentMigration {
         try {
             jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
             var sum = BigDecimal.ZERO
-            jvRecords.forEach {
-                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
-            }
+//            jvRecords.forEach {
+//                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+//            }
             val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
             jvRecordsWithoutBpr.forEach {
                 sum += (it.amount * it.signFlag)
@@ -781,7 +783,8 @@ class PaymentMigrationImpl : PaymentMigration {
                         led_currency = jvParentDetail.ledgerCurrency,
                         amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
-                        description = jvParentDetail.description
+                        description = jvParentDetail.description,
+                        jvCodeNum = jvParentDetail.jvCodeNum
                     )
                 )
                 parentJVId = jvParentRecord.id!!
@@ -791,7 +794,7 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error("$ex")
             migrationLogService.saveMigrationLogs(
                 null, null, jvParentDetail.jvNum, null, null,
-                null, null, null, null, "JV Parent Details were not stored"
+                null, null, null, null, "Error while storing jv header and line items"
             )
             return
         }
@@ -803,6 +806,41 @@ class PaymentMigrationImpl : PaymentMigration {
     private suspend fun storeJVLineItems(jvRecordsWithoutBpr: List<JVLineItemNoBPR>, parentJvId: Long) {
         jvRecordsWithoutBpr.forEach {
             val jvId = paymentMigrationRepository.checkJVWithNoBpr(it.sageUniqueId, it.jvNum)
+            var tradePartyResponse: List<SerialIdDetailsResponse>? = null
+            if ((it.sageOrganizationId?.trim()?.length != 0) &&
+                (it.accMode?.trim()?.length != 0)
+            ) {
+                val response = cogoClient.getOrgDetailsBySageOrgId(
+                    GetOrgDetailsRequest(
+                        sageOrganizationId = it.sageOrganizationId,
+                        organizationType = if (it.accMode.equals("AR")) "income" else "expense"
+                    )
+                )
+                if (response == null || response.organizationId.isNullOrEmpty()) {
+                    val message = "Organization id is null, not migrating journal voucher ${it.jvNum}"
+                    logger().info(message)
+                    migrationLogService.saveMigrationLogs(
+                        null, null, it.jvNum, null, null,
+                        null, null, null, null, message
+                    )
+                    return
+                }
+
+                val organizationSerialId = cogoClient.getCogoOrganization(
+                    CogoOrganizationRequest(
+                        organizationSerialId = null,
+                        organizationId = response.organizationId
+                    )
+                ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
+
+                // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
+                val serialIdInputs = SerialIdsInput(organizationSerialId!!, response.tradePartySerialId!!.toLong())
+
+                val serialIdRequest = SerialIdDetailsRequest(
+                    organizationTradePartyMappings = arrayListOf(serialIdInputs)
+                )
+                tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest) as List<SerialIdDetailsResponse>?
+            }
             if (jvId != null) {
                 journalVoucherRepository.deleteById(jvId)
             }
@@ -820,14 +858,14 @@ class PaymentMigrationImpl : PaymentMigration {
                     ledCurrency = it.ledgerCurrency,
                     status = JVStatus.valueOf(it.status),
                     exchangeRate = it.exchangeRate,
-                    tradePartyId = null,
-                    tradePartyName = "",
+                    tradePartyId = if (tradePartyResponse == null) null else tradePartyResponse[0].organizationTradePartyDetailId,
+                    tradePartyName = if (tradePartyResponse == null) "" else tradePartyResponse[0].tradePartyBusinessName,
                     createdBy = MigrationConstants.createdUpdatedBy,
                     createdAt = it.createdAt,
                     updatedBy = MigrationConstants.createdUpdatedBy,
                     updatedAt = it.updatedAt,
                     description = it.description,
-                    accMode = AccMode.OTHER,
+                    accMode = if (it.accMode?.trim()?.length != 0) AccMode.valueOf(it.accMode!!) else AccMode.OTHER,
                     parentJvId = parentJvId,
                     sageUniqueId = it.sageUniqueId,
                     migrated = true,
