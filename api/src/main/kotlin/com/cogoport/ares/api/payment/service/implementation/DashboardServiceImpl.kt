@@ -91,23 +91,26 @@ class DashboardServiceImpl : DashboardService {
         Client.createIndex(index)
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String, OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
         val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
         val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
 
-        val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
+        val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
+
+        val formattedData = LinkedHashMap<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
-            return durationKey.map {
-                OverallAgeingStatsResponse(
+            durationKey.map {
+                formattedData[it] = OverallAgeingStatsResponse(
                     ageingDuration = it,
                     amount = 0.toBigDecimal(),
                     dashboardCurrency = ledgerCurrency!!
                 )
             }
+            return formattedData
         }
 
         val data = mutableListOf<OverallAgeingStatsResponse>()
@@ -117,7 +120,22 @@ class DashboardServiceImpl : DashboardService {
             data.add(overallAgeingConverter.convertToModel(response))
         }
 
-        return data
+        durationKey.map { key ->
+            val durationData = data.filter { it.ageingDuration == key }
+            if (!durationData.isNullOrEmpty()) {
+                formattedData.put(key, durationData[0])
+            } else {
+                formattedData[key] = OverallAgeingStatsResponse(
+                    ageingDuration = key,
+                    amount = 0.toBigDecimal(),
+                    dashboardCurrency = ledgerCurrency!!
+                )
+            }
+        }
+
+        formattedData.values.sortedBy { it.ageingDuration }
+
+        return formattedData
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
@@ -523,43 +541,71 @@ class DashboardServiceImpl : DashboardService {
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
+        val possibleServiceAndTradeType = mapOf(
+            "ocean" to listOf("FCL_FREIGHT_IMPORT", "FCL_FREIGHT_EXPORT", "LCL_FREIGHT_IMPORT", "LCL_FREIGHT_EXPORT"),
+            "air" to listOf("AIR_CUSTOMS_IMPORT", "AIR_FREIGHT_IMPORT", "AIR_CUSTOMS_EXPORT", "AIR_FREIGHT_EXPORT"),
+            "surface" to listOf("FTL_FREIGHT_IMPORT", "FTL_FREIGHT_EXPORT", "LTL_FREIGHT_IMPORT", "LTL_FREIGHT_EXPORT")
+        )
+
         val data = unifiedDBRepo.getOutstandingData(updatedEntityCode, defaultersOrgIds)
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
-        if (!data.isNullOrEmpty()) {
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
-
-            data.map { it.tradeType = it.tradeType?.uppercase() }
-            data.map { it.serviceType = it.serviceType?.uppercase() }
-
-            data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
-                mapData[k.toString()] = ServiceLevelOutstanding(
-                    openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+        if (data.isNullOrEmpty()) {
+            possibleServiceAndTradeType.entries.map { (k, v) ->
+                mapData[k] = ServiceLevelOutstanding(
+                    openInvoiceAmount = BigDecimal.ZERO,
                     currency = dashboardCurrency,
-                    tradeType = getTradeAndServiceWiseData(v)
+                    tradeType = v.map { value ->
+                        TradeAndServiceLevelOutstanding(
+                            key = value,
+                            name = value.replace("_", " "),
+                            openInvoiceAmount = BigDecimal.ZERO,
+                            currency = dashboardCurrency
+                        )
+                    }
                 )
             }
-
-            val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
-                true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
-                    ?.times(100.toBigDecimal())?.toLong()
-                else -> BigDecimal.ZERO
-            }
+            openSearchData.overallStats = OverallStats(
+                dashboardCurrency = dashboardCurrency!!
+            )
 
             openSearchData.outstandingServiceWise = mapData
-            openSearchData.overallStats = OverallStats(
-                totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                customersCount = data.sumOf { it.customersCount!! },
-                dashboardCurrency = data.first().currency!!,
-                openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
-                onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
-                onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
+
+            return openSearchData
+        }
+
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
+        val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+        val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+
+        data.map { it.tradeType = it.tradeType?.uppercase() }
+        data.map { it.serviceType = it.serviceType?.uppercase() }
+
+        data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
+            mapData[k.toString()] = ServiceLevelOutstanding(
+                openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                currency = dashboardCurrency,
+                tradeType = getTradeAndServiceWiseData(v)
             )
         }
+
+        val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
+            true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
+                ?.times(100.toBigDecimal())?.toLong()
+            else -> BigDecimal.ZERO
+        }
+
+        openSearchData.outstandingServiceWise = mapData
+        openSearchData.overallStats = OverallStats(
+            totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+            openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+            customersCount = data.sumOf { it.customersCount!! },
+            dashboardCurrency = data.first().currency!!,
+            openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
+            openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+            onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
+            onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
+        )
 
         return openSearchData
     }
