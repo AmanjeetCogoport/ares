@@ -54,6 +54,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -248,7 +249,7 @@ class PaymentMigrationImpl : PaymentMigration {
             accountUtilPayLed = paymentRecord.accountUtilPayLed,
             bankPayAmount = paymentRecord.bankPayAmount,
             tradePartySerialId = rorOrgDetails.tradePartySerialId,
-            sageRefNumber = paymentRecord.paymentNumValue
+            sageRefNumber = paymentRecord.sageRefNumber
         )
     }
 
@@ -389,7 +390,11 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.mappingId != null) tradePartyResponse.get(0)?.mappingId else null,
             taggedOrganizationId = receivableRequest.organizationId,
             bankPayAmount = receivableRequest.bankPayAmount,
-            migrated = true
+            migrated = true,
+            paymentDocumentStatus = PaymentDocumentStatus.POSTED,
+            updatedBy = MigrationConstants.createdUpdatedBy,
+            createdBy = MigrationConstants.createdUpdatedBy,
+            sageRefNumber = receivableRequest.sageRefNumber
         )
     }
 
