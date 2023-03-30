@@ -545,8 +545,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyId = tradePartyResponse?.get(0)?.organizationTradePartyDetailId!!,
             tradePartyName = tradePartyResponse[0]?.tradePartyBusinessName!!,
             createdBy = MigrationConstants.createdUpdatedBy,
-            accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
-            description = null,
+            accMode = AccMode.valueOf(journalVoucherRecord.accMode),
+            description = journalVoucherRecord.narration,
             glCode = journalVoucherRecord.accCode.toString(),
             signFlag = journalVoucherRecord.signFlag.toShort()
         )
