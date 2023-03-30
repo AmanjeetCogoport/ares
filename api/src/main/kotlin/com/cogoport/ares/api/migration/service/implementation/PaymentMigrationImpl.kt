@@ -16,6 +16,7 @@ import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
+import com.cogoport.ares.api.migration.entity.JournalVoucherMigration
 import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.MigrationLogsSettlements
 import com.cogoport.ares.api.migration.entity.ParentJournalVoucherMigration
@@ -34,6 +35,7 @@ import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
+import com.cogoport.ares.api.migration.repository.JournalVoucherRepoMigration
 import com.cogoport.ares.api.migration.repository.ParentJVRepoMigration
 import com.cogoport.ares.api.migration.repository.PaymentMigrationRepository
 import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
@@ -41,7 +43,6 @@ import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
-import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
@@ -99,6 +100,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var parentJournalVoucherRepo: ParentJVRepoMigration
 
     @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    @Inject lateinit var journalVoucherRepoMigration: JournalVoucherRepoMigration
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -185,7 +188,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 return
             }
             val jv = convertToJournalVoucherEntity(getJournalVoucherRequest(journalVoucherRecord, response), journalVoucherRecord, parentJvId)
-            val jvRecord = journalVoucherRepository.save(jv)
+            val jvRecord = journalVoucherRepoMigration.save(jv)
             val accUtilEntity = setAccountUtilizationsForJV(journalVoucherRecord, response, jvRecord.id!!)
             val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
             try {
@@ -563,8 +566,8 @@ class PaymentMigrationImpl : PaymentMigration {
         return "credit"
     }
 
-    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest, journalVoucherRecord: JournalVoucherRecord, parentJvId: Long): JournalVoucher {
-        val jv = journalVoucherConverter.convertRequestToEntity(request)
+    private fun convertToJournalVoucherEntity(request: JournalVoucherRequest, journalVoucherRecord: JournalVoucherRecord, parentJvId: Long): JournalVoucherMigration {
+        val jv = journalVoucherConverter.convertRequestToEntityMigration(request)
         jv.createdAt = journalVoucherRecord.createdAt
         jv.updatedAt = journalVoucherRecord.updatedAt
         jv.sageUniqueId = journalVoucherRecord.sageUniqueId
@@ -846,8 +849,8 @@ class PaymentMigrationImpl : PaymentMigration {
                 if (jvId != null) {
                     journalVoucherRepository.deleteById(jvId)
                 }
-                journalVoucherRepository.save(
-                    JournalVoucher(
+                journalVoucherRepoMigration.save(
+                    JournalVoucherMigration(
                         id = null,
                         entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
                         entityCode = it.entityCode.toInt(),

@@ -90,8 +90,8 @@ class SageServiceImpl : SageService {
             ,case when G.SAC_0='AR' then 
             (select BPCNAM_0 from COGO2.BPCUSTOMER where BPCNUM_0=G.BPR_0)
             else (select BPSNAM_0 from COGO2.BPSUPPLIER where BPSNUM_0=G.BPR_0) end as organization_name
-            ,case when G.SAC_0='AR' then 223000 else 321000 end as acc_code
-            ,case when G.SAC_0='SC' then 'AP' else 'AR' end as acc_mode
+            ,GD.ACC_0 as acc_code
+            ,case when G.SAC_0='SC' then 'AP' else G.SAC_0 end as acc_mode
             ,case when G.PAM_0='BNK' then 'BANK'
                   when G.PAM_0='CSH' then 'CASH'
                   else G.PAM_0 end as pay_mode 
