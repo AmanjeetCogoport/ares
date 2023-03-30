@@ -95,11 +95,11 @@ class SageServiceImpl : SageService {
             ,case when G.PAM_0='BNK' then 'BANK'
                   when G.PAM_0='CSH' then 'CASH'
                   else G.PAM_0 end as pay_mode 
-            ,GC.DESVCR_0 as narration
+            ,GD.DES_0 as narration
             ,GC.ACCDAT_0 as transaction_date 
             ,G.DUDDAT_0 as due_date
-            ,GC.CREDATTIM_0 as created_at
-            ,GC.UPDDATTIM_0 as updated_at
+            ,GD.CREDATTIM_0 as created_at
+            ,GD.UPDDATTIM_0 as updated_at
             ,GC.RATMLT_0 as exchange_rate
             ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
             ,G.AMTCUR_0 as account_util_amt_curr    
@@ -339,7 +339,7 @@ class SageServiceImpl : SageService {
 
     override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails> {
         var sqlQuery = """
-            select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, LED_0 as ledger_currency
+            select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, CURLED_0 as ledger_currency
             ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
         """.trimIndent()
         sqlQuery += if (startDate != null && endDate != null) {
@@ -361,7 +361,8 @@ class SageServiceImpl : SageService {
             ,AMTCUR_0 as amount
             , AMTLED_0 as ledger_amount
             ,GD.CUR_0 as currency
-            , GD.CURLED_0 as ledgerCurrency,'APPROVED' as status
+            , GD.CURLED_0 as ledgerCurrency
+            ,'POSTED' as status
             , G.RATMLT_0 as exchange_rate
             , GD.CREDATTIM_0 as created_at
             , GD.UPDDATTIM_0 as updated_at
