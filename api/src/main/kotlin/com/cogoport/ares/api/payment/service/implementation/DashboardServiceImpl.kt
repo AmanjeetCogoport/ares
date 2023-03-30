@@ -842,8 +842,7 @@ class DashboardServiceImpl : DashboardService {
         return accTypeDocStatusMapping[documentType]
     }
 
-    override suspend fun
-    getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+    override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
                 request.serviceType, request.startDate,
