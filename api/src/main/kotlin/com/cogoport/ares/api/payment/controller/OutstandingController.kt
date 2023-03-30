@@ -136,9 +136,10 @@ class OutstandingController {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
         return Response<ResponseList<CustomerOutstandingPaymentResponse?>>().ok(outStandingService.getCustomerOutstandingPaymentDetails(request))
     }
-
+    @Auth
     @Get("/paybles-info")
-    suspend fun getPayblesInfo(@QueryValue entity: Int?): PayblesInfoRes {
-        return outStandingService.getPayablesInfo(entity)
+    suspend fun getPayblesInfo(@QueryValue entity: Int?, user: AuthResponse?, httpRequest: HttpRequest<*>): PayblesInfoRes {
+        val entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entity
+        return outStandingService.getPayablesInfo(entityCode)
     }
 }
