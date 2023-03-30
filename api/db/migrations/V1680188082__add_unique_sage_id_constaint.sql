@@ -1,0 +1,1 @@
+ALTER TABLE journal_vouchers ADD CONSTRAINT sage_unique_id_constaint UNIQUE(sage_unique_id);
