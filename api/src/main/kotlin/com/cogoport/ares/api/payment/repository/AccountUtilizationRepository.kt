@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CollectionTrend
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -1419,4 +1420,37 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+
+    @NewSpan
+    @Query(
+        """
+        SELECT sum(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getAccountPayables(entity: Int?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
+        SELECT SUM(CASE WHEN acc_type IN ('PINV','PREIMB') THEN (amount_loc-pay_loc) ELSE 0 END) AS open_invoice_amount,
+        SUM(CASE WHEN acc_type in ('PINV','PREIMB') THEN 1 ELSE 0 END) AS open_invoice_count,
+        SUM(CASE WHEN acc_type IN ('PAY') THEN (amount_loc-pay_loc) ELSE 0 END) AS on_account_amount,
+        SUM(CASE WHEN acc_type IN ('PCN') THEN (amount_loc-pay_loc) ELSE 0 END) AS credit_note_amount
+        FROM account_utilizations WHERE acc_mode = 'AP' AND deleted_at IS NULL AND migrated = false AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getAccountPayablesStats(entity: Int?): AccountPayablesStats
+
+    @NewSpan
+    @Query(
+        """
+        SELECT  COUNT(distinct trade_party_mapping_id) FROM account_utilizations
+        WHERE acc_mode = 'AP' AND acc_type IN ('PINV','PREIMB') AND deleted_at IS NULL AND migrated = false AND amount_curr > pay_curr AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getOrganizationCount(entity: Int?): Long?
 }

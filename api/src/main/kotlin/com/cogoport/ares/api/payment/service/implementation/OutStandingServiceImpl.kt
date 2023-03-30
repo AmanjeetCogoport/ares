@@ -14,6 +14,7 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccountType
@@ -34,17 +35,23 @@ import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
+import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
+import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 import kotlin.math.ceil
 
@@ -776,5 +783,149 @@ class OutStandingServiceImpl : OutStandingService {
         responseList.pageNo = request.page
 
         return responseList
+    }
+
+    override suspend fun getPayablesInfo(entity: Int?): PayblesInfoRes {
+        val payblesInfo = PayblesInfoRes()
+        payblesInfo.accountPayables = accountUtilizationRepository.getAccountPayables(entity).multiply(BigDecimal(-1))
+        val accountPayablesStats = accountUtilizationRepository.getAccountPayablesStats(entity)
+        payblesInfo.openInvoicesCount = accountPayablesStats.openInvoiceCount
+        payblesInfo.openInvoicesAmount = accountPayablesStats.openInvoiceAmount
+        payblesInfo.onAccountAmount = accountPayablesStats.onAccountAmount
+        payblesInfo.creditNoteAmount = accountPayablesStats.creditNoteAmount
+        payblesInfo.organizationsCount = accountUtilizationRepository.getOrganizationCount(entity)
+        payblesInfo.openInvoiceChange = getPaybleChange("openInvoice", entity)
+        payblesInfo.onAccountChange = getPaybleChange("onAccount", entity)
+        payblesInfo.creditNoteChange = getPaybleChange("creditNote", entity)
+
+        return payblesInfo
+    }
+
+    private fun getPaybleChange(change: String, entity: Int?): BigDecimal {
+        val previousDateStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MIN))
+        val previousDateEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MAX))
+        val weekBeforeStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MIN))
+        val weekBeforeEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MAX))
+        var previousDay: SearchResponse<PayableStatsOpenSearchResponse>?
+        var weekBefore: SearchResponse<PayableStatsOpenSearchResponse>?
+        try {
+            previousDay = Client.search({ s ->
+                s.index(AresConstants.PAYABLES_STATS_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { m ->
+                                m.range { r ->
+                                    r.field("date.keyword")
+                                        .gte(JsonData.of(previousDateStart.toString()))
+                                        .lte(JsonData.of(previousDateEnd.toString()))
+                                }
+                            }
+                            if (entity != null) {
+                                b.must {
+                                    it.match {
+                                        it.field("entity")
+                                            .query(FieldValue.of(entity.toString()))
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .aggregations("sumOpenInvoice") { a ->
+                        a.sum { s ->
+                            s.field("openInvoiceAmount")
+                        }
+                    }
+                    .aggregations("sumOnAccount") { a ->
+                        a.sum { s ->
+                            s.field("onAccountAmount")
+                        }
+                    }
+                    .aggregations("sumCreditNote") { a ->
+                        a.sum { s ->
+                            s.field("creditNoteAmount")
+                        }
+                    }
+            }, PayableStatsOpenSearchResponse::class.java)
+
+            weekBefore = Client.search({ s ->
+                s.index(AresConstants.PAYABLES_STATS_INDEX)
+                    .query { q ->
+                        q.bool { b ->
+                            b.must { m ->
+                                m.range { r ->
+                                    r.field("date.keyword")
+                                        .gte(JsonData.of(weekBeforeStart.toString()))
+                                        .lte(JsonData.of(weekBeforeEnd.toString()))
+                                }
+                            }
+                            if (entity != null) {
+                                b.must {
+                                    it.match {
+                                        it.field("entity")
+                                            .query(FieldValue.of(entity.toString()))
+                                    }
+                                }
+                            }
+                            b
+                        }
+                    }
+                    .aggregations("sumOpenInvoice") { a ->
+                        a.sum { s ->
+                            s.field("openInvoiceAmount")
+                        }
+                    }
+                    .aggregations("sumOnAccount") { a ->
+                        a.sum { s ->
+                            s.field("onAccountAmount")
+                        }
+                    }
+                    .aggregations("sumCreditNote") { a ->
+                        a.sum { s ->
+                            s.field("creditNoteAmount")
+                        }
+                    }
+            }, PayableStatsOpenSearchResponse::class.java)
+        } catch (e: Exception) {
+            return BigDecimal.ZERO
+        }
+
+        var changeValue: BigDecimal = BigDecimal.ZERO
+
+        val previousDayOpenInvoice = previousDay?.aggregations()?.get("sumOpenInvoice")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+        val previousDayOnAccount = previousDay?.aggregations()?.get("sumOnAccount")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+        val previousDayCreditNote = previousDay?.aggregations()?.get("sumCreditNote")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+
+        val weekBeforeOpenInvoice = weekBefore?.aggregations()?.get("sumOpenInvoice")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+        val weekBeforeOnAccount = weekBefore?.aggregations()?.get("sumOnAccount")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+        val weekBeforeCreditNote = weekBefore?.aggregations()?.get("sumCreditNote")?.sum()?.value()?.toBigDecimal() ?: BigDecimal.ZERO
+
+        if (change == "openInvoice") {
+            if (previousDayOpenInvoice.compareTo(BigDecimal.ZERO) != 0 && weekBeforeOpenInvoice.compareTo(BigDecimal.ZERO) != 0) {
+
+                changeValue = ((previousDayOpenInvoice.minus(weekBeforeOpenInvoice!!)).divide(weekBeforeOpenInvoice, 5, RoundingMode.CEILING)).multiply(BigDecimal(100))
+            }
+        } else if (change == "creditNote") {
+            if (previousDayCreditNote.compareTo(BigDecimal.ZERO) != 0 && weekBeforeCreditNote.compareTo(BigDecimal.ZERO) != 0) {
+                changeValue = ((previousDayCreditNote.minus(weekBeforeCreditNote!!)).divide(weekBeforeCreditNote, 5, RoundingMode.CEILING)).multiply(BigDecimal(100))
+            }
+        } else {
+            if (previousDayOnAccount.compareTo(BigDecimal.ZERO) != 0 && weekBeforeOnAccount.compareTo(BigDecimal.ZERO) != 0) {
+
+                changeValue = ((previousDayOnAccount.minus(weekBeforeOnAccount!!)).divide(weekBeforeOnAccount, 5, RoundingMode.CEILING)).multiply(BigDecimal(100))
+            }
+        }
+
+        return changeValue
+    }
+
+    override suspend fun uploadPayblesStats() {
+        val listEntity = listOf<Int>(101, 201, 301, 401, 501)
+        listEntity.map {
+            val payblesInfo = getPayablesInfo(it)
+            val currentDate = Timestamp.valueOf(LocalDateTime.now())
+            val paybleStats = PayableStatsOpenSearchResponse(date = currentDate, entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount, onAccountAmount = payblesInfo.onAccountAmount, creditNoteAmount = payblesInfo.creditNoteAmount)
+            Client.addDocument(AresConstants.PAYABLES_STATS_INDEX, currentDate.toString(), paybleStats, true)
+        }
     }
 }
