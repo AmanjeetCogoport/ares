@@ -538,7 +538,7 @@ class PaymentMigrationImpl : PaymentMigration {
             status = JVStatus.POSTED,
             category = AccountTypeMapping.getAccountType(journalVoucherRecord.accountType!!),
             validityDate = journalVoucherRecord.transactionDate!!,
-            amount = journalVoucherRecord.accountUtilPayLed,
+            amount = journalVoucherRecord.accountUtilAmtCurr,
             currency = journalVoucherRecord.currency!!,
             ledCurrency = journalVoucherRecord.ledgerCurrency!!,
             exchangeRate = journalVoucherRecord.exchangeRate!!,

@@ -95,11 +95,11 @@ class SageServiceImpl : SageService {
             ,case when G.PAM_0='BNK' then 'BANK'
                   when G.PAM_0='CSH' then 'CASH'
                   else G.PAM_0 end as pay_mode 
-            ,GC.DESVCR_0 as narration
+            ,GD.DES_0 as narration
             ,GC.ACCDAT_0 as transaction_date 
             ,G.DUDDAT_0 as due_date
-            ,GC.CREDATTIM_0 as created_at
-            ,GC.UPDDATTIM_0 as updated_at
+            ,GD.CREDATTIM_0 as created_at
+            ,GD.UPDDATTIM_0 as updated_at
             ,GC.RATMLT_0 as exchange_rate
             ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
             ,G.AMTCUR_0 as account_util_amt_curr    
