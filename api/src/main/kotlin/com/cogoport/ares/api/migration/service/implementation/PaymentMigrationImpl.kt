@@ -468,7 +468,7 @@ class PaymentMigrationImpl : PaymentMigration {
             orgSerialId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.tradePartySerial != null) tradePartyResponse.get(0)?.tradePartySerial else 0,
             sageOrganizationId = receivableRequest.sageOrganizationId,
             organizationId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.organizationTradePartyDetailId != null) tradePartyResponse.get(0)?.organizationTradePartyDetailId else null,
-            organizationName = receivableRequest.organizationName,
+            organizationName = if (tradePartyResponse?.get(0)?.tradePartyBusinessName.isNullOrEmpty()) receivableRequest.organizationName else tradePartyResponse?.get(0)?.tradePartyBusinessName,
             accMode = AccMode.valueOf(receivableRequest.accMode!!),
             accCode = receivableRequest.accCode!!,
             accType = AccountType.valueOf(AccountTypeMapping.getAccountType(receivableRequest.accountType!!)),
@@ -548,8 +548,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyId = tradePartyResponse?.get(0)?.organizationTradePartyDetailId!!,
             tradePartyName = tradePartyResponse[0]?.tradePartyBusinessName!!,
             createdBy = MigrationConstants.createdUpdatedBy,
-            accMode = AccMode.valueOf(journalVoucherRecord.accMode!!),
-            description = null,
+            accMode = AccMode.valueOf(journalVoucherRecord.accMode),
+            description = journalVoucherRecord.narration,
             glCode = journalVoucherRecord.accCode.toString(),
             signFlag = journalVoucherRecord.signFlag.toShort()
         )
