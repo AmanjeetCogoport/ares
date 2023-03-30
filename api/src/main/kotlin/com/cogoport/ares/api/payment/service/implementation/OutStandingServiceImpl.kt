@@ -926,11 +926,6 @@ class OutStandingServiceImpl : OutStandingService {
             val currentDate = Timestamp.valueOf(LocalDateTime.now())
             val paybleStats = PayableStatsOpenSearchResponse(date = currentDate, entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount, onAccountAmount = payblesInfo.onAccountAmount, creditNoteAmount = payblesInfo.creditNoteAmount)
             Client.addDocument(AresConstants.PAYABLES_STATS_INDEX, currentDate.toString(), paybleStats, true)
-
-            // Temporary code for testing need to be deleted before taking live
-//            val currentDate1 = Timestamp.valueOf(LocalDateTime.now().minusDays(7))
-//            val paybleStats1 = PayableStatsOpenSearchResponse(date = currentDate1,entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount?.minus(BigDecimal(12552465)), onAccountAmount = payblesInfo.onAccountAmount?.minus(BigDecimal(45632465)),creditNoteAmount  = payblesInfo.onAccountAmount?.minus(BigDecimal(2332465)))
-//            Client.addDocument(AresConstants.PAYABLES_STATS_INDEX, currentDate1.toString(), paybleStats1, true)
         }
     }
 }

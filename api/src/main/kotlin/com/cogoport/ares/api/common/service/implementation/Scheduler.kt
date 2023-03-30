@@ -46,7 +46,7 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
     @Scheduled(cron = "30 04 * * *")
     fun uploadPayblesInfo() {
         runBlocking {
-            // outStandingService.uploadPayblesStats()
+            outStandingService.uploadPayblesStats()
         }
     }
 }
