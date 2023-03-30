@@ -535,7 +535,7 @@ class PaymentMigrationImpl : PaymentMigration {
             entityId = EntityCodeMapping.getByEntityCode(journalVoucherRecord.entityCode.toString()),
             jvNum = journalVoucherRecord.paymentNum,
             type = getTypeForJV(journalVoucherRecord.accMode!!, journalVoucherRecord.signFlag!!),
-            status = JVStatus.APPROVED,
+            status = JVStatus.POSTED,
             category = AccountTypeMapping.getAccountType(journalVoucherRecord.accountType!!),
             validityDate = journalVoucherRecord.transactionDate!!,
             amount = journalVoucherRecord.accountUtilPayLed,
