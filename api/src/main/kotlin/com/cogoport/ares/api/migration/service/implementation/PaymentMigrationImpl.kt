@@ -465,7 +465,7 @@ class PaymentMigrationImpl : PaymentMigration {
             orgSerialId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.tradePartySerial != null) tradePartyResponse.get(0)?.tradePartySerial else 0,
             sageOrganizationId = receivableRequest.sageOrganizationId,
             organizationId = if (tradePartyResponse != null && tradePartyResponse.get(0)?.organizationTradePartyDetailId != null) tradePartyResponse.get(0)?.organizationTradePartyDetailId else null,
-            organizationName = receivableRequest.organizationName,
+            organizationName = if (tradePartyResponse?.get(0)?.tradePartyBusinessName.isNullOrEmpty()) receivableRequest.organizationName else tradePartyResponse?.get(0)?.tradePartyBusinessName,
             accMode = AccMode.valueOf(receivableRequest.accMode!!),
             accCode = receivableRequest.accCode!!,
             accType = AccountType.valueOf(AccountTypeMapping.getAccountType(receivableRequest.accountType!!)),
