@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment
 
 enum class AccountType(val dbValue: String) {
+    EXP("EXP"),
     SINV("SINV"),
     PINV("PINV"),
     SCN("SCN"),

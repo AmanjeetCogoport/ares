@@ -1,0 +1,2 @@
+ALTER TYPE account_type ADD VALUE 'EXP';
+ALTER TYPE service_type ADD VALUE 'EXPENSE';
