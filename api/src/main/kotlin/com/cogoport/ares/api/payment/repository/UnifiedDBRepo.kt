@@ -1128,7 +1128,7 @@ WHERE
 	o.account_type = 'importer_exporter'
 	AND j.income != 0
 	AND j.expense != 0
-    AND (COALESCE(:entityCode) is null or o.sage_company_id IN (:entityCode))
+    AND (COALESCE(:entityCode) is null or o.sage_company_id::DECIMAL IN (:entityCode))
     AND (:query IS NULL OR o.business_name ILIKE :query)
 GROUP BY
 	s.importer_exporter_id,
@@ -1162,7 +1162,7 @@ WHERE
 	o.account_type = 'importer_exporter'
 	AND j.income != 0
 	AND j.expense != 0
-    AND (COALESCE(:entityCode) is null or o.sage_company_id IN (:entityCode))
+    AND (COALESCE(:entityCode) is null or o.sage_company_id::DECIMAL IN (:entityCode))
 	AND s.state != 'cancelled'
     AND (:query IS NULL OR o.business_name ILIKE :query)  
         """
@@ -1263,14 +1263,12 @@ WHERE
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
-        AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType)) 
         """
     )
     fun getFinanceArCardData(
         serviceTypes: List<ServiceType>?,
         startDate: String?,
         endDate: String?,
-        tradeType: List<String>?,
         entityCode: MutableList<Int>?,
     ): ServiceWiseCardData
 
@@ -1314,14 +1312,12 @@ WHERE
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
-        AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType)) 
         """
     )
     fun getFinanceApCardDate(
         serviceTypes: List<ServiceType>?,
         startDate: String?,
         endDate: String?,
-        tradeType: List<String>?,
         entityCode: MutableList<Int>?,
     ): ServiceWiseCardData
 }
