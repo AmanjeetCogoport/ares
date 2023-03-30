@@ -223,13 +223,15 @@ class DashboardController {
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): BfReceivableAndPayable {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceReceivableData(request)
     }
     @Auth
     @Get("/finance-income-expense{?request*}")
     suspend fun getFinanceIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceIncomeExpense(request)
     }
 
@@ -240,35 +242,40 @@ class DashboardController {
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
     ): BfTodayStatsResp {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceTodayStats(request)
     }
 
     @Auth
     @Get("/finance-profitability-shipment{?request*}")
     suspend fun getFinanceShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceShipmentProfit(request)
     }
 
     @Auth
     @Get("/finance-profitability-customer{?request*}")
     suspend fun getFinanceCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceCustomerProfit(request)
     }
 
     @Auth
     @Get("/finance-service-wise-rec-pay{?request*}")
     suspend fun getFinanceServiceWiseRecPay(@Valid request: ServiceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceServiceWiseRecPay(request)
     }
 
     @Auth
     @Get("/finance-service-wise-overdue{?request*}")
     suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceServiceWiseOverdue(request)
     }
 }

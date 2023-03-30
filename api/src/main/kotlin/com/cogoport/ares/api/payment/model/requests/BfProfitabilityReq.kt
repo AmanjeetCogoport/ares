@@ -15,6 +15,6 @@ data class BfProfitabilityReq(
     @JsonFormat(pattern = "yyyy-MM-dd")
     var endDate: String? = null,
     var sortBy: String? = "createdAt",
-    var entityCode: Int? = null,
+    var entityCode: MutableList<Int>? = null,
     var serviceType: List<ServiceType>? = null
 ) : Pagination()

@@ -5,7 +5,7 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class BfServiceWiseOverdueReq(
-    var entityCode: Int? = null,
+    var entityCode: MutableList<Int>? = null,
     var interfaceType: String,
     var tradeType: String? = null,
     @JsonFormat(pattern = "yyyy-MM-dd")
