@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
@@ -23,7 +22,7 @@ data class JournalVoucher(
     val entityCode: Int?,
     var jvNum: String,
     var type: String?,
-    val category: JVCategory,
+    var category: String,
     val validityDate: Date?,
     val amount: BigDecimal?,
     val currency: String?,
@@ -43,5 +42,7 @@ data class JournalVoucher(
     var glCode: String?,
     var parentJvId: Long? = null,
     var sageUniqueId: String? = null,
-    var migrated: Boolean? = false
+    var migrated: Boolean? = false,
+    var ledAmount: BigDecimal?,
+    var signFlag: Short?
 )

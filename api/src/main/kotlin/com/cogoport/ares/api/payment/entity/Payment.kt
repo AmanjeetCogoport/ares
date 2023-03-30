@@ -51,5 +51,6 @@ data class Payment(
     var migrated: Boolean?,
     var paymentDocumentStatus: PaymentDocumentStatus?,
     var createdBy: UUID? = null,
-    var updatedBy: UUID? = null
+    var updatedBy: UUID? = null,
+    var sageRefNumber: String?
 )

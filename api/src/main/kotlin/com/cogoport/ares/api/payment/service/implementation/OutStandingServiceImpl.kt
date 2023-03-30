@@ -5,8 +5,8 @@ import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -501,7 +501,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    private fun getOnAccountPaymentDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getOnAccountPaymentDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val onAccountBucket: AgeingBucketOutstanding?
         var onAccountLedAmount = 0.toBigDecimal()
         var onAccountLedCount = 0
@@ -518,7 +518,7 @@ class OutStandingServiceImpl : OutStandingService {
         return onAccountBucket
     }
 
-    private fun getOpenInvoiceDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getOpenInvoiceDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val openInvoiceAgeingBucket: AgeingBucketOutstanding?
         var openInvoiceLedAmount = 0.toBigDecimal()
         var openInvoiceLedCount = 0
@@ -535,7 +535,7 @@ class OutStandingServiceImpl : OutStandingService {
         return openInvoiceAgeingBucket
     }
 
-    private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getTotalOutstandingDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val totalOutstandingBucket: AgeingBucketOutstanding?
         var totalOutstandingLedAmount = 0.toBigDecimal()
         var totalOutstandingLedCount = 0
@@ -552,7 +552,7 @@ class OutStandingServiceImpl : OutStandingService {
         return totalOutstandingBucket
     }
 
-    private fun getCreditNoteDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getCreditNoteDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val creditNoteBucket: AgeingBucketOutstanding?
         var creditNoteLedAmount = 0.toBigDecimal()
         var creditNoteLedCount = 0

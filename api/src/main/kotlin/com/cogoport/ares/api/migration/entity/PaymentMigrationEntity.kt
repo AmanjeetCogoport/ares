@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.entity
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -45,5 +46,9 @@ data class PaymentMigrationEntity(
     var tradePartyMappingId: UUID?,
     var taggedOrganizationId: UUID?,
     var bankPayAmount: BigDecimal?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var paymentDocumentStatus: PaymentDocumentStatus?,
+    var createdBy: UUID? = null,
+    var updatedBy: UUID? = null,
+    var sageRefNumber: String?
 )

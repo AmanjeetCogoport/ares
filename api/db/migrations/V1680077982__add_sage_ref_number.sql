@@ -1,0 +1,1 @@
+ALTER TABLE payments ADD COLUMN sage_ref_number VARCHAR;
