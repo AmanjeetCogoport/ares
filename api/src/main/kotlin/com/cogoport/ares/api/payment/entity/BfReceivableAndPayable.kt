@@ -15,12 +15,5 @@ data class BfReceivableAndPayable(
     var ninetyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var oneEightyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var threeSixtyDayOverdue: BigDecimal? = 0.toBigDecimal(),
-    var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal(),
-    var totalOceanImportDue: BigDecimal? = 0.toBigDecimal(),
-    var totalOceanExportDue: BigDecimal? = 0.toBigDecimal(),
-    var totalAirImportDue: BigDecimal? = 0.toBigDecimal(),
-    var totalAirExportDue: BigDecimal? = 0.toBigDecimal(),
-    var totalAirOthersDue: BigDecimal? = 0.toBigDecimal(),
-    var totalSurfaceDomesticDue: BigDecimal? = 0.toBigDecimal(),
-    var totalSurfaceLocalDue: BigDecimal? = 0.toBigDecimal()
+    var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal()
 )

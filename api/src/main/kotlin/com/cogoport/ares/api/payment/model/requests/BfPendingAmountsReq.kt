@@ -17,5 +17,5 @@ data class BfPendingAmountsReq(
     @JsonFormat(pattern = "yyyy-MM-dd")
     var endDate: String?,
     var tradeType: List<String>?,
-    var entityCode: Int?
+    var entityCode: MutableList<Int>?
 )
