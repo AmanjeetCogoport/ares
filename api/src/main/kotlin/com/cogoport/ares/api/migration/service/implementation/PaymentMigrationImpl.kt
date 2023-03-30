@@ -204,9 +204,10 @@ class PaymentMigrationImpl : PaymentMigration {
             )
             logger().info("Journal Voucher with ID ${journalVoucherRecord.paymentNum} was successfully migrated")
         } catch (ex: Exception) {
-            var errorMessage = ex.stackTraceToString()
+            var errorMessage = "BPR: ${journalVoucherRecord.sageOrganizationId} ::"
+            errorMessage += ex.stackTraceToString()
             if (errorMessage.length > 5000) {
-                errorMessage = errorMessage.substring(0, 4998)
+                errorMessage = errorMessage.substring(0, 4500)
             }
             logger().error("Error while migrating journal voucher with ID ${journalVoucherRecord.paymentNum} " + ex.stackTraceToString())
             migrationLogService.saveMigrationLogs(null, null, errorMessage, journalVoucherRecord.paymentNum, MigrationStatus.FAILED)
