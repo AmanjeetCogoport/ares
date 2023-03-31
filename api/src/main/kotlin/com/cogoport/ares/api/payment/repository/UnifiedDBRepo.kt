@@ -1318,9 +1318,12 @@ WHERE
     @Query(
         """
             SELECT inv.id FROM plutus.invoices inv 
+            JOIN loki.jobs j on j.id = inv.job_id
             LEFT JOIN ares.account_utilizations ac 
             ON inv.id = ac.document_no AND ac.acc_mode = 'AR'
-            WHERE ac.id IS NULL AND inv.status NOT IN ('FINANCE_REJECTED', 'IRN_CANCELLED', 'CONSOLIDATED');
+            WHERE ac.id IS NULL
+            AND inv.status NOT IN ('FINANCE_REJECTED', 'IRN_CANCELLED', 'CONSOLIDATED')
+            AND j.job_source != 'FREIGHT_FORCE';
         """
     )
     suspend fun getInvoicesNotPresentInAres(): List<Long>?
