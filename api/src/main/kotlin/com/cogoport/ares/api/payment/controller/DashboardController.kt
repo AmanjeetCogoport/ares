@@ -4,8 +4,20 @@ import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingOpensearchResponse
 import com.cogoport.ares.api.common.models.SalesFunnelResponse
 import com.cogoport.ares.api.common.service.interfaces.ExchangeRateHelper
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.Util
@@ -200,5 +212,70 @@ class DashboardController {
     ): HashMap<String, ArrayList<DailySalesStats>> {
         req.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: req.entityCode
         return dashboardService.getLineGraphViewDailyStats(req)
+    }
+
+    // ** Business Finance DashBoard Apis */
+
+    @Auth
+    @Get("/finance-receivable-payable{?request*}")
+    suspend fun getFinanceReceivableData(
+        @Valid request: BfPendingAmountsReq,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): BfReceivableAndPayable {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceReceivableData(request)
+    }
+    @Auth
+    @Get("/finance-income-expense{?request*}")
+    suspend fun getFinanceIncomeExpense(@Valid request: BfIncomeExpenseReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<BfIncomeExpenseResponse> {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceIncomeExpense(request)
+    }
+
+    @Auth
+    @Get("/finance-today-stats{?request*}")
+    suspend fun getFinanceTodayStats(
+        @Valid request: BfTodayStatReq,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): BfTodayStatsResp {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceTodayStats(request)
+    }
+
+    @Auth
+    @Get("/finance-profitability-shipment{?request*}")
+    suspend fun getFinanceShipmentProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceShipmentProfit(request)
+    }
+
+    @Auth
+    @Get("/finance-profitability-customer{?request*}")
+    suspend fun getFinanceCustomerProfit(@Valid request: BfProfitabilityReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ShipmentProfitResp {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceCustomerProfit(request)
+    }
+
+    @Auth
+    @Get("/finance-service-wise-rec-pay{?request*}")
+    suspend fun getFinanceServiceWiseRecPay(@Valid request: ServiceWiseRecPayReq, user: AuthResponse?, httpRequest: HttpRequest<*>): MutableList<ServiceWiseRecPayResp> {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceServiceWiseRecPay(request)
+    }
+
+    @Auth
+    @Get("/finance-service-wise-overdue{?request*}")
+    suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq, user: AuthResponse?, httpRequest: HttpRequest<*>): ServiceWiseOverdueResp {
+        val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
+        request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
+        return dashboardService.getFinanceServiceWiseOverdue(request)
     }
 }

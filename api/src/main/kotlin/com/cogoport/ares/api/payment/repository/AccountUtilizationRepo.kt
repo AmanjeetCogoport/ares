@@ -45,7 +45,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """
             UPDATE account_utilizations SET 
-              updated_at = NOW(), is_void = :isVoid WHERE id in (:ids) AND deleted_at is null"""
+              updated_at = now(), is_void = :isVoid WHERE document_no in (:ids) and acc_mode = 'AP' AND deleted_at is null"""
     )
     suspend fun updateAccountUtilizations(ids: List<Long>, isVoid: Boolean)
     @NewSpan
