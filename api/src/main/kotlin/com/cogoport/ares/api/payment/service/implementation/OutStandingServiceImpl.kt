@@ -793,7 +793,7 @@ class OutStandingServiceImpl : OutStandingService {
         payblesInfo.openInvoicesAmount = accountPayablesStats.openInvoiceAmount
         payblesInfo.onAccountAmount = accountPayablesStats.onAccountAmount
         payblesInfo.creditNoteAmount = accountPayablesStats.creditNoteAmount
-        payblesInfo.organizationsCount = accountUtilizationRepository.getOrganizationCount(entity)
+        payblesInfo.organizationsCount = accountUtilizationRepo.getOrganizationCount(entity)
         payblesInfo.openInvoiceChange = getPaybleChange("openInvoice", entity)
         payblesInfo.onAccountChange = getPaybleChange("onAccount", entity)
         payblesInfo.creditNoteChange = getPaybleChange("creditNote", entity)
