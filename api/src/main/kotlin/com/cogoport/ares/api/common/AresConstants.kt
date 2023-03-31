@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
@@ -20,17 +21,11 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
-
-    const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
-    const val QUARTERLY_TREND_PREFIX = "QUARTERLY_OUTSTANDING_"
-    const val COLLECTIONS_TREND_PREFIX = "COLLECTION_TREND_"
-    const val OVERALL_STATS_PREFIX = "OVERALL_STATS_"
-    const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
-    const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
 
     const val ZONE = "zone"
     const val QUARTER = "quarter"
@@ -44,6 +39,7 @@ object AresConstants {
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
     const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val COGO_ENTITY_ID = "cogoEntityId"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 
@@ -97,6 +93,13 @@ object AresConstants {
         401 to "04bd1037-c110-4aad-8ecc-fc43e9d4069d",
         501 to "b67d40b1-616c-4471-b77b-de52b4c9f2ff"
     )
+    val TAGGED_ENTITY_ID_MAPPINGS = mapOf(
+        "6fd98605-9d5d-479d-9fac-cf905d292b88" to 101,
+        "c7e1390d-ec41-477f-964b-55423ee84700" to 201,
+        "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1" to 301,
+        "04bd1037-c110-4aad-8ecc-fc43e9d4069d" to 401,
+        "b67d40b1-616c-4471-b77b-de52b4c9f2ff" to 501,
+    )
 
     val LEDGER_CURRENCY = mapOf(
         101 to "INR",
@@ -104,5 +107,31 @@ object AresConstants {
         301 to "INR",
         401 to "SGD",
         501 to "VND",
+    )
+
+    val OCEAN_SERVICES = listOf(
+        ServiceType.FCL_FREIGHT,
+        ServiceType.LCL_FREIGHT,
+        ServiceType.FCL_CUSTOMS,
+        ServiceType.LCL_CUSTOMS,
+        ServiceType.FCL_CUSTOMS_FREIGHT,
+        ServiceType.LCL_CUSTOMS_FREIGHT,
+        ServiceType.FCL_CFS,
+        ServiceType.FCL_FREIGHT_LOCAL
+    )
+    val AIR_SERVICES = listOf(
+        ServiceType.AIR_CUSTOMS,
+        ServiceType.AIR_FREIGHT,
+        ServiceType.AIR_CUSTOMS_FREIGHT,
+        ServiceType.AIR_FREIGHT_LOCAL,
+        ServiceType.DOMESTIC_AIR_FREIGHT
+    )
+    val SURFACE_SERVICES = listOf(
+        ServiceType.FTL_FREIGHT,
+        ServiceType.LTL_FREIGHT,
+        ServiceType.HAULAGE_FREIGHT,
+        ServiceType.TRAILER_FREIGHT,
+        ServiceType.RAIL_DOMESTIC_FREIGHT,
+        ServiceType.TRUCKING
     )
 }

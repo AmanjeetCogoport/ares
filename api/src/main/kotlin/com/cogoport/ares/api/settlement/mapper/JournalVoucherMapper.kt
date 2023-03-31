@@ -1,4 +1,5 @@
 package com.cogoport.ares.api.settlement.mapper
+import com.cogoport.ares.api.migration.entity.JournalVoucherMigration
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.model.settlement.JournalVoucherResponse
@@ -24,4 +25,7 @@ interface JournalVoucherMapper {
     fun convertIncidentModelToEntity(jv: com.cogoport.hades.model.incident.JournalVoucher): JournalVoucher
 
     fun convertICJVEntityToModel(jv: ParentJournalVoucher): ParentJournalVoucherResponse
+
+    @Mapping(source = "createdBy", target = "updatedBy")
+    fun convertRequestToEntityMigration(journalVoucher: JournalVoucherRequest): JournalVoucherMigration
 }

@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.service.implementation
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -15,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 class Scheduler(
     private var emitter: AresMessagePublisher,
     private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo
 ) {
 
@@ -45,6 +47,12 @@ class Scheduler(
                     Sentry.captureException(e)
                 }
             }
+        }
+    }
+    @Scheduled(cron = "30 04 * * *")
+    fun uploadPayblesInfo() {
+        runBlocking {
+            outStandingService.uploadPayblesStats()
         }
     }
 

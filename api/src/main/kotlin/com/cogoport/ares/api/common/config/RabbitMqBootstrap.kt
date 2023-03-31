@@ -32,9 +32,6 @@ class RabbitMqBootstrap : ChannelInitializer() {
         channel?.queueDeclare("unfreeze-credit-consumption", true, false, false, null)
         channel?.queueBind("unfreeze-credit-consumption", "ares", "unfreeze.credit.consumption", null)
 
-        channel?.queueDeclare("receivables-dashboard-data", true, false, false, null)
-        channel?.queueBind("receivables-dashboard-data", "ares", "receivables.dashboard.data", null)
-
         channel?.queueDeclare("receivables-outstanding-data", true, false, false, null)
         channel?.queueBind("receivables-outstanding-data", "ares", "receivables.outstanding.data", null)
 

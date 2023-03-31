@@ -11,8 +11,12 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Month
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -35,7 +39,7 @@ class Utilities {
 
         fun isInvoiceAccountType(accType: AccountType): Boolean {
             if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN || accType == AccountType.PCN ||
-                accType == AccountType.PINV || accType == AccountType.PDN || accType == AccountType.PREIMB || accType == AccountType.SREIMB
+                accType == AccountType.PINV || accType == AccountType.PDN || accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP
             ) {
                 return true
             }
@@ -113,6 +117,24 @@ class Utilities {
                 return PaymentStatus.PARTIAL_PAID
             }
             return PaymentStatus.UNPAID
+        }
+
+        fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {
+            return try {
+                Timestamp.valueOf(
+                    DateTimeFormatter
+                        .ofPattern("yyyy-MM-dd HH:mm:ss")
+                        .withZone(ZoneOffset.UTC)
+                        .format(date)
+                )
+            } catch (e: Exception) {
+                Timestamp.valueOf(
+                    DateTimeFormatter
+                        .ofPattern("yyyy-MM-dd HH:mm:ss")
+                        .withZone(ZoneOffset.UTC)
+                        .format(Instant.now())
+                )
+            }
         }
     }
 }
