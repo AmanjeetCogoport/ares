@@ -20,17 +20,11 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
 
     const val ROLE_ZONE_HEAD = "b2af88f9-84e4-44fd-92f8-12f74c55e5ae"
     const val ROLE_SUPER_ADMIN = "SuperAdmin"
-
-    const val MONTHLY_TREND_PREFIX = "MONTHLY_OUTSTANDING_"
-    const val QUARTERLY_TREND_PREFIX = "QUARTERLY_OUTSTANDING_"
-    const val COLLECTIONS_TREND_PREFIX = "COLLECTION_TREND_"
-    const val OVERALL_STATS_PREFIX = "OVERALL_STATS_"
-    const val DAILY_SALES_OUTSTANDING_PREFIX = "DAILY_SALES_"
-    const val DAILY_PAYABLES_OUTSTANDING_PREFIX = "DAILY_PAYABLES_"
 
     const val ZONE = "zone"
     const val QUARTER = "quarter"
@@ -44,6 +38,7 @@ object AresConstants {
     const val SERVICE_TYPE = "serviceType"
     const val INVOICE_CURRENCY = "invoiceCurrency"
     const val DASHBOARD_CURRENCY = "dashboardCurrency"
+    const val COGO_ENTITY_ID = "cogoEntityId"
 
     const val YEAR_DATE_FORMAT = "yyyy-MM-dd"
 
@@ -77,6 +72,8 @@ object AresConstants {
     const val INVOICE = "INVOICE"
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
+
+    const val UNIFIED = "dms"
 
     const val LIMIT = 10000
 
