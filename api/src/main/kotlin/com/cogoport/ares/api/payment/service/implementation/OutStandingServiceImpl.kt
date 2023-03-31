@@ -802,10 +802,10 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     private fun getPaybleChange(change: String, entity: Int?): BigDecimal {
-        val previousDateStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MIN))
-        val previousDateEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MAX))
-        val weekBeforeStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MIN))
-        val weekBeforeEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MAX))
+        val previousDateStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN))
+        val previousDateEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MAX))
+        val weekBeforeStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MIN))
+        val weekBeforeEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MAX))
         var previousDay: SearchResponse<PayableStatsOpenSearchResponse>?
         var weekBefore: SearchResponse<PayableStatsOpenSearchResponse>?
         try {
