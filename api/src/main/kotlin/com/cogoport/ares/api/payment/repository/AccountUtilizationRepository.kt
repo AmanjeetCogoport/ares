@@ -1489,7 +1489,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-        SELECT sum(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        SELECT SUM(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
         WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
         CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
     """

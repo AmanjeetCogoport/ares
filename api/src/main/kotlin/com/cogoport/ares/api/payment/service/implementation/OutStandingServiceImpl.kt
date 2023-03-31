@@ -802,10 +802,10 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     private fun getPaybleChange(change: String, entity: Int?): BigDecimal {
-        val previousDateStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN))
-        val previousDateEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MAX))
-        val weekBeforeStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MIN))
-        val weekBeforeEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MAX))
+        val previousDateStart = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN))
+        val previousDateEnd = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MAX))
+        val weekBeforeStart = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MIN))
+        val weekBeforeEnd = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MAX))
         var previousDay: SearchResponse<PayableStatsOpenSearchResponse>?
         var weekBefore: SearchResponse<PayableStatsOpenSearchResponse>?
         try {
@@ -920,8 +920,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun uploadPayblesStats() {
-        val listEntity = listOf<Int>(101, 201, 301, 401, 501)
-        listEntity.map {
+
+        AresConstants.COGO_ENTITIES.map {
             val payblesInfo = getPayablesInfo(it)
             val currentDate = Timestamp.valueOf(LocalDateTime.now())
             val paybleStats = PayableStatsOpenSearchResponse(date = currentDate, entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount, onAccountAmount = payblesInfo.onAccountAmount, creditNoteAmount = payblesInfo.creditNoteAmount)

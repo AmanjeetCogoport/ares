@@ -119,7 +119,7 @@ class Utilities {
             return PaymentStatus.UNPAID
         }
 
-        fun timestampConversion(date: LocalDateTime): Timestamp {
+        fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {
             return try {
                 Timestamp.valueOf(
                     DateTimeFormatter
