@@ -5,7 +5,7 @@ import java.math.BigDecimal
 
 @MappedEntity
 data class Outstanding(
-    var duration: String?,
+    var duration: String? = null,
     var dashboardCurrency: String? = "INR",
     var openInvoiceAmount: BigDecimal? = BigDecimal.ZERO,
     var totalOutstandingAmount: BigDecimal? = BigDecimal.ZERO,
