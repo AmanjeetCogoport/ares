@@ -4,9 +4,9 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
 @MappedEntity
-data class CollectionTrend(
+data class DailySalesStats(
     var duration: String?,
-    var receivableAmount: BigDecimal?,
-    var collectableAmount: BigDecimal?,
-    var dashboardCurrency: String? = "INR"
+    var amount: BigDecimal,
+    var dashboardCurrency: String? = "INR",
+    var count: Long? = 0L
 )
