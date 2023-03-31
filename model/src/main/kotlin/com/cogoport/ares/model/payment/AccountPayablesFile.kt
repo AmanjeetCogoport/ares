@@ -26,6 +26,7 @@ data class AccountPayablesFile(
     var accMode: AccMode,
     var accType: AccountType,
     var signFlag: Short,
+    var bankId: UUID?,
     var currency: String, // Currency of amount paid against invoice
     var currencyAmount: BigDecimal, // Amount paid in that currency
     var ledgerCurrency: String, // Ledger currency if amount paid against invoice
