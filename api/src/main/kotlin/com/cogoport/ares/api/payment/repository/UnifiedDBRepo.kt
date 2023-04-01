@@ -143,6 +143,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             aau.trade_party_mapping_id is not null 
             AND acc_mode ='AR'
             AND acc_type in ('SINV', 'SCN')
+            AND aau.document_status = 'FINAL'
             AND aau.migrated = false
             AND (amount_loc-pay_loc) > 0 
             AND aau.transaction_date::date <= Now()
@@ -180,6 +181,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND aau.acc_mode ='AR'
+            AND document_status = 'FINAL'
             AND acc_type in ('SINV','SCN')
             AND (aau.entity_code = :entityCode)
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
