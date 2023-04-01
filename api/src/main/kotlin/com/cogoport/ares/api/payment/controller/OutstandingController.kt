@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.model.response.TopTenVendorsRes
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util
@@ -141,5 +142,11 @@ class OutstandingController {
     suspend fun getPayblesInfo(@QueryValue entity: Int?, user: AuthResponse?, httpRequest: HttpRequest<*>): PayblesInfoRes {
         val entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entity
         return outStandingService.getPayablesInfo(entityCode)
+    }
+    @Auth
+    @Get("/top-ten-vendors{?request*}")
+    suspend fun getTopTenVendors(@Valid request: SupplierOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): TopTenVendorsRes {
+        request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
+        return outStandingService.getTopTenVendors(request)
     }
 }

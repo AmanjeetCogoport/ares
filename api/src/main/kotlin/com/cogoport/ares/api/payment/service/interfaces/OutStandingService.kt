@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.response.TopTenVendorsRes
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -46,4 +47,5 @@ interface OutStandingService {
     suspend fun getPayablesInfo(entity: Int?): PayblesInfoRes
 
     suspend fun uploadPayblesStats()
+    suspend fun getTopTenVendors(request: SupplierOutstandingRequest): TopTenVendorsRes
 }
