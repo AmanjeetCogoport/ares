@@ -5,8 +5,8 @@ import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -468,7 +468,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val onAccountRecAgeingBucket = getAgeingBucketForCustomerOutstanding(onAccountRecQueryResponse, entity)
                 val customerOutstanding: CustomerOutstandingDocumentResponse?
 
-                val orgOutstandingData = accountUtilizationRepo.generateCustomerOutstanding(request.organizationId!!, entity)
+                val orgOutstandingData = accountUtilizationRepository.generateCustomerOutstanding(request.organizationId!!, entity)
                 val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                 val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                 val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
@@ -508,7 +508,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    private fun getOnAccountPaymentDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getOnAccountPaymentDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val onAccountBucket: AgeingBucketOutstanding?
         var onAccountLedAmount = 0.toBigDecimal()
         var onAccountLedCount = 0
@@ -525,7 +525,7 @@ class OutStandingServiceImpl : OutStandingService {
         return onAccountBucket
     }
 
-    private fun getOpenInvoiceDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getOpenInvoiceDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val openInvoiceAgeingBucket: AgeingBucketOutstanding?
         var openInvoiceLedAmount = 0.toBigDecimal()
         var openInvoiceLedCount = 0
@@ -542,7 +542,7 @@ class OutStandingServiceImpl : OutStandingService {
         return openInvoiceAgeingBucket
     }
 
-    private fun getTotalOutstandingDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getTotalOutstandingDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val totalOutstandingBucket: AgeingBucketOutstanding?
         var totalOutstandingLedAmount = 0.toBigDecimal()
         var totalOutstandingLedCount = 0
@@ -559,7 +559,7 @@ class OutStandingServiceImpl : OutStandingService {
         return totalOutstandingBucket
     }
 
-    private fun getCreditNoteDetails(orgOutstandingData: List<OrgOutstanding>, entity: Int): AgeingBucketOutstanding {
+    private fun getCreditNoteDetails(orgOutstandingData: List<CustomerOrgOutstanding>, entity: Int): AgeingBucketOutstanding {
         val creditNoteBucket: AgeingBucketOutstanding?
         var creditNoteLedAmount = 0.toBigDecimal()
         var creditNoteLedCount = 0
@@ -707,7 +707,7 @@ class OutStandingServiceImpl : OutStandingService {
                         val creditNoteAgeingBucket = getAgeingBucketForCustomerOutstanding(creditNoteQueryResponse, entity)
                         val onAccountRecAgeingBucket = getAgeingBucketForCustomerOutstanding(onAccountRecQueryResponse, entity)
 
-                        val orgOutstandingData = accountUtilizationRepo.generateCustomerOutstanding(id, entity)
+                        val orgOutstandingData = accountUtilizationRepository.generateCustomerOutstanding(id, entity)
                         val onAccountPayment = getOnAccountPaymentDetails(orgOutstandingData, entity)
                         val openInvoice = getOpenInvoiceDetails(orgOutstandingData, entity)
                         val totalOutstanding = getTotalOutstandingDetails(orgOutstandingData, entity)
@@ -793,7 +793,7 @@ class OutStandingServiceImpl : OutStandingService {
         payblesInfo.openInvoicesAmount = accountPayablesStats.openInvoiceAmount
         payblesInfo.onAccountAmount = accountPayablesStats.onAccountAmount
         payblesInfo.creditNoteAmount = accountPayablesStats.creditNoteAmount
-        payblesInfo.organizationsCount = accountUtilizationRepository.getOrganizationCount(entity)
+        payblesInfo.organizationsCount = accountUtilizationRepo.getOrganizationCount(entity)
         payblesInfo.openInvoiceChange = getPaybleChange("openInvoice", entity)
         payblesInfo.onAccountChange = getPaybleChange("onAccount", entity)
         payblesInfo.creditNoteChange = getPaybleChange("creditNote", entity)
@@ -802,10 +802,10 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     private fun getPaybleChange(change: String, entity: Int?): BigDecimal {
-        val previousDateStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MIN))
-        val previousDateEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(0), LocalTime.MAX))
-        val weekBeforeStart = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MIN))
-        val weekBeforeEnd = Utilities.timestampConversion(LocalDateTime.of(LocalDate.now().minusDays(7), LocalTime.MAX))
+        val previousDateStart = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIN))
+        val previousDateEnd = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MAX))
+        val weekBeforeStart = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MIN))
+        val weekBeforeEnd = Utilities.localDateTimeToTimeStamp(LocalDateTime.of(LocalDate.now().minusDays(8), LocalTime.MAX))
         var previousDay: SearchResponse<PayableStatsOpenSearchResponse>?
         var weekBefore: SearchResponse<PayableStatsOpenSearchResponse>?
         try {
@@ -920,8 +920,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun uploadPayblesStats() {
-        val listEntity = listOf<Int>(101, 201, 301, 401, 501)
-        listEntity.map {
+
+        AresConstants.COGO_ENTITIES.map {
             val payblesInfo = getPayablesInfo(it)
             val currentDate = Timestamp.valueOf(LocalDateTime.now())
             val paybleStats = PayableStatsOpenSearchResponse(date = currentDate, entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount, onAccountAmount = payblesInfo.onAccountAmount, creditNoteAmount = payblesInfo.creditNoteAmount)

@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.migration.entity
 
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.GeneratedValue
@@ -18,7 +17,7 @@ data class ParentJournalVoucherMigration(
     @field:Id @GeneratedValue
     var id: Long?,
     var status: JVStatus,
-    var category: JVCategory,
+    var category: String,
     var jvNum: String?,
     var validityDate: Date?,
     var createdBy: UUID?,
@@ -30,5 +29,6 @@ data class ParentJournalVoucherMigration(
     var amount: BigDecimal?,
     var exchangeRate: BigDecimal,
     var description: String?,
-    var migrated: Boolean? = false
+    var migrated: Boolean? = false,
+    var jvCodeNum: String?
 )

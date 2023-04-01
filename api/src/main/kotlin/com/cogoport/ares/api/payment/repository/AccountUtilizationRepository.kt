@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
@@ -1419,12 +1420,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             group by organization_id, currency
         """
     )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<CustomerOrgOutstanding>
 
     @NewSpan
     @Query(
         """
-        SELECT sum(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        SELECT SUM(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
         WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
         CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
     """
@@ -1443,7 +1444,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getAccountPayablesStats(entity: Int?): AccountPayablesStats
-
     @NewSpan
     @Query(
         """

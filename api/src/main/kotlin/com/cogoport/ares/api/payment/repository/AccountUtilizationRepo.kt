@@ -531,4 +531,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getInvoicesOnAccountAgeingBucket(entityCode: Int, orgId: String?): List<CustomerOutstandingAgeing>
+    @NewSpan
+    @Query(
+        """
+        SELECT  COUNT(distinct trade_party_mapping_id) FROM account_utilizations
+        WHERE acc_mode = 'AP' AND acc_type IN ('PINV','PREIMB') AND deleted_at IS NULL AND migrated = false AND amount_curr > pay_curr AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getOrganizationCount(entity: Int?): Long?
 }

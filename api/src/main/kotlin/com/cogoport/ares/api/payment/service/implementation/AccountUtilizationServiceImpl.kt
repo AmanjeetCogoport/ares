@@ -13,6 +13,7 @@ import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -68,6 +69,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var auditService: AuditService
+
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
 
     @Inject
     lateinit var settlementRepository: SettlementRepository
@@ -503,5 +507,18 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 accUtilRepository.updateAccountUtilization(payment.id!!, payment.documentStatus!!, toUpdatePayCurr, toUpdateLedCurr)
             }
         }
+    }
+
+    override suspend fun getInvoicesNotPresentInAres(): List<Long>? {
+        return unifiedDBRepo.getInvoicesNotPresentInAres()
+    }
+
+    override suspend fun getInvoicesAmountMismatch(): List<Long>? {
+        return unifiedDBRepo.getInvoicesAmountMismatch()
+    }
+
+    override suspend fun deleteInvoicesNotPresentInPlutus(id: Long) {
+        accUtilRepository.deleteInvoiceUtils(id)
+        Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, id.toString())
     }
 }

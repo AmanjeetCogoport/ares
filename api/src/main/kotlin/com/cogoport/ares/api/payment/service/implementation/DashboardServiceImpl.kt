@@ -172,6 +172,8 @@ class DashboardServiceImpl : DashboardService {
 
         val updatedCompanyType = getCompanyType(request.companyType)
 
+        val companyType = request.companyType
+
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
             2 to "APR - JUN",
@@ -929,10 +931,10 @@ class DashboardServiceImpl : DashboardService {
         val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
         val cashFlowChange = todayCashFlow?.minus(yesterdayCashFlow!!)
         val cashFlowChangePercentage = cashFlowChange?.let {
-            yesterdayCashFlow?.let {
+            yesterdayCashFlow?.takeIf { it != BigDecimal.ZERO }?.let {
                 (cashFlowChange.divide(yesterdayCashFlow, 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
             }
-        }
+        } ?: BigDecimal.ZERO
         response.totalCashFlow = todayCashFlow
         response.cashFlowDiffFromYesterday = cashFlowChangePercentage
         return response
