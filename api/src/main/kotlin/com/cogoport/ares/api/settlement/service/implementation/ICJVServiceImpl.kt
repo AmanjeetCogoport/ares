@@ -94,7 +94,7 @@ open class ICJVServiceImpl : ICJVService {
             it.jvNum = parentJvNumber + "/L${index + 1}"
             it.parentJvId = parentJvData.id.toString()
             it.status = JVStatus.PENDING
-            it.category = JVCategory.ICJV
+            it.category = JVCategory.ICJV.name
 
             if (it.entityId == null) {
                 val data = railsClient.getCogoEntity(it.entityCode.toString())

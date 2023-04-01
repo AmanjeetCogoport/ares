@@ -16,5 +16,5 @@ data class BfProfitabilityReq(
     var endDate: String? = null,
     var sortBy: String? = "createdAt",
     var entityCode: MutableList<Int>? = null,
-    var serviceType: List<ServiceType>? = null
+    var serviceTypes: List<ServiceType>? = null
 ) : Pagination()

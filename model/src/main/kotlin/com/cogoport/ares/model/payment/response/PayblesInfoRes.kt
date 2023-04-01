@@ -12,4 +12,5 @@ data class PayblesInfoRes(
     var onAccountChange: BigDecimal? = null,
     var creditNoteAmount: BigDecimal? = null,
     var creditNoteChange: BigDecimal? = null,
+    var currency: String? = "INR"
 )

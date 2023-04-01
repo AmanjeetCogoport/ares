@@ -7,7 +7,7 @@ import java.math.BigDecimal
 @MappedEntity
 data class KamWiseOutstanding(
     @JsonProperty("kam_owners")
-    var kamOwners: String?,
+    var kamOwners: String? = null,
     @JsonProperty("open_invoice_amount")
     var openInvoiceAmount: BigDecimal = BigDecimal.ZERO,
     @JsonProperty("total_outstanding_amount")

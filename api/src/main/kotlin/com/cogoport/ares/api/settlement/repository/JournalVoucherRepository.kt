@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -37,13 +36,16 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.updated_by,
             j.description as description,
             j.acc_mode,
-            j.parent_jv_id
+            j.parent_jv_id,
             j.sage_unique_id,
-            j.migrated
+            j.migrated,
+            j.gl_code,
+            j.led_amount,
+            j.sign_flag
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
-                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:category is null OR  category = :category::varchar) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' OR jv_num ilike '%'||:query||'%') AND
                 (:entityCode IS NULL OR :entityCode = entity_code) AND
@@ -66,7 +68,7 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     )
     suspend fun getListVouchers(
         status: JVStatus?,
-        category: JVCategory?,
+        category: String?,
         type: String?,
         query: String?,
         page: Int,
@@ -83,14 +85,14 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             FROM journal_vouchers j
             where 
                 (:status is null OR  status = :status::JV_STATUS) AND
-                (:category is null OR  category = :category::JV_CATEGORY) AND
+                (:category is null OR  category = :category::VARCHAR) AND
                 (:type is null OR  type = :type) AND
                 (:query is null OR trade_party_name ilike '%'||:query||'%' or jv_num ilike '%'||:query||'%') AND
                 (:entityCode IS NULL OR :entityCode = entity_code) AND
                 (parent_jv_id is null)
         """
     )
-    fun countDocument(status: JVStatus?, category: JVCategory?, type: String?, query: String?, entityCode: Int?): Long
+    fun countDocument(status: JVStatus?, category: String?, type: String?, query: String?, entityCode: Int?): Long
 
     @NewSpan
     @Query(
@@ -138,7 +140,10 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             j.acc_mode,
             j.parent_jv_id,
             j.sage_unique_id,
-            j.migrated
+            j.migrated,
+            j.gl_code,
+            j.led_amount,
+            j.sign_flag
             FROM journal_vouchers j 
             Where 
                 j.parent_jv_id = :parentId

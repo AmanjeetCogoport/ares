@@ -58,5 +58,6 @@ data class PaymentMigrationModel(
     var accountUtilPayCurr: BigDecimal,
     var accountUtilPayLed: BigDecimal,
     var accountType: AccountType,
+    var sageRefNumber: String?
 
 )

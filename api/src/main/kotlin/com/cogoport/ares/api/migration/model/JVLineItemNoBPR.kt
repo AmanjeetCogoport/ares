@@ -39,5 +39,11 @@ data class JVLineItemNoBPR(
     @JsonProperty("sage_unique_id")
     val sageUniqueId: String,
     @JsonProperty("sign_flag")
-    val signFlag: BigDecimal
+    val signFlag: BigDecimal,
+    @JsonProperty("gl_code")
+    val glcode: String,
+    @JsonProperty("sage_organization_id")
+    val sageOrganizationId: String?,
+    @JsonProperty("acc_mode")
+    val accMode: String?
 )
