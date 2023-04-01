@@ -4,7 +4,7 @@ import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
-import com.cogoport.ares.api.payment.model.response.TopTenVendorsRes
+import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util
@@ -145,7 +145,7 @@ class OutstandingController {
     }
     @Auth
     @Get("/top-ten-service-providers{?request*}")
-    suspend fun getTopTenServiceProviders(@Valid request: SupplierOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): TopTenVendorsRes {
+    suspend fun getTopTenServiceProviders(@Valid request: SupplierOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): TopServiceProviders {
         request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
         return outStandingService.getTopTenServiceProviders(request)
     }

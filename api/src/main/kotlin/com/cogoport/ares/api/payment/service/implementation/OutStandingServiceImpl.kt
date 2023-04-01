@@ -11,7 +11,7 @@ import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
-import com.cogoport.ares.api.payment.model.response.TopTenVendorsRes
+import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -933,11 +933,11 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopTenVendorsRes {
+    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders {
         if (request.flag == "overall") {
             throw AresException(AresError.ERR_1003, "Entity not found")
         }
         val res = listSupplierDetails(request)
-        return TopTenVendorsRes(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
+        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
     }
 }

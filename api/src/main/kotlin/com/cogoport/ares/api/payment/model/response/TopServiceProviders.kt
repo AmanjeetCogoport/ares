@@ -4,7 +4,7 @@ import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import io.micronaut.core.annotation.Introspected
 
 @Introspected
-data class TopTenVendorsRes(
+data class TopServiceProviders(
     var list: List<SupplierOutstandingDocument?>? = null,
     var currency: String? = "INR"
 )
