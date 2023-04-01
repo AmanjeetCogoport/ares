@@ -681,7 +681,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
 		AND au.acc_type IN ('PINV','PCN','PREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
-        AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (:startDate is null or :endDate is null or bill.finance_accept_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
@@ -822,7 +822,7 @@ FROM
         """
             SELECT
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-01-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:endYear, '-01-01')::DATE
 			AND CONCAT(:endYear, '-01-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                  CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -833,7 +833,7 @@ FROM
 			0
 		END) AS january,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-02-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:endYear, '-02-01')::DATE
 			AND CONCAT(:endYear, '-02-28')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -844,7 +844,7 @@ FROM
 			0
 		END) AS february,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:endYear, '-03-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:endYear, '-03-01')::DATE
 			AND CONCAT(:endYear, '-03-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -855,7 +855,7 @@ FROM
 			0
 		END) AS march,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-04-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-04-01')::DATE
 			AND CONCAT(:startYear, '-04-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -866,7 +866,7 @@ FROM
 			0
 		END) AS april,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-05-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-05-01')::DATE
 			AND CONCAT(:startYear, '-05-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -877,7 +877,7 @@ FROM
 			0
 		END) AS may,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-06-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-06-01')::DATE
 			AND CONCAT(:startYear, '-06-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -888,7 +888,7 @@ FROM
 			0
 		END) AS june,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-07-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-07-01')::DATE
 			AND CONCAT(:startYear, '-07-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -899,7 +899,7 @@ FROM
 			0
 		END) AS july,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-08-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-08-01')::DATE
 			AND CONCAT(:startYear, '-08-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -910,7 +910,7 @@ FROM
 			0
 		END) AS august,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-09-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-09-01')::DATE
 			AND CONCAT(:startYear, '-09-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -921,7 +921,7 @@ FROM
 			0
 		END) AS september,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-10-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-10-01')::DATE
 			AND CONCAT(:startYear, '-10-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -932,7 +932,7 @@ FROM
 			0
 		END) AS october,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-11-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-11-01')::DATE
 			AND CONCAT(:startYear, '-11-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -943,7 +943,7 @@ FROM
 			0
 		END) AS november,
 	sum(
-		CASE WHEN bill_date BETWEEN CONCAT(:startYear, '-12-01')::DATE
+		CASE WHEN finance_accept_date::DATE BETWEEN CONCAT(:startYear, '-12-01')::DATE
 			AND CONCAT(:startYear, '-12-30')::DATE THEN
             CASE WHEN bill.bill_type = 'BILL' THEN
                 CASE WHEN :isPostTax = TRUE THEN bill.ledger_total ELSE (bill.ledger_total/bill.grand_total) * bill.sub_total END
@@ -961,7 +961,7 @@ FROM
         AND au.document_status = 'FINAL'
         AND au.acc_type IN ('PINV','PCN')
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
-        AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
+        AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED','DRAFT','LOCKED')
         """
     )
     fun getBfExpenseMonthly(serviceTypes: List<ServiceType>?, startYear: String, endYear: String, isPostTax: Boolean, entityCode: MutableList<Int>?): LogisticsMonthlyData
@@ -1004,7 +1004,7 @@ FROM
         """
     SELECT
 	sum(
-		CASE WHEN bill.bill_date::date = :date::date THEN
+		CASE WHEN bill.finance_accept_date::date = :date::date THEN
 			CASE WHEN bill.bill_type = 'BILL' THEN
 				bill.ledger_total
 			WHEN bill.bill_type = 'CREDIT_NOTE' THEN
@@ -1012,7 +1012,7 @@ FROM
 			ELSE 0 END
 		ELSE 0 END) AS total_expense,
 	sum(
-		CASE WHEN bill.bill_date::date = :date::date
+		CASE WHEN bill.finance_accept_date::date = :date::date
 			AND bill.bill_type = 'BILL' THEN
 			1
 		ELSE 0 END) AS total_bills,
@@ -1025,10 +1025,10 @@ FROM
     WHERE
     au.acc_mode = 'AP'
     AND au.acc_type IN ('PINV','PCN')
-	AND bill.bill_date::date = :date::date	
+	AND bill.finance_accept_date::date = :date::date	
     AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
     AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
-	AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED')
+	AND bill.status NOT IN ('INITIATED','COE_REJECTED','FINANCE_REJECTED','DRAFT','LOCKED')
      """
     )
     fun getPurchaseStatsByDate(serviceTypes: List<ServiceType>?, entityCode: MutableList<Int>?, date: LocalDate): TodayPurchaseStats
@@ -1200,7 +1200,7 @@ WHERE
 		au.acc_mode = :accMode
 		AND au.due_date IS NOT NULL
 		AND au.document_status in('FINAL')
-        AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (:startDate is null or :endDate is null or bill.finance_accept_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes))
@@ -1304,7 +1304,7 @@ WHERE
 		AND au.acc_type IN ('PINV','PCN','PREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
-        AND (:startDate is null or :endDate is null or bill.bill_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (:startDate is null or :endDate is null or bill.finance_accept_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         """
     )
     fun getFinanceApCardDate(

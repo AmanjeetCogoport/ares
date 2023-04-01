@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull
 
 @Introspected
 data class BfPendingAmountsReq(
-    var serviceType: List<ServiceType>?,
+    var serviceTypes: List<ServiceType>?,
     @NotNull
     var accountMode: AccMode,
     var buyerType: String?,
