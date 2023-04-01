@@ -47,5 +47,5 @@ interface OutStandingService {
     suspend fun getPayablesInfo(entity: Int?): PayblesInfoRes
 
     suspend fun uploadPayblesStats()
-    suspend fun getTopTenVendors(request: SupplierOutstandingRequest): TopTenVendorsRes
+    suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopTenVendorsRes
 }

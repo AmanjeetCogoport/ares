@@ -933,7 +933,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    override suspend fun getTopTenVendors(request: SupplierOutstandingRequest): TopTenVendorsRes {
+    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopTenVendorsRes {
         if (request.flag == "overall") {
             throw AresException(AresError.ERR_1003, "Entity not found")
         }
