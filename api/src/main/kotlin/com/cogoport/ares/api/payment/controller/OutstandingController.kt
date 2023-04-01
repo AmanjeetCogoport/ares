@@ -134,7 +134,7 @@ class OutstandingController {
     @Auth
     @Get("/customer-payment{?request*}")
     suspend fun getCustomerOutstandingPaymentDetails(@Valid request: CustomerOutstandingPaymentRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingPaymentResponse?> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.entityCode
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<ResponseList<CustomerOutstandingPaymentResponse?>>().ok(outStandingService.getCustomerOutstandingPaymentDetails(request))
     }
     @Auth

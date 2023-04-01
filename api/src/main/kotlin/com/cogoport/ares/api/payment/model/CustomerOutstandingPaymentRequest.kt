@@ -11,7 +11,7 @@ data class CustomerOutstandingPaymentRequest(
     @field:NotNull(message = "orgId is mandate")
     val orgId: UUID? = null,
     val statusList: List<DocStatus>? = listOf(DocStatus.PARTIAL_UTILIZED, DocStatus.UNUTILIZED, DocStatus.UTILIZED),
-    var entityCode: String? = "overall",
+    var entityCode: Int? = 301,
     val page: Int = 1,
     val pageLimit: Int = 10,
     val query: String? = "",
