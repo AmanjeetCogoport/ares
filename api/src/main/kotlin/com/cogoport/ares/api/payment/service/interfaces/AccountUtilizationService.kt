@@ -15,4 +15,7 @@ interface AccountUtilizationService {
     suspend fun update(updateInvoiceRequest: UpdateInvoiceRequest)
     suspend fun updateStatus(updateInvoiceStatusRequest: UpdateInvoiceStatusRequest)
     suspend fun getInvoicePaymentStatus(invoiceRequest: InvoicePaymentRequest): InvoicePaymentResponse?
+    suspend fun getInvoicesNotPresentInAres(): List<Long>?
+    suspend fun getInvoicesAmountMismatch(): List<Long>?
+    suspend fun deleteInvoicesNotPresentInPlutus(id: Long)
 }

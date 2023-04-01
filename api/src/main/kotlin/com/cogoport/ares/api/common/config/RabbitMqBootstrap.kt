@@ -64,5 +64,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("update-customer-details", true, false, false, null)
         channel?.queueBind("update-customer-details", "ares", "customer.outstanding", null)
+
+        channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
+        channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
     }
 }

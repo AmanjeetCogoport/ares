@@ -40,4 +40,7 @@ interface AresMessagePublisher {
 
     @Binding("customer.outstanding")
     suspend fun emitUpdateCustomerOutstanding(request: UpdateSupplierOutstandingRequest)
+
+    @Binding("delete.invoices.not.present.in.plutus")
+    suspend fun emitDeleteInvoicesNotPresentInPlutus(id: Long)
 }
