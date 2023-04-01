@@ -856,7 +856,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
-                request.serviceType, request.startDate,
+                request.serviceTypes, request.startDate,
                 request.endDate, request.tradeType, request.entityCode,
             )
         }
@@ -866,7 +866,7 @@ class DashboardServiceImpl : DashboardService {
             "enterprise" to listOf("enterprise")
         )
         return unifiedDBRepo.getBfReceivable(
-            request.serviceType, request.startDate, request.endDate,
+            request.serviceTypes, request.startDate, request.endDate,
             request.tradeType, request.entityCode, customerTypes[request.buyerType]
         )
     }
@@ -967,7 +967,7 @@ class DashboardServiceImpl : DashboardService {
             taggedEntityCode,
             request.startDate,
             request.endDate,
-            request.serviceType
+            request.serviceTypes
         )
         listResponse.forEach {
             it.entity = TAGGED_ENTITY_ID_MAPPINGS[it.taggedEntityId].toString()
@@ -978,7 +978,7 @@ class DashboardServiceImpl : DashboardService {
             taggedEntityCode,
             request.startDate,
             request.endDate,
-            request.serviceType
+            request.serviceTypes
         )
         return ShipmentProfitResp(
             shipmentList = listResponse,
