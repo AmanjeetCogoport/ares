@@ -1226,7 +1226,7 @@ WHERE
 	count(DISTINCT s.serial_id) AS shipment_count,
 	s.importer_exporter_id,o.sage_company_id as entity,
 	o.business_name,sum(j.income) AS booked_income,sum(j.expense) AS booked_expense,
-    (SUM(j.income) - SUM(j.expense)) / 100 as profitability
+    ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 as profitability
 
 FROM
 	loki.jobs j
@@ -1260,7 +1260,7 @@ GROUP BY
         """
              SELECT
              COUNT(DISTINCT s.importer_exporter_id) AS total_count,
-             (SUM(j.income) - SUM(j.expense)) /  COUNT(DISTINCT s.importer_exporter_id) AS average_profit
+             (((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100) /  COUNT(DISTINCT s.importer_exporter_id) AS average_profit
 FROM
 	loki.jobs j
 	JOIN shipments s ON j.job_number::VARCHAR = s.serial_id::VARCHAR

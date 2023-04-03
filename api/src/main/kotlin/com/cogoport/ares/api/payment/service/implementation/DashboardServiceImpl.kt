@@ -904,7 +904,12 @@ class DashboardServiceImpl : DashboardService {
                 )
             )
         }
-
+        if(request.financeYearStart != null){
+            for (index in 0..2) {
+                val monthData = response.removeAt(0)
+                response.add(monthData)
+            }
+        }
         return response
     }
 
