@@ -11,6 +11,7 @@ import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -773,7 +774,7 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
 
         val list: List<CustomerOutstandingPaymentResponse?>
-        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%", request.page, request.pageLimit)
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%", request.entityCode!!, request.page, request.pageLimit)
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 
@@ -786,8 +787,11 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getPayablesInfo(entity: Int?): PayblesInfoRes {
+        if (entity == null) {
+            throw AresException(AresError.ERR_1003, "Entity not found")
+        }
         val payblesInfo = PayblesInfoRes()
-        payblesInfo.accountPayables = accountUtilizationRepository.getAccountPayables(entity).multiply(BigDecimal(-1))
+        payblesInfo.accountPayables = accountUtilizationRepository.getAccountPayables(entity)?.multiply(BigDecimal(-1))
         val accountPayablesStats = accountUtilizationRepository.getAccountPayablesStats(entity)
         payblesInfo.openInvoicesCount = accountPayablesStats.openInvoiceCount
         payblesInfo.openInvoicesAmount = accountPayablesStats.openInvoiceAmount
@@ -797,7 +801,7 @@ class OutStandingServiceImpl : OutStandingService {
         payblesInfo.openInvoiceChange = getPaybleChange("openInvoice", entity)
         payblesInfo.onAccountChange = getPaybleChange("onAccount", entity)
         payblesInfo.creditNoteChange = getPaybleChange("creditNote", entity)
-
+        payblesInfo.currency = AresConstants.LEDGER_CURRENCY.get(entity)
         return payblesInfo
     }
 
@@ -927,5 +931,13 @@ class OutStandingServiceImpl : OutStandingService {
             val paybleStats = PayableStatsOpenSearchResponse(date = currentDate, entity = it, openInvoiceAmount = payblesInfo.openInvoicesAmount, onAccountAmount = payblesInfo.onAccountAmount, creditNoteAmount = payblesInfo.creditNoteAmount)
             Client.addDocument(AresConstants.PAYABLES_STATS_INDEX, currentDate.toString(), paybleStats, true)
         }
+    }
+
+    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders {
+        if (request.flag == "overall") {
+            throw AresException(AresError.ERR_1003, "Entity not found")
+        }
+        val res = listSupplierDetails(request)
+        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
     }
 }
