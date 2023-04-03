@@ -904,7 +904,7 @@ class DashboardServiceImpl : DashboardService {
                 )
             )
         }
-        if(request.financeYearStart != null){
+        if (request.financeYearStart != null) {
             for (index in 0..2) {
                 val monthData = response.removeAt(0)
                 response.add(monthData)
@@ -946,10 +946,12 @@ class DashboardServiceImpl : DashboardService {
         val cashFlowChange = todayCashFlow?.minus(yesterdayCashFlow!!)
         val cashFlowChangePercentage = cashFlowChange?.let {
             yesterdayCashFlow?.takeIf { it != BigDecimal.ZERO }?.let {
-                (cashFlowChange.divide(yesterdayCashFlow, 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+                (cashFlowChange.divide(yesterdayCashFlow.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
             }
         } ?: BigDecimal.ZERO
+
         response.totalCashFlow = todayCashFlow
+        response.yesterdayCashFlow = yesterdayCashFlow
         response.cashFlowDiffFromYesterday = cashFlowChangePercentage
         return response
     }
