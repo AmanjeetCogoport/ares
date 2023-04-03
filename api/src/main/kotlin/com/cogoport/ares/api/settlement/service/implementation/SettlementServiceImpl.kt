@@ -2536,25 +2536,26 @@ open class SettlementServiceImpl : SettlementService {
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(it)!!
-                    val documents = accountUtilizationRepository.findByIds(arrayListOf(settlement?.sourceId!!, settlement?.destinationId!!))
+                    val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement?.sourceId!!, AccountType.valueOf(settlement?.sourceType.toString()))
+                    val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement?.destinationId!!, AccountType.valueOf(settlement?.destinationType.toString()))
 
-                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(it, documents.first().accMode, documents[0])
-                    val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(documents[0].documentValue!!, sageOrganizationResponse[0]!!, documents[0].orgSerialId, documents[0].accType, sageOrganizationResponse[1]!!)
-                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(documents[1].documentValue!!, sageOrganizationResponse[0]!!, documents[1].orgSerialId, documents[1].accType, sageOrganizationResponse[1]!!)
+                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(it, sourceDocument.accMode, sourceDocument)
+                    val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (!destinationPresentOnSage || !sourcePresentOnSage) {
                         throw AresException(AresError.ERR_1527, "")
                     }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
-                    var flag = if (listOfRecOrPayCode.contains(documents[0].accType)) "P" else ""
+                    var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(documents[0].documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
                     )
 
-                    flag = if (listOfRecOrPayCode.contains(documents[1].accType)) "P" else ""
+                    flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(documents[1].documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)

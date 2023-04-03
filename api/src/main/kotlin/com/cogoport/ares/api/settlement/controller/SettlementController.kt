@@ -30,6 +30,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.authentication.Auth
@@ -185,7 +186,7 @@ class SettlementController {
     }
 
     @Post("/matching-on-sage")
-    suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
-        return settlementService.matchingSettlementOnSage(settlementIds, performedBy)
+    suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): FailedSettlementIds {
+        return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementIds, postSettlementRequest.performedBy)
     }
 }

@@ -43,8 +43,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @NewSpan
-    @Query("SELECT * FROM account_utilizations WHERE id IN (:ids)")
-    suspend fun findByIds(ids: List<Long>): List<AccountUtilization>
+    @Query("SELECT * FROM account_utilizations WHERE document_no = :documentNo AND acc_type = :accType::account_type LIMIT 1")
+    suspend fun findByDocumentNo(documentNo: Long, accType: AccountType): AccountUtilization
 
     @NewSpan
     @Query(
