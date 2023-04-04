@@ -306,6 +306,8 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
 
         if (receivableRequest.accMode == AccMode.AR) {
             accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE

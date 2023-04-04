@@ -50,6 +50,6 @@ data class AccUtilizationRequest(
     var performedBy: UUID? = null,
     var performedByType: String? = null,
     var migrated: Boolean?,
-    var isVoid: Boolean?,
+    var isVoid: Boolean? = false,
     val tagBillIds: List<Long>? = null
 )
