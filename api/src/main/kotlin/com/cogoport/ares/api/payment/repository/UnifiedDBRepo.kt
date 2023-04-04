@@ -143,6 +143,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             aau.trade_party_mapping_id is not null 
             AND acc_mode ='AR'
             AND acc_type in ('SINV', 'SCN')
+            AND aau.document_status = 'FINAL'
             AND aau.migrated = false
             AND (amount_loc-pay_loc) > 0 
             AND aau.transaction_date::date <= Now()
@@ -180,6 +181,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND aau.acc_mode ='AR'
+            AND document_status = 'FINAL'
             AND acc_type in ('SINV','SCN')
             AND (aau.entity_code = :entityCode)
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1224,7 +1226,7 @@ WHERE
 	count(DISTINCT s.serial_id) AS shipment_count,
 	s.importer_exporter_id,o.sage_company_id as entity,
 	o.business_name,sum(j.income) AS booked_income,sum(j.expense) AS booked_expense,
-    (SUM(j.income) - SUM(j.expense)) / 100 as profitability
+    ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 as profitability
 
 FROM
 	loki.jobs j
@@ -1258,7 +1260,7 @@ GROUP BY
         """
              SELECT
              COUNT(DISTINCT s.importer_exporter_id) AS total_count,
-             (SUM(j.income) - SUM(j.expense)) /  COUNT(DISTINCT s.importer_exporter_id) AS average_profit
+             (((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100) /  COUNT(DISTINCT s.importer_exporter_id) AS average_profit
 FROM
 	loki.jobs j
 	JOIN shipments s ON j.job_number::VARCHAR = s.serial_id::VARCHAR
