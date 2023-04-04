@@ -117,7 +117,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
         val documentEntity = journalVoucherRepository.getListVouchers(
             jvListRequest.status,
-            jvListRequest.category,
+            jvListRequest.category?.name,
             jvListRequest.type,
             jvListRequest.query,
             jvListRequest.page,
@@ -129,7 +129,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val totalRecords =
             journalVoucherRepository.countDocument(
                 jvListRequest.status,
-                jvListRequest.category,
+                jvListRequest.category?.name,
                 jvListRequest.type,
                 jvListRequest.query,
                 jvListRequest.entityCode
@@ -455,7 +455,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             result = Client.postJVToSage(
                 JVRequest
                 (
-                    if (jvDetails.category == JVCategory.EXCH) JVEntryType.MCTTV else JVEntryType.MISC,
+                    if (jvDetails.category == JVCategory.EXCH.name) JVEntryType.MCTTV else JVEntryType.MISC,
                     jvDetails.jvNum,
                     jvDetails.entityCode.toString(),
                     JVType.MISC,
@@ -549,11 +549,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
     private fun getJvGLLineItem(journalVoucher: JournalVoucher): JVLineItem {
         val glCode = when (journalVoucher.category) {
-            JVCategory.JVNOS -> SageGLCodes.JVNOS
-            JVCategory.EXCH -> SageGLCodes.EXCH
-            JVCategory.ROFF -> SageGLCodes.ROFF
-            JVCategory.WOFF -> SageGLCodes.WOFF
-            JVCategory.ICJV -> SageGLCodes.ICJV
+            JVCategory.JVNOS.name -> SageGLCodes.JVNOS
+            JVCategory.EXCH.name -> SageGLCodes.EXCH
+            JVCategory.ROFF.name -> SageGLCodes.ROFF
+            JVCategory.WOFF.name -> SageGLCodes.WOFF
+            JVCategory.ICJV.name -> SageGLCodes.ICJV
             else -> { throw AresException(AresError.ERR_1517, journalVoucher.category.toString()) }
         }
         return JVLineItem(

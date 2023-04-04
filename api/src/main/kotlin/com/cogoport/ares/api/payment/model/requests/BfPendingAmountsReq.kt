@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull
 
 @Introspected
 data class BfPendingAmountsReq(
-    var serviceType: List<ServiceType>?,
+    var serviceTypes: List<ServiceType>?,
     @NotNull
     var accountMode: AccMode,
     var buyerType: String?,
@@ -17,5 +17,5 @@ data class BfPendingAmountsReq(
     @JsonFormat(pattern = "yyyy-MM-dd")
     var endDate: String?,
     var tradeType: List<String>?,
-    var entityCode: MutableList<Int>?
+    var entityCode: MutableList<Int>? = null
 )

@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.settlement.request
 
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
@@ -16,7 +15,7 @@ data class JournalVoucherRequest(
     var jvNum: String?,
     val type: String,
     var status: JVStatus?,
-    var category: JVCategory,
+    var category: String,
     val validityDate: Date,
     val amount: BigDecimal,
     val currency: String,
@@ -29,5 +28,7 @@ data class JournalVoucherRequest(
     var description: String?,
     var parentJvId: String? = null,
     var sageUniqueId: String? = null,
-    var migrated: Boolean? = false
+    var migrated: Boolean? = false,
+    var glCode: String?,
+    var signFlag: Short
 )

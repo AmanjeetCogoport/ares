@@ -1,10 +1,8 @@
-package com.cogoport.ares.api.settlement.entity
+package com.cogoport.ares.api.migration.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
@@ -15,8 +13,9 @@ import java.util.UUID
 
 @Introspected
 @MappedEntity(value = "journal_vouchers")
-data class JournalVoucher(
-    @field:Id @GeneratedValue
+data class JournalVoucherMigration(
+    @field:Id
+    @GeneratedValue
     var id: Long?,
     val entityId: UUID?,
     val entityCode: Int?,
@@ -32,10 +31,8 @@ data class JournalVoucher(
     val tradePartyId: UUID?,
     val tradePartyName: String,
     var createdBy: UUID?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var createdAt: Timestamp?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    @DateCreated var updatedAt: Timestamp?,
+    var createdAt: Timestamp?,
+    var updatedAt: Timestamp?,
     var updatedBy: UUID?,
     var description: String?,
     var accMode: AccMode?,
