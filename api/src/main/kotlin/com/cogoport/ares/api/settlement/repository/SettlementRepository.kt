@@ -239,7 +239,7 @@ WHERE
 	And(p.acc_mode = 'AR'
 		OR p.acc_mode IS NULL)
     AND s.destination_type in ('SINV','SREIMB')
-        AND s.source_type = 'REC' and is_void = false
+        AND s.source_type = 'REC' and s.is_void = false
 ORDER BY
 	s.created_at DESC
 	
@@ -264,7 +264,7 @@ WHERE
 	And(a.acc_mode = 'AR'
 		OR a.acc_mode IS NULL)
     AND s.destination_type in ('SINV','SREIMB')
-    AND s.source_type <> 'REC' and is_void = false
+    AND s.source_type <> 'REC' and s.is_void = false and a.is_void = false
 ORDER BY
 	s.created_at DESC
           
