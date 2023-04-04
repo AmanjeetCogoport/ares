@@ -96,6 +96,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             WHERE (:query IS NULL OR document_value LIKE :query)
                 AND organization_id = :organizationId
                 AND acc_type = 'REC'
+                AND entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
@@ -116,7 +117,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """

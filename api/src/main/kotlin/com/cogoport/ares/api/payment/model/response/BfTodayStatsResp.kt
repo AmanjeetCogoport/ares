@@ -16,5 +16,8 @@ data class BfTodayStatsResp(
     var totalCashFlow: BigDecimal? = null
 
     @field:javax.persistence.Transient
+    var yesterdayCashFlow: BigDecimal? = null
+
+    @field:javax.persistence.Transient
     var cashFlowDiffFromYesterday: BigDecimal? = null
 }

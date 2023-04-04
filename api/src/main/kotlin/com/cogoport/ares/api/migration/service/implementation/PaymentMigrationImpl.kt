@@ -781,7 +781,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
             }
             jvRecordsWithoutBpr.forEach {
-                sum += (it.amount * it.signFlag)
+                sum += (it.ledgerAmount * it.signFlag)
             }
             if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
                 migrationLogService.saveMigrationLogs(
