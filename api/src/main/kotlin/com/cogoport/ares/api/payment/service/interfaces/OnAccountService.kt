@@ -17,8 +17,8 @@ import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.sage.SageFailedResponse
 import java.util.UUID
-import com.cogoport.ares.model.sage.SageFailedResponse as SageFailedResponse1
 
 interface OnAccountService {
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse
@@ -34,6 +34,6 @@ interface OnAccountService {
     suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary
     suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>
     suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean
-    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse1
-    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse1
+    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse
+    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse
 }
