@@ -96,4 +96,17 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun getPaymentDocumentStatusWiseIds(): List<PaymentDocumentStatusForPayments>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                payments 
+            SET 
+                sage_ref_number = :sageRefNumber 
+            WHERE 
+                id = :id
+        """
+    )
+    suspend fun updateSageReferenceNumber(id: Long, sageRefNumber: String)
 }

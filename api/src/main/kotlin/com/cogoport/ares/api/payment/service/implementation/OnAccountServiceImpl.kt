@@ -79,6 +79,7 @@ import com.cogoport.ares.model.payment.response.PaymentResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
@@ -1371,6 +1372,31 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
                 openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
                 Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+
+                val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
+                val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+                val records = mappedResponse["recordset"] as? ArrayList<*>
+
+                if (records?.size != 0) {
+                    val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
+                    paymentRepository.updateSageReferenceNumber(paymentId, queryResult.toString())
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentToSage",
+                            "Payment",
+                            paymentId,
+                            "PAYMENT",
+                            "500",
+                            records.toString(),
+                            "Sage Payment Num Value not present",
+                            false
+                        )
+                    )
+                }
+
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1462,5 +1488,144 @@ open class OnAccountServiceImpl : OnAccountService {
             ?.getJSONObject("status")
             ?.get("content")
         return status as Int?
+    }
+
+    override suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        for (id in paymentIds) {
+            try {
+                val payment = paymentRepository.findByPaymentId(id)
+
+                if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
+                    throw AresException(AresError.ERR_1527, "")
+                }
+
+                val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+                if (status == 1) {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentFromSage",
+                            "Payment",
+                            id,
+                            "PAYMENT",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            true
+                        )
+                    )
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentFromSage",
+                            "Payment",
+                            id,
+                            "PAYMENT",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            false
+                        )
+                    )
+                    failedIds.add(id)
+                }
+            } catch (e: Exception) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentFromSage",
+                        "Payment",
+                        id,
+                        "PAYMENT",
+                        "500",
+                        "",
+                        e.toString(),
+                        false
+                    )
+                )
+                failedIds.add(id)
+            }
+        }
+        return SageFailedResponse(
+            failedIdsList = failedIds
+        )
+    }
+
+    override suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        for (id in paymentIds) {
+            try {
+                val payment = paymentRepository.findByPaymentId(id)
+
+                if (isPaymentPostedFromSage(payment.paymentNumValue!!)) {
+                    throw AresException(AresError.ERR_1528, "")
+                }
+
+                val result = SageClient.cancelPaymentFromSage(payment.sageRefNumber!!)
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+                if (status == 1) {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "CancelPaymentFromSage",
+                            "Payment",
+                            id,
+                            "PAYMENT",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            true
+                        )
+                    )
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "CancelPaymentFromSage",
+                            "Payment",
+                            id,
+                            "PAYMENT",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            false
+                        )
+                    )
+                    failedIds.add(id)
+                }
+            } catch (e: Exception) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "CancelPaymentFromSage",
+                        "Payment",
+                        id,
+                        "PAYMENT",
+                        "500",
+                        "",
+                        e.toString(),
+                        false
+                    )
+                )
+                failedIds.add(id)
+            }
+        }
+        return SageFailedResponse(
+            failedIdsList = failedIds
+        )
+    }
+
+    private fun isPaymentPostedFromSage(paymentValue: String): Boolean {
+        val query = "Select UMRNUM_0 from $sageDatabase where UMRNUM_0='$paymentValue' and STA_0 = 9"
+        val resultFromQuery = SageClient.sqlQuery(query)
+        val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
+            .get("recordset") as ArrayList<String>
+
+        return records.size != 0
     }
 }

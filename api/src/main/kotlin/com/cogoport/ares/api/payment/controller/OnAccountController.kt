@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.sage.SageFailedResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -107,5 +108,15 @@ class OnAccountController {
     @Put("/open-search/payment-document-status")
     suspend fun paymentDocumentStatusMigration() {
         openSearchService.paymentDocumentStatusMigration()
+    }
+
+    @Post("/post-from-sage")
+    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+        return onAccountService.postPaymentFromSage(paymentIds)
+    }
+
+    @Post("/cancel-from-sage")
+    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+        return onAccountService.cancelPaymentFromSage(paymentIds)
     }
 }
