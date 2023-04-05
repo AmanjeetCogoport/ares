@@ -44,22 +44,22 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sinv.status, 
             sinv.payment_status
             FROM 
-            ares.account_utilizations aau 
-            INNER JOIN plutus.invoices sinv on sinv.id = aau.document_no
-            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id
+            plutus.invoices sinv
             INNER JOIN loki.jobs lj on lj.id = sinv.job_id
-            LEFT JOIN organizations o on o.registration_number = pa.registration_number
-            LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            inner join organizations o on o.id = pb.organization_id
+            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
-            EXTRACT(YEAR FROM aau.transaction_date) = :year
-            AND EXTRACT(MONTH FROM aau.transaction_date) = :month
+            EXTRACT(YEAR FROM sinv.created_at) = :year
+            AND EXTRACT(MONTH FROM sinv.created_at) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (aau.entity_code = :entityCode)
-            AND aau.acc_type in ('SINV', 'SCN')
+            AND (pa1.entity_code = :entityCode)
+            AND lj.job_source != 'FREIGHT_FORCE'
+            AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
             AND o.status = 'active'
-            AND (aau.migrated = false)
             AND (sinv.migrated = false)
-            AND (pa.organization_type = 'BUYER')
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
         """
@@ -70,7 +70,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT 
-            distinct(aau.document_no) as id, 
+            distinct(sinv.id) as id, 
             sinv.status, 
             sinv.payment_status,
             json_agg(
@@ -82,25 +82,25 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 )
             )::text as events
             FROM 
-            ares.account_utilizations aau 
-            INNER JOIN plutus.invoices sinv on sinv.id = aau.document_no
-            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id
-            INNER JOIN plutus.invoice_events ie on ie.invoice_id = sinv.id
+            plutus.invoices sinv
             INNER JOIN loki.jobs lj on lj.id = sinv.job_id
-            LEFT JOIN organizations o on o.registration_number = pa.registration_number
-            LEFT JOIN lead_organization_segmentations los on o.lead_organization_id = los.lead_organization_id
+            INNER JOIN plutus.invoice_events ie on ie.invoice_id = sinv.id
+            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            inner join organizations o on o.id = pb.organization_id
+            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
-            EXTRACT(YEAR FROM aau.transaction_date) = :year
-            AND EXTRACT(MONTH FROM aau.transaction_date) = :month
+            EXTRACT(YEAR FROM sinv.created_at) = :year
+            AND EXTRACT(MONTH FROM sinv.created_at) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (aau.entity_code = :entityCode)
-            AND aau.acc_type in ('SINV', 'SCN')
-            AND (aau.migrated = false)
+            AND (pa1.entity_code = :entityCode)
+            AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
             AND (sinv.migrated = false)
-            AND (pa.organization_type = 'BUYER')
+            AND lj.job_source != 'FREIGHT_FORCE'
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
-            group by aau.document_no, sinv.status, sinv.payment_status
+            group by sinv.id, sinv.status, sinv.payment_status
         """
     )
     fun getInvoices(year: Int?, month: Int?, entityCode: Int?, companyType: List<String>?, serviceType: String?): List<SalesInvoiceTimelineResponse>
@@ -148,6 +148,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (amount_loc-pay_loc) > 0 
             AND aau.transaction_date::date <= Now()
             AND (:entityCode is null or aau.entity_code = :entityCode)
+            AND lj.job_source != 'FREIGHT_FORCE'
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             group by aau.led_currency,aau.service_type, aau.led_currency, lj.job_details  ->> 'tradeType'
         """
@@ -359,6 +360,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 AND date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
                 AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
                 AND (pa1.entity_code = :entityCode)
+                AND lj.job_source != 'FREIGHT_FORCE'
                 AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
                 AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
                 AND (pa.organization_type = 'BUYER')
@@ -457,6 +459,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
             AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
             AND (pa1.entity_code = :entityCode)
+            AND lj.job_source != 'FREIGHT_FORCE'
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'BUYER')
@@ -690,7 +693,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (pa1.entity_code = :entityCode)
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'BUYER')
+            AND lj.job_source != 'FREIGHT_FORCE'
             AND o.status = 'active'
           GROUP BY date_trunc('day', lj.created_at), dashboard_currency
         ), series_with_data AS (
