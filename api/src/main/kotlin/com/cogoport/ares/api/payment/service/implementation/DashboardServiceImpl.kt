@@ -878,20 +878,23 @@ class DashboardServiceImpl : DashboardService {
         }
         val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
         var endYear = request.financeYearEnd ?: request.calenderYear ?: thisYear
+        var isLeapYear = Year.isLeap(endYear.toLong())
 
         val monthlyIncomes = unifiedDBRepo.getBfIncomeMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
-            request.entityCode
+            request.entityCode,
+            isLeapYear
         )
         val monthlyExpenses = unifiedDBRepo.getBfExpenseMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
-            request.entityCode
+            request.entityCode,
+            isLeapYear
         )
         var response = mutableListOf<BfIncomeExpenseResponse>()
         for (monthIndex in 1..12) {
