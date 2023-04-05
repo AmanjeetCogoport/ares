@@ -198,124 +198,140 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
            WITH months AS (
                 SELECT generate_series(:quarterStart::date, :quarterEnd::date - '1 month'::interval, '1 month'::interval)::date AS duration
                 ), x AS (
-          SELECT 
-            DISTINCT(aau.document_no) AS id,
-            DATE_TRUNC('month', aau.transaction_date) AS duration,
-            aau.amount_loc AS amount,
-            aau.led_currency AS dashboard_currency
-          FROM ares.account_utilizations aau
-          INNER JOIN organizations o ON o.id = aau.tagged_organization_id
-          LEFT JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
-          WHERE 
-            aau.acc_mode = 'AR' 
-            AND aau.document_status = 'FINAL'
-            AND aau.transaction_date >= :quarterStart::DATE
-            AND aau.transaction_date < :quarterEnd::DATE
-            AND aau.deleted_at IS NULL 
-            AND (aau.acc_type::VARCHAR = :accType)
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND (aau.entity_code = :entityCode)
-            AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (:serviceType IS NULL OR aau.service_type = :serviceType) 
+          select 
+                sinv.invoice_type as invoice_type,
+                sinv.id as id,
+                sinv.ledger_total as amount,
+                sinv.ledger_currency as dashboard_currency,
+                date_trunc('day', sinv.invoice_date) AS duration
+                from plutus.invoices sinv
+                INNER JOIN loki.jobs lj on sinv.job_id = lj.id
+                inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+                inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+                inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+                inner join organizations o on o.id = pb.organization_id
+                left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+                WHERE 
+                pa1.entity_code = :entityCode
+                AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
+                AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
+                AND lj.job_source != 'FREIGHT_FORCE'
+                and sinv.invoice_date is not null
+                AND sinv.invoice_date >= :quarterStart ::DATE
+                AND sinv.invoice_date < :quarterEnd::DATE
+                AND (COALESCE(:invoiceType) is NULL OR sinv.invoice_type in (:invoiceType))
+                AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
           )
         SELECT 
-          months.duration, 
+          months.duration,
           COALESCE(SUM(x.amount), 0) AS amount, 
           COALESCE(COUNT(x.id), 0) AS count, 
-          x.dashboard_currency 
+          x.dashboard_currency,
+          x.invoice_type
         FROM 
           months 
-          LEFT JOIN x ON months.duration = x.duration
+          LEFT JOIN x ON extract(month from months.duration) = extract (month from x.duration) and extract(year from months.duration) = extract(year from x.duration)
         GROUP BY 
           months.duration, 
-          x.dashboard_currency
+          x.dashboard_currency,
+          x.invoice_type
         ORDER BY 
           months.duration ASC
         """
     )
-    suspend fun generateMonthlySalesStats(quarterStart: LocalDateTime, quarterEnd: LocalDateTime, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: List<String>?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateMonthlySalesStats(quarterStart: LocalDateTime, quarterEnd: LocalDateTime, invoiceType: List<String>?, entityCode: Int?, companyType: List<String>?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
-            WITH date_series AS (
-                SELECT generate_series(
-                   date_trunc('day', :asOnDate::date - '3 day'::interval),
-                   date_trunc('day', :asOnDate::date),
-                   '1 day'::interval
-                ) AS date), x AS (
-          SELECT DISTINCT
-            aau.document_no AS id,
-            date_trunc('day', aau.transaction_date) AS duration,
-            aau.amount_loc AS amount,
-            aau.led_currency AS dashboard_currency
-          FROM ares.account_utilizations aau
-          INNER JOIN organizations o ON o.id = aau.tagged_organization_id
-          LEFT JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
-          WHERE aau.acc_mode = 'AR'
-          AND aau.document_status = 'FINAL'
-          AND aau.deleted_at IS NULL 
-          AND (aau.acc_type::VARCHAR = :accType)
-          AND (aau.entity_code = :entityCode)
-          AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-          AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-          AND (:serviceType IS NULL OR aau.service_type = :serviceType)
+    WITH date_series AS (
+    SELECT generate_series(
+       date_trunc('day', :asOnDate::date - '3 day'::interval),
+       date_trunc('day', :asOnDate::date),
+       '1 day'::interval
+    ) AS date), x AS (
+        select 
+        sinv.invoice_type as invoice_type,
+        sinv.id as id,
+        sinv.ledger_total as amount,
+        sinv.ledger_currency as dashboard_currency,
+        sinv.invoice_date  as duration
+        from plutus.invoices sinv
+        INNER JOIN loki.jobs lj on sinv.job_id = lj.id
+        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+        inner join organizations o on o.id = pb.organization_id
+        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+        WHERE 
+        pa1.entity_code = :entityCode
+        AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
+        AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
+        AND lj.job_source != 'FREIGHT_FORCE'
+        and sinv.invoice_date is not null
+        AND((:invoiceType) is null or sinv.invoice_type IN (:invoiceType))
+        AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
           )
         SELECT
           date_series.date AS duration,
           COALESCE(SUM(x.amount), 0) AS amount,
           COALESCE(COUNT(x.id), 0) AS count,
-          x.dashboard_currency
+          x.dashboard_currency,
+          x.invoice_type
         FROM date_series
         LEFT JOIN x ON x.duration = date_series.date
-        GROUP BY date_series.date, x.dashboard_currency
+        GROUP BY date_series.date, x.dashboard_currency, x.invoice_type
         ORDER BY date_series.date ASC
         """
     )
-    suspend fun generateDailySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: List<String>?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateDailySalesStats(asOnDate: String, invoiceType: List<String>?, entityCode: Int?, companyType: List<String>?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
         """
         WITH date_series AS (
-            SELECT generate_series(
-               date_trunc('year', :asOnDate::date - '3 year'::interval),
-               date_trunc('year', :asOnDate::date),
-               interval '1 year'
-         ) AS duration), x AS (
-          SELECT 
-            DISTINCT aau.document_no AS id,
-            date_trunc('year',aau.transaction_date) AS duration,
-            aau.amount_loc AS amount,
-            aau.led_currency AS dashboard_currency
-          FROM ares.account_utilizations aau
-          INNER JOIN organizations o ON o.id = aau.tagged_organization_id
-          LEFT JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
-          WHERE 
-            aau.acc_mode = 'AR' 
-            AND 
-            aau.document_status = 'FINAL'
-            AND aau.deleted_at IS NULL 
-            AND (aau.acc_type = :accType)
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND ( aau.entity_code = :entityCode)
-            AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (:serviceType IS NULL OR aau.service_type = :serviceType) 
+    SELECT generate_series(
+       date_trunc('year', :asOnDate::date - '3 year'::interval),
+       date_trunc('year', :asOnDate::date),
+       interval '1 year'
+    ) AS duration), x AS (
+          select 
+            sinv.invoice_type as invoice_type,
+            sinv.id as id,
+            sinv.ledger_total as amount,
+            sinv.ledger_currency as dashboard_currency,
+            sinv.invoice_date  as duration
+            from plutus.invoices sinv
+            INNER JOIN loki.jobs lj on sinv.job_id = lj.id
+            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            inner join organizations o on o.id = pb.organization_id
+            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+            WHERE 
+            pa1.entity_code = :entityCode
+            AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
+            AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
+            AND lj.job_source != 'FREIGHT_FORCE'
+            and sinv.invoice_date is not null
+            AND((:invoiceType) is null or sinv.invoice_type IN (:invoiceType))
+            AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
         ), series_with_data AS (
           SELECT 
             ds.duration, 
             COALESCE(SUM(x.amount), 0) AS amount, 
             COUNT(x.id) AS count, 
-            x.dashboard_currency 
+            x.dashboard_currency,
+            invoice_type
           FROM date_series ds
-          LEFT JOIN x ON x.duration = ds.duration
-          GROUP BY ds.duration, x.dashboard_currency
+          LEFT JOIN x ON extract (year from x.duration) = extract (year from ds.duration)
+          GROUP BY ds.duration, x.dashboard_currency, invoice_type
           ORDER BY ds.duration ASC
         )
         SELECT * FROM series_with_data
         """
     )
-    suspend fun generateYearlySalesStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: List<String>?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateYearlySalesStats(asOnDate: String, invoiceType: List<String>?, entityCode: Int?, companyType: List<String>?, serviceType: String?): MutableList<DailySalesStats>?
     @NewSpan
     @Query(
         """
@@ -330,7 +346,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 date_trunc('day', lj.created_at) AS duration,
                 coalesce(sum(CASE WHEN invoice_type = 'INVOICE' THEN pinv.ledger_total ELSE -1 * (pinv.ledger_total) END), 0) AS amount,
                 count(DISTINCT lj.id) AS count,
-                pinv.ledger_currency AS dashboard_currency
+                pinv.ledger_currency AS dashboard_currency,
+                '' as invoice_type
               FROM loki.jobs lj
               INNER JOIN plutus.invoices pinv ON lj.id = pinv.job_id
               INNER JOIN plutus.addresses pa ON pa.invoice_id = pinv.id
@@ -350,7 +367,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 ds.duration, 
                 COALESCE(x.amount, 0) AS amount, 
                 COALESCE(x.count, 0) AS count, 
-                x.dashboard_currency 
+                x.dashboard_currency,
+                x.invoice_type
               FROM date_series ds
               LEFT JOIN x ON x.duration = ds.duration
             )
@@ -374,7 +392,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('month',lj.created_at) AS duration,
             coalesce(sum(CASE when invoice_type = 'INVOICE' THEN pinv.ledger_total else -1 * (pinv.ledger_total) end), 0) AS amount,
             count(distinct lj.id) AS count,
-            pinv.ledger_currency AS dashboard_currency
+            pinv.ledger_currency AS dashboard_currency,
+            '' as invoice_type
           FROM loki.jobs lj
           INNER JOIN plutus.invoices pinv ON lj.id = pinv.job_id
           INNER JOIN plutus.addresses pa ON pa.invoice_id = pinv.id
@@ -389,13 +408,15 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (pinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND (pa.organization_type = 'BUYER')
             AND o.status = 'active'
+            AND lj.job_source != 'FREIGHT_FORCE'
           GROUP BY date_trunc('month',lj.created_at), dashboard_currency
         ), series_with_data AS (
           SELECT 
             ds.duration, 
             COALESCE(x.amount, 0) AS amount, 
             COALESCE(x.count, 0) AS count, 
-            x.dashboard_currency 
+            x.dashboard_currency,
+            x.invoice_type
           FROM date_series ds
           LEFT JOIN x ON x.duration = ds.duration
         )
@@ -419,7 +440,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('year', lj.created_at) AS duration,
             coalesce(sum(CASE WHEN invoice_type = 'INVOICE' THEN pinv.ledger_total ELSE -1 * (pinv.ledger_total) END), 0) AS amount,
             count(DISTINCT lj.id) AS count,
-            pinv.ledger_currency AS dashboard_currency
+            pinv.ledger_currency AS dashboard_currency,
+            '' as invoice_type
           FROM loki.jobs lj
           INNER JOIN plutus.invoices pinv ON lj.id = pinv.job_id
           INNER JOIN plutus.addresses pa ON pa.invoice_id = pinv.id
@@ -439,7 +461,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ds.duration, 
             COALESCE(x.amount, 0) AS amount, 
             COALESCE(x.count, 0) AS count, 
-            x.dashboard_currency 
+            x.dashboard_currency,
+            x.invoice_type
           FROM date_series ds
           LEFT JOIN x ON x.duration = ds.duration
         )
@@ -591,43 +614,47 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            WITH date_series AS (
-              SELECT generate_series(
-                       date_trunc('day', :asOnDate::date - '29 day'::interval),
-                       date_trunc('day', :asOnDate::date),
-                       '1 day'::interval
-                     ) AS date
-            )
-        , x AS (
-          SELECT DISTINCT
-            aau.document_no AS id,
-            date_trunc('day', aau.transaction_date) AS duration,
-            aau.amount_loc AS amount,
-            aau.led_currency AS dashboard_currency
-          FROM ares.account_utilizations aau
-          INNER JOIN organizations o ON o.id = aau.tagged_organization_id
-          LEFT JOIN lead_organization_segmentations los ON los.lead_organization_id = o.lead_organization_id
-          WHERE aau.acc_mode = 'AR'
-            AND aau.document_status = 'FINAL'
-            AND aau.deleted_at IS NULL 
-            AND (aau.acc_type::VARCHAR = :accType)
-            AND (aau.entity_code = :entityCode)
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
-            AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (:serviceType IS NULL OR aau.service_type = :serviceType)
-        )
+        WITH date_series AS (
+    SELECT generate_series(
+       date_trunc('day', :asOnDate::date - '29 day'::interval),
+       date_trunc('day', :asOnDate::date),
+       '1 day'::interval
+    ) AS date), x AS (
+        select 
+        sinv.invoice_type as invoice_type,
+        sinv.id as id,
+        sinv.ledger_total as amount,
+        sinv.ledger_currency as dashboard_currency,
+        sinv.invoice_date  as duration
+        from plutus.invoices sinv
+        INNER JOIN loki.jobs lj on sinv.job_id = lj.id
+        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
+        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
+        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+        inner join organizations o on o.id = pb.organization_id
+        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+        WHERE 
+        pa1.entity_code = :entityCode
+        AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
+        AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
+        AND lj.job_source != 'FREIGHT_FORCE'
+        and sinv.invoice_date is not null
+        AND((:invoiceType) is null or sinv.invoice_type IN (:invoiceType))
+        AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
+          )
         SELECT
           date_series.date AS duration,
           COALESCE(SUM(x.amount), 0) AS amount,
           COALESCE(COUNT(x.id), 0) AS count,
-          x.dashboard_currency
+          x.dashboard_currency,
+          x.invoice_type
         FROM date_series
         LEFT JOIN x ON x.duration = date_series.date
-        GROUP BY date_series.date, x.dashboard_currency
+        GROUP BY date_series.date, x.dashboard_currency, x.invoice_type
         ORDER BY date_series.date ASC
         """
     )
-    suspend fun generateLineGraphViewDailyStats(asOnDate: String, accType: String, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: List<String>?, serviceType: ServiceType?): MutableList<DailySalesStats>?
+    suspend fun generateLineGraphViewDailyStats(asOnDate: String, invoiceType: List<String>?, defaultersOrgIds: List<UUID>?, entityCode: Int?, companyType: List<String>?, serviceType: String?): MutableList<DailySalesStats>?
 
     @NewSpan
     @Query(
