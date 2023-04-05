@@ -631,13 +631,13 @@ class DashboardServiceImpl : DashboardService {
 
         openSearchData.outstandingServiceWise = mapData
         openSearchData.overallStats = OverallStats(
-            totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+            totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount!!).setScale(4, RoundingMode.UP),
             openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
             customersCount = data.sumOf { it.customersCount!! },
             dashboardCurrency = data.first().currency!!,
             openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
             openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
-            onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
+            onAccountAmount = onAccountAmount.setScale(4, RoundingMode.UP),
             onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
         )
 
@@ -810,6 +810,9 @@ class DashboardServiceImpl : DashboardService {
                 hashMap[documentType.name]?.add(revenue)
             }
         }
+
+        hashMap[documentType.name]?.sortedBy { it.duration }
+
         return hashMap
     }
 
