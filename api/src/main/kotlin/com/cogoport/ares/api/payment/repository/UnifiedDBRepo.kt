@@ -46,19 +46,17 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             FROM 
             plutus.invoices sinv
             INNER JOIN loki.jobs lj on lj.id = sinv.job_id
-            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-            inner join organizations o on o.id = pb.organization_id
-            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+            LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            LEFT JOIN organizations o on o.id = pb.organization_id
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
             EXTRACT(YEAR FROM sinv.created_at) = :year
             AND EXTRACT(MONTH FROM sinv.created_at) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (pa1.entity_code = :entityCode)
+            AND (pa.entity_code = :entityCode)
             AND lj.job_source != 'FREIGHT_FORCE'
             AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
-            AND o.status = 'active'
             AND (sinv.migrated = false)
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             AND (:serviceType is null or lj.job_details ->> 'shipmentType' = :serviceType)
@@ -85,16 +83,15 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             plutus.invoices sinv
             INNER JOIN loki.jobs lj on lj.id = sinv.job_id
             INNER JOIN plutus.invoice_events ie on ie.invoice_id = sinv.id
-            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-            inner join organizations o on o.id = pb.organization_id
-            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+            LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            LEFT JOIN organizations o on o.id = pb.organization_id
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
             EXTRACT(YEAR FROM sinv.created_at) = :year
             AND EXTRACT(MONTH FROM sinv.created_at) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
-            AND (pa1.entity_code = :entityCode)
+            AND (pa.entity_code = :entityCode)
             AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
             AND (sinv.migrated = false)
             AND lj.job_source != 'FREIGHT_FORCE'
@@ -207,13 +204,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 date_trunc('day', sinv.invoice_date) AS duration
                 from plutus.invoices sinv
                 INNER JOIN loki.jobs lj on sinv.job_id = lj.id
-                inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-                inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-                inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-                inner join organizations o on o.id = pb.organization_id
-                left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+                INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+                LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+                LEFT JOIN organizations o on o.id = pb.organization_id
+                LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
                 WHERE 
-                pa1.entity_code = :entityCode
+                pa.entity_code = :entityCode
                 AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
                 AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
                 AND lj.job_source != 'FREIGHT_FORCE'
@@ -259,13 +255,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sinv.invoice_date  as duration
         from plutus.invoices sinv
         INNER JOIN loki.jobs lj on sinv.job_id = lj.id
-        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-        inner join organizations o on o.id = pb.organization_id
-        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+        INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+        LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+        LEFT JOIN organizations o on o.id = pb.organization_id
+        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
         WHERE 
-        pa1.entity_code = :entityCode
+        pa.entity_code = :entityCode
         AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
         AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
         AND lj.job_source != 'FREIGHT_FORCE'
@@ -304,13 +299,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sinv.invoice_date  as duration
             from plutus.invoices sinv
             INNER JOIN loki.jobs lj on sinv.job_id = lj.id
-            inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-            inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-            inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-            inner join organizations o on o.id = pb.organization_id
-            left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+            INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+            LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+            LEFT JOIN organizations o on o.id = pb.organization_id
+            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
-            pa1.entity_code = :entityCode
+            pa.entity_code = :entityCode
             AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
             AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
             AND lj.job_source != 'FREIGHT_FORCE'
@@ -350,20 +344,18 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 sinv.ledger_currency AS dashboard_currency,
                 '' as invoice_type
               FROM loki.jobs lj
-              inner join plutus.invoices sinv on sinv.job_id = lj.id
-                inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-                inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-                inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-                inner join organizations o on o.id = pb.organization_id
-                left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+              INNER JOIN  plutus.invoices sinv on sinv.job_id = lj.id
+              INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+              LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+              LEFT JOIN organizations o on o.id = pb.organization_id
+              LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
               WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '3 day'::interval)
                 AND date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
                 AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-                AND (pa1.entity_code = :entityCode)
+                AND (pa.entity_code = :entityCode)
                 AND lj.job_source != 'FREIGHT_FORCE'
                 AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
                 AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-                AND o.status = 'active'
               GROUP BY date_trunc('day', lj.created_at), dashboard_currency
             ), series_with_data AS (
               SELECT 
@@ -398,20 +390,18 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sinv.ledger_currency AS dashboard_currency,
             '' as invoice_type
           FROM loki.jobs lj
-          inner join plutus.invoices sinv on sinv.job_id = lj.id
-        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-        inner join organizations o on o.id = pb.organization_id
-        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+          INNER JOIN plutus.invoices sinv on sinv.job_id = lj.id
+          INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+          LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+          LEFT JOIN organizations o on o.id = pb.organization_id
+          LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
           WHERE 
             lj.created_at > :quarterStart::DATE
             AND lj.created_at < :quarterEnd::DATE
             AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (pa1.entity_code = :entityCode)
+            AND (pa.entity_code = :entityCode)
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND o.status = 'active'
             AND lj.job_source != 'FREIGHT_FORCE'
           GROUP BY date_trunc('month',lj.created_at), dashboard_currency
         ), series_with_data AS (
@@ -447,20 +437,18 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sinv.ledger_currency AS dashboard_currency,
             '' as invoice_type
           FROM loki.jobs lj
-          inner join plutus.invoices sinv on sinv.job_id = lj.id
-        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-        inner join organizations o on o.id = pb.organization_id
-        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+          INNER JOIN plutus.invoices sinv on sinv.job_id = lj.id
+          INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+          LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+          LEFT JOIN organizations o on o.id = pb.organization_id
+          LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
           WHERE date_trunc('year', lj.created_at) >= date_trunc('year', :asOnDate:: date - '3 year'::interval)
             AND date_trunc('year', lj.created_at) <= date_trunc('year', :asOnDate:: date)
             AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (pa1.entity_code = :entityCode)
+            AND (pa.entity_code = :entityCode)
             AND lj.job_source != 'FREIGHT_FORCE'
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND o.status = 'active'
           GROUP BY date_trunc('year', lj.created_at), dashboard_currency
         ), series_with_data AS (
           SELECT 
@@ -634,13 +622,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sinv.invoice_date  as duration
         from plutus.invoices sinv
         INNER JOIN loki.jobs lj on sinv.job_id = lj.id
-        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-        inner join organizations o on o.id = pb.organization_id
-        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+        INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+        LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+        LEFT JOIN organizations o on o.id = pb.organization_id
+        LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
         WHERE 
-        pa1.entity_code = :entityCode
+        pa.entity_code = :entityCode
         AND sinv.status in ('POSTED','FINANCE_ACCEPTED','IRN_GENERATED','FAILED','IRN_FAILED')
         AND (COALESCE(:companyType) is null OR los.segment in (:companyType))
         AND lj.job_source != 'FREIGHT_FORCE'
@@ -680,19 +667,17 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             '' as invoice_type
           FROM loki.jobs lj
         inner join plutus.invoices sinv on sinv.job_id = lj.id
-        inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
-        inner join plutus.addresses pa1 on pa1.invoice_id = sinv.id and pa1.organization_type = 'SELLER'
-        inner join plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
-        inner join organizations o on o.id = pb.organization_id
-        left join lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+          INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
+          LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
+          LEFT JOIN organizations o on o.id = pb.organization_id
+          LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
           WHERE date_trunc('day', lj.created_at) >= date_trunc('day', :asOnDate:: date - '29 day'::interval)
             AND date_trunc('day', lj.created_at) <= date_trunc('day', :asOnDate:: date)
             AND ((:companyType) IS NULL OR los.id IS NULL OR los.segment IN (:companyType))
-            AND (pa1.entity_code = :entityCode)
+            AND (pa.entity_code = :entityCode)
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
             AND lj.job_source != 'FREIGHT_FORCE'
-            AND o.status = 'active'
           GROUP BY date_trunc('day', lj.created_at), dashboard_currency
         ), series_with_data AS (
           SELECT 
