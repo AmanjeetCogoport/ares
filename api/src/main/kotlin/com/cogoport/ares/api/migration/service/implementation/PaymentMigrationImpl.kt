@@ -43,6 +43,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
@@ -76,6 +77,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var migrationLogService: MigrationLogService
 
     @Inject lateinit var cogoClient: AuthClient
+
+    @Inject lateinit var paymentNumGeneratorRepo: PaymentNumGeneratorRepo
 
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
 
@@ -889,7 +892,9 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     override suspend fun migrateSettlementNum(id: Long) {
-        val settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+        val prefix = SequenceSuffix.SETTLEMENT.prefix
+        val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
+        val settlementNum = "${prefix}222300000000$number"
         settlementRepository.updateSettlementNumber(id, settlementNum)
     }
 }
