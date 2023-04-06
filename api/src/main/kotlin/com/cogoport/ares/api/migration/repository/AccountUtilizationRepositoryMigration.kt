@@ -36,6 +36,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             UPDATE account_utilizations 
             SET pay_loc = :payLedger 
             ,pay_curr = :payCurrency
+            ,updated_at = now()
             WHERE 
             document_value = :documentValue
             AND
