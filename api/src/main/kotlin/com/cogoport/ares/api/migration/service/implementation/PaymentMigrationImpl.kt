@@ -12,6 +12,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.AccountTypeMapping
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
@@ -688,13 +689,16 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
-            val paymentNumValue = accountUtilizationRepositoryMigration.getPaymentDetails(
-                sageRefNumber = payLocUpdateRequest.documentValue!!,
-                accMode = payLocUpdateRequest.accMode!!,
-                organizationId = tradePartyDetailId
-            )
+            if (MigrationRecordType.PAYMENT == payLocUpdateRequest.recordType) {
+                val documentValue = accountUtilizationRepositoryMigration.getPaymentDetails(
+                    sageRefNumber = payLocUpdateRequest.documentValue!!,
+                    accMode = payLocUpdateRequest.accMode!!,
+                    organizationId = tradePartyDetailId
+                )
+                if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
+            }
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                paymentNumValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
+                payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -704,14 +708,14 @@ class PaymentMigrationImpl : PaymentMigration {
             } else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
-                        paymentNumValue,
+                        payLocUpdateRequest.documentValue!!,
                         payLocUpdateRequest.payLoc!!,
                         payLocUpdateRequest.payCurr!!,
-                        payLocUpdateRequest.accMode,
+                        payLocUpdateRequest.accMode!!,
                         tradePartyDetailId
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
-                    paymentNumValue,
+                    payLocUpdateRequest.documentValue!!,
                     payLocUpdateRequest.accMode,
                     tradePartyDetailId
                 )
@@ -727,7 +731,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 ) {
                     plutusMessagePublisher.emitInvoiceStatus(
                         PaidUnpaidStatus(
-                            documentValue = paymentNumValue,
+                            documentValue = payLocUpdateRequest.documentValue!!,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -744,7 +748,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     }
                     kuberMessagePublisher.emitBIllStatus(
                         PaidUnpaidStatus(
-                            documentValue = paymentNumValue,
+                            documentValue = payLocUpdateRequest.documentValue!!,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -752,7 +756,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 }
             }
 
-            migrationLogService.saveMigrationLogs(null, null, null, paymentNumValue, migrationStatus)
+            migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue!!, migrationStatus)
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
             if (errorMessage.length > 5000) {
