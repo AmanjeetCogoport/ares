@@ -14,6 +14,6 @@ data class BfReceivableAndPayable(
     var sixtyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var ninetyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var oneEightyDayOverdue: BigDecimal? = 0.toBigDecimal(),
-    var threeSixtyDayOverdue: BigDecimal? = 0.toBigDecimal()
-
+    var threeSixtyDayOverdue: BigDecimal? = 0.toBigDecimal(),
+    var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal()
 )

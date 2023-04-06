@@ -65,6 +65,15 @@ class RabbitMqBootstrap : ChannelInitializer() {
         channel?.queueDeclare("update-customer-details", true, false, false, null)
         channel?.queueBind("update-customer-details", "ares", "customer.outstanding", null)
 
+        channel?.queueDeclare("migrate-settlement-number", true, false, false, null)
+        channel?.queueBind("migrate-settlement-number", "ares", "migrate.settlement.number", null)
+
+        channel?.queueDeclare("update-settlement-bill-updated", true, false, false, null)
+        channel?.queueBind("update-settlement-bill-updated", "ares", "update.settlement.bill.updated", null)
+
+        channel?.queueDeclare("tagged-bill-auto-knockoff", true, false, false, null)
+        channel?.queueBind("tagged-bill-auto-knockoff", "ares", "tagged.bill.auto.knockoff", null)
+
         channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
         channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
     }
