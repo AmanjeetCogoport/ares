@@ -894,7 +894,7 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateSettlementNum(id: Long) {
         val prefix = SequenceSuffix.SETTLEMENT.prefix
         val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
-        val settlementNum = "${prefix}222300000000${number}"
+        val settlementNum = "${prefix}222300000000$number"
         settlementRepository.updateSettlementNumber(id, settlementNum)
     }
 }
