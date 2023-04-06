@@ -26,7 +26,10 @@ class SequenceGeneratorImpl() {
 
     private fun getFormattedYear(): String {
         val now = LocalDate.now()
-        val currentYear = now.year
+        var currentYear = now.year
+        if (now.month < Month.APRIL) {
+            currentYear -= 1
+        }
         val startOfFinancialYear = LocalDate.of(currentYear, Month.APRIL, 1)
         val endOfFinancialYear = startOfFinancialYear.plusYears(1).minusDays(1)
         val formatter = DateTimeFormatter.ofPattern("yy")
