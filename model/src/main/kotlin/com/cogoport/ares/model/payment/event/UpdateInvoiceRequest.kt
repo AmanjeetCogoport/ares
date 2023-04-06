@@ -42,5 +42,8 @@ data class UpdateInvoiceRequest(
     var zoneCode: String?,
     var serviceType: ServiceType?,
     var category: String?,
-    var migrated: Boolean?
+    var migrated: Boolean?,
+    var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
+    var tdsAmount: BigDecimal? = BigDecimal.ZERO,
+    val isVoid: Boolean? = false
 )

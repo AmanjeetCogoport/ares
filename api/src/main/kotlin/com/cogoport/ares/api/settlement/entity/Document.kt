@@ -34,5 +34,6 @@ data class Document(
     var exchangeRate: BigDecimal,
     var approved: Boolean?,
     var signFlag: Short,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var tds: BigDecimal = BigDecimal.ZERO
 )
