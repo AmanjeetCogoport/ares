@@ -172,6 +172,8 @@ class DashboardServiceImpl : DashboardService {
 
         val updatedCompanyType = getCompanyType(request.companyType)
 
+        val companyType = request.companyType
+
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
             2 to "APR - JUN",
@@ -845,7 +847,7 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
-                request.serviceType, request.startDate,
+                request.serviceTypes, request.startDate,
                 request.endDate, request.tradeType, request.entityCode,
             )
         }
@@ -855,7 +857,7 @@ class DashboardServiceImpl : DashboardService {
             "enterprise" to listOf("enterprise")
         )
         return unifiedDBRepo.getBfReceivable(
-            request.serviceType, request.startDate, request.endDate,
+            request.serviceTypes, request.startDate, request.endDate,
             request.tradeType, request.entityCode, customerTypes[request.buyerType]
         )
     }
@@ -867,20 +869,23 @@ class DashboardServiceImpl : DashboardService {
         }
         val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
         var endYear = request.financeYearEnd ?: request.calenderYear ?: thisYear
+        var isLeapYear = Year.isLeap(endYear.toLong())
 
         val monthlyIncomes = unifiedDBRepo.getBfIncomeMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
-            request.entityCode
+            request.entityCode,
+            isLeapYear
         )
         val monthlyExpenses = unifiedDBRepo.getBfExpenseMonthly(
             request.serviceTypes,
             startYear,
             endYear,
             request.isPostTax!!,
-            request.entityCode
+            request.entityCode,
+            isLeapYear
         )
         var response = mutableListOf<BfIncomeExpenseResponse>()
         for (monthIndex in 1..12) {
@@ -893,7 +898,12 @@ class DashboardServiceImpl : DashboardService {
                 )
             )
         }
-
+        if (request.financeYearStart != null) {
+            for (index in 0..2) {
+                val monthData = response.removeAt(0)
+                response.add(monthData)
+            }
+        }
         return response
     }
 
@@ -929,11 +939,13 @@ class DashboardServiceImpl : DashboardService {
         val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
         val cashFlowChange = todayCashFlow?.minus(yesterdayCashFlow!!)
         val cashFlowChangePercentage = cashFlowChange?.let {
-            yesterdayCashFlow?.let {
-                (cashFlowChange.divide(yesterdayCashFlow, 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            yesterdayCashFlow?.takeIf { it != BigDecimal.ZERO }?.let {
+                (cashFlowChange.divide(yesterdayCashFlow.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
             }
-        }
+        } ?: BigDecimal.ZERO
+
         response.totalCashFlow = todayCashFlow
+        response.yesterdayCashFlow = yesterdayCashFlow
         response.cashFlowDiffFromYesterday = cashFlowChangePercentage
         return response
     }
@@ -956,7 +968,7 @@ class DashboardServiceImpl : DashboardService {
             taggedEntityCode,
             request.startDate,
             request.endDate,
-            request.serviceType
+            request.serviceTypes
         )
         listResponse.forEach {
             it.entity = TAGGED_ENTITY_ID_MAPPINGS[it.taggedEntityId].toString()
@@ -967,7 +979,7 @@ class DashboardServiceImpl : DashboardService {
             taggedEntityCode,
             request.startDate,
             request.endDate,
-            request.serviceType
+            request.serviceTypes
         )
         return ShipmentProfitResp(
             shipmentList = listResponse,

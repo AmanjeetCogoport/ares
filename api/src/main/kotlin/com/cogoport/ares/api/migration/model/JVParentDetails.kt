@@ -30,5 +30,7 @@ data class JVParentDetails(
     @JsonProperty("amount")
     val amount: BigDecimal,
     @JsonProperty("description")
-    val description: String
+    val description: String,
+    @JsonProperty("jv_code_num")
+    val jvCodeNum: String
 )

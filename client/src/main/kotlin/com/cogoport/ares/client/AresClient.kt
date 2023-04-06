@@ -6,13 +6,10 @@ import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
-import com.cogoport.ares.model.payment.DailySalesOutstanding
-import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
@@ -23,9 +20,7 @@ import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
-import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
-import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
@@ -38,7 +33,6 @@ import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
-import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -61,15 +55,6 @@ import kotlin.collections.HashMap
 
 @Client(id = "ares")
 interface AresClient {
-
-    @Get("/payments/dashboard/daily-sales-outstanding{?request*}")
-    public suspend fun getDailySalesOutstanding(@Valid request: DsoRequest): DailySalesOutstanding?
-
-    @Get("/payments/dashboard/quarterly-outstanding{?request*}")
-    public suspend fun getQuarterlyOutstanding(@Valid request: QuarterlyOutstandingRequest): QuarterlyOutstanding?
-
-    @Get("/payments/dashboard/outstanding-by-age{?request*}")
-    public suspend fun getOutStandingByAge(@Valid request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse>?
 
     @Get("/payments/dashboard/org-collection{?request*}")
     public suspend fun getOrgCollection(@Valid request: OrganizationReceivablesRequest): List<OutstandingResponse>
@@ -156,6 +141,12 @@ interface AresClient {
     suspend fun getInvoiceListForTradeParties(
         @Valid @Body request: InvoiceListRequestForTradeParty
     ): ResponseList<InvoiceListResponse?>
+
+    @Get("/payments/invoice/amount-mismatch")
+    suspend fun getInvoicesAmountMismatch(): List<Long>?
+
+    @Get("/payments/invoice/missing-invoices")
+    suspend fun getInvoicesNotPresentInAres(): List<Long>?
 
     @Post("/payments/accounts/settle-tagged-invoice-payment")
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)

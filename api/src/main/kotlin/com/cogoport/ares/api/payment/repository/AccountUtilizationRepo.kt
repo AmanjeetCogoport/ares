@@ -96,6 +96,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             WHERE (:query IS NULL OR document_value LIKE :query)
                 AND organization_id = :organizationId
                 AND acc_type = 'REC'
+                AND entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
@@ -116,7 +117,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -531,4 +532,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getInvoicesOnAccountAgeingBucket(entityCode: Int, orgId: String?): List<CustomerOutstandingAgeing>
+    @NewSpan
+    @Query(
+        """
+        SELECT  COUNT(distinct trade_party_mapping_id) FROM account_utilizations
+        WHERE acc_mode = 'AP' AND acc_type IN ('PINV','PREIMB') AND deleted_at IS NULL AND migrated = false AND amount_curr > pay_curr AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getOrganizationCount(entity: Int?): Long?
 }
