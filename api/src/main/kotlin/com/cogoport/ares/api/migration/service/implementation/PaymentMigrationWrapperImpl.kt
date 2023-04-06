@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
+import com.cogoport.ares.model.payment.AccMode
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -219,7 +220,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
-            val account = accountUtilizationRepository.findRecord(it.documentNo)
+            val account = accountUtilizationRepository.findRecord(it.documentNo, null, AccMode.AP.name)
             if (account != null) {
                 accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
             }
