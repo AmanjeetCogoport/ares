@@ -4,7 +4,9 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.time.LocalDateTime
+import java.time.LocalDate
+import java.time.Month
+import java.time.format.DateTimeFormatter
 
 @Singleton
 class SequenceGeneratorImpl() {
@@ -23,8 +25,13 @@ class SequenceGeneratorImpl() {
     }
 
     private fun getFormattedYear(): String {
-        val currYear = LocalDateTime.now().toString().split("-")[0].substring(2, 4)
-        val lastYear = LocalDateTime.now().minusYears(1).toString().split("-")[0].substring(2, 4)
-        return lastYear.plus(currYear)
+        val now = LocalDate.now()
+        val currentYear = now.year
+        val startOfFinancialYear = LocalDate.of(currentYear, Month.APRIL, 1)
+        val endOfFinancialYear = startOfFinancialYear.plusYears(1).minusDays(1)
+        val formatter = DateTimeFormatter.ofPattern("yy")
+        val startYear = startOfFinancialYear.format(formatter)
+        val endYear = endOfFinancialYear.format(formatter)
+        return startYear.plus(endYear)
     }
 }
