@@ -935,16 +935,6 @@ class DashboardServiceImpl : DashboardService {
         return accTypeDocStatusMapping[documentType]
     }
 
-    private fun getCompanyType(companyType: CompanyType?): List<String>? {
-        return when (companyType != null) {
-            true -> when (companyType == CompanyType.IE) {
-                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
-                else -> listOf(companyType.value)
-            }
-            else -> null
-        }
-    }
-
     override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
         if (request.accountMode == AccMode.AP) {
             return unifiedDBRepo.getBfPayable(
@@ -1180,6 +1170,16 @@ class DashboardServiceImpl : DashboardService {
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
+        }
+    }
+
+    private fun getCompanyType(companyType: CompanyType?): List<String>? {
+        return when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
         }
     }
 }
