@@ -114,7 +114,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             WHERE au.amount_curr <> 0 
                 AND s.source_id = :sourceId
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
-                AND s.deleted_at is null  and s.is_void = false and
+                AND s.deleted_at is null  and s.is_void = false
                 AND au.deleted_at is null  and au.is_void = false
             GROUP BY au.id, s.source_id, s.destination_id, s.destination_type, s.currency, s.led_currency
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
