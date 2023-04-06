@@ -363,7 +363,6 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 AND lj.job_source != 'FREIGHT_FORCE'
                 AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
                 AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-                AND (pa.organization_type = 'BUYER')
                 AND o.status = 'active'
               GROUP BY date_trunc('day', lj.created_at), dashboard_currency
             ), series_with_data AS (
@@ -412,7 +411,6 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND (pa1.entity_code = :entityCode)
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'BUYER')
             AND o.status = 'active'
             AND lj.job_source != 'FREIGHT_FORCE'
           GROUP BY date_trunc('month',lj.created_at), dashboard_currency
@@ -462,7 +460,6 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND lj.job_source != 'FREIGHT_FORCE'
             AND (:serviceType IS NULL OR lj.job_details ->> 'shipmentType' = :serviceType)
             AND (sinv.status NOT IN ('FINANCE_REJECTED', 'CONSOLIDATED', 'IRN_CANCELLED'))
-            AND (pa.organization_type = 'BUYER')
             AND o.status = 'active'
           GROUP BY date_trunc('year', lj.created_at), dashboard_currency
         ), series_with_data AS (
@@ -679,7 +676,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('day', lj.created_at) AS duration,
             coalesce(sum(CASE WHEN invoice_type = 'INVOICE' THEN sinv.ledger_total ELSE -1 * (sinv.ledger_total) END), 0) AS amount,
             count(DISTINCT lj.id) AS count,
-            sinv.ledger_currency AS dashboard_currency
+            sinv.ledger_currency AS dashboard_currency,
+            '' as invoice_type
           FROM loki.jobs lj
         inner join plutus.invoices sinv on sinv.job_id = lj.id
         inner join plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'BUYER'
@@ -701,7 +699,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ds.duration, 
             COALESCE(x.amount, 0) AS amount, 
             COALESCE(x.count, 0) AS count, 
-            x.dashboard_currency 
+            x.dashboard_currency,
+            x.invoice_type
           FROM date_series ds
           LEFT JOIN x ON x.duration = ds.duration
         )
