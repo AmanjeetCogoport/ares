@@ -76,6 +76,8 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var migrationLogService: MigrationLogService
 
+    @Inject lateinit var paymentNumGeneratorRepo: PaymentNumGeneratorRepo
+
     @Inject lateinit var cogoClient: AuthClient
 
     @Inject lateinit var paymentNumGeneratorRepo: PaymentNumGeneratorRepo
