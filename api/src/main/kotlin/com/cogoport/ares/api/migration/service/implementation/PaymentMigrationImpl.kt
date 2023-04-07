@@ -80,8 +80,6 @@ class PaymentMigrationImpl : PaymentMigration {
 
     @Inject lateinit var cogoClient: AuthClient
 
-    @Inject lateinit var paymentNumGeneratorRepo: PaymentNumGeneratorRepo
-
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
 
     @Inject lateinit var journalVoucherRepository: JournalVoucherRepository
