@@ -8,5 +8,6 @@ data class DailySalesStats(
     var duration: String?,
     var amount: BigDecimal,
     var dashboardCurrency: String? = "INR",
-    var count: Long? = 0L
+    var count: Long? = 0L,
+    var invoiceType: String? = null
 )
