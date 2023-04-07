@@ -471,7 +471,7 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val data = unifiedDBRepo.getInvoices(year, monthKey, entityCode, updatedCompanyType, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoiceTatStats(year, monthKey, entityCode, updatedCompanyType, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 

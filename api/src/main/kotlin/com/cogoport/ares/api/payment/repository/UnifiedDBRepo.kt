@@ -51,8 +51,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN organizations o on o.id = pb.organization_id
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
-            EXTRACT(YEAR FROM sinv.created_at) = :year
-            AND EXTRACT(MONTH FROM sinv.created_at) = :month
+            EXTRACT(YEAR FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :year
+            AND EXTRACT(MONTH FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (pa.entity_code = :entityCode)
             AND lj.job_source != 'FREIGHT_FORCE'
@@ -88,8 +88,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LEFT JOIN organizations o on o.id = pb.organization_id
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
             WHERE 
-            EXTRACT(YEAR FROM sinv.created_at) = :year
-            AND EXTRACT(MONTH FROM sinv.created_at) = :month
+            EXTRACT(YEAR FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :year
+            AND EXTRACT(MONTH FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :month
             AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
             AND (pa.entity_code = :entityCode)
             AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')
@@ -100,7 +100,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by sinv.id, sinv.status, sinv.payment_status
         """
     )
-    fun getInvoices(year: Int?, month: Int?, entityCode: Int?, companyType: List<String>?, serviceType: String?): List<SalesInvoiceTimelineResponse>
+    fun getInvoiceTatStats(year: Int?, month: Int?, entityCode: Int?, companyType: List<String>?, serviceType: String?): List<SalesInvoiceTimelineResponse>
     @NewSpan
     @Query(
         """
