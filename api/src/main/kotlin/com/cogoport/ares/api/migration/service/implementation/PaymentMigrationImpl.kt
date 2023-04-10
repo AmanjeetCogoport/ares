@@ -12,6 +12,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.AccountTypeMapping
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
 import com.cogoport.ares.api.migration.constants.SettlementTypeMigration
@@ -42,6 +43,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
@@ -73,6 +75,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var paymentMigrationRepository: PaymentMigrationRepository
 
     @Inject lateinit var migrationLogService: MigrationLogService
+
+    @Inject lateinit var paymentNumGeneratorRepo: PaymentNumGeneratorRepo
 
     @Inject lateinit var cogoClient: AuthClient
 
@@ -691,13 +695,16 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
-            val paymentNumValue = accountUtilizationRepositoryMigration.getPaymentDetails(
-                sageRefNumber = payLocUpdateRequest.documentValue!!,
-                accMode = payLocUpdateRequest.accMode!!,
-                organizationId = tradePartyDetailId
-            )
+            if (MigrationRecordType.PAYMENT == payLocUpdateRequest.recordType) {
+                val documentValue = accountUtilizationRepositoryMigration.getPaymentDetails(
+                    sageRefNumber = payLocUpdateRequest.documentValue!!,
+                    accMode = payLocUpdateRequest.accMode!!,
+                    organizationId = tradePartyDetailId
+                )
+                if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
+            }
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
-                paymentNumValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
+                payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
@@ -707,14 +714,14 @@ class PaymentMigrationImpl : PaymentMigration {
             } else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
-                        paymentNumValue,
+                        payLocUpdateRequest.documentValue!!,
                         payLocUpdateRequest.payLoc!!,
                         payLocUpdateRequest.payCurr!!,
-                        payLocUpdateRequest.accMode,
+                        payLocUpdateRequest.accMode!!,
                         tradePartyDetailId
                     )
                 val response = accountUtilizationRepositoryMigration.getAccType(
-                    paymentNumValue,
+                    payLocUpdateRequest.documentValue!!,
                     payLocUpdateRequest.accMode,
                     tradePartyDetailId
                 )
@@ -730,7 +737,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 ) {
                     plutusMessagePublisher.emitInvoiceStatus(
                         PaidUnpaidStatus(
-                            documentValue = paymentNumValue,
+                            documentValue = payLocUpdateRequest.documentValue!!,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -747,7 +754,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     }
                     kuberMessagePublisher.emitBIllStatus(
                         PaidUnpaidStatus(
-                            documentValue = paymentNumValue,
+                            documentValue = payLocUpdateRequest.documentValue!!,
                             documentNumber = response.documentNo!!,
                             status = status
                         )
@@ -755,7 +762,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 }
             }
 
-            migrationLogService.saveMigrationLogs(null, null, null, paymentNumValue, migrationStatus)
+            migrationLogService.saveMigrationLogs(null, null, null, payLocUpdateRequest.documentValue!!, migrationStatus)
         } catch (ex: Exception) {
             var errorMessage = ex.stackTraceToString()
             if (errorMessage.length > 5000) {
@@ -885,7 +892,9 @@ class PaymentMigrationImpl : PaymentMigration {
     }
 
     override suspend fun migrateSettlementNum(id: Long) {
-        val settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+        val prefix = SequenceSuffix.SETTLEMENT.prefix
+        val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
+        val settlementNum = "${prefix}222300000000$number"
         settlementRepository.updateSettlementNumber(id, settlementNum)
     }
 }
