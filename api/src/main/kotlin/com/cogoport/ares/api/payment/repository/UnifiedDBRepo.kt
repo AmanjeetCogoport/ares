@@ -752,6 +752,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
         AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
@@ -761,7 +762,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         endDate: String?,
         tradeType: List<String>?,
         entityCode: MutableList<Int>?,
-        customerTypes: List<String>?
+        customerTypes: List<String>?,
+        defaultersOrgIds: List<UUID>?
     ): BfReceivableAndPayable
 
     @NewSpan
@@ -1267,11 +1269,11 @@ GROUP BY
 	o.sage_company_id
         ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
-                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / 100) ELSE random() END
+                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 ELSE random() END
             END 
             Desc,
             CASE WHEN :sortType = 'Asc' THEN
-                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / 100) ELSE random() END    
+                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 ELSE random() END    
             END 
             Asc
     OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
@@ -1314,6 +1316,7 @@ WHERE
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         """
     )
@@ -1323,7 +1326,8 @@ WHERE
         serviceTypes: List<ServiceType>,
         entityCode: MutableList<Int>?,
         startDate: String?,
-        endDate: String?
+        endDate: String?,
+        defaultersOrgIds: List<UUID>?
     ): BigDecimal?
     @Query(
         """
@@ -1392,6 +1396,7 @@ WHERE
 		AND au.acc_type IN ('SINV','SCN','SREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         """
     )
@@ -1400,6 +1405,7 @@ WHERE
         startDate: String?,
         endDate: String?,
         entityCode: MutableList<Int>?,
+        defaultersOrgIds: List<UUID>?
     ): ServiceWiseCardData
 
     @Query(
