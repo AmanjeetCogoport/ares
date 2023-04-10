@@ -106,8 +106,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
-        WHERE document_status = 'FINAL'
-        AND (:entityCode is null OR aau.entity_code = :entityCode)
+        WHERE 
+        document_status = 'FINAL'
+        AND (aau.entity_code = :entityCode)
         AND aau.transaction_date < NOW() 
         AND acc_type = 'REC'
         AND (acc_mode = 'AR')
@@ -136,18 +137,16 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ares.account_utilizations aau 
             INNER JOIN plutus.invoices pinv on pinv.id = aau.document_no
             INNER JOIN loki.jobs lj on lj.id = pinv.job_id
-            where
-            aau.trade_party_mapping_id is not null 
-            AND acc_mode ='AR'
-            AND acc_type in ('SINV', 'SCN')
+            WHERE
+            acc_mode = 'AR'
+            AND acc_type in ('SINV', 'SCN', 'SREIMB')
             AND aau.document_status = 'FINAL'
-            AND aau.migrated = false
-            AND (amount_loc-pay_loc) > 0 
+            AND aau.due_date IS NOT NULL
             AND aau.transaction_date::date <= Now()
-            AND (:entityCode is null or aau.entity_code = :entityCode)
-            AND lj.job_source != 'FREIGHT_FORCE'
+            AND ( aau.entity_code = :entityCode)
+            AND (lj.job_source != 'FREIGHT_FORCE')
             AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by aau.led_currency,aau.service_type, aau.led_currency, lj.job_details  ->> 'tradeType'
+            group by aau.led_currency,aau.service_type, lj.job_details  ->> 'tradeType'
         """
     )
     fun getOutstandingData(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
