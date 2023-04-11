@@ -34,6 +34,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -1422,6 +1423,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<CustomerOrgOutstanding>
 
+<<<<<<< Updated upstream
     @NewSpan
     @Query(
         """
@@ -1453,4 +1455,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrganizationCount(entity: Int?): Long?
+=======
+    @Query("""
+        SELECT organization_id, 
+        SUM(amount_loc - pay_loc) AS opening_balance
+        FROM account_utilizations
+        WHERE status = 'FINAL' and entity_code = :entityCode and
+        transaction_date <= :transactionDate group by organization_id
+    """)
+    suspend fun getOpeningBalances(transactionDate: Date, entityCode: Int): OpenbalanceResponse
+>>>>>>> Stashed changes
 }
