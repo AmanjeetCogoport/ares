@@ -66,37 +66,40 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         *
         FROM (
             SELECT
-                acc_code,
-                acc_mode,
-                amount_curr AS payment_amount,
-                amount_loc,
-                pay_curr AS utilized_amount,
-                pay_loc AS payment_loc,
-                created_at,
-                currency,
-                entity_code,
-                led_currency AS ledger_currency,
-                organization_name,
-                document_no,
-                document_value AS payment_number,
-                sign_flag,
-                transaction_date,
-                updated_at,
+                au.acc_code,
+                p.sage_ref_number,
+                au.acc_mode,
+                au.amount_curr AS payment_amount,
+                au.amount_loc,
+                au.pay_curr AS utilized_amount,
+                au.pay_loc AS payment_loc,
+                au.created_at,
+                au.currency,
+                au.entity_code,
+                au.led_currency AS ledger_currency,
+                au.organization_name,
+                au.document_no,
+                au.document_value AS payment_number,
+                au.sign_flag,
+                au.transaction_date,
+                au.updated_at,
                 (
-                    CASE WHEN pay_curr = 0 THEN
+                    CASE WHEN au.pay_curr = 0 THEN
                         'UNUTILIZED'
-                    WHEN amount_curr = pay_curr THEN
+                    WHEN au.amount_curr = au.pay_curr THEN
                         'PARTIAL_UTILIZED'
                     ELSE
                         'UTILIZED'
                     END
                 ) utilization_status
             FROM
-                account_utilizations
-            WHERE (:query IS NULL OR document_value LIKE :query)
-                AND organization_id = :organizationId
-                AND acc_type = 'REC'
-                AND entity_code = :entityCode
+                account_utilizations au
+		        JOIN payments p ON au.document_value = p.payment_num_value
+            WHERE (:query IS NULL OR au.document_value LIKE :query 
+                    OR p.sage_ref_number LIKE :query)
+                AND au.organization_id = :organizationId
+                AND au.acc_type = 'REC'
+                AND au.entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
