@@ -778,8 +778,10 @@ class OutStandingServiceImpl : OutStandingService {
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 
+        val count = accountUtilizationRepo.getCount(request.orgId!!, request.statusList, "%${request.query}%", request.entityCode!!)
+
         responseList.list = list
-        responseList.totalRecords = list.size.toLong()
+        responseList.totalRecords = count
         responseList.totalPages = if (responseList.totalRecords!! % request.pageLimit == 0.toLong()) (responseList.totalRecords!! / request.pageLimit) else (responseList.totalRecords!! / request.pageLimit) + 1.toLong()
         responseList.pageNo = request.page
 
