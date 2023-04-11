@@ -67,4 +67,17 @@ class Scheduler(
             }
         }
     }
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Europe/Paris")
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Ho_Chi_Minh")
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Kolkata")
+
+    /**
+     * Asia/Singapore is UTC+08:00
+     **/
+    @Scheduled(cron = "0 16 * * *")
+    fun createLedger() {
+    }
 }
