@@ -86,7 +86,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 (
                     CASE WHEN au.pay_curr = 0 THEN
                         'UNUTILIZED'
-                    WHEN au.amount_curr = au.pay_curr THEN
+                    WHEN (au.amount_curr - au.pay_curr) > 0 THEN
                         'PARTIAL_UTILIZED'
                     ELSE
                         'UTILIZED'
@@ -572,7 +572,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 (
                     CASE WHEN au.pay_curr = 0 THEN
                         'UNUTILIZED'
-                    WHEN au.amount_curr = au.pay_curr THEN
+                    WHEN (au.amount_curr - au.pay_curr) > 0 THEN
                         'PARTIAL_UTILIZED'
                     ELSE
                         'UTILIZED'
