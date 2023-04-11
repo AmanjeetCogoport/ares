@@ -544,4 +544,52 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     """
     )
     suspend fun getOrganizationCount(entity: Int?): Long?
+
+    @NewSpan
+    @Query(
+        """ 
+        SELECT
+        count(*)
+        FROM (
+            SELECT
+                au.acc_code,
+                p.sage_ref_number,
+                au.acc_mode,
+                au.amount_curr AS payment_amount,
+                au.amount_loc,
+                au.pay_curr AS utilized_amount,
+                au.pay_loc AS payment_loc,
+                au.created_at,
+                au.currency,
+                au.entity_code,
+                au.led_currency AS ledger_currency,
+                au.organization_name,
+                au.document_no,
+                au.document_value AS payment_number,
+                au.sign_flag,
+                au.transaction_date,
+                au.updated_at,
+                (
+                    CASE WHEN au.pay_curr = 0 THEN
+                        'UNUTILIZED'
+                    WHEN au.amount_curr = au.pay_curr THEN
+                        'PARTIAL_UTILIZED'
+                    ELSE
+                        'UTILIZED'
+                    END
+                ) utilization_status
+            FROM
+                account_utilizations au
+		        JOIN payments p ON au.document_value = p.payment_num_value
+            WHERE (:query IS NULL OR au.document_value LIKE :query 
+                    OR p.sage_ref_number LIKE :query)
+                AND au.organization_id = :organizationId
+                AND au.acc_type = 'REC'
+                AND au.entity_code = :entityCode
+        ) subquery
+        WHERE
+            utilization_status::varchar IN (:statusList)
+        """
+    )
+    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int): Long
 }
