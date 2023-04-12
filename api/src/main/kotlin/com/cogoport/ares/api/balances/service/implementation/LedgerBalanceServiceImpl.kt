@@ -11,9 +11,10 @@ import com.cogoport.ares.model.common.ResponseList
 import jakarta.inject.Singleton
 import java.util.Date
 import java.util.UUID
+import javax.transaction.Transactional
 
 @Singleton
-class LedgerBalanceServiceImpl(
+open class LedgerBalanceServiceImpl(
     private val ledgerBalanceRepo: LedgerBalanceRepo,
     private var accountUtilizationRepository: AccountUtilizationRepository,
 ) : LedgerBalanceService {
@@ -47,7 +48,8 @@ class LedgerBalanceServiceImpl(
         return responseList
     }
 
-    suspend fun createLedgerBalances(currentDate: Date, entityCode: Int) {
+    @Transactional
+    open suspend fun createLedgerBalances(currentDate: Date, entityCode: Int) {
         val openingBalances = accountUtilizationRepository.getLedgerBalances(currentDate, entityCode)
             ?: return
         val ledgerBalanceList = mutableListOf<LedgerBalance>()
