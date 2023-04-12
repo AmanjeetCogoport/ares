@@ -28,7 +28,11 @@ class BalanceServiceImpl(
         val openingBalList = openingBalanceRepo.listOpeningBalances(
             query,
             listOpeningBalanceReq.entityCode!!,
-            listOpeningBalanceReq.date!!
+            listOpeningBalanceReq.date!!,
+            listOpeningBalanceReq.pageIndex,
+            listOpeningBalanceReq.pageSize,
+            listOpeningBalanceReq.sortField,
+            listOpeningBalanceReq.sortType
         ) ?: throw AresException(AresError.ERR_1002, " No opening balances found")
 
         val totalCount = openingBalanceRepo.countOpeningBalances(

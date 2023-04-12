@@ -1466,8 +1466,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             account_utilizations
         WHERE
             document_status = 'FINAL'
-            AND entity_code := entityCode 
-            AND transaction_date <= transactionDate::DATE
+            AND entity_code = :entityCode 
+            AND transaction_date <= :transactionDate::DATE
+            AND acc_type != 'NEWPR'
         GROUP BY
             organization_id, led_currency
     """
