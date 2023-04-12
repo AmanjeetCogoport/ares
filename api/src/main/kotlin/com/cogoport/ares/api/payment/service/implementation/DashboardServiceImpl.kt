@@ -967,7 +967,11 @@ class DashboardServiceImpl : DashboardService {
             yesterdayTotalOutStanding = RedisClient.get("yesterdayArOutStanding")?.toBigDecimal() ?: 0.toBigDecimal()
             yesterdayOnAccountPayment = RedisClient.get("yesterdayArOnAccount")?.toBigDecimal() ?: 0.toBigDecimal()
         }
-        val totalOutStanding = (response.overdueAmount?.plus(response.nonOverdueAmount!!))?.minus(onAccountPayment!!)
+        var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
+        if(request.accountMode == AccMode.AP){
+            totalReceivableOrPayable =  totalReceivableOrPayable?.times((-1).toBigDecimal())
+        }
+        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
         val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(yesterdayOnAccountPayment)
         val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(yesterdayTotalOutStanding)
         response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {

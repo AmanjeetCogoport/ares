@@ -114,7 +114,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
         AND (COALESCE(:serviceTypes) is null or aau.service_type in (:serviceTypes))
         AND (:startDate is null or :endDate is null or aau.transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
-        AND (CASE WHEN :accMode = 'AP' THEN aau.migrated = FALSE ELSE NULL END)
+        AND (CASE WHEN :accMode = 'AP' THEN aau.migrated = FALSE ELSE TRUE END)
         AND deleted_at is null
         """
     )

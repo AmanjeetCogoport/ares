@@ -67,4 +67,11 @@ class Scheduler(
             }
         }
     }
+
+    @Scheduled(cron = "0 0 * * *")
+    fun saveDailyOnAccountAndOutstandingOnRedis() {
+        runBlocking {
+        emitter.emitSaveDailyOnAccountAndOutstandingOnRedis()
+        }
+    }
 }

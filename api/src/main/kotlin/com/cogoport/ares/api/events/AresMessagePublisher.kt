@@ -53,4 +53,7 @@ interface AresMessagePublisher {
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
     @Binding("tagged.bill.auto.knockoff")
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
+
+    @Binding("save.daily.outstanding.in.redis")
+    suspend fun emitSaveDailyOnAccountAndOutstandingOnRedis()
 }
