@@ -1,8 +1,6 @@
 package com.cogoport.ares.api.balances.repository
 
 import com.cogoport.ares.api.balances.entity.OpeningBalance
-import com.cogoport.ares.api.payment.entity.AccountUtilization
-import com.cogoport.ares.model.payment.OpenBalance
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -11,7 +9,9 @@ import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface OpeningBalanceRepo: CoroutineCrudRepository<OpeningBalance, Long> {
+interface OpeningBalanceRepo : CoroutineCrudRepository<OpeningBalance, Long> {
+
+    suspend fun saveAll(openingBalanceList: List<OpeningBalance>): List<OpeningBalance>
 
     @Query(
         """
@@ -43,5 +43,4 @@ interface OpeningBalanceRepo: CoroutineCrudRepository<OpeningBalance, Long> {
         """
     )
     suspend fun countOpeningBalances(query: String?, entityId: UUID, date: Date): Long
-
 }

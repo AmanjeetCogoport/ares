@@ -7,6 +7,7 @@ CREATE TABLE opening_balances (
 	id                      BIGSERIAL   NOT NULL,
 	trade_party_detail_id   UUID        NOT NULL,
 	balance_date            DATE        NOT NULL,
+	balance_amount          DECIMAL(18,4)   NOT NULL,
 	ledger_currency         VARCHAR(3)  NOT NULL REFERENCES currencies (currency_code),
 	entity_id               UUID        NOT NULL,
 	entity_code             int4        NOT NULL,

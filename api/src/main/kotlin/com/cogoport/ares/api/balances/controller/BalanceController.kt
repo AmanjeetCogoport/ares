@@ -16,7 +16,7 @@ class BalanceController(
 ) {
 
     @Get("/list{?requests*}")
-    suspend fun listOpeningBalances(@Valid requests: ListOpeningBalancesReq): ResponseList<OpeningBalance>{
+    suspend fun listOpeningBalances(@Valid requests: ListOpeningBalancesReq): ResponseList<OpeningBalance> {
         return balanceService.getOpeningBalances(requests)
     }
 }

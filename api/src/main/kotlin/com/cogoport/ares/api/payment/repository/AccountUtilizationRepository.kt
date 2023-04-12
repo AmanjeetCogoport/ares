@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
+import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CollectionTrend
@@ -1423,7 +1424,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<CustomerOrgOutstanding>
 
-<<<<<<< Updated upstream
     @NewSpan
     @Query(
         """
@@ -1455,14 +1455,22 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrganizationCount(entity: Int?): Long?
-=======
-    @Query("""
-        SELECT organization_id, 
-        SUM(amount_loc - pay_loc) AS opening_balance
-        FROM account_utilizations
-        WHERE status = 'FINAL' and entity_code = :entityCode and
-        transaction_date <= :transactionDate group by organization_id
-    """)
-    suspend fun getOpeningBalances(transactionDate: Date, entityCode: Int): OpenbalanceResponse
->>>>>>> Stashed changes
+
+    @Query(
+        """
+        SELECT
+            organization_id as trade_party_detail_id,
+            SUM(amount_loc - pay_loc) AS balance_amount,
+            led_currency as ledger_currency
+        FROM
+            account_utilizations
+        WHERE
+            document_status = 'FINAL'
+            AND entity_code := entityCode 
+            AND transaction_date <= transactionDate::DATE
+        GROUP BY
+            organization_id, led_currency
+    """
+    )
+    suspend fun getOpeningBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
 }
