@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.entity
 
+import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
@@ -15,5 +16,14 @@ data class BfReceivableAndPayable(
     var ninetyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var oneEightyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var threeSixtyDayOverdue: BigDecimal? = 0.toBigDecimal(),
-    var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal()
-)
+    var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal(),
+) {
+    @field:javax.persistence.Transient
+    var onAccountAndOutStandingData: MutableList<OnAccountAndOutstandingResp>? = null
+
+    @field:javax.persistence.Transient
+    var onAccountChangeFromYesterday: BigDecimal? = 0.toBigDecimal()
+
+    @field:javax.persistence.Transient
+    var outstandingChangeFromYesterday: BigDecimal? = 0.toBigDecimal()
+}

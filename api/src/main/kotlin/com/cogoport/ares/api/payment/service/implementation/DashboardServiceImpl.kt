@@ -30,6 +30,7 @@ import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
@@ -87,6 +88,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import com.cogoport.brahma.redis.Client as RedisClient
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -608,7 +610,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
@@ -936,21 +938,52 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+        val response: BfReceivableAndPayable?
+        val onAccountPayment: BigDecimal?
+        val pieChartData: MutableList<OnAccountAndOutstandingResp> = mutableListOf()
+        val yesterdayTotalOutStanding: BigDecimal
+        val yesterdayOnAccountPayment: BigDecimal
         if (request.accountMode == AccMode.AP) {
-            return unifiedDBRepo.getBfPayable(
+            response = unifiedDBRepo.getBfPayable(
                 request.serviceTypes, request.startDate,
                 request.endDate, request.tradeType, request.entityCode,
             )
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
+            yesterdayTotalOutStanding = RedisClient.get("yesterdayApOutStanding")?.toBigDecimal() ?: 0.toBigDecimal()
+            yesterdayOnAccountPayment = RedisClient.get("yesterdayApOnAccount")?.toBigDecimal() ?: 0.toBigDecimal()
+        } else {
+            val defaultOrgIds = getDefaultersOrgIds()
+            val customerTypes = mapOf(
+                "cp" to listOf("channel_partner"),
+                "ie" to listOf("mid_size", "long_tail"),
+                "enterprise" to listOf("enterprise")
+            )
+
+            response = unifiedDBRepo.getBfReceivable(
+                request.serviceTypes, request.startDate, request.endDate,
+                request.tradeType, request.entityCode, customerTypes[request.buyerType]
+            )
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
+            yesterdayTotalOutStanding = RedisClient.get("yesterdayArOutStanding")?.toBigDecimal() ?: 0.toBigDecimal()
+            yesterdayOnAccountPayment = RedisClient.get("yesterdayArOnAccount")?.toBigDecimal() ?: 0.toBigDecimal()
         }
-        val customerTypes = mapOf(
-            "cp" to listOf("channel_partner"),
-            "ie" to listOf("mid_size", "long_tail"),
-            "enterprise" to listOf("enterprise")
-        )
-        return unifiedDBRepo.getBfReceivable(
-            request.serviceTypes, request.startDate, request.endDate,
-            request.tradeType, request.entityCode, customerTypes[request.buyerType]
-        )
+        val totalOutStanding = (response.overdueAmount?.plus(response.nonOverdueAmount!!))?.minus(onAccountPayment!!)
+        val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(yesterdayOnAccountPayment)
+        val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(yesterdayTotalOutStanding)
+        response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {
+            yesterdayOnAccountPayment.takeIf { it != BigDecimal.ZERO }?.let {
+                (onAccountPaymentChangeFromYesterday.divide(yesterdayOnAccountPayment.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        response.outstandingChangeFromYesterday = totalOutStandingChangeFromYesterday?.let {
+            yesterdayTotalOutStanding.takeIf { it != BigDecimal.ZERO }?.let {
+                (totalOutStandingChangeFromYesterday.divide(yesterdayTotalOutStanding.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        pieChartData.add(OnAccountAndOutstandingResp("outstanding", totalOutStanding))
+        pieChartData.add(OnAccountAndOutstandingResp("onAccount", onAccountPayment))
+        response.onAccountAndOutStandingData = pieChartData
+        return response
     }
 
     override suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {

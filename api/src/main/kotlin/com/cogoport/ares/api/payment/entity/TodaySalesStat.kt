@@ -9,5 +9,6 @@ import java.math.BigDecimal
 data class TodaySalesStat(
     var totalRevenue: BigDecimal? = 0.toBigDecimal(),
     var totalInvoices: Long? = 0,
-    var totalSalesOrgs: Long? = 0
+    var totalSalesOrgs: Long? = 0,
+    var totalSalesCreditNotes: Long? = 0
 )

@@ -107,15 +107,26 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
         WHERE document_status = 'FINAL'
-        AND (:entityCode is null OR aau.entity_code = :entityCode)
+        AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
         AND aau.transaction_date < NOW() 
-        AND acc_type = 'REC'
-        AND (acc_mode = 'AR')
+        AND (acc_type = :accType)
+        AND (acc_mode = :accMode)
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:serviceTypes) is null or aau.service_type in (:serviceTypes))
+        AND (:startDate is null or :endDate is null or aau.transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (CASE WHEN :accMode = 'AP' THEN aau.migrated = FALSE ELSE NULL END)
         AND deleted_at is null
         """
     )
-    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmount(
+        entityCode: MutableList<Int>?,
+        defaultersOrgIds: List<UUID>? = null,
+        accMode: String,
+        accType: String,
+        serviceTypes: List<ServiceType>? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ): BigDecimal?
 
     @NewSpan
     @Query(
@@ -1119,6 +1130,11 @@ FROM
 			AND iv.invoice_type = 'INVOICE' THEN
 			1
 		ELSE 0 END) AS total_invoices,
+    sum(
+		CASE WHEN iv.invoice_date::date = :date::date
+			AND iv.invoice_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_sales_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'SINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_sales_orgs
@@ -1153,6 +1169,11 @@ FROM
 			AND bill.bill_type = 'BILL' THEN
 			1
 		ELSE 0 END) AS total_bills,
+    sum(
+		CASE WHEN bill.finance_accept_date::date = :date::date
+			AND bill.bill_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_purchase_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'PINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_purchase_orgs
