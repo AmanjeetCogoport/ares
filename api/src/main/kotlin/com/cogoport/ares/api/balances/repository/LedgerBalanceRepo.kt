@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.balances.repository
 
-import com.cogoport.ares.api.balances.entity.OpeningBalance
+import com.cogoport.ares.api.balances.entity.LedgerBalance
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -8,9 +8,9 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import java.time.LocalDate
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface OpeningBalanceRepo : CoroutineCrudRepository<OpeningBalance, Long> {
+interface LedgerBalanceRepo : CoroutineCrudRepository<LedgerBalance, Long> {
 
-    suspend fun saveAll(openingBalanceList: List<OpeningBalance>): List<OpeningBalance>
+    suspend fun saveAll(ledgerBalanceList: List<LedgerBalance>): List<LedgerBalance>
 
     @Query(
         """
@@ -29,7 +29,7 @@ interface OpeningBalanceRepo : CoroutineCrudRepository<OpeningBalance, Long> {
             LIMIT :pageSize
         """
     )
-    suspend fun listOpeningBalances(query: String?, entityCode: Int, date: LocalDate, pageIndex: Int, pageSize: Int, sortField: String, sortType: String): List<OpeningBalance>?
+    suspend fun listLedgerBalances(query: String?, entityCode: Int, date: LocalDate, pageIndex: Int, pageSize: Int, sortField: String, sortType: String): List<LedgerBalance>?
 
     @Query(
         """
@@ -43,5 +43,5 @@ interface OpeningBalanceRepo : CoroutineCrudRepository<OpeningBalance, Long> {
             AND balance_date = :date::DATE
         """
     )
-    suspend fun countOpeningBalances(query: String?, entityCode: Int, date: LocalDate): Long
+    suspend fun countLedgerBalances(query: String?, entityCode: Int, date: LocalDate): Long
 }

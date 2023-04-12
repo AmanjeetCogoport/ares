@@ -75,20 +75,20 @@ class Scheduler(
     @Scheduled(cron = "0 0 * * *", zoneId = "Europe/Paris")
     fun createLedgerBalancesForNetherlands() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
-        balanceServiceImpl.createOpeningBalances(calendar.time, 201)
+        balanceServiceImpl.createLedgerBalances(calendar.time, 201)
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Ho_Chi_Minh")
     fun createLedgerBalancesForVietnam() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
-        balanceServiceImpl.createOpeningBalances(calendar.time, 501)
+        balanceServiceImpl.createLedgerBalances(calendar.time, 501)
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Kolkata")
     fun createLedgerBalancesForIndia() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
-        balanceServiceImpl.createOpeningBalances(calendar.time, 301)
-        balanceServiceImpl.createOpeningBalances(calendar.time, 101)
+        balanceServiceImpl.createLedgerBalances(calendar.time, 301)
+        balanceServiceImpl.createLedgerBalances(calendar.time, 101)
     }
 
     /**
@@ -97,6 +97,6 @@ class Scheduler(
     @Scheduled(cron = "0 16 * * *")
     fun createLedgerBalancesForSingapore() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
-        balanceServiceImpl.createOpeningBalances(calendar.time, 401)
+        balanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 }

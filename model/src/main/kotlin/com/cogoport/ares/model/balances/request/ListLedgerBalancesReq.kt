@@ -6,7 +6,7 @@ import java.time.LocalDate
 import javax.validation.constraints.NotNull
 
 @Introspected
-data class ListOpeningBalancesReq(
+data class ListLedgerBalancesReq(
     var q: String? = null,
     @field: NotNull
     var entityCode: Int? = null,

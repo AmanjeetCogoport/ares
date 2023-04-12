@@ -12,7 +12,7 @@ import java.util.Date
 import java.util.UUID
 
 @MappedEntity("opening_balances")
-data class OpeningBalance(
+data class LedgerBalance(
     @field:Id @GeneratedValue var id: Long?,
     var tradePartyDetailId: UUID,
     var balanceAmount: BigDecimal,

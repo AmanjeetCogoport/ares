@@ -1473,5 +1473,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             organization_id, led_currency
     """
     )
-    suspend fun getOpeningBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
+    suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
 }
