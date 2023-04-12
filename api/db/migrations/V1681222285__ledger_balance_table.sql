@@ -3,7 +3,7 @@ CREATE TABLE currencies
     currency_code VARCHAR(3) PRIMARY KEY
 );
 
-CREATE TABLE opening_balances (
+CREATE TABLE ledger_balances (
 	id                      BIGSERIAL   NOT NULL,
 	trade_party_detail_id   UUID        NOT NULL,
 	balance_date            DATE        NOT NULL,
@@ -185,6 +185,3 @@ INSERT INTO currencies (currency_code) VALUES
 ('ZMK'),
 ('ZMW'),
 ('ZWL');
-
-
-

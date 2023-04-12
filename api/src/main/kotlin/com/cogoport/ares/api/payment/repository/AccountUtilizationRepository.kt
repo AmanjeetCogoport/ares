@@ -1470,7 +1470,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND transaction_date <= :transactionDate::DATE
             AND acc_type != 'NEWPR'
         GROUP BY
-            organization_id, led_currency
+            trade_party_detail_id, led_currency
     """
     )
     suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?

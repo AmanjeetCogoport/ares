@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.common.service.implementation
 
-import com.cogoport.ares.api.balances.service.implementation.BalanceServiceImpl
+import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
@@ -21,7 +21,7 @@ class Scheduler(
     private var accountUtilizationRepository: AccountUtilizationRepository,
     private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo,
-    private var balanceServiceImpl: BalanceServiceImpl
+    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl
 ) {
 
     @Scheduled(cron = "0 0 * * *")
@@ -75,20 +75,20 @@ class Scheduler(
     @Scheduled(cron = "0 0 * * *", zoneId = "Europe/Paris")
     fun createLedgerBalancesForNetherlands() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
-        balanceServiceImpl.createLedgerBalances(calendar.time, 201)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 201)
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Ho_Chi_Minh")
     fun createLedgerBalancesForVietnam() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
-        balanceServiceImpl.createLedgerBalances(calendar.time, 501)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 501)
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Kolkata")
     fun createLedgerBalancesForIndia() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
-        balanceServiceImpl.createLedgerBalances(calendar.time, 301)
-        balanceServiceImpl.createLedgerBalances(calendar.time, 101)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 301)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
     }
 
     /**
@@ -97,6 +97,6 @@ class Scheduler(
     @Scheduled(cron = "0 16 * * *")
     fun createLedgerBalancesForSingapore() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
-        balanceServiceImpl.createLedgerBalances(calendar.time, 401)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 }

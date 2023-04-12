@@ -17,10 +17,9 @@ interface LedgerBalanceRepo : CoroutineCrudRepository<LedgerBalance, Long> {
             SELECT
                 *
             FROM
-                opening_balances
+                ledger_balances
             WHERE 
-            (:query IS NULL OR ledger_currency ILIKE :query)
-            AND entity_code = :entityCode
+            entity_code = :entityCode
             AND balance_date = :date::DATE
             ORDER BY
                 CASE WHEN :sortType = 'ASC' AND :sortField = 'balanceAmount' THEN balance_amount END ASC,
@@ -29,17 +28,16 @@ interface LedgerBalanceRepo : CoroutineCrudRepository<LedgerBalance, Long> {
             LIMIT :pageSize
         """
     )
-    suspend fun listLedgerBalances(query: String?, entityCode: Int, date: LocalDate, pageIndex: Int, pageSize: Int, sortField: String, sortType: String): List<LedgerBalance>?
+    suspend fun listLedgerBalances(query: String?, entityCode: Int, date: LocalDate, pageIndex: Int, pageSize: Int, sortField: String, sortType: String): List<LedgerBalance>
 
     @Query(
         """
             SELECT
                 COALESCE(COUNT(*), 0)
             FROM
-                opening_balances
+                ledger_balances
             WHERE 
-            (:query IS NULL OR ledger_currency ILIKE :query)
-            AND entity_code = :entityCode
+            entity_code = :entityCode
             AND balance_date = :date::DATE
         """
     )

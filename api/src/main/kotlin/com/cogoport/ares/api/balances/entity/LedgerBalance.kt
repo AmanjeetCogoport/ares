@@ -11,7 +11,7 @@ import java.time.Instant
 import java.util.Date
 import java.util.UUID
 
-@MappedEntity("opening_balances")
+@MappedEntity("ledger_balances")
 data class LedgerBalance(
     @field:Id @GeneratedValue var id: Long?,
     var tradePartyDetailId: UUID,
