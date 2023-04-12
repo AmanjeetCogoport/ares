@@ -116,6 +116,16 @@ class PaymentMigrationImpl : PaymentMigration {
             ) {
                 throw AresException(AresError.ERR_1010, "Not migrating as payment already exists")
             }
+
+            val inactiveBRPNo = mapOf(
+                "40" to "37910",
+                "51640" to "53366",
+                "52529" to "60004",
+                "31594" to "",
+                "35352" to "61248"
+            )
+
+            paymentRecord.sageOrganizationId = if (inactiveBRPNo.containsKey(paymentRecord.sageOrganizationId)) inactiveBRPNo[paymentRecord.sageOrganizationId] else paymentRecord.sageOrganizationId
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
