@@ -1,1 +1,0 @@
-ALTER TABLE payments ADD CONSTRAINT payment_num_unique UNIQUE (payment_num);

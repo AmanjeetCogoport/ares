@@ -1498,7 +1498,7 @@ WHERE
             FROM plutus.invoices 
             WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED', 'CONSOLIDATED')
             AND invoice_type != 'REIMBURSEMENT'
-            GROUP BY job_id)
+            GROUP BY job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
           ABS(x.total_income - j.income) >= 1 OR
           ABS(x.pre_tax_income - j.pre_tax_income) >= 1 OR  
@@ -1518,7 +1518,7 @@ WHERE
             FROM kuber.bills 
             WHERE status NOT IN ('INITIATED', 'DRAFT', 'ON_HOLD', 'LOCKED' 'FINANCE_REJECTED', 'COE_REJECTED', 'VOID')
             AND bill_type NOT IN ('REIMBURSEMENT', 'EXPENSE', 'REIMBURSEMENT_CN')
-            group by job_id)
+            group by job_id order by job_id desc)
         SELECT * FROM loki.jobs j JOIN y ON y.id = j.id WHERE
         ABS(y.pre_tax_expense - j.pre_tax_expense) >= 1 OR  
         ABS(y.expense_tax_amount - j.expense_tax_amount) >= 1 OR     
