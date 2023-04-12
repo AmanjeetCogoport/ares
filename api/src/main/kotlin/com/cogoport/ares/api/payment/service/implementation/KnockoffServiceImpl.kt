@@ -130,13 +130,13 @@ open class KnockoffServiceImpl : KnockoffService {
 
         if (isOverPaid) {
             saveAccountUtilization(
-                savedPaymentRecord.id!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr),
                 (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc)
             )
         } else {
             saveAccountUtilization(
-                savedPaymentRecord.id!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
                 currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid
             )
         }
@@ -227,7 +227,7 @@ open class KnockoffServiceImpl : KnockoffService {
     }
 
     private suspend fun saveAccountUtilization(
-        paymentId: Long,
+        paymentNum: Long,
         paymentNumValue: String,
         knockOffRecord: AccountPayablesFile,
         accountUtilization: AccountUtilization,
@@ -238,7 +238,7 @@ open class KnockoffServiceImpl : KnockoffService {
     ) {
         val accountUtilEntity = AccountUtilization(
             id = null,
-            documentNo = paymentId,
+            documentNo = paymentNum,
             documentValue = paymentNumValue,
             zoneCode = knockOffRecord.zoneCode.toString(),
             serviceType = accountUtilization.serviceType,

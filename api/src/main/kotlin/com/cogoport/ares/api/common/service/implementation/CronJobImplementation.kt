@@ -4,7 +4,7 @@ import com.cogoport.ares.api.common.service.interfaces.CronJobService
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import jakarta.inject.Inject
 
-class CronJobImplementation: CronJobService {
+class CronJobImplementation : CronJobService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo

@@ -1508,7 +1508,8 @@ WHERE
     suspend fun getSalesAmountMismatchInJobs(): List<Long>?
 
     @NewSpan
-    @Query("""
+    @Query(
+        """
         WITH y AS
          (SELECT 
             job_id AS id,
@@ -1523,6 +1524,7 @@ WHERE
         ABS(y.pre_tax_expense - j.pre_tax_expense) >= 1 OR  
         ABS(y.expense_tax_amount - j.expense_tax_amount) >= 1 OR     
         ABS(y.total_expense - j.expense) >= 1 LIMIT 1000
-    """)
+    """
+    )
     suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
 }
