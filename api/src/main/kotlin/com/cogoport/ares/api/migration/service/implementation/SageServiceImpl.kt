@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.model.GlCodeRecordsManager
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
@@ -14,6 +15,7 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
@@ -380,5 +382,18 @@ class SageServiceImpl : SageService {
         val result = Client.sqlQuery(sqlQuery)
         val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
         return jvLineItemNoBPR.recordSets!![0]
+    }
+
+    override suspend fun getGLCode(): List<GlCodeMaster> {
+        val sqlQuery = """
+            select ACC_0 as account_code, DES_0 as description, 
+            COA_0 as led_account, ACCSHO_0 as account_type, CLSCOD_0 as class_code,
+            'c4f72139-e4b9-4cea-b590-32cea179f441' as created_by, 'c4f72139-e4b9-4cea-b590-32cea179f441' as updated_by,
+            CREDAT_0 as created_at, UPDDAT_0 as updated_at
+            from COGO2.GACCOUNT
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val glCodeRecords = ObjectMapper().readValue(result, GlCodeRecordsManager::class.java)
+        return glCodeRecords.recordSets!![0]
     }
 }

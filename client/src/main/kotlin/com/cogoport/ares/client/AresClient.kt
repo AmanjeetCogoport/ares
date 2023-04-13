@@ -36,6 +36,7 @@ import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
+import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
@@ -153,4 +154,7 @@ interface AresClient {
 
     @Put("/payments/tds-amount")
     suspend fun migrateTdsAmount(@Body req: List<TdsAmountReq>)
+
+    @Post("/payments/parent-jv/update")
+    suspend fun updateParentJv(@Body req: ParentJVUpdateRequest): String
 }

@@ -61,6 +61,7 @@ object AresConstants {
     const val SETTLEMENT = "settlement"
     const val INCIDENT_MAPPINGS = "incident_mappings"
     const val JOURNAL_VOUCHERS = "journal_vouchers"
+    const val PARENT_JOURNAL_VOUCHERS = "parent_journal_vouchers"
 
     const val CREATE = "CREATE"
     const val UPDATE = "UPDATE"

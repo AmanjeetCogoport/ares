@@ -25,12 +25,13 @@ data class JournalVoucher(
     var category: String,
     val validityDate: Date?,
     val amount: BigDecimal?,
+    val ledAmount: BigDecimal?,
     val currency: String?,
     val ledCurrency: String,
     var status: JVStatus,
     val exchangeRate: BigDecimal?,
     val tradePartyId: UUID?,
-    val tradePartyName: String,
+    val tradePartyName: String?,
     var createdBy: UUID?,
     @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?,
@@ -40,9 +41,10 @@ data class JournalVoucher(
     var description: String?,
     var accMode: AccMode?,
     var glCode: String?,
-    var parentJvId: Long? = null,
+    var parentJvId: Long?,
+    var signFlag: Short?,
     var sageUniqueId: String? = null,
     var migrated: Boolean? = false,
-    var ledAmount: BigDecimal?,
-    var signFlag: Short?
+    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
+    var deletedAt: Timestamp? = null
 )

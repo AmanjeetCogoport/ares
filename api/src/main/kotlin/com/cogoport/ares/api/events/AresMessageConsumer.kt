@@ -5,6 +5,7 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
+import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
@@ -20,6 +21,7 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import io.micronaut.rabbitmq.annotation.Queue
@@ -50,6 +52,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var taggedSettlementService: TaggedSettlementService
+
+    @Inject
+    lateinit var paymentMigrationWrapper: PaymentMigrationWrapper
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -144,5 +149,10 @@ class AresMessageConsumer {
     @Queue("tagged-bill-auto-knockoff", prefetch = 1)
     fun taggedBillAutoKnockOff(req: OnAccountPaymentRequest) = runBlocking {
         taggedSettlementService.settleOnAccountInvoicePayment(req)
+    }
+
+    @Queue("migrate-gl-codes", prefetch = 1)
+    fun migrateGLCode(req: GlCodeMaster) = runBlocking {
+        paymentMigrationWrapper.createGLCode(req)
     }
 }

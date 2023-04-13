@@ -76,5 +76,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
         channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
+
+        channel?.queueDeclare("migrate-gl-codes", true, false, false, null)
+        channel?.queueBind("migrate-gl-codes", "ares", "migrate.gl.codes", null)
     }
 }
