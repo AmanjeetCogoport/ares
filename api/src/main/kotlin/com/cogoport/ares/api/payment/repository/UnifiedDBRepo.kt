@@ -111,6 +111,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND aau.transaction_date < NOW() 
         AND (acc_type = :accType)
         AND (acc_mode = :accMode)
+        AND (CASE WHEN :isTillYesterday = TRUE THEN aau.transaction_date < now()::DATE ELSE TRUE END)
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
         AND (COALESCE(:serviceTypes) is null or aau.service_type in (:serviceTypes))
         AND (:startDate is null or :endDate is null or aau.transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
@@ -125,7 +126,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         accType: String,
         serviceTypes: List<ServiceType>? = null,
         startDate: String? = null,
-        endDate: String? = null
+        endDate: String? = null,
+        isTillYesterday: Boolean? = false
     ): BigDecimal?
 
     @NewSpan
@@ -746,7 +748,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+       sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
@@ -815,7 +821,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				au.sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+        sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         kuber.bills bill ON au.document_no = bill.id JOIN

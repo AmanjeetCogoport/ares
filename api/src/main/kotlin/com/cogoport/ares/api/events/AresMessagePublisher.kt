@@ -53,5 +53,4 @@ interface AresMessagePublisher {
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
     @Binding("tagged.bill.auto.knockoff")
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
-
 }

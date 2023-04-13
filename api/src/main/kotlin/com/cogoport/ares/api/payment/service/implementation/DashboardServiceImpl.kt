@@ -88,7 +88,6 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import com.cogoport.brahma.redis.Client as RedisClient
 
 @Singleton
 class DashboardServiceImpl : DashboardService {
@@ -941,16 +940,16 @@ class DashboardServiceImpl : DashboardService {
         val response: BfReceivableAndPayable?
         val onAccountPayment: BigDecimal?
         val pieChartData: MutableList<OnAccountAndOutstandingResp> = mutableListOf()
-        val yesterdayTotalOutStanding: BigDecimal
-        val yesterdayOnAccountPayment: BigDecimal
+        var receivableOrPayableTillYesterday: BigDecimal?
+        val onAccountTillYesterday: BigDecimal?
         if (request.accountMode == AccMode.AP) {
             response = unifiedDBRepo.getBfPayable(
                 request.serviceTypes, request.startDate,
                 request.endDate, request.tradeType, request.entityCode,
             )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
             onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
-            yesterdayTotalOutStanding = RedisClient.get("yesterdayApOutStanding")?.toBigDecimal() ?: 0.toBigDecimal()
-            yesterdayOnAccountPayment = RedisClient.get("yesterdayApOnAccount")?.toBigDecimal() ?: 0.toBigDecimal()
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
         } else {
             val defaultOrgIds = getDefaultersOrgIds()
             val customerTypes = mapOf(
@@ -958,30 +957,31 @@ class DashboardServiceImpl : DashboardService {
                 "ie" to listOf("mid_size", "long_tail"),
                 "enterprise" to listOf("enterprise")
             )
-
             response = unifiedDBRepo.getBfReceivable(
                 request.serviceTypes, request.startDate, request.endDate,
                 request.tradeType, request.entityCode, customerTypes[request.buyerType]
             )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
             onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
-            yesterdayTotalOutStanding = RedisClient.get("yesterdayArOutStanding")?.toBigDecimal() ?: 0.toBigDecimal()
-            yesterdayOnAccountPayment = RedisClient.get("yesterdayArOnAccount")?.toBigDecimal() ?: 0.toBigDecimal()
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
         }
         var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
-        if(request.accountMode == AccMode.AP){
-            totalReceivableOrPayable =  totalReceivableOrPayable?.times((-1).toBigDecimal())
+        if (request.accountMode == AccMode.AP) {
+            totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
+            receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
         }
         val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
-        val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(yesterdayOnAccountPayment)
-        val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(yesterdayTotalOutStanding)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
+        val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
         response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {
-            yesterdayOnAccountPayment.takeIf { it != BigDecimal.ZERO }?.let {
-                (onAccountPaymentChangeFromYesterday.divide(yesterdayOnAccountPayment.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            onAccountTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (onAccountPaymentChangeFromYesterday.divide(onAccountTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
             }
         } ?: BigDecimal.ZERO
         response.outstandingChangeFromYesterday = totalOutStandingChangeFromYesterday?.let {
-            yesterdayTotalOutStanding.takeIf { it != BigDecimal.ZERO }?.let {
-                (totalOutStandingChangeFromYesterday.divide(yesterdayTotalOutStanding.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            totalOutStandingTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (totalOutStandingChangeFromYesterday.divide(totalOutStandingTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
             }
         } ?: BigDecimal.ZERO
         pieChartData.add(OnAccountAndOutstandingResp("outstanding", totalOutStanding))

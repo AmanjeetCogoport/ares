@@ -17,6 +17,7 @@ data class BfReceivableAndPayable(
     var oneEightyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var threeSixtyDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal(),
+    var tillYesterdayTotalOutstanding: BigDecimal? = 0.toBigDecimal()
 ) {
     @field:javax.persistence.Transient
     var onAccountAndOutStandingData: MutableList<OnAccountAndOutstandingResp>? = null

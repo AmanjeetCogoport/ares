@@ -128,7 +128,6 @@ dependencies {
 
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1")
-    implementation("com.cogoport.brahma.redis:client:1.0.0-beta")
 
     // Tracing instrumentation libraries
     implementation("io.micronaut:micronaut-tracing:3.3.0-M1")
