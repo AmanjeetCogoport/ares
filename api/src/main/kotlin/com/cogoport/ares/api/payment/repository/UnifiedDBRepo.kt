@@ -1500,9 +1500,9 @@ WHERE
             AND invoice_type != 'REIMBURSEMENT'
             GROUP BY job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
-          ABS(x.total_income - j.income) >= 1 OR
-          ABS(x.pre_tax_income - j.pre_tax_income) >= 1 OR  
-          ABS(x.income_tax_amount - j.income_tax_amount) >= 1 LIMIT 1000
+          ABS(x.total_income - j.income) >= 0 OR
+          ABS(x.pre_tax_income - j.pre_tax_income) >= 0 OR  
+          ABS(x.income_tax_amount - j.income_tax_amount) >= 0 LIMIT 1000
          """
     )
     suspend fun getSalesAmountMismatchInJobs(): List<Long>?
@@ -1517,13 +1517,13 @@ WHERE
             COALESCE(SUM(CASE WHEN bill_type != 'CREDIT_NOTE' THEN tax_total * exchange_rate ELSE -1 * tax_total * exchange_rate END),0) as expense_tax_amount,
             COALESCE(SUM(CASE WHEN bill_type != 'CREDIT_NOTE' THEN grand_total * exchange_rate ELSE -1 * grand_total * exchange_rate END),0) as total_expense
             FROM kuber.bills 
-            WHERE status NOT IN ('INITIATED', 'DRAFT', 'ON_HOLD', 'LOCKED' 'FINANCE_REJECTED', 'COE_REJECTED', 'VOID')
+            WHERE status NOT IN ('INITIATED', 'DRAFT', 'ON_HOLD', 'LOCKED', 'FINANCE_REJECTED', 'COE_REJECTED', 'VOID')
             AND bill_type NOT IN ('REIMBURSEMENT', 'EXPENSE', 'REIMBURSEMENT_CN')
             group by job_id order by job_id desc)
-        SELECT * FROM loki.jobs j JOIN y ON y.id = j.id WHERE
-        ABS(y.pre_tax_expense - j.pre_tax_expense) >= 1 OR  
-        ABS(y.expense_tax_amount - j.expense_tax_amount) >= 1 OR     
-        ABS(y.total_expense - j.expense) >= 1 LIMIT 1000
+        SELECT j.id FROM loki.jobs j JOIN y ON y.id = j.id WHERE
+        ABS(y.pre_tax_expense - j.pre_tax_expense) >= 0 OR  
+        ABS(y.expense_tax_amount - j.expense_tax_amount) >= 0 OR     
+        ABS(y.total_expense - j.expense) >= 0 LIMIT 1000
     """
     )
     suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
