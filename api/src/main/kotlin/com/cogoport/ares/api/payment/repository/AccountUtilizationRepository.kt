@@ -1460,7 +1460,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         SELECT
             organization_id as trade_party_detail_id,
-            SUM(amount_loc - pay_loc) AS balance_amount,
+            SUM((amount_loc - pay_loc) * sign_flag) AS balance_amount,
             led_currency as ledger_currency
         FROM
             account_utilizations
