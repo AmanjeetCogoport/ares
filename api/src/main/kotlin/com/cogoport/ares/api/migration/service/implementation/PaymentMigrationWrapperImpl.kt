@@ -53,7 +53,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             }
             jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
         }
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+//        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
 //            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
