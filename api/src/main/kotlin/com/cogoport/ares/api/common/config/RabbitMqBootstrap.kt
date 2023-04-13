@@ -76,7 +76,5 @@ class RabbitMqBootstrap : ChannelInitializer() {
         channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
         channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
 
-        channel?.queueDeclare("save-daily-outstanding-in-redis", true, false, false, null)
-        channel?.queueBind("save-daily-outstanding-in-redis", "ares", "save.daily.outstanding.in.redis", null)
     }
 }
