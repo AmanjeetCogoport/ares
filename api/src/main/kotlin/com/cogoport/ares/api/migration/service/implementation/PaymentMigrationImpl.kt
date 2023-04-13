@@ -785,7 +785,7 @@ class PaymentMigrationImpl : PaymentMigration {
         var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
         val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
