@@ -15,16 +15,16 @@ class SageServiceImpl : SageService {
 
     override suspend fun checkIfDocumentExistInSage(documentValue: String, sageBPRNumber: String, organizationSerialId: Long?, documentType: AccountType, registrationNumber: String?): Boolean {
         // Check if SINV, SCN exists and it is posted in sage
-        if (arrayListOf<AccountType>(AccountType.SCN, AccountType.SCN, AccountType.SDN).contains(documentType)) {
+        if (arrayListOf(AccountType.SINV, AccountType.SCN, AccountType.SDN).contains(documentType)) {
             return isInvoiceDataPostedFromSage("NUM_0", "$sageDatabase.SINVOICE", documentValue)
         }
         // Check if PINV, PCN exists and it is posted in sage
-        if (arrayListOf<AccountType>(AccountType.PINV, AccountType.PCN, AccountType.PDN).contains(documentType)) {
+        if (arrayListOf(AccountType.PINV, AccountType.PCN, AccountType.PDN).contains(documentType)) {
             return isBillDataPostedFromSage(documentValue, organizationSerialId, sageBPRNumber, registrationNumber)
         }
 
         // Check if REC, PAY exists and it is posted in sage
-        if (arrayListOf<AccountType>(AccountType.REC, AccountType.PAY).contains(documentType)) {
+        if (arrayListOf(AccountType.REC, AccountType.PAY).contains(documentType)) {
             return isPaymentPostedFromSage(documentValue)
         }
 
@@ -33,7 +33,7 @@ class SageServiceImpl : SageService {
     }
 
     private fun isBillDataPostedFromSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): Boolean {
-        var query = """
+        val query = """
             SELECT  * FROM $sageDatabase.PINVOICE P 
             	            INNER JOIN $sageDatabase.BPSUPPLIER BP ON (P.BPR_0 = BP.BPSNUM_0) 
             	            WHERE (P.BPRVCR_0 = '$billNumber'  
@@ -41,8 +41,8 @@ class SageServiceImpl : SageService {
                             AND P.STA_0 = 3
             	            AND BP.XX1P4PANNO_0 = '$registrationNumber'
         """.trimIndent()
-        var resultFromQuery = Client.sqlQuery(query)
-        var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
+        val resultFromQuery = Client.sqlQuery(query)
+        val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
 
         return records.size != 0
     }
@@ -57,7 +57,7 @@ class SageServiceImpl : SageService {
     }
 
     private fun isPaymentPostedFromSage(paymentValue: String): Boolean {
-        val query = "Select UMRNUM_0 from $sageDatabase where UMRNUM_0='$paymentValue' and STA_0 = 9"
+        val query = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>

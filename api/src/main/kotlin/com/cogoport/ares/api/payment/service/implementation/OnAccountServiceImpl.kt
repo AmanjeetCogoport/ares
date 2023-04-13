@@ -1207,9 +1207,9 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
-            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
-                throw AresException(AresError.ERR_1523, "")
-            }
+//            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
+//                throw AresException(AresError.ERR_1523, "")
+//            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
                 throw AresException(AresError.ERR_1524, "")
@@ -1331,7 +1331,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 entityCode = paymentDetails.entityCode.toString()
                 currency = paymentDetails.currency
             } else {
-                val bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
                 bankCode = bankCodeDetails["bankCode"]!!
                 entityCode = bankCodeDetails["entityCode"].toString()
                 currency = bankCodeDetails["currency"]!!

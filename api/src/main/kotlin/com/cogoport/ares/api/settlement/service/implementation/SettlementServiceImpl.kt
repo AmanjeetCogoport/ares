@@ -2529,23 +2529,23 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         var failedSettlementIds: MutableList<Long>? = mutableListOf()
-        var listOfRecOrPayCode = listOf<AccountType>(AccountType.PAY, AccountType.REC)
+        var listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
                 try {
                     // Fetch source and destination details
-                    val settlement = settlementRepository.findById(it)!!
-                    val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement?.sourceId!!, AccountType.valueOf(settlement?.sourceType.toString()))
-                    val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement?.destinationId!!, AccountType.valueOf(settlement?.destinationType.toString()))
+                    val settlement = settlementRepository.findById(it) ?: throw AresException(AresError.ERR_1002,"Settlement for this Id")
+                    val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
+                    val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
                     val sageOrganizationResponse = checkIfOrganizationIdIsValid(it, sourceDocument.accMode, sourceDocument)
                     val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
-                    if (!destinationPresentOnSage || !sourcePresentOnSage) {
-                        throw AresException(AresError.ERR_1527, "")
-                    }
+//                    if (!destinationPresentOnSage || !sourcePresentOnSage) {
+//                        throw AresException(AresError.ERR_1527, "")
+//                    }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
                     var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
@@ -2624,15 +2624,15 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
 
-        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
-            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
-        }
-
-        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
-            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
-        }
+//        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
+//            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
+//            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
+//        }
+//
+//        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
+//            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+//            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
+//        }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
     }
