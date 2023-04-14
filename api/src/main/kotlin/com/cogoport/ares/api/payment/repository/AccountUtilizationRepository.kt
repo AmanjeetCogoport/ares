@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
+import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CollectionTrend
@@ -34,6 +35,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -1453,4 +1455,23 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getOrganizationCount(entity: Int?): Long?
+
+    @Query(
+        """
+        SELECT
+            organization_id as trade_party_detail_id,
+            SUM((amount_loc - pay_loc) * sign_flag) AS balance_amount,
+            led_currency as ledger_currency
+        FROM
+            account_utilizations
+        WHERE
+            document_status = 'FINAL'
+            AND entity_code = :entityCode 
+            AND transaction_date <= :transactionDate::DATE
+            AND acc_type != 'NEWPR'
+        GROUP BY
+            trade_party_detail_id, led_currency
+    """
+    )
+    suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
 }
