@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.entity
 
+import javax.persistence.Transient
 import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
@@ -19,12 +20,12 @@ data class BfReceivableAndPayable(
     var threeSixtyPlusDayOverdue: BigDecimal? = 0.toBigDecimal(),
     var tillYesterdayTotalOutstanding: BigDecimal? = 0.toBigDecimal()
 ) {
-    @field:javax.persistence.Transient
+    @field:Transient
     var onAccountAndOutStandingData: MutableList<OnAccountAndOutstandingResp>? = null
 
-    @field:javax.persistence.Transient
+    @field:Transient
     var onAccountChangeFromYesterday: BigDecimal? = 0.toBigDecimal()
 
-    @field:javax.persistence.Transient
+    @field:Transient
     var outstandingChangeFromYesterday: BigDecimal? = 0.toBigDecimal()
 }
