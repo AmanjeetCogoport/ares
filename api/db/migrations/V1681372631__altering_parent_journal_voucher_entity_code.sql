@@ -8,5 +8,3 @@ ALTER TABLE parent_journal_vouchers DROP COLUMN acc_mode;
 
 ALTER TABLE journal_vouchers
 ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-
-ALTER TABLE journal_voucher_codes DROP COLUMN jv_category_id;
