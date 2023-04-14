@@ -112,7 +112,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND aau.transaction_date < NOW() 
         AND acc_type = 'REC'
         AND (acc_mode = 'AR')
-        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
         AND deleted_at is null
         """
     )
@@ -145,7 +145,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND aau.transaction_date::date <= Now()
             AND ( aau.entity_code = :entityCode)
             AND (lj.job_source != 'FREIGHT_FORCE')
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             group by aau.led_currency,aau.service_type, lj.job_details  ->> 'tradeType'
         """
     )
@@ -161,7 +161,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND aau.transaction_date < NOW() 
             AND acc_type = 'REC'
             AND (acc_mode = 'AR')
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
             AND date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
         """
@@ -181,7 +181,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND document_status = 'FINAL'
             AND acc_type in ('SINV','SCN')
             AND (aau.entity_code = :entityCode)
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
             GROUP BY led_currency
         """
@@ -535,7 +535,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             acc_type in ('SINV','SDN') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
+            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             AND (:serviceType is null OR aau.service_type = :serviceType)
             AND ( aau.entity_code = :entityCode)
@@ -558,7 +558,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         '' as dashboard_currency
         FROM
         ares.account_utilizations aau
-        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+        INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
         INNER JOIN organizations o on o.registration_number = otpd.registration_number
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE
@@ -571,7 +571,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         (:serviceType is null or aau.service_type = :serviceType) 
         AND document_status in ('FINAL') 
         AND deleted_at is null
-        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds)) 
         AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
         group by EXTRACT(MONTH FROM transaction_date)
         """
@@ -587,7 +587,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
             '' as dashboard_currency
             from ares.account_utilizations aau
-            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+            INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
             INNER JOIN organizations o on o.registration_number = otpd.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE 
@@ -596,7 +596,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND document_status in ('FINAL') 
             AND EXTRACT(YEAR FROM aau.transaction_date) = :year
             AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (aau.entity_code = :entityCode)
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             GROUP BY date_trunc('quarter',aau.transaction_date)
@@ -751,7 +751,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
-        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
@@ -1315,7 +1315,7 @@ WHERE
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
-        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         """
     )
@@ -1395,7 +1395,7 @@ WHERE
 		AND au.acc_type IN ('SINV','SCN','SREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
-        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         """
     )
