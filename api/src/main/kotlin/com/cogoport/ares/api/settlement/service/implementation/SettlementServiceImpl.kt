@@ -2543,19 +2543,19 @@ open class SettlementServiceImpl : SettlementService {
                     val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
-//                    if (!destinationPresentOnSage || !sourcePresentOnSage) {
-//                        throw AresException(AresError.ERR_1527, "")
-//                    }
+                    if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
+                        throw AresException(AresError.ERR_1527, "")
+                    }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
                     var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
                     )
 
                     flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)

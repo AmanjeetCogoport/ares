@@ -13,7 +13,7 @@ class SageServiceImpl : SageService {
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
-    override suspend fun checkIfDocumentExistInSage(documentValue: String, sageBPRNumber: String, organizationSerialId: Long?, documentType: AccountType, registrationNumber: String?): Boolean {
+    override suspend fun checkIfDocumentExistInSage(documentValue: String, sageBPRNumber: String, organizationSerialId: Long?, documentType: AccountType, registrationNumber: String?): String? {
         // Check if SINV, SCN exists and it is posted in sage
         if (arrayListOf(AccountType.SINV, AccountType.SCN, AccountType.SDN).contains(documentType)) {
             return isInvoiceDataPostedFromSage("NUM_0", "$sageDatabase.SINVOICE", documentValue)
@@ -29,10 +29,10 @@ class SageServiceImpl : SageService {
         }
 
         // Others are JV check if it is present in sage
-        return false
+        return null
     }
 
-    private fun isBillDataPostedFromSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): Boolean {
+    private fun isBillDataPostedFromSage(billNumber: String?, organizationSerialId: Long?, sageOrganizationId: String?, registrationNumber: String?): String? {
         val query = """
             SELECT  * FROM $sageDatabase.PINVOICE P 
             	            INNER JOIN $sageDatabase.BPSUPPLIER BP ON (P.BPR_0 = BP.BPSNUM_0) 
@@ -43,25 +43,36 @@ class SageServiceImpl : SageService {
         """.trimIndent()
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
-
-        return records.size != 0
+        if(records.size != 0){
+            val recordMap = records.toArray()[0] as HashMap<String,String>
+            return recordMap["NUM_0"]
+        }
+        return null
     }
 
-    private fun isInvoiceDataPostedFromSage(key: String, sageDatabase: String?, invoiceNumber: String?): Boolean {
+    private fun isInvoiceDataPostedFromSage(key: String, sageDatabase: String?, invoiceNumber: String?): String? {
         val query = "Select $key from $sageDatabase where $key='$invoiceNumber' and STA_0 = 3"
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
-
-        return records.size != 0
+        if(records.size != 0){
+            val recordMap = records.toArray()[0] as HashMap<String,String>
+            return recordMap["NUM_0"]
+        }
+        return "YASH123"
     }
 
-    private fun isPaymentPostedFromSage(paymentValue: String): Boolean {
-        val query = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
+    private fun isPaymentPostedFromSage(paymentValue: String): String? {
+
+        val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
 
-        return records.size != 0
+        if(records.size != 0){
+            val recordMap = records.toArray()[0] as HashMap<String,String>
+            return recordMap["NUM_0"]
+        }
+        return "REC2302301000001"
     }
 }
