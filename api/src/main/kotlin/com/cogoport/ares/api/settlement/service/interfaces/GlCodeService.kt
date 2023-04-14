@@ -4,5 +4,5 @@ import com.cogoport.ares.api.settlement.entity.GlCode
 
 interface GlCodeService {
 
-    suspend fun getGLCode(entityCode: Int?, q: String?): List<GlCode>
+    suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode>
 }

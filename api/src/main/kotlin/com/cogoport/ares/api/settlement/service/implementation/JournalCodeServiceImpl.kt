@@ -13,6 +13,7 @@ class JournalCodeServiceImpl : JournalCodeService {
     lateinit var journalCodeRepository: JournalCodeRepository
 
     override suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode> {
-        return journalCodeRepository.getJournalCode(q, pageLimit)
+        val updatedPageLimit = pageLimit ?: 10
+        return journalCodeRepository.getJournalCode(q, updatedPageLimit)
     }
 }

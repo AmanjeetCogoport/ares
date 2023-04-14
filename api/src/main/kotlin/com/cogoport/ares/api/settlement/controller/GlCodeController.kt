@@ -16,7 +16,7 @@ class GlCodeController {
     lateinit var glCodeService: GlCodeService
 
     @Get
-    suspend fun getGLCode(@QueryValue("entityCode") entityCode: Int?, @QueryValue("q") q: String?): List<GlCode> {
-        return glCodeService.getGLCode(entityCode, q)
+    suspend fun getGLCode(@QueryValue("entityCode") entityCode: Int?, @QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<GlCode> {
+        return glCodeService.getGLCode(entityCode, q, pageLimit)
     }
 }

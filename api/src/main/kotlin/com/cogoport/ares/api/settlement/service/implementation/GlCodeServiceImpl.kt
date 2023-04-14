@@ -12,7 +12,8 @@ class GlCodeServiceImpl : GlCodeService {
     @Inject
     lateinit var glCodeRepository: GlCodeRepository
 
-    override suspend fun getGLCode(entityCode: Int?, q: String?): List<GlCode> {
-        return glCodeRepository.getGLCode(entityCode, q)
+    override suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode> {
+        val updatedPageLimit = pageLimit ?: 10
+        return glCodeRepository.getGLCode(entityCode, q, updatedPageLimit)
     }
 }

@@ -12,7 +12,7 @@ data class JvLineItemRequest(
     var id: String?,
     var entityCode: Int,
     var entityId: UUID?,
-    var accMode: AccMode? = AccMode.OTHER,
+    var accMode: AccMode?,
     @field:NotNull(message = "glCode is mandatory")
     var glCode: String?,
     var tradePartyId: UUID?,
