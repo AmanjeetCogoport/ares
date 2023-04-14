@@ -157,7 +157,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
         documentEntity.forEach { doc ->
-            val jvData = journalVoucherConverter.convertICJVEntityToModel((doc))
+            val jvData = journalVoucherConverter.convertParentJvEntityToModel((doc))
             jvData.id = Hashids.encode(jvData.id.toLong())
             jvList.add(jvData)
         }
@@ -332,7 +332,7 @@ open class ParentJVServiceImpl : ParentJVService {
             val jvLineItemData = JournalVoucher(
                 id = null,
                 jvNum = parentJvData?.jvNum!!,
-                accMode = lineItem.accMode,
+                accMode = if (lineItem.accMode != null) lineItem.accMode else AccMode.OTHER,
                 category = request.jvCategory,
                 createdAt = request.createdAt,
                 createdBy = request.createdBy,

@@ -58,7 +58,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 j.migrated,
                 j.gl_code,
                 j.led_amount,
-                j.sign_flag
+                j.sign_flag,
+                j.deleted_at
             FROM 
                 journal_vouchers j 
             Where 

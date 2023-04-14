@@ -47,7 +47,7 @@ class ParentJVController {
     }
 
     @Put("/update")
-    suspend fun updateICJV(@Valid @Body request: ParentJVUpdateRequest): String {
+    suspend fun updateParentJv(@Valid @Body request: ParentJVUpdateRequest): String {
         return parentJVService.updateParentJv(request)
     }
 
