@@ -12,6 +12,7 @@ import java.util.Date
 @MappedEntity
 data class CustomerOutstandingPaymentResponse(
     val accCode: Int?,
+    val sageRefNumber: String?,
     val accMode: AccMode?,
     val paymentAmount: String?,
     val documentNo: Long?,
