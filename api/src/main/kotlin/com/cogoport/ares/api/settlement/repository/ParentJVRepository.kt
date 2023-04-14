@@ -48,13 +48,13 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             ORDER BY
                 CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN pjv.created_at                         
-                         WHEN :sortBy = 'validityDate' THEN pjv.validity_date
+                         WHEN :sortBy = 'accountingDate' THEN pjv.transaction_date
                     END
                 END 
                 Desc,
                 CASE WHEN :sortType = 'Asc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN pjv.created_at
-                         WHEN :sortBy = 'validityDate' THEN pjv.validity_date
+                         WHEN :sortBy = 'accountingDate' THEN pjv.transaction_date
                     END        
                 END 
                 Asc

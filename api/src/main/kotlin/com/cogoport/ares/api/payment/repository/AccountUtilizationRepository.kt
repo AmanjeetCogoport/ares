@@ -1486,7 +1486,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WHERE 
                 document_value = :docValue 
             AND 
-                acc_type = :accType
+                acc_type = :accType::ACCOUNT_TYPE
             AND
                 deleted_at IS NULL
         """

@@ -322,7 +322,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?) {
         request.jvLineItems.forEach { lineItem ->
-            if (lineItem.tradePartyName == null && lineItem.tradePartyId != null) {
+            if (lineItem.tradePartyName.isNullOrEmpty() && lineItem.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
                 if (data.list.isNotEmpty()) {
                     lineItem.tradePartyName = data.list[0]["legal_business_name"].toString()
