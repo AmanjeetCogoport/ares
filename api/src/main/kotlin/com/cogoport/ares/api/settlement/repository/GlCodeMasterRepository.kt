@@ -27,7 +27,7 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                 FROM 
                     gl_code_masters
                 WHERE 
-                    (:q IS NULL OR gl_code ILIKE '%'||:q||'%')
+                    (:q IS NULL OR account_code::VARCHAR ILIKE '%'||:q||'%')
                 LIMIT 
                     :pageLimit
             """

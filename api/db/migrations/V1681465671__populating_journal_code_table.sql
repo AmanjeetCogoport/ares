@@ -1,5 +1,5 @@
-INSERT INTO journal_voucher_codes (id, number, description, jv_category_id, entity_code, country_code, created_by, updated_by) VALUES
-	('1', 'ACIXO', 'Axis O/D A/c-919030087386886', '', '101', 'IND', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+INSERT INTO journal_voucher_codes (id, number, description, entity_code, country_code, created_by, updated_by) VALUES
+	('1', 'ACIXO', 'Axis O/D A/c-919030087386886', '', '101', 'IND', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
 	('2', 'ACIXO', 'Axis O/D A/c-919030087386886', '', '301', 'IND', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
 	('3', 'AXIO', 'AXIO-7762', '', '101', 'IND', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
 	('4', 'AXIO', 'AXIO-7762', '', '301', 'IND', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
