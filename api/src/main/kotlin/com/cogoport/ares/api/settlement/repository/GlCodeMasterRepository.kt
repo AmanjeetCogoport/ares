@@ -28,9 +28,11 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                     gl_code_masters
                 WHERE 
                     (:q IS NULL OR account_code::VARCHAR ILIKE '%'||:q||'%')
+                AND
+                    (:accMode IS NULL OR account_type = :accMode::VARCHAR)
                 LIMIT 
                     :pageLimit
             """
     )
-    fun getGLCodeMaster(q: String?, pageLimit: Int?): List<GlCodeMaster>
+    fun getGLCodeMaster(accMode: String?, q: String?, pageLimit: Int?): List<GlCodeMaster>
 }
