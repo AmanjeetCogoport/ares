@@ -1500,9 +1500,9 @@ WHERE
             AND invoice_type != 'REIMBURSEMENT'
             GROUP BY job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
-          ABS(x.total_income - j.income) >= 0 OR
-          ABS(x.pre_tax_income - j.pre_tax_income) >= 0 OR  
-          ABS(x.income_tax_amount - j.income_tax_amount) >= 0 LIMIT 1000
+          x.total_income != j.income OR
+          x.pre_tax_income != j.pre_tax_income OR  
+          x.income_tax_amount != j.income_tax_amount LIMIT 1000
          """
     )
     suspend fun getSalesAmountMismatchInJobs(): List<Long>?
@@ -1521,9 +1521,9 @@ WHERE
             AND bill_type NOT IN ('REIMBURSEMENT', 'EXPENSE', 'REIMBURSEMENT_CN')
             group by job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN y ON y.id = j.id WHERE
-        ABS(y.pre_tax_expense - j.pre_tax_expense) >= 0 OR  
-        ABS(y.expense_tax_amount - j.expense_tax_amount) >= 0 OR     
-        ABS(y.total_expense - j.expense) >= 0 LIMIT 1000
+        y.pre_tax_expense != j.pre_tax_expense OR  
+        y.expense_tax_amount != j.expense_tax_amount OR     
+        y.total_expense != j.expense LIMIT 1000
     """
     )
     suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
