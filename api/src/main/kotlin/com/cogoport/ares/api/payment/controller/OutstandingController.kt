@@ -144,7 +144,7 @@ class OutstandingController {
         request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
         return outStandingService.getTopTenServiceProviders(request)
     }
- 
+
     @Get("/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
