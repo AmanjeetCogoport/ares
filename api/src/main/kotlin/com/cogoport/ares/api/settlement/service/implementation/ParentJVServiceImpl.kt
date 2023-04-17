@@ -16,7 +16,6 @@ import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.ParentJVRepository
-import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
@@ -26,7 +25,6 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
-import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JvListRequest
@@ -38,7 +36,6 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.JVLineItem
 import com.cogoport.brahma.sage.model.request.JVRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
-import com.cogoport.hades.client.HadesClient
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -76,9 +73,6 @@ open class ParentJVServiceImpl : ParentJVService {
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject
-    lateinit var hadesClient: HadesClient
-
-    @Inject
     lateinit var railsClient: RailsClient
 
     @Inject
@@ -89,9 +83,6 @@ open class ParentJVServiceImpl : ParentJVService {
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
-
-    @Inject
-    lateinit var settlementRepository: SettlementRepository
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -444,15 +435,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 jvLineItemsDetails.add(jvLineItemDetails)
             }
 
-            lateinit var result: SageResponse
-
-            val destinationDocumentValue = settlementRepository.findBySourceIdAndSourceType(parentJVId, listOf(SettlementType.valueOf(parentJVDetails.category)))
-
-            val mapDestinationDocumentValue = destinationDocumentValue.map {
-                it?.destinationId
-            }.joinToString(",")
-
-            result = Client.postJVToSage(
+            val result: SageResponse = Client.postJVToSage(
                 JVRequest
                 (
                     parentJVDetails.category,
@@ -460,7 +443,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.entityCode.toString(),
                     parentJVDetails.jvCodeNum!!,
                     parentJVDetails.currency!!,
-                    mapDestinationDocumentValue,
+                    parentJVDetails.jvNum!!,
                     parentJVDetails.createdAt!!,
                     parentJVDetails.description!!,
                     jvLineItemsDetails
