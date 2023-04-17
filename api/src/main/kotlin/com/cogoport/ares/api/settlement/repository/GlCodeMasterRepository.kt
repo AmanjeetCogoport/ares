@@ -12,13 +12,13 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
 
     @NewSpan
     @Query(
-            """
+        """
                 SELECT 
                     id,
                     account_code,
                     description,
                     led_account,
-                    account_type,
+                    acc_mode,
                     class_code,
                     created_by,
                     updated_by,
@@ -28,9 +28,11 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                     gl_code_masters
                 WHERE 
                     (:q IS NULL OR account_code::VARCHAR ILIKE '%'||:q||'%')
+                AND
+                    (:accMode IS NULL OR acc_mode = :accMode::VARCHAR)
                 LIMIT 
                     :pageLimit
             """
     )
-    fun getGLCodeMaster(q: String?, pageLimit: Int?): List<GlCodeMaster>
+    fun getGLCodeMaster(accMode: String?, q: String?, pageLimit: Int?): List<GlCodeMaster>
 }

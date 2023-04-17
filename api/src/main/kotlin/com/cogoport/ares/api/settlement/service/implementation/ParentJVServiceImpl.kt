@@ -109,7 +109,7 @@ open class ParentJVServiceImpl : ParentJVService {
         val parentJvNum = getJvNumber()
         val transactionDate = request.transactionDate
 
-        val status = when (request.jvLineItems.filter { it.tradePartyId  !== null }.sumOf{it.amount } < 50.toBigDecimal()){
+        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
             true -> JVStatus.APPROVED
             false -> JVStatus.PENDING
         }
@@ -132,7 +132,7 @@ open class ParentJVServiceImpl : ParentJVService {
         )
         val parentJvData = parentJVRepository.save(parentData)
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
+        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -297,7 +297,7 @@ open class ParentJVServiceImpl : ParentJVService {
         val parentJvNum = getJvNumber()
         val transactionDate = request.transactionDate
 
-        val status = when (request.jvLineItems.filter { it.tradePartyId  !== null }.sumOf{it.amount } < 50.toBigDecimal()){
+        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
             true -> JVStatus.APPROVED
             false -> JVStatus.PENDING
         }
@@ -325,23 +325,18 @@ open class ParentJVServiceImpl : ParentJVService {
         journalVoucherRepository.deletingLineItemsWithParentJvId(parentJvData.id!!)
         accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvData.jvNum, AccountType.valueOf(parentJvData.category))
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
+        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
 
         return Hashids.encode(parentJvData.id!!)
     }
 
-    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?) {
+    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?, jvStatus: JVStatus) {
         request.jvLineItems.forEach { lineItem ->
             if (lineItem.tradePartyName.isNullOrEmpty() && lineItem.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
                 if (data.list.isNotEmpty()) {
                     lineItem.tradePartyName = data.list[0]["legal_business_name"].toString()
                 }
-            }
-
-            val status = when (lineItem.amount.multiply(request.exchangeRate) < 50.toBigDecimal()){
-                true -> JVStatus.APPROVED
-                false -> JVStatus.PENDING
             }
 
             val jvLineItemData = JournalVoucher(
@@ -365,7 +360,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 parentJvId = parentJvData.id,
                 type = lineItem.type,
                 signFlag = getSignFlag(lineItem.type),
-                status = status,
+                status = jvStatus,
                 tradePartyId = lineItem.tradePartyId,
                 tradePartyName = lineItem.tradePartyName,
                 validityDate = transactionDate,
@@ -375,7 +370,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
             val jvLineItem = journalVoucherRepository.save(jvLineItemData)
 
-            if (status === JVStatus.APPROVED && jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER){
+            if (jvStatus === JVStatus.APPROVED && jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
                 val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
                 val signFlag = getSignFlag(lineItem.type)
                 journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)
@@ -391,24 +386,28 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
-            updateParentJv(ParentJVUpdateRequest(
-                parentJvId = Hashids.encode(parentJVId),
-                performedBy = performedBy,
-                status =  JVStatus.APPROVED,
-                remark = null
-            ))
 
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
+
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
+
+            if (parentJVDetails.status == JVStatus.PENDING) {
+                if (jvLineItems.any { it.tradePartyId !== null }) {
+                    jvLineItems.filter { it.tradePartyId !== null }.map {
+                        if (it.accMode !== null) {
+                            journalVoucherService.createJvAccUtil(it, it.accMode!!, getSignFlag(it.type!!))
+                        }
+                    }
+                }
+            }
+
+            if (parentJVDetails.status == JVStatus.POSTED) {
+                throw AresException(AresError.ERR_1518, "")
+            }
+
             var sageOrganization: SageOrganizationResponse?
 
             val jvLineItemsDetails = arrayListOf<JVLineItem>()
-
-            when (parentJVDetails.status) {
-                JVStatus.PENDING -> throw AresException(AresError.ERR_1528, "")
-                JVStatus.POSTED -> throw AresException(AresError.ERR_1518, "")
-                else -> {}
-            }
 
             jvLineItems.map { lineItem ->
                 if (lineItem.tradePartyId != null) {
