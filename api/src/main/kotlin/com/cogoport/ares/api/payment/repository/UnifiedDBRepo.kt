@@ -1531,7 +1531,7 @@ WHERE
             COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN tax_total * exchange_rate ELSE -1 * tax_total * exchange_rate END),0) as income_tax_amount,
             COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN grand_total * exchange_rate ELSE -1 * grand_total * exchange_rate END),0) as total_income 
             FROM plutus.invoices 
-            WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED', 'CONSOLIDATED')
+            WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED')
             AND invoice_type != 'REIMBURSEMENT'
             GROUP BY job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
