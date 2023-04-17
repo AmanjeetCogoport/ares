@@ -30,6 +30,7 @@ import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
@@ -608,7 +609,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
@@ -936,21 +937,58 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+        val response: BfReceivableAndPayable?
+        val onAccountPayment: BigDecimal?
+        val pieChartData: MutableList<OnAccountAndOutstandingResp> = mutableListOf()
+        var receivableOrPayableTillYesterday: BigDecimal?
+        val onAccountTillYesterday: BigDecimal?
         if (request.accountMode == AccMode.AP) {
-            return unifiedDBRepo.getBfPayable(
+            response = unifiedDBRepo.getBfPayable(
                 request.serviceTypes, request.startDate,
                 request.endDate, request.tradeType, request.entityCode,
             )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
+        } else {
+            val defaultOrgIds = getDefaultersOrgIds()
+            val customerTypes = mapOf(
+                "cp" to listOf("channel_partner"),
+                "ie" to listOf("mid_size", "long_tail"),
+                "enterprise" to listOf("enterprise")
+            )
+            response = unifiedDBRepo.getBfReceivable(
+                request.serviceTypes, request.startDate, request.endDate,
+                request.tradeType, request.entityCode, customerTypes[request.buyerType],
+                defaultOrgIds
+            )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
         }
-        val customerTypes = mapOf(
-            "cp" to listOf("channel_partner"),
-            "ie" to listOf("mid_size", "long_tail"),
-            "enterprise" to listOf("enterprise")
-        )
-        return unifiedDBRepo.getBfReceivable(
-            request.serviceTypes, request.startDate, request.endDate,
-            request.tradeType, request.entityCode, customerTypes[request.buyerType]
-        )
+        var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
+        if (request.accountMode == AccMode.AP) {
+            totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
+            receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
+        }
+        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
+        val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
+        response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {
+            onAccountTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (onAccountPaymentChangeFromYesterday.divide(onAccountTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        response.outstandingChangeFromYesterday = totalOutStandingChangeFromYesterday?.let {
+            totalOutStandingTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (totalOutStandingChangeFromYesterday.divide(totalOutStandingTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        pieChartData.add(OnAccountAndOutstandingResp("outstanding", totalOutStanding))
+        pieChartData.add(OnAccountAndOutstandingResp("onAccount", onAccountPayment))
+        response.onAccountAndOutStandingData = pieChartData
+        return response
     }
 
     override suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
@@ -1110,11 +1148,12 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
         val response = mutableListOf<ServiceWiseRecPayResp>()
         val entityCode = request.entityCode
-        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val defaultersOrgIds = getDefaultersOrgIds()
+        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val oceanPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
-        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val airPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
-        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val surfacePayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
 
         response.add(
@@ -1150,23 +1189,24 @@ class DashboardServiceImpl : DashboardService {
             "local" -> listOf("LOCAL", "local")
             else -> null
         }
+        val defaultersOrgIds = getDefaultersOrgIds()
         return when (request.interfaceType) {
             "ocean" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             "air" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(AIR_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(AIR_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(AIR_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             "surface" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")

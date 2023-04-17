@@ -12,6 +12,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.AccountTypeMapping
 import com.cogoport.ares.api.migration.constants.EntityCodeMapping
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.constants.MigrationConstants.inactiveBRPNo
 import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.constants.MigrationStatus
 import com.cogoport.ares.api.migration.constants.SageBankMapping
@@ -116,6 +117,8 @@ class PaymentMigrationImpl : PaymentMigration {
             ) {
                 throw AresException(AresError.ERR_1010, "Not migrating as payment already exists")
             }
+
+            paymentRecord.sageOrganizationId = if (inactiveBRPNo.containsKey(paymentRecord.sageOrganizationId)) inactiveBRPNo[paymentRecord.sageOrganizationId] else paymentRecord.sageOrganizationId
             /*FETCH ORGANIZATION DETAILS BY SAGE ORGANIZATION ID*/
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
@@ -782,7 +785,7 @@ class PaymentMigrationImpl : PaymentMigration {
         var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
         val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSage(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
