@@ -959,7 +959,8 @@ class DashboardServiceImpl : DashboardService {
             )
             response = unifiedDBRepo.getBfReceivable(
                 request.serviceTypes, request.startDate, request.endDate,
-                request.tradeType, request.entityCode, customerTypes[request.buyerType]
+                request.tradeType, request.entityCode, customerTypes[request.buyerType],
+                defaultOrgIds
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
             onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
@@ -1147,11 +1148,12 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
         val response = mutableListOf<ServiceWiseRecPayResp>()
         val entityCode = request.entityCode
-        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val defaultersOrgIds = getDefaultersOrgIds()
+        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val oceanPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
-        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val airPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
-        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
         val surfacePayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
 
         response.add(
@@ -1187,23 +1189,24 @@ class DashboardServiceImpl : DashboardService {
             "local" -> listOf("LOCAL", "local")
             else -> null
         }
+        val defaultersOrgIds = getDefaultersOrgIds()
         return when (request.interfaceType) {
             "ocean" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             "air" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(AIR_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(AIR_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(AIR_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             "surface" -> ServiceWiseOverdueResp(
                 arData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
                 apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
-                cardDataAr = unifiedDBRepo.getFinanceArCardData(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
                 cardDataAp = unifiedDBRepo.getFinanceApCardDate(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode)
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
