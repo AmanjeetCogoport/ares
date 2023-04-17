@@ -1,10 +1,10 @@
 package com.cogoport.ares.api.payment.entity
 
-import javax.persistence.Transient
 import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
+import javax.persistence.Transient
 
 @Introspected
 @MappedEntity
