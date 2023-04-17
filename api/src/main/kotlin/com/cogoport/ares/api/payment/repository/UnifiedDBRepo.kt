@@ -106,17 +106,29 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
-        WHERE 
-        document_status = 'FINAL'
-        AND (aau.entity_code = :entityCode)
+        WHERE document_status = 'FINAL'
+        AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
         AND aau.transaction_date < NOW() 
-        AND acc_type = 'REC'
-        AND (acc_mode = 'AR')
-        AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
+        AND (acc_type = :accType)
+        AND (acc_mode = :accMode)
+        AND (CASE WHEN :isTillYesterday = TRUE THEN aau.transaction_date < now()::DATE ELSE TRUE END)
+        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:serviceTypes) is null or aau.service_type in (:serviceTypes))
+        AND (:startDate is null or :endDate is null or aau.transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (CASE WHEN :accMode = 'AP' THEN aau.migrated = FALSE ELSE TRUE END)
         AND deleted_at is null
         """
     )
-    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmount(
+        entityCode: MutableList<Int>?,
+        defaultersOrgIds: List<UUID>? = null,
+        accMode: String,
+        accType: String,
+        serviceTypes: List<ServiceType>? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        isTillYesterday: Boolean? = false
+    ): BigDecimal?
 
     @NewSpan
     @Query(
@@ -734,7 +746,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+       sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
@@ -805,7 +821,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				au.sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+        sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         kuber.bills bill ON au.document_no = bill.id JOIN
@@ -1120,6 +1140,11 @@ FROM
 			AND iv.invoice_type = 'INVOICE' THEN
 			1
 		ELSE 0 END) AS total_invoices,
+    sum(
+		CASE WHEN iv.invoice_date::date = :date::date
+			AND iv.invoice_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_sales_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'SINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_sales_orgs
@@ -1154,6 +1179,11 @@ FROM
 			AND bill.bill_type = 'BILL' THEN
 			1
 		ELSE 0 END) AS total_bills,
+    sum(
+		CASE WHEN bill.finance_accept_date::date = :date::date
+			AND bill.bill_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_purchase_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'PINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_purchase_orgs
@@ -1501,7 +1531,7 @@ WHERE
             COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN tax_total * exchange_rate ELSE -1 * tax_total * exchange_rate END),0) as income_tax_amount,
             COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN grand_total * exchange_rate ELSE -1 * grand_total * exchange_rate END),0) as total_income 
             FROM plutus.invoices 
-            WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED', 'CONSOLIDATED')
+            WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED')
             AND invoice_type != 'REIMBURSEMENT'
             GROUP BY job_id order by job_id desc)
         SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
