@@ -3,14 +3,13 @@ package com.cogoport.ares.api.settlement.service.implementation
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.settlement.entity.GlCodeMaster
-import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.settlement.service.interfaces.GlCodeMasterService
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import jakarta.inject.Inject
 
-class GlCodeMasterServiceImpl: GlCodeMasterService {
+class GlCodeMasterServiceImpl : GlCodeMasterService {
 
     @Inject
     lateinit var glCodeMasterRepository: GlCodeMasterRepository

@@ -100,9 +100,14 @@ open class ParentJVServiceImpl : ParentJVService {
         val parentJvNum = getJvNumber()
         val transactionDate = request.transactionDate
 
+        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
+            true -> JVStatus.APPROVED
+            false -> JVStatus.PENDING
+        }
+
         val parentData = ParentJournalVoucher(
             id = null,
-            status = JVStatus.PENDING,
+            status = status,
             category = request.jvCategory,
             validityDate = transactionDate,
             jvNum = parentJvNum,
@@ -118,7 +123,7 @@ open class ParentJVServiceImpl : ParentJVService {
         )
         val parentJvData = parentJVRepository.save(parentData)
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
+        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -283,9 +288,14 @@ open class ParentJVServiceImpl : ParentJVService {
         val parentJvNum = getJvNumber()
         val transactionDate = request.transactionDate
 
+        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
+            true -> JVStatus.APPROVED
+            false -> JVStatus.PENDING
+        }
+
         val parentData = ParentJournalVoucher(
             id = Hashids.decode(request.id!!)[0],
-            status = JVStatus.PENDING,
+            status = status,
             category = request.jvCategory,
             validityDate = transactionDate,
             jvNum = parentJvNum,
@@ -306,12 +316,12 @@ open class ParentJVServiceImpl : ParentJVService {
         journalVoucherRepository.deletingLineItemsWithParentJvId(parentJvData.id!!)
         accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvData.jvNum, AccountType.valueOf(parentJvData.category))
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
+        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
 
         return Hashids.encode(parentJvData.id!!)
     }
 
-    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?) {
+    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?, jvStatus: JVStatus) {
         request.jvLineItems.forEach { lineItem ->
             if (lineItem.tradePartyName.isNullOrEmpty() && lineItem.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
@@ -341,7 +351,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 parentJvId = parentJvData.id,
                 type = lineItem.type,
                 signFlag = getSignFlag(lineItem.type),
-                status = JVStatus.PENDING,
+                status = jvStatus,
                 tradePartyId = lineItem.tradePartyId,
                 tradePartyName = lineItem.tradePartyName,
                 validityDate = transactionDate,
@@ -349,7 +359,13 @@ open class ParentJVServiceImpl : ParentJVService {
                 deletedAt = null
             )
 
-            journalVoucherRepository.save(jvLineItemData)
+            val jvLineItem = journalVoucherRepository.save(jvLineItemData)
+
+            if (jvStatus === JVStatus.APPROVED && jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
+                val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
+                val signFlag = getSignFlag(lineItem.type)
+                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)
+            }
         }
     }
 
@@ -361,17 +377,28 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
+
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
+
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
+
+            if (parentJVDetails.status == JVStatus.PENDING) {
+                if (jvLineItems.any { it.tradePartyId !== null }) {
+                    jvLineItems.filter { it.tradePartyId !== null }.map {
+                        if (it.accMode !== null) {
+                            journalVoucherService.createJvAccUtil(it, it.accMode!!, getSignFlag(it.type!!))
+                        }
+                    }
+                }
+            }
+
+            if (parentJVDetails.status == JVStatus.POSTED) {
+                throw AresException(AresError.ERR_1518, "")
+            }
+
             var sageOrganization: SageOrganizationResponse?
 
             val jvLineItemsDetails = arrayListOf<JVLineItem>()
-
-            when (parentJVDetails.status) {
-                JVStatus.PENDING -> throw AresException(AresError.ERR_1528, "")
-                JVStatus.POSTED -> throw AresException(AresError.ERR_1518, "")
-                else -> {}
-            }
 
             jvLineItems.map { lineItem ->
                 if (lineItem.tradePartyId != null) {
