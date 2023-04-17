@@ -20,5 +20,6 @@ interface AccUtilizationToPaymentMapper {
     @Mapping(source = "currencyPayment", target = "payCurr")
     @Mapping(source = "ledgerPayment", target = "payLoc")
     @Mapping(source = "docStatus", target = "documentStatus")
+    @Mapping(target = "isVoid", expression = "java(false)")
     fun convertModelToEntity(accUtilization: AccUtilizationRequest): AccountUtilization
 }
