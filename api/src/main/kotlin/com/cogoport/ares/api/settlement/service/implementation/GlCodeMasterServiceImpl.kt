@@ -32,7 +32,6 @@ class GlCodeMasterServiceImpl : GlCodeMasterService {
             AccMode.EMD -> JVSageControls.EMD.value
             AccMode.SUSA -> JVSageControls.SUSA.value
             AccMode.SUSS -> JVSageControls.SUSS.value
-            AccMode.OTHER -> JVSageControls.OTHER.value
             else -> {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
