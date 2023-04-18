@@ -1434,15 +1434,7 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PREIMB,
                 SettlementType.SREIMB
             )
-        val jvType =
-            listOf(
-                SettlementType.WOFF,
-                SettlementType.ROFF,
-                SettlementType.JVNOS,
-                SettlementType.EXCH,
-                SettlementType.OUTST,
-                SettlementType.ICJV
-            )
+        val jvType = settlementServiceHelper.getJvList(SettlementType::class.java)
         for (doc in request.stackDetails!!.reversed()) {
             if (creditType.contains(doc.accountType)) {
                 source.add(doc)

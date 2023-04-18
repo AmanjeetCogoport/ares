@@ -8,7 +8,7 @@ import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
 import java.util.UUID
 
 interface ParentJVService {
-    suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String
+    suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String?
 
     suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<ParentJournalVoucherResponse>
 

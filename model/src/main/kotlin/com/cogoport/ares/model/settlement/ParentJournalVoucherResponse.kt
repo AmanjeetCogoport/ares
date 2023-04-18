@@ -25,6 +25,7 @@ data class ParentJournalVoucherResponse(
     var updatedBy: UUID?,
     var validityDate: Date?,
     var transactionDate: Date?,
+    var isUtilized: Boolean?,
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now())
 )

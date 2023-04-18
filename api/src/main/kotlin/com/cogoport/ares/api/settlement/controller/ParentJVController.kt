@@ -37,8 +37,8 @@ class ParentJVController {
     lateinit var parentJVService: ParentJVService
 
     @Post
-    suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Request Sent", parentJVService.createJournalVoucher(request))
+    suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String?> {
+        return Response<String?>().ok("Request Sent", parentJVService.createJournalVoucher(request))
     }
 
     @Auth

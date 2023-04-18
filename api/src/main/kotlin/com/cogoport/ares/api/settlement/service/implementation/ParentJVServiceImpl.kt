@@ -99,7 +99,7 @@ open class ParentJVServiceImpl : ParentJVService {
      */
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
-    override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String {
+    override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String? {
         validateCreateRequest(request)
 
         val parentJvNum = getJvNumber()
@@ -126,7 +126,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
 
-        return Hashids.encode(parentJvData.id!!)
+        return parentJvData.jvNum
     }
 
     /**
