@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
@@ -33,9 +32,7 @@ data class JournalVoucher(
     val tradePartyId: UUID?,
     val tradePartyName: String?,
     var createdBy: UUID?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var updatedAt: Timestamp?,
     var updatedBy: UUID?,
     var description: String?,
@@ -45,6 +42,5 @@ data class JournalVoucher(
     var signFlag: Short?,
     var sageUniqueId: String? = null,
     var migrated: Boolean? = false,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     var deletedAt: Timestamp? = null
 )

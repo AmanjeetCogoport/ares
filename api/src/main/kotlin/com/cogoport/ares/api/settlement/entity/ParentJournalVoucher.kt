@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.settlement.enums.JVStatus
-import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
@@ -31,11 +30,8 @@ data class ParentJournalVoucher(
     var updatedBy: UUID?,
     var migrated: Boolean? = false,
     var jvCodeNum: String?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     @DateCreated var createdAt: Timestamp? = null,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     @DateCreated var updatedAt: Timestamp? = null,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     var deletedAt: Timestamp? = null,
     var isUtilized: Boolean? = false
 )

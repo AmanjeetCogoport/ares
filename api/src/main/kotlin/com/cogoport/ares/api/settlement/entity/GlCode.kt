@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.settlement.entity
 
-import com.fasterxml.jackson.annotation.JsonFormat
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
@@ -19,6 +18,5 @@ data class GlCode(
     var currency: String?,
     var glCode: String,
     var bankShortName: String?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?
 )

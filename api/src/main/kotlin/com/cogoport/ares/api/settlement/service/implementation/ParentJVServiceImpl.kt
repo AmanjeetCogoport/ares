@@ -20,6 +20,7 @@ import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
@@ -89,6 +90,9 @@ open class ParentJVServiceImpl : ParentJVService {
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
 
+    @Inject
+    lateinit var util: Util
+
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
@@ -136,10 +140,11 @@ open class ParentJVServiceImpl : ParentJVService {
      */
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<ParentJournalVoucherResponse> {
+        val query = util.toQueryString(jvListRequest.query)
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
-            jvListRequest.query,
+                query,
             jvListRequest.page,
             jvListRequest.pageLimit,
             jvListRequest.sortType,
@@ -149,7 +154,7 @@ open class ParentJVServiceImpl : ParentJVService {
             parentJVRepository.countDocument(
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
-                jvListRequest.query
+                query
             )
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()

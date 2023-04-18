@@ -42,8 +42,8 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             AND
                 (:category IS NULL OR pjv.category = :category::VARCHAR) 
             AND
-                ((:query IS NULL OR pjv.jv_num ILIKE '%'||:query||'%') OR
-                ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE '%'||:query||'%')))))
+                (pjv.jv_num ILIKE :query OR
+                ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
             AND
                 pjv.deleted_at is NULL
             ORDER BY
@@ -83,7 +83,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         AND
             (:category IS NULL OR  category = :category::VARCHAR) 
         AND
-            (:query IS NULL OR jv_num ILIKE '%'||:query||'%')
+            jv_num ILIKE :query
         """
     )
     fun countDocument(status: JVStatus?, category: String?, query: String?): Long
