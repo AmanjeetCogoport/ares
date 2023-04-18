@@ -27,7 +27,7 @@ interface GlCodeRepository : CoroutineCrudRepository<GlCode, Long> {
                 WHERE 
                     (:entityCode IS NULL OR entity_code = :entityCode)
                 AND
-                    (:q IS NULL OR gl_code ILIKE '%'||:q||'%')
+                    gl_code ILIKE :q
                 LIMIT
                     :pageLimit
             """

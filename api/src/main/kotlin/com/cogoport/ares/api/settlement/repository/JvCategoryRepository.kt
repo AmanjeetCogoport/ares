@@ -22,7 +22,7 @@ interface JvCategoryRepository : CoroutineCrudRepository<JvCategory, Long> {
                 FROM 
                     journal_voucher_categories 
                 WHERE 
-                    (:q IS NULL OR category ILIKE '%'||:q||'%')
+                    category ILIKE :q
                 LIMIT 
                     :pageLimit
             """

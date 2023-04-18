@@ -24,8 +24,8 @@ interface JournalCodeRepository : CoroutineCrudRepository<JournalCode, Long> {
                 FROM 
                     journal_voucher_codes 
                 WHERE 
-                   (:q IS NULL OR number ILIKE '%'||:q||'%')
-               LIMIT 
+                   number ILIKE :q
+                LIMIT 
                     :pageLimit
             """
     )
