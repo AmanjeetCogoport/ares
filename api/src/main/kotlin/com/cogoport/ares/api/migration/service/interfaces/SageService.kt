@@ -21,4 +21,6 @@ interface SageService {
     suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails>
 
     suspend fun getJournalVoucherFromSage(startDate: String?, endDate: String?, jvNums: String?): ArrayList<JournalVoucherRecord>
+
+    suspend fun getPaymentsForScheduler(startDate: String, endDate: String): ArrayList<PaymentRecord>
 }
