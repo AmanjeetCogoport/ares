@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.settlement.repository
 
-import com.cogoport.ares.api.settlement.entity.JournalCode
 import com.cogoport.ares.api.settlement.entity.JvCategory
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -9,7 +8,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface JvCategoryRepository : CoroutineCrudRepository<JournalCode, Long> {
+interface JvCategoryRepository : CoroutineCrudRepository<JvCategory, Long> {
 
     @NewSpan
     @Query(

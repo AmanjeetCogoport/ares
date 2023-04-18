@@ -16,12 +16,8 @@ data class JournalCode(
     var id: Long?,
     var number: String,
     var description: String,
-    var entityCode: Int?,
-    var countryCode: String?,
     var createdBy: UUID?,
     var updatedBy: UUID?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var createdAt: Timestamp?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
     @DateCreated var updatedAt: Timestamp?
 )
