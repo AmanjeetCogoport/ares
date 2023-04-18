@@ -377,27 +377,14 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
-
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
-
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
-
-            if (parentJVDetails.status == JVStatus.PENDING) {
-                if (jvLineItems.any { it.tradePartyId !== null }) {
-                    jvLineItems.filter { it.tradePartyId !== null }.map {
-                        if (it.accMode !== null) {
-                            journalVoucherService.createJvAccUtil(it, it.accMode!!, getSignFlag(it.type!!))
-                        }
-                    }
-                }
-            }
 
             if (parentJVDetails.status == JVStatus.POSTED) {
                 throw AresException(AresError.ERR_1518, "")
             }
 
             var sageOrganization: SageOrganizationResponse?
-
             val jvLineItemsDetails = arrayListOf<JVLineItem>()
 
             jvLineItems.map { lineItem ->

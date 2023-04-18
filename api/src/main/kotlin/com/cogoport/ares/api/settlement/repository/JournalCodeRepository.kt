@@ -17,8 +17,6 @@ interface JournalCodeRepository : CoroutineCrudRepository<JournalCode, Long> {
                     id,
                     number,
                     description,
-                    entity_code,
-                    country_code,
                     created_at,
                     updated_at,
                     created_by,
