@@ -3,7 +3,7 @@ CREATE TABLE public.gl_code_masters (
     account_code INT,
     description VARCHAR,
     led_account VARCHAR,
-    acc_mode VARCHAR,
+    account_type VARCHAR,
     class_code INT,
     created_by UUID,
     updated_by UUID,

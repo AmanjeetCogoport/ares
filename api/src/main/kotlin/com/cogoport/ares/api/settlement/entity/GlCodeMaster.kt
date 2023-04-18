@@ -14,7 +14,7 @@ data class GlCodeMaster(
     val accountCode: Int?,
     val description: String?,
     val ledAccount: String?,
-    val accMode: String?,
+    val accountType: String?,
     val classCode: Int?,
     val createdBy: UUID?,
     val updatedBy: UUID?,
