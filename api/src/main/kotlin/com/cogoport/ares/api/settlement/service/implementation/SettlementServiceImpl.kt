@@ -64,7 +64,6 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
-import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
@@ -1902,7 +1901,7 @@ open class SettlementServiceImpl : SettlementService {
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
-                    status = JVStatus.UTILIZED,
+                    isUtilized = true,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType
                 )

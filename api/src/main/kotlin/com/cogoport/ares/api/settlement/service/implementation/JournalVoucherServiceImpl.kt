@@ -16,7 +16,6 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.JvLineItemResponse
-import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -40,14 +39,14 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
 
-    override suspend fun updateJournalVoucherStatus(id: Long, status: JVStatus, performedBy: UUID, performedByUserType: String?) {
-        journalVoucherRepository.updateStatus(id, status, performedBy)
+    override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?) {
+        journalVoucherRepository.updateIsUtilizedColumn(id, isUtilized, performedBy)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.JOURNAL_VOUCHERS,
                 objectId = id,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to id, "status" to status),
+                data = mapOf("id" to id, "status" to "UTILIZED"),
                 performedBy = performedBy.toString(),
                 performedByUserType = performedByUserType
             )

@@ -11,6 +11,7 @@ import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
@@ -22,8 +23,10 @@ import com.cogoport.ares.model.payment.event.UpdateInvoiceStatusEvent
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.GlCodeMaster
+import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject
@@ -55,6 +58,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var paymentMigrationWrapper: PaymentMigrationWrapper
+
+    @Inject
+    lateinit var parentJVService: ParentJVService
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -154,5 +160,10 @@ class AresMessageConsumer {
     @Queue("migrate-gl-codes", prefetch = 1)
     fun migrateGLCode(req: GlCodeMaster) = runBlocking {
         paymentMigrationWrapper.createGLCode(req)
+    }
+
+    @Queue("post-jv-to-sage", prefetch = 1)
+    fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
+        parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
     }
 }

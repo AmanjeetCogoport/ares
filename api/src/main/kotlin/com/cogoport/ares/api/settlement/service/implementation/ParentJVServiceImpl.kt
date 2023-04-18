@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.model.AuditRequest
@@ -25,6 +26,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
+import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.request.JvListRequest
@@ -84,6 +86,9 @@ open class ParentJVServiceImpl : ParentJVService {
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
+
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
@@ -100,14 +105,9 @@ open class ParentJVServiceImpl : ParentJVService {
         val parentJvNum = getJvNumber()
         val transactionDate = request.transactionDate
 
-        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
-            true -> JVStatus.APPROVED
-            false -> JVStatus.PENDING
-        }
-
         val parentData = ParentJournalVoucher(
             id = null,
-            status = status,
+            status = JVStatus.APPROVED,
             category = request.jvCategory,
             validityDate = transactionDate,
             jvNum = parentJvNum,
@@ -119,11 +119,12 @@ open class ParentJVServiceImpl : ParentJVService {
             jvCodeNum = request.jvCodeNum,
             ledCurrency = request.ledCurrency,
             entityCode = request.entityCode,
-            transactionDate = request.transactionDate
+            transactionDate = request.transactionDate,
+            isUtilized = false
         )
         val parentJvData = parentJVRepository.save(parentData)
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
+        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -284,44 +285,43 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun editJv(request: ParentJournalVoucherRequest): String {
         validateCreateRequest(request)
-
-        val parentJvNum = getJvNumber()
+        val parentJvData = parentJVRepository.findById(Hashids.decode(request.id!!)[0])
         val transactionDate = request.transactionDate
 
-        val status = when (request.jvLineItems.filter { it.tradePartyId !== null }.sumOf { it.amount } < 50.toBigDecimal()) {
-            true -> JVStatus.APPROVED
-            false -> JVStatus.PENDING
-        }
+        parentJvData?.status = JVStatus.APPROVED
+        parentJvData?.category = request.jvCategory
+        parentJvData?.validityDate = transactionDate
+        parentJvData?.jvNum = parentJvData?.jvNum
+        parentJvData?.createdBy = request.createdBy
+        parentJvData?.updatedBy = request.createdBy
+        parentJvData?.currency = request.currency
+        parentJvData?.description = request.description
+        parentJvData?.exchangeRate = request.exchangeRate
+        parentJvData?.jvCodeNum = request.jvCodeNum
+        parentJvData?.ledCurrency = request.ledCurrency
+        parentJvData?.entityCode = request.entityCode
+        parentJvData?.transactionDate = request.transactionDate
 
-        val parentData = ParentJournalVoucher(
-            id = Hashids.decode(request.id!!)[0],
-            status = status,
-            category = request.jvCategory,
-            validityDate = transactionDate,
-            jvNum = parentJvNum,
-            createdBy = request.createdBy,
-            updatedBy = request.createdBy,
-            currency = request.currency,
-            description = request.description,
-            exchangeRate = request.exchangeRate,
-            jvCodeNum = request.jvCodeNum,
-            ledCurrency = request.ledCurrency,
-            entityCode = request.entityCode,
-            transactionDate = request.transactionDate
-        )
-
-        val parentJvData = parentJVRepository.update(parentData)
+        val updatedParentJvData = parentJVRepository.update(parentJvData!!)
 
         // deleting all line items with parentId
-        journalVoucherRepository.deletingLineItemsWithParentJvId(parentJvData.id!!)
-        accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvData.jvNum, AccountType.valueOf(parentJvData.category))
+        journalVoucherRepository.deletingLineItemsWithParentJvId(updatedParentJvData.id!!)
+        accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(updatedParentJvData.jvNum, AccountType.valueOf(parentJvData.category))
 
-        creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate, status)
+        creatingLineItemsAndRequestToIncident(request, updatedParentJvData, transactionDate)
+
+        aresMessagePublisher.emitPostJvToSage(
+            PostJVToSageRequest(
+                parentJvId = Hashids.encode(updatedParentJvData.id!!),
+                performedBy = updatedParentJvData.createdBy!!
+
+            )
+        )
 
         return Hashids.encode(parentJvData.id!!)
     }
 
-    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?, jvStatus: JVStatus) {
+    private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?) {
         request.jvLineItems.forEach { lineItem ->
             if (lineItem.tradePartyName.isNullOrEmpty() && lineItem.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
@@ -351,7 +351,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 parentJvId = parentJvData.id,
                 type = lineItem.type,
                 signFlag = getSignFlag(lineItem.type),
-                status = jvStatus,
+                status = JVStatus.APPROVED,
                 tradePartyId = lineItem.tradePartyId,
                 tradePartyName = lineItem.tradePartyName,
                 validityDate = transactionDate,
@@ -361,7 +361,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
             val jvLineItem = journalVoucherRepository.save(jvLineItemData)
 
-            if (jvStatus === JVStatus.APPROVED && jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
+            if (jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
                 val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
                 val signFlag = getSignFlag(lineItem.type)
                 journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)

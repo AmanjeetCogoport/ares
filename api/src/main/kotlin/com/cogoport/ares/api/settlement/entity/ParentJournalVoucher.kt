@@ -31,10 +31,11 @@ data class ParentJournalVoucher(
     var updatedBy: UUID?,
     var migrated: Boolean? = false,
     var jvCodeNum: String?,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
+    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     @DateCreated var createdAt: Timestamp? = null,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
+    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     @DateCreated var updatedAt: Timestamp? = null,
-    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss", timezone = "Asia/Kolkata")
-    var deletedAt: Timestamp? = null
+    @field:JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
+    var deletedAt: Timestamp? = null,
+    var isUtilized: Boolean? = false
 )
