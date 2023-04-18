@@ -17,7 +17,7 @@ class GlCodeMasterServiceImpl : GlCodeMasterService {
     override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?): List<GlCodeMaster> {
         val updatedPageLimit = pageLimit ?: 10
         val updatedAccMode = when (accMode) {
-            null -> null
+            null -> " "
             else -> getAccModeValue(accMode)
         }
         return glCodeMasterRepository.getGLCodeMaster(updatedAccMode, q, updatedPageLimit)

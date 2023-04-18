@@ -18,7 +18,7 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                     account_code,
                     description,
                     led_account,
-                    acc_mode,
+                    account_type,
                     class_code,
                     created_by,
                     updated_by,
@@ -29,7 +29,7 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                 WHERE 
                     (:q IS NULL OR account_code::VARCHAR ILIKE '%'||:q||'%')
                 AND
-                    (:accMode IS NULL OR acc_mode = :accMode::VARCHAR)
+                    account_type::VARCHAR = :accMode
                 LIMIT 
                     :pageLimit
             """
