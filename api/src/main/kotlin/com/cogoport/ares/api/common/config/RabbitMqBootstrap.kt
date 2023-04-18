@@ -79,5 +79,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("migrate-gl-codes", true, false, false, null)
         channel?.queueBind("migrate-gl-codes", "ares", "migrate.gl.codes", null)
+
+        channel?.queueDeclare("post-jv-to-sage", true, false, false, null)
+        channel?.queueBind("post-jv-to-sage", "ares", "post.jv.to.sage", null)
     }
 }

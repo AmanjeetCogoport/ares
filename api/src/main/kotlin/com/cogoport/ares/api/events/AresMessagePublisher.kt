@@ -9,6 +9,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.GlCodeMaster
+import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -57,4 +58,7 @@ interface AresMessagePublisher {
 
     @Binding("migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)
+
+    @Binding("post.jv.to.sage")
+    suspend fun emitPostJvToSage(req: PostJVToSageRequest)
 }

@@ -32,5 +32,6 @@ data class ParentJournalVoucher(
     var jvCodeNum: String?,
     @DateCreated var createdAt: Timestamp? = null,
     @DateCreated var updatedAt: Timestamp? = null,
-    var deletedAt: Timestamp? = null
+    var deletedAt: Timestamp? = null,
+    var isUtilized: Boolean? = false
 )

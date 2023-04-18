@@ -4,6 +4,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
+import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
@@ -62,10 +63,10 @@ class ParentJVController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postJVToSage(id: String, performedBy: UUID): Response<String> {
+    suspend fun postJVToSage(req: PostJVToSageRequest): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            if (parentJVService.postJVToSage(Hashids.decode(id)[0], performedBy)) "Success." else "Failed."
+            if (parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)) "Success." else "Failed."
         )
     }
 }

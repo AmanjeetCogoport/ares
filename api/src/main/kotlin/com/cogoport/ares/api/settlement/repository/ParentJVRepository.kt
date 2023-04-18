@@ -33,7 +33,8 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
                 pjv.created_by,
                 pjv.updated_at,
                 pjv.updated_by,
-                pjv.deleted_at
+                pjv.deleted_at,
+                pjv.is_utilized
             FROM 
                 parent_journal_vouchers pjv
             WHERE 
