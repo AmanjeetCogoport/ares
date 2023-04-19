@@ -2528,14 +2528,14 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
-        var failedSettlementIds: MutableList<Long>? = mutableListOf()
-        var listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+        val failedSettlementIds: MutableList<Long>? = mutableListOf()
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
                 try {
                     // Fetch source and destination details
-                    val settlement = settlementRepository.findById(it) ?: throw AresException(AresError.ERR_1002,"Settlement for this Id")
+                    val settlement = settlementRepository.findById(it) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
@@ -2550,12 +2550,12 @@ open class SettlementServiceImpl : SettlementService {
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
                     var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(sourcePresentOnSage, sourcePresentOnSage, settlement.amount.toString(), flag)
                     )
 
                     flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(destinationPresentOnSage, destinationPresentOnSage, settlement.amount.toString(), flag)
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
@@ -2624,15 +2624,15 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
 
-//        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-//            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
-//            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
-//        }
-//
-//        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-//            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
-//            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
-//        }
+        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
+            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
+        }
+
+        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
+        }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
     }

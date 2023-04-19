@@ -43,8 +43,8 @@ class SageServiceImpl : SageService {
         """.trimIndent()
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
-        if(records.size != 0){
-            val recordMap = records.toArray()[0] as HashMap<String,String>
+        if (records.size != 0) {
+            val recordMap = records.toArray()[0] as HashMap<String, String>
             return recordMap["NUM_0"]
         }
         return null
@@ -55,24 +55,23 @@ class SageServiceImpl : SageService {
         val resultFromQuery = Client.sqlQuery(query)
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
-        if(records.size != 0){
-            val recordMap = records.toArray()[0] as HashMap<String,String>
+        if (records.size != 0) {
+            val recordMap = records.toArray()[0] as HashMap<String, String>
             return recordMap["NUM_0"]
         }
-        return "YASH123"
+        return null
     }
 
     private fun isPaymentPostedFromSage(paymentValue: String): String? {
 
         val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
         val resultFromQuery = Client.sqlQuery(query)
-        val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
+        var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
-
-        if(records.size != 0){
-            val recordMap = records.toArray()[0] as HashMap<String,String>
+        if (records.size != 0) {
+            val recordMap = records.toArray()[0] as HashMap<String, String>
             return recordMap["NUM_0"]
         }
-        return "REC2302301000001"
+        return null
     }
 }
