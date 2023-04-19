@@ -1196,9 +1196,9 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
 
-//            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
-//                throw AresException(AresError.ERR_1523, "")
-//            }
+            if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
+                throw AresException(AresError.ERR_1523, "")
+            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
                 throw AresException(AresError.ERR_1524, "")

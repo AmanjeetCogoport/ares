@@ -162,17 +162,4 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
         """
     )
     suspend fun getCountOfJournalVoucherByParentJVId(parentId: Long): Long
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-	            status
-            FROM
-	            journal_vouchers
-            WHERE
-	            jv_num = :jvNum
-        """
-    )
-    suspend fun getStatusByDocumentNumber(jvNum: String): JVStatus?
 }
