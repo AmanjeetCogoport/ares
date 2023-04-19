@@ -585,6 +585,11 @@ open class ParentJVServiceImpl : ParentJVService {
             AccMode.EMD -> JVSageControls.EMD.value
             AccMode.SUSA -> JVSageControls.SUSA.value
             AccMode.SUSS -> JVSageControls.SUSS.value
+            AccMode.RE -> JVSageControls.RE.value
+            AccMode.RI -> JVSageControls.RI.value
+            AccMode.EMP -> JVSageControls.EMP.value
+            AccMode.PREF -> JVSageControls.PREF.value
+            AccMode.PC -> JVSageControls.PC.value
             AccMode.OTHER -> JVSageControls.OTHER.value
             else -> {
                 throw AresException(AresError.ERR_1529, accMode.name)
