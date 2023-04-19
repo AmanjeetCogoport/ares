@@ -5,6 +5,7 @@ CREATE TABLE public.gl_code_masters (
     led_account VARCHAR,
     account_type VARCHAR,
     class_code INT,
+    account_class_id BIGINT NOT NULL REFERENCES account_classes (id) ON DELETE CASCADE,
     created_by UUID,
     updated_by UUID,
     created_at TIMESTAMP not null default now(),
