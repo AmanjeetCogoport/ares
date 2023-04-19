@@ -9,6 +9,7 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
@@ -32,6 +33,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject
     lateinit var glCodeMasterRepository: GlCodeMasterRepository
+
+    @Inject lateinit var accountClassRepo: AccountClassRepository
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -237,7 +240,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
                 createdBy = glRecord.createdBy,
                 updatedBy = glRecord.updatedBy,
                 createdAt = glRecord.createdAt,
-                updatedAt = glRecord.updatedAt
+                updatedAt = glRecord.updatedAt,
+                accountClassId = null
             )
             aresMessagePublisher.emitGLCode(glCode)
         }
@@ -245,6 +249,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     }
 
     override suspend fun createGLCode(request: GlCodeMaster) {
+        val classCodeDetails = accountClassRepo.getAccountClass(request.ledAccount, request.classCode)
+
         val glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
             id = null,
             accountCode = request.accountCode,
@@ -252,6 +258,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             ledAccount = request.ledAccount,
             accountType = request.accountType,
             classCode = request.classCode,
+            accountClassId = classCodeDetails.id!!,
             createdBy = request.createdBy,
             updatedAt = request.updatedAt,
             updatedBy = request.updatedBy,

@@ -17,6 +17,8 @@ data class GlCodeMaster(
     var accountType: String?,
     @JsonProperty("class_code")
     var classCode: Int,
+    @JsonProperty("account_class_id")
+    var accountClassId: Long?,
     @JsonProperty("created_by")
     var createdBy: UUID,
     @JsonProperty("updated_by")

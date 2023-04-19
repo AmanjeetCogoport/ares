@@ -20,6 +20,7 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                     led_account,
                     account_type,
                     class_code,
+                    account_class_id,
                     created_by,
                     updated_by,
                     created_at,
