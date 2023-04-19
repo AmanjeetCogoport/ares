@@ -15,8 +15,6 @@ data class JournalCode(
     var id: Long?,
     var number: String,
     var description: String,
-    var createdBy: UUID?,
-    var updatedBy: UUID?,
     @DateCreated var createdAt: Timestamp?,
     @DateCreated var updatedAt: Timestamp?
 )

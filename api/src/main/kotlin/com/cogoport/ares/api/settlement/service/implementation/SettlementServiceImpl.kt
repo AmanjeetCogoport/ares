@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.SageStatus.Companion.getZstatus
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
@@ -23,6 +24,7 @@ import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -35,6 +37,7 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -50,11 +53,13 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
+import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -64,6 +69,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
@@ -73,6 +79,7 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
 import com.cogoport.hades.model.incident.Organization
@@ -84,11 +91,14 @@ import com.cogoport.kuber.model.bills.ListBillRequest
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.enums.TransactionType
+import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.json.XML
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
@@ -99,6 +109,7 @@ import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
+import com.cogoport.brahma.sage.Client as SageClient
 
 @Singleton
 open class SettlementServiceImpl : SettlementService {
@@ -169,6 +180,15 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
+
+    @Inject
+    lateinit var sageService: SageService
+
+    @Value("\${sage.databaseName}")
+    var sageDatabase: String? = null
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -2058,7 +2078,8 @@ open class SettlementServiceImpl : SettlementService {
                 Timestamp.from(Instant.now()),
                 supportingDocUrl,
                 false,
-                sequenceGeneratorImpl.getSettlementNumber()
+                sequenceGeneratorImpl.getSettlementNumber(),
+                SettlementStatus.CREATED
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
@@ -2495,5 +2516,117 @@ open class SettlementServiceImpl : SettlementService {
                 isSuccess = true
             )
         )
+    }
+
+    override suspend fun matchingSettlementOnSage(settlementIds: List<String>, performedBy: UUID): FailedSettlementIds {
+
+        val failedSettlementIds: MutableList<Long>? = mutableListOf()
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+
+        if (settlementIds.isNotEmpty()) {
+            settlementIds.forEach {
+                val settlementId = Hashids.decode(it)[0]
+                try {
+                    // Fetch source and destination details
+                    val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
+                    val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
+
+                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
+                    val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
+
+                    if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
+                        throw AresException(AresError.ERR_1527, "")
+                    }
+
+                    val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
+                    var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                    )
+
+                    flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                    )
+
+                    val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+                    val processedResponse = XML.toJSONObject(result.response)
+                    val status = getZstatus(processedResponse)
+                    if (status == "DONE") {
+                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTED, performedBy)
+                        recordAudits(settlementId, result.requestString, result.response, true)
+                    } else {
+                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                        failedSettlementIds?.add(settlementId)
+                        recordAudits(settlementId, result.requestString, result.response, false)
+                    }
+                } catch (e: Exception) {
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, "", e.toString(), false)
+                }
+            }
+        }
+
+        return FailedSettlementIds(
+            failedSettlementIds
+        )
+    }
+
+    private suspend fun recordAudits(id: Long, request: String, response: String, isSuccess: Boolean) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                "MatchSettlementOnSage",
+                "Settlement",
+                id,
+                "SETTLEMENT",
+                "200",
+                request,
+                response,
+                isSuccess
+            )
+        )
+    }
+
+    private suspend fun checkIfOrganizationIdIsValid(settlementId: Long, accMode: AccMode, accountUtilization: AccountUtilization): List<String?> {
+        val sageOrganizationFromSageId: String?
+
+        val registrationNumber: String?
+        if (accountUtilization.organizationId != null) {
+            val organization = railsClient.getListOrganizationTradePartyDetails(accountUtilization.organizationId!!)
+            registrationNumber = organization.list[0]["registration_number"].toString()
+            val sageOrganizationQuery = if (accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='$registrationNumber'"
+            val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
+            val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            sageOrganizationFromSageId = if (accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+        } else {
+            throw AresException(AresError.ERR_1528, "organizationId is not present")
+        }
+
+        val sageOrganizationResponse = cogoClient.getSageOrganization(
+            SageOrganizationRequest(
+                accountUtilization.orgSerialId.toString(),
+                if (accMode == AccMode.AR) {
+                    "importer_exporter"
+                } else {
+                    "service_provider"
+                }
+            )
+        )
+
+        if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
+            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
+        }
+
+        if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
+        }
+
+        return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
     }
 }
