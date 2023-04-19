@@ -226,7 +226,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateGlAccount(): Int {
         val glRecords = sageService.getGLCode()
-        logger().info("Total number of payment record to process : ${glRecords.size}")
+        logger().info("Total number of gl account records to process: ${glRecords.size}")
         for (glRecord in glRecords) {
             val glCode = GlCodeMaster(
                 accountCode = glRecord.accountCode,

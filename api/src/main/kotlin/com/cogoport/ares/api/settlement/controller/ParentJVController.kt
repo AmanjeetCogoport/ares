@@ -1,8 +1,13 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.settlement.entity.GlCode
+import com.cogoport.ares.api.settlement.entity.GlCodeMaster
+import com.cogoport.ares.api.settlement.entity.JournalCode
+import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
@@ -68,5 +73,25 @@ class ParentJVController {
             HttpStatus.OK.name,
             if (parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)) "Success." else "Failed."
         )
+    }
+
+    @Get("/jv-category")
+    suspend fun getJVCategories(@QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<JvCategory> {
+        return parentJVService.getJvCategory(q, pageLimit)
+    }
+
+    @Get("/gl-code")
+    suspend fun getGLCode(@QueryValue("entityCode") entityCode: Int?, @QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<GlCode> {
+        return parentJVService.getGLCode(entityCode, q, pageLimit)
+    }
+
+    @Get("/gl-code-master")
+    suspend fun getGLCodeMaster(@QueryValue("accMode") accMode: AccMode?, @QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<GlCodeMaster> {
+        return parentJVService.getGLCodeMaster(accMode, q, pageLimit)
+    }
+
+    @Get("/journal-code")
+    suspend fun getJournalCode(@QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<JournalCode> {
+        return parentJVService.getJournalCode(q, pageLimit)
     }
 }

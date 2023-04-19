@@ -11,11 +11,19 @@ import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.GlCode
+import com.cogoport.ares.api.settlement.entity.GlCodeMaster
+import com.cogoport.ares.api.settlement.entity.JournalCode
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
+import com.cogoport.ares.api.settlement.repository.GlCodeRepository
+import com.cogoport.ares.api.settlement.repository.JournalCodeRepository
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.repository.JvCategoryRepository
 import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
@@ -74,6 +82,18 @@ open class ParentJVServiceImpl : ParentJVService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var jvCategoryRepository: JvCategoryRepository
+
+    @Inject
+    lateinit var glCodeRepository: GlCodeRepository
+
+    @Inject
+    lateinit var glCodeMasterRepository: GlCodeMasterRepository
+
+    @Inject
+    lateinit var journalCodeRepository: JournalCodeRepository
 
     @Inject
     lateinit var railsClient: RailsClient
@@ -577,5 +597,33 @@ open class ParentJVServiceImpl : ParentJVService {
             ?.getJSONObject("status")
             ?.get("content")
         return status as Int?
+    }
+
+    override suspend fun getJvCategory(q: String?, pageLimit: Int?): List<JvCategory> {
+        val query = util.toQueryString(q)
+        val updatedPageLimit = pageLimit ?: 10
+        return jvCategoryRepository.getJvCategory(query, updatedPageLimit)
+    }
+
+    override suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode> {
+        val query = util.toQueryString(q)
+        val updatedPageLimit = pageLimit ?: 10
+        return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit)
+    }
+
+    override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?): List<GlCodeMaster> {
+        val updatedPageLimit = pageLimit ?: 10
+        var query = util.toQueryString(q)
+        val updatedAccMode = when (accMode) {
+            null -> " "
+            else -> getAccModeValue(accMode)
+        }
+        return glCodeMasterRepository.getGLCodeMaster(updatedAccMode, query, updatedPageLimit)
+    }
+
+    override suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode> {
+        val updatedPageLimit = pageLimit ?: 10
+        val query = util.toQueryString(q)
+        return journalCodeRepository.getJournalCode(query, updatedPageLimit)
     }
 }
