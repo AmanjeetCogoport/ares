@@ -32,4 +32,6 @@ interface ParentJVService {
     suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?, entityCode: Int?): List<GlCodeMaster>
 
     suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode>
+
+    suspend fun getAccountMode(q: String?): List<HashMap<String, String>>
 }

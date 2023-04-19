@@ -94,4 +94,9 @@ class ParentJVController {
     suspend fun getJournalCode(@QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<JournalCode> {
         return parentJVService.getJournalCode(q, pageLimit)
     }
+
+    @Get("/acc-mode")
+    suspend fun getAccountMode(@QueryValue("q") q: String?): List<HashMap<String, String>> {
+        return parentJVService.getAccountMode(q)
+    }
 }
