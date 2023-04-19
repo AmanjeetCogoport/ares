@@ -2095,6 +2095,11 @@ open class SettlementServiceImpl : SettlementService {
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
         val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
+
+        if (jvList.contains(accType)) {
+            return jvSettleList
+        }
+
         return when (accType) {
             SettlementType.REC -> {
                 listOf(SettlementType.SINV, SettlementType.SDN) + jvList
@@ -2125,24 +2130,6 @@ open class SettlementServiceImpl : SettlementService {
             }
             SettlementType.VTDS -> {
                 listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PCN)
-            }
-            SettlementType.WOFF -> {
-                jvSettleList
-            }
-            SettlementType.ROFF -> {
-                jvSettleList
-            }
-            SettlementType.OUTST -> {
-                jvSettleList
-            }
-            SettlementType.EXCH -> {
-                jvSettleList
-            }
-            SettlementType.JVNOS -> {
-                jvSettleList
-            }
-            SettlementType.ICJV -> {
-                jvSettleList
             }
             SettlementType.PREIMB -> {
                 listOf(SettlementType.SREIMB)
