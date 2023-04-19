@@ -95,7 +95,6 @@ import com.cogoport.plutus.model.common.enums.TransactionType
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -2541,21 +2540,22 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
+    override suspend fun matchingSettlementOnSage(settlementIds: List<String>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
+                val settlementId = Hashids.decode(it)[0]
                 try {
                     // Fetch source and destination details
-                    val settlement = settlementRepository.findById(it) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
-                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(it, sourceDocument.accMode, sourceDocument)
-                    val sourcePresentOnSage = sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
+                    val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
@@ -2577,17 +2577,17 @@ open class SettlementServiceImpl : SettlementService {
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
-                        settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTED, performedBy)
-                        recordAudits(it, result.requestString, result.response, true)
+                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTED, performedBy)
+                        recordAudits(settlementId, result.requestString, result.response, true)
                     } else {
-                        settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
-                        failedSettlementIds?.add(it)
-                        recordAudits(it, result.requestString, result.response, false)
+                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                        failedSettlementIds?.add(settlementId)
+                        recordAudits(settlementId, result.requestString, result.response, false)
                     }
                 } catch (e: Exception) {
-                    settlementRepository.updateSettlementStatus(it, SettlementStatus.POSTING_FAILED, performedBy)
-                    failedSettlementIds?.add(it)
-                    recordAudits(it, "", e.toString(), false)
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, "", e.toString(), false)
                 }
             }
         }

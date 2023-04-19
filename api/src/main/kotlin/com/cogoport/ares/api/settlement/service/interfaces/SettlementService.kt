@@ -60,5 +60,5 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
-    suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds
+    suspend fun matchingSettlementOnSage(settlementIds: List<String>, performedBy: UUID): FailedSettlementIds
 }
