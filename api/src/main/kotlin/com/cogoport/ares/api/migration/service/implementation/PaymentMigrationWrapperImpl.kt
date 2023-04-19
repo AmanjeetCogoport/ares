@@ -14,8 +14,8 @@ import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
-import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
