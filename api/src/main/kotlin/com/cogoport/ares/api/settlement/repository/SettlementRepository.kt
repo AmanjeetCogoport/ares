@@ -42,7 +42,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.supporting_doc_url
+            s.supporting_doc_url,
+            s.settlement_status
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType
         """
@@ -68,7 +69,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.created_by,
             s.updated_at,
             s.updated_by,
-            s.supporting_doc_url
+            s.supporting_doc_url,
+            s.settlement_status
             FROM settlements s
             where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType)
         """
