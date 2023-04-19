@@ -43,7 +43,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         journalVoucherRepository.updateIsUtilizedColumn(id, isUtilized, performedBy)
         auditService.createAudit(
             AuditRequest(
-                objectType = AresConstants.JOURNAL_VOUCHERS,
+                objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                 objectId = id,
                 actionName = AresConstants.UPDATE,
                 data = mapOf("id" to id, "status" to "UTILIZED"),
