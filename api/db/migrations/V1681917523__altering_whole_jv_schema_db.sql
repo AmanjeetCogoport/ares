@@ -1,3 +1,135 @@
+ALTER TABLE parent_journal_vouchers
+ADD COLUMN entity_code int2 DEFAULT NULL,
+ADD COLUMN transaction_date DATE DEFAULT NULL,
+ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
+ADD COLUMN is_utilized BOOL DEFAULT FALSE;
+
+ALTER TABLE parent_journal_vouchers DROP COLUMN amount;
+ALTER TABLE parent_journal_vouchers DROP COLUMN acc_mode;
+
+ALTER TABLE journal_vouchers
+ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
+
+ALTER TABLE journal_voucher_categories DROP COLUMN default_journal_code;
+ALTER TABLE journal_voucher_categories DROP COLUMN entity_code;
+ALTER TABLE journal_voucher_categories DROP COLUMN country_code;
+ALTER TABLE journal_voucher_categories DROP COLUMN valid_start;
+ALTER TABLE journal_voucher_categories DROP COLUMN valid_end;
+ALTER TABLE journal_voucher_categories DROP COLUMN created_by;
+ALTER TABLE journal_voucher_categories DROP COLUMN updated_by;
+
+ALTER TABLE journal_voucher_codes DROP COLUMN entity_code;
+ALTER TABLE journal_voucher_codes DROP COLUMN country_code;
+ALTER TABLE journal_voucher_codes DROP COLUMN jv_category_id;
+ALTER TABLE journal_voucher_codes DROP COLUMN created_by;
+ALTER TABLE journal_voucher_codes DROP COLUMN updated_by;
+
+CREATE TABLE public.gl_code_masters (
+    id BIGSERIAL CONSTRAINT gl_code_master_PK PRIMARY KEY,
+    account_code INT,
+    description VARCHAR,
+    led_account VARCHAR,
+    account_type VARCHAR,
+    class_code INT,
+    account_class_id BIGINT NOT NULL REFERENCES account_classes (id) ON DELETE CASCADE,
+    created_by UUID,
+    updated_by UUID,
+    created_at TIMESTAMP not null default now(),
+    updated_at TIMESTAMP not null default now()
+);
+
+CREATE TABLE public.account_classes (
+    id BIGSERIAL CONSTRAINT account_class_PK PRIMARY KEY,
+    led_account VARCHAR,
+    account_category VARCHAR,
+    class_code INT,
+    created_by UUID,
+    updated_by UUID,
+    created_at TIMESTAMP not null default now(),
+    updated_at TIMESTAMP not null default now()
+);
+
+ALTER TYPE account_mode ADD VALUE 'RE';
+ALTER TYPE account_mode ADD VALUE 'PREF';
+ALTER TYPE account_mode ADD VALUE 'EMP';
+ALTER TYPE account_mode ADD VALUE 'RI';
+ALTER TYPE account_mode ADD VALUE 'PC';
+
+INSERT INTO account_classes (led_account, account_category, class_code, created_by, updated_by) VALUES
+	('IND', 'Equity', '01', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Non Current Assets', '02', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Current Assets', '03', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Liability', '04', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Current Liability', '05', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Provision', '06', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Revenue', '07', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Direct Expense', '08', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Indirect Expense', '09', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('IND', 'Indirect Income', '10', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Equity', '01', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Non Current Assets', '02', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Current Assets', '03', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Liability', '04', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Current Liability', '05', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Provision', '06', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Revenue', '07', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Direct Expense', '08', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Indirect Expense', '09', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('NL', 'Indirect Income', '10', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Equity', '01', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Non Current Assets', '02', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Current Assets', '03', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Liability', '04', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Current Liability', '05', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Provision', '06', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Revenue', '07', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Direct Expense', '08', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Indirect Expense', '09', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441'),
+	('SGP', 'Indirect Income', '10', 'c4f72139-e4b9-4cea-b590-32cea179f441', 'c4f72139-e4b9-4cea-b590-32cea179f441');
+
+INSERT INTO journal_voucher_codes (number, description) VALUES
+	('ACIXO', 'Axis O/D A/c-919030087386886'),
+	('AXIO', 'AXIO-7762'),
+	('AXIP', 'AXIP'),
+	('AXISC', 'Axis Current'),
+	('AXISP', 'AXISP-20029492479'),
+	('BANK', 'BANK ENTRY'),
+	('CCA', 'CC Avenue'),
+	('CITI', 'Citi Bank Current'),
+	('CITIS', 'Citi Singapore-21112003'),
+	('CN', 'Reimbursement Invoice'),
+	('CTDS', 'Customer TDS BANK'),
+	('DBSC', 'DBS Current'),
+	('DBSU', 'DBS EEFC -USD'),
+	('DN', 'Reimbursement Invoice'),
+	('GENAJ', 'Genral Journal'),
+	('ICICC', 'ICICI Current'),
+	('INDC', 'Indusind CA 201015563832'),
+	('INDUA', 'Indusind bank-201015561001'),
+	('INDUS', 'Indusind Current - 60301403308'),
+	('INGE', 'ING Euro 095'),
+	('INGG', 'ING GBP 686'),
+	('INGU', 'ING USD account 769'),
+	('INTER', 'Intercompany Journal Entry'),
+	('KOTAC', 'Kotak Current'),
+	('KOTOD', 'Kotak OD - 1412537955'),
+	('KOTWC', 'Kotak WCDL Limit'),
+	('MISC', 'Miscellaneous entry'),
+	('MTC', 'Legal Match.'),
+	('NEWPR', 'New Year'),
+	('OPDIV', 'Miscellaneous entry'),
+	('PIHI', 'Purchase Invoice'),
+	('RAZO', 'Razorpay transactions'),
+	('RBLC', 'RBL Current'),
+	('RBLCP', 'RBLCP-2058'),
+	('RBLD', 'RBL O/D A/c- 609000715480'),
+	('RBLO', 'RBL O/D A/c- 609000632974'),
+	('RBLPU', 'RBL USD A/C-409001685863'),
+	('RBLU', 'RBL EEFC - USD'),
+	('SIHI', 'Sales Invoice'),
+	('TDS', 'TDS BANK'),
+	('VTDS', 'Vendor TDS BANK');
+
 INSERT INTO journal_voucher_categories
 (category, description)
 VALUES
@@ -174,3 +306,13 @@ ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'MISC';
 ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'CSINV';
 ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'STMNT';
 ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'FAAR2';
+
+ CREATE TYPE SETTLEMENT_STATUS AS ENUM (
+  'CREATED',
+  'POSTED',
+  'POSTING_FAILED',
+  'DELETED');
+
+  CREATE CAST (varchar AS SETTLEMENT_STATUS) WITH INOUT AS IMPLICIT;
+
+ ALTER TABLE settlements ADD COLUMN settlement_status SETTLEMENT_STATUS NOT NULL DEFAULT 'CREATED';

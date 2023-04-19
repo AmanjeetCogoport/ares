@@ -155,6 +155,12 @@ interface AresClient {
     @Put("/payments/tds-amount")
     suspend fun migrateTdsAmount(@Body req: List<TdsAmountReq>)
 
+    @Get("/payments/cron-jobs/sales-amount-mismatch")
+    suspend fun getSalesAmountMismatchInJobs(): List<Long>?
+
+    @Get("/payments/cron-jobs/purchase-amount-mismatch")
+    suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
+
     @Post("/payments/parent-jv/update")
     suspend fun updateParentJv(@Body req: ParentJVUpdateRequest): String
 }

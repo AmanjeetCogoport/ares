@@ -35,6 +35,7 @@ import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
@@ -225,7 +226,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 createdBy = null,
                 updatedBy = null,
                 updatedAt = Timestamp.from(Instant.now()),
-                settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+                settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
+                settlementStatus = SettlementStatus.CREATED
             )
         )
 
@@ -254,7 +256,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                     createdBy = null,
                     updatedBy = null,
                     updatedAt = Timestamp.from(Instant.now()),
-                    settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+                    settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
+                    settlementStatus = SettlementStatus.CREATED
                 )
             )
         }
@@ -281,7 +284,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                     createdBy = null,
                     updatedBy = null,
                     updatedAt = Timestamp.from(Instant.now()),
-                    settlementNum = sequenceGeneratorImpl.getSettlementNumber()
+                    settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
+                    settlementStatus = SettlementStatus.CREATED
                 )
             )
         }

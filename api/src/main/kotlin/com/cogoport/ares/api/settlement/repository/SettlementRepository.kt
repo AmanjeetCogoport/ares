@@ -6,6 +6,7 @@ import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -47,7 +48,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.is_void,
             s.supporting_doc_url,
-            settlement_num
+            settlement_num,
+            s.settlement_status
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_void = false
         """
@@ -75,7 +77,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.is_void,
             s.supporting_doc_url,
-            s.settlement_num
+            s.settlement_num,
+            s.settlement_status
             FROM settlements s
             where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_void = false
         """
@@ -298,7 +301,6 @@ ORDER BY
         """
     )
     suspend fun getSettlementDateBySourceId(documentNo: Long?): SettlementNumInfo
-
     @NewSpan
     @Query(
         """
@@ -328,7 +330,7 @@ ORDER BY
     @Query(
         """
           SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num,
-          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_void
+          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_void,settlement_status
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
           deleted_at is null and is_void = false and source_type not in ('VTDS') order by created_at desc limit 1
         """
@@ -372,7 +374,8 @@ ORDER BY
             s.updated_by,
             s.supporting_doc_url,
             is_void,
-            settlement_num
+            settlement_num,
+            settlement_status
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
             and deleted_at IS NULL  and is_void = false
@@ -380,4 +383,17 @@ ORDER BY
         """
     )
     suspend fun findByDestIdAndDestTypeAndSourceType(destId: Long, destType: SettlementType, sourceType: SettlementType): List<Settlement?>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                settlements
+            SET 
+                settlement_status = :settlementStatus, updated_at = NOW(), updated_by = :performedBy
+            WHERE 
+                id = :id
+            """
+    )
+    suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
 }

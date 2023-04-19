@@ -12,7 +12,6 @@ class RabbitMqBootstrap : ChannelInitializer() {
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         initialize(null, "")
     }
-
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 

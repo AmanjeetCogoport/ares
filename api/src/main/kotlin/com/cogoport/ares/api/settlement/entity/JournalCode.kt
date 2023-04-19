@@ -6,7 +6,6 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
-import java.util.UUID
 
 @Introspected
 @MappedEntity(value = "journal_voucher_codes")
@@ -15,8 +14,6 @@ data class JournalCode(
     var id: Long?,
     var number: String,
     var description: String,
-    var createdBy: UUID?,
-    var updatedBy: UUID?,
     @DateCreated var createdAt: Timestamp?,
     @DateCreated var updatedAt: Timestamp?
 )

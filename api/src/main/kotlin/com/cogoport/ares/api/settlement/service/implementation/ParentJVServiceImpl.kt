@@ -148,6 +148,17 @@ open class ParentJVServiceImpl : ParentJVService {
         )
         val parentJvData = parentJVRepository.save(parentData)
 
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
+                objectId = parentJvData.id,
+                actionName = AresConstants.CREATE,
+                data = parentJvData,
+                performedBy = request.createdBy.toString(),
+                performedByUserType = null
+            )
+        )
+
         creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
 
         return parentJvData.jvNum
@@ -298,6 +309,17 @@ open class ParentJVServiceImpl : ParentJVService {
             }
         }
         journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.JOURNAL_VOUCHERS,
+                objectId = parentJvId,
+                actionName = AresConstants.DELETE,
+                data = mapOf("id" to id, "status" to "DELETED"),
+                performedBy = performedBy.toString(),
+                performedByUserType = null
+            )
+        )
 
         return id
     }

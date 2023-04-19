@@ -1311,18 +1311,19 @@ open class OnAccountServiceImpl : OnAccountService {
                 return false
             }
 
-            when (paymentDetails.payMode) {
-                PayMode.RAZORPAY -> {
-                    bankCode = PaymentSageGLCodes.RAZO.name
-                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
-                    currency = PaymentSageGLCodes.RAZO.currency
-                }
-                else -> {
-                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
-                    bankCode = bankCodeDetails["bankCode"]!!
-                    entityCode = bankCodeDetails["entityCode"].toString()
-                    currency = bankCodeDetails["currency"]!!
-                }
+            if (paymentDetails.payMode == PayMode.RAZORPAY) {
+                bankCode = PaymentSageGLCodes.RAZO.name
+                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                currency = PaymentSageGLCodes.RAZO.currency
+            } else if (paymentDetails.paymentCode == PaymentCode.CTDS) {
+                bankCode = "CTDSP"
+                entityCode = paymentDetails.entityCode.toString()
+                currency = paymentDetails.currency
+            } else {
+                bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                bankCode = bankCodeDetails["bankCode"]!!
+                entityCode = bankCodeDetails["entityCode"].toString()
+                currency = bankCodeDetails["currency"]!!
             }
 
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
@@ -1371,6 +1372,31 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
                 openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
                 Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+
+                val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
+                val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+                val records = mappedResponse["recordset"] as? ArrayList<*>
+
+                if (records?.size != 0) {
+                    val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
+                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentToSage",
+                            "Payment",
+                            paymentId,
+                            "PAYMENT",
+                            "500",
+                            records.toString(),
+                            "Sage Payment Num Value not present",
+                            false
+                        )
+                    )
+                }
+
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
