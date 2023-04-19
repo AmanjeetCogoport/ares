@@ -8,5 +8,10 @@ enum class JVSageControls(val value: String) {
     PDA("PDA"),
     EMD("EMD"),
     SUSS("SUSS"),
-    SUSA("SUSA")
+    SUSA("SUSA"),
+    RE("RE"),
+    PREF("PREF"),
+    EMP("EMP"),
+    RI("RI"),
+    PC("PC")
 }
