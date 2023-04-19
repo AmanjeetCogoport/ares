@@ -35,6 +35,7 @@ import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
@@ -343,7 +344,8 @@ open class KnockoffServiceImpl : KnockoffService {
             createdBy = knockOffRecord.createdBy,
             updatedBy = knockOffRecord.updatedBy,
             settlementDate = Date(Timestamp.from(Instant.now()).time),
-            settlementNum = null
+            settlementNum = null,
+            settlementStatus = SettlementStatus.CREATED
         )
     }
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
