@@ -69,7 +69,6 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
-import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -1455,15 +1454,7 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PREIMB,
                 SettlementType.SREIMB
             )
-        val jvType =
-            listOf(
-                SettlementType.WOFF,
-                SettlementType.ROFF,
-                SettlementType.JVNOS,
-                SettlementType.EXCH,
-                SettlementType.OUTST,
-                SettlementType.ICJV
-            )
+        val jvType = settlementServiceHelper.getJvList(SettlementType::class.java)
         for (doc in request.stackDetails!!.reversed()) {
             if (creditType.contains(doc.accountType)) {
                 source.add(doc)
@@ -1922,7 +1913,7 @@ open class SettlementServiceImpl : SettlementService {
             AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
                 journalVoucherService.updateJournalVoucherStatus(
                     id = accountUtilization.documentNo,
-                    status = JVStatus.UTILIZED,
+                    isUtilized = true,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType
                 )
@@ -2125,6 +2116,11 @@ open class SettlementServiceImpl : SettlementService {
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
         val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
+
+        if (jvList.contains(accType)) {
+            return jvSettleList
+        }
+
         return when (accType) {
             SettlementType.REC -> {
                 listOf(SettlementType.SINV, SettlementType.SDN) + jvList
@@ -2155,24 +2151,6 @@ open class SettlementServiceImpl : SettlementService {
             }
             SettlementType.VTDS -> {
                 listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PCN)
-            }
-            SettlementType.WOFF -> {
-                jvSettleList
-            }
-            SettlementType.ROFF -> {
-                jvSettleList
-            }
-            SettlementType.OUTST -> {
-                jvSettleList
-            }
-            SettlementType.EXCH -> {
-                jvSettleList
-            }
-            SettlementType.JVNOS -> {
-                jvSettleList
-            }
-            SettlementType.ICJV -> {
-                jvSettleList
             }
             SettlementType.PREIMB -> {
                 listOf(SettlementType.SREIMB)

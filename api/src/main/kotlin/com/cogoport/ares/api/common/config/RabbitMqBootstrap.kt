@@ -75,5 +75,11 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
         channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
+
+        channel?.queueDeclare("ares-migrate-gl-codes", true, false, false, null)
+        channel?.queueBind("ares-migrate-gl-codes", "ares", "ares.migrate.gl.codes", null)
+
+        channel?.queueDeclare("ares-post-jv-to-sage", true, false, false, null)
+        channel?.queueBind("ares-post-jv-to-sage", "ares", "ares.post.jv.to.sage", null)
     }
 }
