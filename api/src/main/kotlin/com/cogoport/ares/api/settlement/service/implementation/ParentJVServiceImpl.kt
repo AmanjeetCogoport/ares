@@ -615,11 +615,11 @@ open class ParentJVServiceImpl : ParentJVService {
         val updatedPageLimit = pageLimit ?: 10
         val query = util.toQueryString(q)
         val updatedAccMode = when (accMode) {
-            null -> " "
+            null -> null
             else -> getAccModeValue(accMode)
         }
 
-        val countryEntityCode = mapOf(301 to "IND", 101 to "IND", 201 to "NL", 401 to "SGP", 501 to "VN")
+        val countryEntityCode = mapOf(301 to listOf("IND", "USD"), 101 to listOf("IND", "USD"), 201 to listOf("NL", "USD"), 401 to listOf("SGP", "USD"), 501 to listOf("VN", "USD"))
         return glCodeMasterRepository.getGLCodeMaster(updatedAccMode, query, updatedPageLimit, countryEntityCode[entityCode])
     }
 
