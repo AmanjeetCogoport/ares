@@ -86,8 +86,8 @@ class ParentJVController {
     }
 
     @Get("/gl-code-master")
-    suspend fun getGLCodeMaster(@QueryValue("accMode") accMode: AccMode?, @QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10): List<GlCodeMaster> {
-        return parentJVService.getGLCodeMaster(accMode, q, pageLimit)
+    suspend fun getGLCodeMaster(@QueryValue("accMode") accMode: AccMode?, @QueryValue("q") q: String?, @QueryValue("pageLimit") pageLimit: Int? = 10, @QueryValue("entityCode") entityCode: Int? = 301): List<GlCodeMaster> {
+        return parentJVService.getGLCodeMaster(accMode, q, pageLimit, entityCode)
     }
 
     @Get("/journal-code")

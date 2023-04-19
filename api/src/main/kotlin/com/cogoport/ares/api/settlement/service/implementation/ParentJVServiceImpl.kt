@@ -164,7 +164,7 @@ open class ParentJVServiceImpl : ParentJVService {
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
-                query,
+            query,
             jvListRequest.page,
             jvListRequest.pageLimit,
             jvListRequest.sortType,
@@ -611,14 +611,16 @@ open class ParentJVServiceImpl : ParentJVService {
         return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit)
     }
 
-    override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?): List<GlCodeMaster> {
+    override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?, entityCode: Int?): List<GlCodeMaster> {
         val updatedPageLimit = pageLimit ?: 10
-        var query = util.toQueryString(q)
+        val query = util.toQueryString(q)
         val updatedAccMode = when (accMode) {
             null -> " "
             else -> getAccModeValue(accMode)
         }
-        return glCodeMasterRepository.getGLCodeMaster(updatedAccMode, query, updatedPageLimit)
+
+        val countryEntityCode = mapOf(301 to "IND", 101 to "IND", 201 to "NL", 401 to "SGP", 501 to "VN")
+        return glCodeMasterRepository.getGLCodeMaster(updatedAccMode, query, updatedPageLimit, countryEntityCode[entityCode])
     }
 
     override suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode> {

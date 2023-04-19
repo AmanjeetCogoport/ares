@@ -29,7 +29,7 @@ interface ParentJVService {
 
     suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode>
 
-    suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?): List<GlCodeMaster>
+    suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?, entityCode: Int?): List<GlCodeMaster>
 
     suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode>
 }

@@ -18,6 +18,6 @@ class Util {
     }
 
     fun toQueryString(q: String?): String {
-        return if (q == null) "%%" else "%${q}%"
+        return if (q == null) "%%" else "%$q%"
     }
 }
