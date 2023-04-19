@@ -659,4 +659,14 @@ open class ParentJVServiceImpl : ParentJVService {
         val query = util.toQueryString(q)
         return journalCodeRepository.getJournalCode(query, updatedPageLimit)
     }
+
+    override suspend fun getAccountMode(q: String?): List<HashMap<String, String>> {
+        val query = util.toQueryString(q)
+
+        val uniqueAccountModes = glCodeMasterRepository.getDistinctAccType(query)
+
+        return uniqueAccountModes.map {
+            hashMapOf("label" to it, "value" to it)
+        }
+    }
 }

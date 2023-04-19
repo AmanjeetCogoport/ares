@@ -38,4 +38,16 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
             """
     )
     fun getGLCodeMaster(accMode: String?, q: String?, pageLimit: Int?, countryCode: List<String>?): List<GlCodeMaster>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            distinct(account_type)
+            FROM 
+            gl_code_masters
+            where account_type != ' ' and account_type::VARCHAR ILIKE :q
+            """
+    )
+    fun getDistinctAccType(q: String?): List<String>
 }
