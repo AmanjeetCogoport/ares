@@ -157,12 +157,12 @@ class AresMessageConsumer {
         taggedSettlementService.settleOnAccountInvoicePayment(req)
     }
 
-    @Queue("migrate-gl-codes", prefetch = 1)
+    @Queue("ares-migrate-gl-codes", prefetch = 1)
     fun migrateGLCode(req: GlCodeMaster) = runBlocking {
         paymentMigrationWrapper.createGLCode(req)
     }
 
-    @Queue("post-jv-to-sage", prefetch = 1)
+    @Queue("ares-post-jv-to-sage", prefetch = 1)
     fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
         parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
     }

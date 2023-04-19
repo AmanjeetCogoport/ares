@@ -56,9 +56,9 @@ interface AresMessagePublisher {
     @Binding("tagged.bill.auto.knockoff")
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
 
-    @Binding("migrate.gl.codes")
+    @Binding("ares.migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)
 
-    @Binding("post.jv.to.sage")
+    @Binding("ares.post.jv.to.sage")
     suspend fun emitPostJvToSage(req: PostJVToSageRequest)
 }
