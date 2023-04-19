@@ -68,7 +68,7 @@ class ParentJVController {
     }
 
     @Post("/post-to-sage")
-    suspend fun postJVToSage(@Body req: PostJVToSageRequest): Response<String> {
+    suspend fun postJVToSage(@Valid @Body req: PostJVToSageRequest): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
             if (parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)) "Success." else "Failed."

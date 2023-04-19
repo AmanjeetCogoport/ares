@@ -416,6 +416,10 @@ open class ParentJVServiceImpl : ParentJVService {
                 if (lineItem.tradePartyId != null) {
                     val organization = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId)
 
+                    if (organization.list.isEmpty()) {
+                        throw AresException(AresError.ERR_1530, "")
+                    }
+
                     sageOrganization = authClient.getSageOrganization(
                         SageOrganizationRequest(
                             organization.list[0]["serial_id"]!!.toString(),
