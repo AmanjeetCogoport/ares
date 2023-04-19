@@ -643,8 +643,12 @@ open class ParentJVServiceImpl : ParentJVService {
 
         val uniqueAccountModes = glCodeMasterRepository.getDistinctAccType(query)
 
-        return uniqueAccountModes.map {
-            hashMapOf("label" to it, "value" to it)
+        val uniqueAccountModeList = mutableListOf<HashMap<String, String>>()
+
+        uniqueAccountModes.forEachIndexed { index, it ->
+            uniqueAccountModeList.add(hashMapOf("label" to it, "value" to it, "id" to index.toString()))
         }
+
+        return uniqueAccountModeList
     }
 }
