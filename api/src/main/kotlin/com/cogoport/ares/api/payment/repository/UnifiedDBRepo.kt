@@ -107,15 +107,28 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
         WHERE document_status = 'FINAL'
-        AND (:entityCode is null OR aau.entity_code = :entityCode)
+        AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
         AND aau.transaction_date < NOW() 
-        AND acc_type = 'REC'
-        AND (acc_mode = 'AR')
+        AND (acc_type = :accType)
+        AND (acc_mode = :accMode)
+        AND (CASE WHEN :isTillYesterday = TRUE THEN aau.transaction_date < now()::DATE ELSE TRUE END)
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+        AND (COALESCE(:serviceTypes) is null or aau.service_type in (:serviceTypes))
+        AND (:startDate is null or :endDate is null or aau.transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (CASE WHEN :accMode = 'AP' THEN aau.migrated = FALSE ELSE TRUE END)
         AND deleted_at is null
         """
     )
-    fun getOnAccountAmount(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): BigDecimal?
+    fun getOnAccountAmount(
+        entityCode: MutableList<Int>?,
+        defaultersOrgIds: List<UUID>? = null,
+        accMode: String,
+        accType: String,
+        serviceTypes: List<ServiceType>? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        isTillYesterday: Boolean? = false
+    ): BigDecimal?
 
     @NewSpan
     @Query(
@@ -136,18 +149,16 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             ares.account_utilizations aau 
             INNER JOIN plutus.invoices pinv on pinv.id = aau.document_no
             INNER JOIN loki.jobs lj on lj.id = pinv.job_id
-            where
-            aau.trade_party_mapping_id is not null 
-            AND acc_mode ='AR'
-            AND acc_type in ('SINV', 'SCN')
+            WHERE
+            acc_mode = 'AR'
+            AND acc_type in ('SINV', 'SCN', 'SREIMB')
             AND aau.document_status = 'FINAL'
-            AND aau.migrated = false
-            AND (amount_loc-pay_loc) > 0 
+            AND aau.due_date IS NOT NULL
             AND aau.transaction_date::date <= Now()
-            AND (:entityCode is null or aau.entity_code = :entityCode)
-            AND lj.job_source != 'FREIGHT_FORCE'
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by aau.led_currency,aau.service_type, aau.led_currency, lj.job_details  ->> 'tradeType'
+            AND ( aau.entity_code = :entityCode)
+            AND (lj.job_source != 'FREIGHT_FORCE')
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
+            group by aau.led_currency,aau.service_type, lj.job_details  ->> 'tradeType'
         """
     )
     fun getOutstandingData(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
@@ -162,7 +173,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND aau.transaction_date < NOW() 
             AND acc_type = 'REC'
             AND (acc_mode = 'AR')
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
             AND date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
         """
@@ -182,7 +193,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND document_status = 'FINAL'
             AND acc_type in ('SINV','SCN')
             AND (aau.entity_code = :entityCode)
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
             GROUP BY led_currency
         """
@@ -536,7 +547,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             acc_type in ('SINV','SDN') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id NOT IN (:defaultersOrgIds))
+            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             AND (:serviceType is null OR aau.service_type = :serviceType)
             AND ( aau.entity_code = :entityCode)
@@ -559,7 +570,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         '' as dashboard_currency
         FROM
         ares.account_utilizations aau
-        INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+        INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
         INNER JOIN organizations o on o.registration_number = otpd.registration_number
         LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
         WHERE
@@ -572,7 +583,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         (:serviceType is null or aau.service_type = :serviceType) 
         AND document_status in ('FINAL') 
         AND deleted_at is null
-        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds)) 
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds)) 
         AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
         group by EXTRACT(MONTH FROM transaction_date)
         """
@@ -588,7 +599,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
             '' as dashboard_currency
             from ares.account_utilizations aau
-            INNER JOIN organization_trade_party_details otpd on aau.organization_id = otpd.id
+            INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
             INNER JOIN organizations o on o.registration_number = otpd.registration_number
             LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
             WHERE 
@@ -597,7 +608,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             AND document_status in ('FINAL') 
             AND EXTRACT(YEAR FROM aau.transaction_date) = :year
             AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
+            AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (aau.entity_code = :entityCode)
             AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
             GROUP BY date_trunc('quarter',aau.transaction_date)
@@ -735,7 +746,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+       sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
@@ -752,6 +767,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (COALESCE(:tradeType) is null or j.job_details->>'tradeType' in (:tradeType))
         """
     )
@@ -761,7 +777,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         endDate: String?,
         tradeType: List<String>?,
         entityCode: MutableList<Int>?,
-        customerTypes: List<String>?
+        customerTypes: List<String>?,
+        defaultersOrgIds: List<UUID>?
     ): BfReceivableAndPayable
 
     @NewSpan
@@ -804,7 +821,11 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         sum(
 			CASE WHEN (now()::date - au.due_date) > 360 THEN
 				au.sign_flag * (au.amount_loc - au.pay_loc)
-			ELSE 0 END) AS three_sixty_plus_day_overdue
+			ELSE 0 END) AS three_sixty_plus_day_overdue,
+        sum(
+			CASE WHEN au.transaction_date < now()::date THEN
+				au.sign_flag * (au.amount_loc - au.pay_loc)
+			ELSE 0 END) AS till_yesterday_total_outstanding
 	FROM
 		ares.account_utilizations au JOIN 
         kuber.bills bill ON au.document_no = bill.id JOIN
@@ -1119,6 +1140,11 @@ FROM
 			AND iv.invoice_type = 'INVOICE' THEN
 			1
 		ELSE 0 END) AS total_invoices,
+    sum(
+		CASE WHEN iv.invoice_date::date = :date::date
+			AND iv.invoice_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_sales_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'SINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_sales_orgs
@@ -1153,6 +1179,11 @@ FROM
 			AND bill.bill_type = 'BILL' THEN
 			1
 		ELSE 0 END) AS total_bills,
+    sum(
+		CASE WHEN bill.finance_accept_date::date = :date::date
+			AND bill.bill_type = 'CREDIT_NOTE' THEN
+			1
+		ELSE 0 END) AS total_purchase_credit_notes,
 	count(DISTINCT CASE WHEN au.acc_type = 'PINV' THEN
 			au.tagged_organization_id
 		ELSE NULL END) AS total_purchase_orgs
@@ -1267,11 +1298,11 @@ GROUP BY
 	o.sage_company_id
         ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
-                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / 100) ELSE random() END
+                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 ELSE random() END
             END 
             Desc,
             CASE WHEN :sortType = 'Asc' THEN
-                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / 100) ELSE random() END    
+                     CASE WHEN :sortBy = 'profit' THEN ((SUM(j.income) - SUM(j.expense)) / SUM(j.income)) * 100 ELSE random() END    
             END 
             Asc
     OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
@@ -1314,6 +1345,7 @@ WHERE
 		AND au.deleted_at IS NULL
 		AND au.acc_type IN (:accType)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         """
     )
@@ -1323,7 +1355,8 @@ WHERE
         serviceTypes: List<ServiceType>,
         entityCode: MutableList<Int>?,
         startDate: String?,
-        endDate: String?
+        endDate: String?,
+        defaultersOrgIds: List<UUID>?
     ): BigDecimal?
     @Query(
         """
@@ -1392,6 +1425,7 @@ WHERE
 		AND au.acc_type IN ('SINV','SCN','SREIMB')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
+        AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
         """
     )
@@ -1400,6 +1434,7 @@ WHERE
         startDate: String?,
         endDate: String?,
         entityCode: MutableList<Int>?,
+        defaultersOrgIds: List<UUID>?
     ): ServiceWiseCardData
 
     @Query(
@@ -1485,4 +1520,46 @@ WHERE
         """
     )
     suspend fun getInvoicesNotPresentInPlutus(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+        WITH x AS
+         (SELECT 
+            job_id as id,
+            COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN sub_total * exchange_rate ELSE -1 * sub_total * exchange_rate END),0) as pre_tax_income,
+            COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN tax_total * exchange_rate ELSE -1 * tax_total * exchange_rate END),0) as income_tax_amount,
+            COALESCE(SUM(CASE WHEN invoice_type NOT IN ('CREDIT_NOTE') THEN grand_total * exchange_rate ELSE -1 * grand_total * exchange_rate END),0) as total_income 
+            FROM plutus.invoices 
+            WHERE status NOT IN ('DRAFT', 'FINANCE_REJECTED', 'IRN_CANCELLED')
+            AND invoice_type != 'REIMBURSEMENT'
+            GROUP BY job_id order by job_id desc)
+        SELECT j.id FROM loki.jobs j JOIN x ON x.id = j.id WHERE
+          x.total_income != j.income OR
+          x.pre_tax_income != j.pre_tax_income OR  
+          x.income_tax_amount != j.income_tax_amount LIMIT 1000
+         """
+    )
+    suspend fun getSalesAmountMismatchInJobs(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+        WITH y AS
+         (SELECT 
+            job_id AS id,
+            COALESCE(SUM(CASE WHEN bill_type != 'CREDIT_NOTE' THEN sub_total * exchange_rate ELSE -1 * sub_total * exchange_rate END),0) as pre_tax_expense,
+            COALESCE(SUM(CASE WHEN bill_type != 'CREDIT_NOTE' THEN tax_total * exchange_rate ELSE -1 * tax_total * exchange_rate END),0) as expense_tax_amount,
+            COALESCE(SUM(CASE WHEN bill_type != 'CREDIT_NOTE' THEN grand_total * exchange_rate ELSE -1 * grand_total * exchange_rate END),0) as total_expense
+            FROM kuber.bills 
+            WHERE status NOT IN ('INITIATED', 'DRAFT', 'ON_HOLD', 'LOCKED', 'FINANCE_REJECTED', 'COE_REJECTED', 'VOID')
+            AND bill_type NOT IN ('REIMBURSEMENT', 'EXPENSE', 'REIMBURSEMENT_CN')
+            group by job_id order by job_id desc)
+        SELECT j.id FROM loki.jobs j JOIN y ON y.id = j.id WHERE
+        y.pre_tax_expense != j.pre_tax_expense OR  
+        y.expense_tax_amount != j.expense_tax_amount OR     
+        y.total_expense != j.expense LIMIT 1000
+    """
+    )
+    suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
 }

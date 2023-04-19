@@ -9,11 +9,13 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.settlement.GlCodeMaster
+import com.cogoport.ares.model.payment.AccMode
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -27,6 +29,9 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
@@ -56,7 +61,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             }
             jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
         }
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+//        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
 //            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
@@ -223,7 +229,10 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
-            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            val account = accountUtilizationRepository.findRecord(it.documentNo, null, AccMode.AP.name)
+            if (account != null) {
+                accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            }
         }
     }
 
