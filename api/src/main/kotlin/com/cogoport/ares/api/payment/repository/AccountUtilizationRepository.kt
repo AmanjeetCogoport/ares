@@ -1478,4 +1478,22 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                account_utilizations 
+            SET 
+                deleted_at = NOW(), 
+                updated_at = NOW() 
+            WHERE 
+                document_value = :docValue 
+            AND 
+                acc_type = :accType::ACCOUNT_TYPE
+            AND
+                deleted_at IS NULL
+        """
+    )
+    suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
 }

@@ -5,6 +5,7 @@ import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.model.settlement.GlCodeMaster
 
 interface SageService {
     suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord>
@@ -23,4 +24,6 @@ interface SageService {
     suspend fun getJournalVoucherFromSage(startDate: String?, endDate: String?, jvNums: String?): ArrayList<JournalVoucherRecord>
 
     suspend fun getPaymentsForScheduler(startDate: String, endDate: String): ArrayList<PaymentRecord>
+
+    suspend fun getGLCode(): List<GlCodeMaster>
 }

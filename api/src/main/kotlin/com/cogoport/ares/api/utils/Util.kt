@@ -16,4 +16,8 @@ class Util {
         val data = cogoBackClient.getPartnerDetails(GetPartnerRequest(UUID.fromString(cogoEntityId), false)) as LinkedHashMap<String, LinkedHashMap<String, String>>
         return data.get("data")?.get("entity_code")
     }
+
+    fun toQueryString(q: String?): String {
+        return if (q == null) "%%" else "%$q%"
+    }
 }
