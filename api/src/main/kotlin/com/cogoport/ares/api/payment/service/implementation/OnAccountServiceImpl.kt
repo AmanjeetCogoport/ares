@@ -119,8 +119,6 @@ import java.nio.file.StandardCopyOption
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.ZoneId
-import java.time.temporal.IsoFields
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.abs
@@ -308,6 +306,8 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
 
         if (receivableRequest.accMode == AccMode.AR) {
             accUtilEntity.accCode = AresModelConstants.AR_ACCOUNT_CODE
@@ -370,17 +370,6 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     private suspend fun emitDashboardAndOutstandingEvent(accUtilizationRequest: AccUtilizationRequest) {
         val date = accUtilizationRequest.dueDate ?: accUtilizationRequest.transactionDate
-        aresMessagePublisher.emitDashboardData(
-            OpenSearchEvent(
-                OpenSearchRequest(
-                    zone = accUtilizationRequest.zoneCode,
-                    date = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(date),
-                    quarter = date!!.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().get(IsoFields.QUARTER_OF_YEAR),
-                    year = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year,
-                    accMode = accUtilizationRequest.accMode
-                )
-            )
-        )
         aresMessagePublisher.emitOutstandingData(
             OpenSearchEvent(
                 OpenSearchRequest(

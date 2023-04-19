@@ -29,5 +29,7 @@ data class Settlement(
     var updatedBy: UUID?,
     var updatedAt: Timestamp?,
     var supportingDocUrl: String? = null,
+    var isVoid: Boolean? = false,
+    var settlementNum: String?,
     var settlementStatus: SettlementStatus
 )

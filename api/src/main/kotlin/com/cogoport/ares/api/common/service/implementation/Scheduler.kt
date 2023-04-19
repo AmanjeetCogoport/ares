@@ -1,7 +1,10 @@
 package com.cogoport.ares.api.common.service.implementation
 
+import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -9,9 +12,17 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
+import java.util.Calendar
+import java.util.TimeZone
 
 @Singleton
-class Scheduler(private var emitter: AresMessagePublisher, private var accountUtilizationRepository: AccountUtilizationRepository) {
+class Scheduler(
+    private var emitter: AresMessagePublisher,
+    private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var outStandingService: OutStandingService,
+    private var unifiedDBRepo: UnifiedDBRepo,
+    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl
+) {
 
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
@@ -41,5 +52,51 @@ class Scheduler(private var emitter: AresMessagePublisher, private var accountUt
                 }
             }
         }
+    }
+    @Scheduled(cron = "30 04 * * *")
+    fun uploadPayblesInfo() {
+        runBlocking {
+            outStandingService.uploadPayblesStats()
+        }
+    }
+
+    @Scheduled(cron = "0 * * * *")
+    fun deleteInvoicesNotPresentInPlutus() {
+        runBlocking {
+            val ids = unifiedDBRepo.getInvoicesNotPresentInPlutus()
+            if (!ids.isNullOrEmpty()) {
+                for (id in ids) {
+                    emitter.emitDeleteInvoicesNotPresentInPlutus(id)
+                }
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Europe/Paris")
+    fun createLedgerBalancesForNetherlands() = runBlocking {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 201)
+    }
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Ho_Chi_Minh")
+    fun createLedgerBalancesForVietnam() = runBlocking {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 501)
+    }
+
+    @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Kolkata")
+    fun createLedgerBalancesForIndia() = runBlocking {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 301)
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
+    }
+
+    /**
+     * Asia/Singapore is UTC+08:00
+     **/
+    @Scheduled(cron = "0 16 * * *")
+    fun createLedgerBalancesForSingapore() = runBlocking {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
+        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 }

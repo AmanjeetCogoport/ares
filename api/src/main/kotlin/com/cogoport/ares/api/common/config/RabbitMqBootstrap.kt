@@ -12,7 +12,6 @@ class RabbitMqBootstrap : ChannelInitializer() {
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         initialize(null, "")
     }
-
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 
@@ -31,9 +30,6 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("unfreeze-credit-consumption", true, false, false, null)
         channel?.queueBind("unfreeze-credit-consumption", "ares", "unfreeze.credit.consumption", null)
-
-        channel?.queueDeclare("receivables-dashboard-data", true, false, false, null)
-        channel?.queueBind("receivables-dashboard-data", "ares", "receivables.dashboard.data", null)
 
         channel?.queueDeclare("receivables-outstanding-data", true, false, false, null)
         channel?.queueBind("receivables-outstanding-data", "ares", "receivables.outstanding.data", null)
@@ -67,5 +63,17 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("update-customer-details", true, false, false, null)
         channel?.queueBind("update-customer-details", "ares", "customer.outstanding", null)
+
+        channel?.queueDeclare("migrate-settlement-number", true, false, false, null)
+        channel?.queueBind("migrate-settlement-number", "ares", "migrate.settlement.number", null)
+
+        channel?.queueDeclare("update-settlement-bill-updated", true, false, false, null)
+        channel?.queueBind("update-settlement-bill-updated", "ares", "update.settlement.bill.updated", null)
+
+        channel?.queueDeclare("tagged-bill-auto-knockoff", true, false, false, null)
+        channel?.queueBind("tagged-bill-auto-knockoff", "ares", "tagged.bill.auto.knockoff", null)
+
+        channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
+        channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
     }
 }

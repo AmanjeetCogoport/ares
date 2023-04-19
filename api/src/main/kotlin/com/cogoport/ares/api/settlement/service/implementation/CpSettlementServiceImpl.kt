@@ -226,6 +226,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                 createdBy = null,
                 updatedBy = null,
                 updatedAt = Timestamp.from(Instant.now()),
+                settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
                 settlementStatus = SettlementStatus.CREATED
             )
         )
@@ -255,6 +256,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                     createdBy = null,
                     updatedBy = null,
                     updatedAt = Timestamp.from(Instant.now()),
+                    settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
                     settlementStatus = SettlementStatus.CREATED
                 )
             )
@@ -282,6 +284,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                     createdBy = null,
                     updatedBy = null,
                     updatedAt = Timestamp.from(Instant.now()),
+                    settlementNum = sequenceGeneratorImpl.getSettlementNumber(),
                     settlementStatus = SettlementStatus.CREATED
                 )
             )

@@ -44,6 +44,9 @@ data class AccountUtilizationMigration(
     var transactionDate: Date?,
     var createdAt: Timestamp?,
     var updatedAt: Timestamp?,
-    var migrated: Boolean?
-
+    var migrated: Boolean?,
+    var isVoid: Boolean? = false,
+    var taggedBillId: String? = null,
+    var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
+    var tdsAmount: BigDecimal? = BigDecimal.ZERO
 )
