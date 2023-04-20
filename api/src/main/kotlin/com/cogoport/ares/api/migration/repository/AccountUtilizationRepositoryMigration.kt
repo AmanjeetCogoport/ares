@@ -89,7 +89,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     @Query(
         """
         SELECT EXISTS (
-            SELECT * FROM 
+            SELECT id FROM 
             account_utilizations WHERE 
             document_value = :documentValue 
             AND sage_organization_id = :sageOrganizationId 
