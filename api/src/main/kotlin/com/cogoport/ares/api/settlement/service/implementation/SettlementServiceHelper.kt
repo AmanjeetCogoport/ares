@@ -60,7 +60,6 @@ class SettlementServiceHelper {
             AccountType.PAYRL -> getVoucherType(signFlag) + InvoiceType.PAYRL.value
             AccountType.GENSM -> getVoucherType(signFlag) + InvoiceType.GENSM.value
             AccountType.FAIR3 -> getVoucherType(signFlag) + InvoiceType.FAIR3.value
-            AccountType.ZSINV -> getVoucherType(signFlag) + InvoiceType.ZSINV.value
             AccountType.WIPCS -> getVoucherType(signFlag) + InvoiceType.WIPCS.value
             AccountType.MFIIS -> getVoucherType(signFlag) + InvoiceType.MFIIS.value
             AccountType.BANK -> getVoucherType(signFlag) + InvoiceType.BANK.value
@@ -72,7 +71,12 @@ class SettlementServiceHelper {
             AccountType.CLOS1 -> getVoucherType(signFlag) + InvoiceType.CLOS1.value
             AccountType.SPMEM -> getVoucherType(signFlag) + InvoiceType.SPMEM.value
             AccountType.GEN -> getVoucherType(signFlag) + InvoiceType.GEN.value
-            else -> throw AresException(AresError.ERR_1009, "accountType")
+            AccountType.MISC -> getVoucherType(signFlag) + InvoiceType.MISC.value
+            AccountType.OPDIV -> getVoucherType(signFlag) + InvoiceType.OPDIV.value
+            AccountType.CSMEM -> getVoucherType(signFlag) + InvoiceType.CSMEM.value
+            AccountType.CONTR -> getVoucherType(signFlag) + InvoiceType.CONTR.value
+            AccountType.BANK -> getVoucherType(signFlag) + InvoiceType.BANK.value
+            else -> throw AresException(AresError.ERR_1009, "accountType $accType")
         }
     }
 
@@ -127,7 +131,6 @@ class SettlementServiceHelper {
                 SettlementType.PAYMT,
                 SettlementType.SPMEM,
                 SettlementType.FAIS3,
-                SettlementType.ZSINV,
                 SettlementType.SPDIR,
                 SettlementType.GEN,
                 SettlementType.NEWPR,
@@ -138,7 +141,6 @@ class SettlementServiceHelper {
                 SettlementType.STOCK,
                 SettlementType.MTC,
                 SettlementType.WIPCO,
-                SettlementType.SPINV,
                 SettlementType.RECP,
                 SettlementType.MSCOP,
                 SettlementType.INTER,
@@ -189,7 +191,6 @@ class SettlementServiceHelper {
                 AccountType.PAYMT,
                 AccountType.SPMEM,
                 AccountType.FAIS3,
-                AccountType.ZSINV,
                 AccountType.SPDIR,
                 AccountType.GEN,
                 AccountType.NEWPR,
@@ -200,7 +201,6 @@ class SettlementServiceHelper {
                 AccountType.STOCK,
                 AccountType.MTC,
                 AccountType.WIPCO,
-                AccountType.SPINV,
                 AccountType.RECP,
                 AccountType.MSCOP,
                 AccountType.INTER,

@@ -53,9 +53,19 @@ enum class DocStatus(val value: String) {
 }
 
 enum class InvoiceType(val value: String) {
-    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"),
-    PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment"),
-    WOFF("Write Off Voucher"), ROFF("Round Off Voucher"), EXCH("Exchange Voucher"), OUTST("Outstanding Voucher"), JVNOS("Nostro Voucher"),
+    SINV("Sales Invoice"),
+    SCN("Sales Credit Note"),
+    SDN("Sales Debit Note"),
+    REC("Sales Payment"),
+    PINV("Purchase Invoice"),
+    PCN("Purchase Credit Note"),
+    PDN("Purchase Debit Note"),
+    PAY("Purchase Payment"),
+    WOFF("Write Off Voucher"),
+    ROFF("Round Off Voucher"),
+    EXCH("Exchange Voucher"),
+    OUTST("Outstanding Voucher"),
+    JVNOS("Nostro Voucher"),
     SREIMB("Reimbursement Sales Invoice"),
     PREIMB("Reimbursement Purchase Invoice"),
     ICJV("Inter Company Journal Voucher"),
@@ -80,7 +90,6 @@ enum class InvoiceType(val value: String) {
     PAYRL("OD de nómina"),
     GENSM("Simulação Geral"),
     FAIR3("OD Imob IAS"),
-    ZSINV("Customer Invoice"),
     WIPCS("Em Curso"),
     MFIIS("Interface Produção"),
     BANK("Bank Entry"),
@@ -92,7 +101,11 @@ enum class InvoiceType(val value: String) {
     CSDIR("Прямые продажи (сф)"),
     CLOS1("Closing Year End / Legal"),
     SPMEM("Supplier Credit Memo"),
-    GEN("Opérations diverses")
+    GEN("Opérations diverses"),
+    MISC("Miscellaneous entry"),
+    CSMEM("Customer Memo"),
+    OPDIV("Miscellaneous entry"),
+    CONTR("CONTRA"),
 }
 
 /**
