@@ -20,5 +20,5 @@ interface PaymentMigrationWrapper {
 
     suspend fun migrateTdsAmount(req: List<TdsAmountReq>)
 
-    suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?)
+    suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 }

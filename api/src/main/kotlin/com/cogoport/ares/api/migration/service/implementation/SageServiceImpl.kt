@@ -494,7 +494,7 @@ class SageServiceImpl : SageService {
         return payments.recordSets!![0]
     }
 
-    override suspend fun getNewPeriodRecord(startDate: String, endDate: String, bpr: String?): List<NewPeriodRecord> {
+    override suspend fun getNewPeriodRecord(startDate: String, endDate: String, bpr: String?, accMode: String): List<NewPeriodRecord> {
         var sqlQuery = """
             select 
             TYP_0 as acc_type
@@ -511,7 +511,7 @@ class SageServiceImpl : SageService {
             ,CREDATTIM_0 as createdAt
             ,UPDDATTIM_0 as updatedAt
             ,SNS_0 as sign_flag
-            from COGO2.GACCDUDATE where TYP_0 = 'NEWPR' and SAC_0 in ('AR','SC') and cast(DUDDAT_0 as date) between'20220401' and '20220401'
+            from COGO2.GACCDUDATE where TYP_0 = 'NEWPR' and SAC_0 in ('$accMode') and cast(DUDDAT_0 as date) between'20220401' and '20220401'
         """.trimIndent()
         if (bpr != null) {
             sqlQuery += """ and BPR_0 in '$bpr'"""

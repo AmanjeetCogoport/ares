@@ -150,8 +150,8 @@ class MigratePaymentsController {
     }
 
     @Get("/new-pr")
-    suspend fun migrateNewPrRecord(@QueryValue startDate: String, @QueryValue endDate: String, @QueryValue bpr: String?): String {
-        paymentMigration.migrateNewPR(startDate, endDate, bpr)
+    suspend fun migrateNewPrRecord(@QueryValue startDate: String, @QueryValue endDate: String, @QueryValue bpr: String?, @QueryValue accMode: String): String {
+        paymentMigration.migrateNewPR(startDate, endDate, bpr,accMode)
         return Response<String>().ok(
             "request received to migrate new period"
         )

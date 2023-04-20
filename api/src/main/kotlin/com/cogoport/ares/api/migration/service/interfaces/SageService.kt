@@ -25,5 +25,5 @@ interface SageService {
 
     suspend fun getPaymentsForScheduler(startDate: String, endDate: String): ArrayList<PaymentRecord>
 
-    suspend fun getNewPeriodRecord(startDate: String, endDate: String, bpr: String?): List<NewPeriodRecord>
+    suspend fun getNewPeriodRecord(startDate: String, endDate: String, bpr: String?, accMode: String): List<NewPeriodRecord>
 }
