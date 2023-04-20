@@ -96,7 +96,7 @@ class ParentJVController {
     }
 
     @Get("/acc-mode")
-    suspend fun getAccountMode(@QueryValue("q") q: String?): List<HashMap<String, String>> {
-        return parentJVService.getAccountMode(q)
+    suspend fun getAccountMode(@QueryValue("q") q: String?, @QueryValue("glCode") glCode: String?): List<HashMap<String, String>> {
+        return parentJVService.getAccountMode(q, glCode)
     }
 }
