@@ -28,6 +28,7 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
 import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -67,6 +68,7 @@ import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
@@ -899,5 +901,95 @@ class PaymentMigrationImpl : PaymentMigration {
         val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
         val settlementNum = "${prefix}222300000000$number"
         settlementRepository.updateSettlementNumber(id, settlementNum)
+    }
+
+    override suspend fun migrateNewPeriodRecords(record: NewPeriodRecord) {
+        try {
+            val response = cogoClient.getOrgDetailsBySageOrgId(
+                GetOrgDetailsRequest(
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationType = if (record.accMode.equals("AR")) "income" else "expense"
+                )
+            )
+            val cogoOrganization = cogoClient.getCogoOrganization(
+                CogoOrganizationRequest(
+                    organizationSerialId = null,
+                    organizationId = response.organizationId
+                )
+            )
+            if (cogoOrganization.organizationSerialId == null) {
+                throw AresException(AresError.ERR_1008, "Organization serial_id information not found")
+            }
+            val organizationSerialId = cogoOrganization.organizationSerialId!!
+            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong())
+            val serialIdRequest = SerialIdDetailsRequest(
+                organizationTradePartyMappings = arrayListOf(serialIdInputs)
+            )
+            val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)?.get(0)
+                ?: throw AresException(AresError.ERR_1008, "trade party information not found")
+
+            if (accountUtilizationRepositoryMigration.checkIfNewRecordIsPresent(record.documentValue!!, record.sageOrganizationId!!)) {
+                throw AresException(AresError.ERR_1008, "new period record already present")
+            }
+            accountUtilizationRepositoryMigration.save(
+                AccountUtilizationMigration(
+                    id = null,
+                    documentNo = getFormattedNumber(record.documentValue).toLong(),
+                    documentValue = record.documentValue,
+                    zoneCode = "NORTH",
+                    serviceType = "NA",
+                    documentStatus = DocumentStatus.FINAL,
+                    entityCode = record.cogoEntity!!.toInt(),
+                    category = null,
+                    orgSerialId = tradePartyResponse.tradePartySerial,
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationId = tradePartyResponse.organizationTradePartyDetailId,
+                    taggedOrganizationId = tradePartyResponse.organizationId,
+                    tradePartyMappingId = tradePartyResponse.mappingId,
+                    organizationName = tradePartyResponse.tradePartyBusinessName,
+                    accCode = if (record.accMode == "AR") 223000 else 321000,
+                    accType = AccountType.NEWPR,
+                    accMode = if (record.accMode == "AR") AccMode.AR else AccMode.AP,
+                    signFlag = record.signFlag!!.toShort(),
+                    currency = record.currency!!,
+                    ledCurrency = record.currency,
+                    amountCurr = record.amountCurr!!.toBigDecimal(),
+                    amountLoc = record.amountLoc!!.toBigDecimal(),
+                    taxableAmount = BigDecimal.ZERO,
+                    payCurr = BigDecimal.ZERO,
+                    payLoc = BigDecimal.ZERO,
+                    dueDate = SimpleDateFormat("yyyy-MM-dd").parse(record.transactionDate),
+                    transactionDate = SimpleDateFormat("yyyy-MM-dd").parse(record.transactionDate),
+                    createdAt = record.createdAt,
+                    updatedAt = record.updatedAt,
+                    migrated = true,
+                    isVoid = false,
+                    taggedBillId = null,
+                    tdsAmountLoc = BigDecimal.ZERO,
+                    tdsAmount = BigDecimal.ZERO
+                )
+            )
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, null)
+        } catch (ex: AresException) {
+            logger().info("${record.sageOrganizationId} Error while migrating newPR record")
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, "${record.sageOrganizationId} : ${ex.context}")
+        } catch (ex: Exception) {
+            val message = "E${record.sageOrganizationId}: Error while migrating newPR record"
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, message)
+        }
+    }
+
+    private fun getFormattedNumber(record: String?): String {
+        var numString = ""
+        try {
+            record?.forEach { ch ->
+                if (ch.isDigit())
+                    numString += ch
+            }
+            return numString
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
+        return "NA"
     }
 }

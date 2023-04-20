@@ -148,4 +148,12 @@ class MigratePaymentsController {
             "Request received to update utilizations for bill total record: $count"
         )
     }
+
+    @Get("/new-pr")
+    suspend fun migrateNewPrRecord(@QueryValue startDate: String, @QueryValue endDate: String, @QueryValue bpr: String?): String {
+        paymentMigration.migrateNewPR(startDate, endDate, bpr)
+        return Response<String>().ok(
+            "request received to migrate new period"
+        )
+    }
 }
