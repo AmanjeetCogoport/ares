@@ -172,14 +172,16 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<ParentJournalVoucherResponse> {
         val query = util.toQueryString(jvListRequest.query)
+        val sortType = jvListRequest.sortType ?: "DESC"
+        val sortBy = jvListRequest.sortBy ?: "createdAt"
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
             query,
             jvListRequest.page,
             jvListRequest.pageLimit,
-            jvListRequest.sortType,
-            jvListRequest.sortBy
+            sortType,
+            sortBy
         )
         val totalRecords =
             parentJVRepository.countDocument(
@@ -647,7 +649,7 @@ open class ParentJVServiceImpl : ParentJVService {
         val query = util.toQueryString(q)
         val updatedAccMode = when (accMode) {
             null -> null
-            else -> getAccModeValue(accMode)
+            else -> accMode.name
         }
 
         val countryEntityCode = mapOf(301 to listOf("IND", "USD"), 101 to listOf("IND", "USD"), 201 to listOf("NL", "USD"), 401 to listOf("SGP", "USD"), 501 to listOf("VN", "USD"))
