@@ -85,4 +85,17 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         accMode: String,
         organizationId: UUID
     ): String?
+
+    @Query(
+        """
+        SELECT EXISTS (
+            SELECT id FROM 
+            account_utilizations WHERE 
+            document_value = :documentValue 
+            AND sage_organization_id = :sageOrganizationId 
+            AND migrated = true    
+        )
+    """
+    )
+    fun checkIfNewRecordIsPresent(documentValue: String, sageOrganizationId: String): Boolean
 }

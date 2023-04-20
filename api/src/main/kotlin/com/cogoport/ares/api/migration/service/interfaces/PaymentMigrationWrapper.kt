@@ -19,4 +19,6 @@ interface PaymentMigrationWrapper {
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
     suspend fun migrateTdsAmount(req: List<TdsAmountReq>)
+
+    suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 }

@@ -9,6 +9,8 @@ import com.cogoport.ares.api.migration.model.JVParentRecordManger
 import com.cogoport.ares.api.migration.model.JVRecordsWithoutBprManager
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
+import com.cogoport.ares.api.migration.model.NewPeriodRecordManager
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -490,5 +492,32 @@ class SageServiceImpl : SageService {
         val paymentRecords = Client.sqlQuery(sqlQuery)
         val payments = ObjectMapper().readValue(paymentRecords, PaymentRecordManager::class.java)
         return payments.recordSets!![0]
+    }
+
+    override suspend fun getNewPeriodRecord(startDate: String, endDate: String, bpr: String?, accMode: String): List<NewPeriodRecord> {
+        var sqlQuery = """
+            select 
+            TYP_0 as acc_type
+            ,NUM_0 as document_value
+            ,FCY_0 as cogo_entity
+            ,CUR_0 as currency
+            ,SAC_0 as accMode
+            ,BPR_0 as sageOrganizationId
+            ,DUDDAT_0 as transactionDate
+            ,AMTCUR_0 as amountCurr
+            ,AMTLOC_0 as amountLoc
+            ,PAYCUR_0 as payCurr
+            ,PAYLOC_0 as payLoc
+            ,CREDATTIM_0 as createdAt
+            ,UPDDATTIM_0 as updatedAt
+            ,SNS_0 as sign_flag
+            from COGO2.GACCDUDATE where TYP_0 = 'NEWPR' and SAC_0 in ('$accMode') and cast(DUDDAT_0 as date) between'20220401' and '20220401'
+        """.trimIndent()
+        if (bpr != null) {
+            sqlQuery += """ and BPR_0 in '$bpr'"""
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val newPeriodRecords = ObjectMapper().readValue(result, NewPeriodRecordManager::class.java)
+        return newPeriodRecords.recordSets!![0]
     }
 }

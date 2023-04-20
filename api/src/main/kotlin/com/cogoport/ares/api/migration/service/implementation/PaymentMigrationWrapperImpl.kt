@@ -227,4 +227,11 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             }
         }
     }
+
+    override suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String) {
+        val records = sageService.getNewPeriodRecord(startDate, endDate, bpr, accMode)
+        records.forEach {
+            aresMessagePublisher.emitNewPeriodRecords(it)
+        }
+    }
 }

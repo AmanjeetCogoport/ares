@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -144,5 +145,10 @@ class AresMessageConsumer {
     @Queue("tagged-bill-auto-knockoff", prefetch = 1)
     fun taggedBillAutoKnockOff(req: OnAccountPaymentRequest) = runBlocking {
         taggedSettlementService.settleOnAccountInvoicePayment(req)
+    }
+
+    @Queue("migrate-new-period", prefetch = 1)
+    fun migrateNewPeriodRecord(newPeriodRecord: NewPeriodRecord) = runBlocking {
+        paymentMigration.migrateNewPeriodRecords(newPeriodRecord)
     }
 }

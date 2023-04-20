@@ -24,7 +24,8 @@ enum class AccountType(val dbValue: String) {
     SREIMB("SREIMB"),
     PREIMB("PREIMB"),
     ICJV("ICJV"),
-    EXP("EXP");
+    EXP("EXP"),
+    NEWPR("NEWPR");
 
     open operator fun contains(value: String?): Boolean {
         for (c in AccountType.values()) {

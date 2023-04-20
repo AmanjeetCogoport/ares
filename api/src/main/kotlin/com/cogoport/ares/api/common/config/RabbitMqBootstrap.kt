@@ -75,5 +75,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
         channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
+
+        channel?.queueDeclare("migrate-new-period", true, false, false, null)
+        channel?.queueBind("migrate-new-period", "ares", "migrate.new.period", null)
     }
 }
