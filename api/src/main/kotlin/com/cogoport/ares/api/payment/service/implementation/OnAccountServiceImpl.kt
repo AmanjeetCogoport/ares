@@ -1208,7 +1208,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
             val responseMap = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery)
             val records = responseMap["recordset"] as? ArrayList<*>
-            logger().info(responseMap.toString(), records?.size)
+            logger().info("Payment Present On Sage Response: $responseMap with size ${records?.size} ")
             if (records?.size != 0) {
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
