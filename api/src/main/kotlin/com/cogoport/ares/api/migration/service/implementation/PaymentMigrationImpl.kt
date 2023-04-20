@@ -974,7 +974,7 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().info("${record.sageOrganizationId} Error while migrating newPR record")
             migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, "${record.sageOrganizationId} : ${ex.context}")
         } catch (ex: Exception) {
-            val message = "E${record.sageOrganizationId}: Error while migrating newPR record"
+            val message = "${record.sageOrganizationId}: Error while migrating newPR record"
             migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, message)
         }
     }
