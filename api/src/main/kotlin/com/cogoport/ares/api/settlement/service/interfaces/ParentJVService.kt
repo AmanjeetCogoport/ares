@@ -33,5 +33,5 @@ interface ParentJVService {
 
     suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode>
 
-    suspend fun getAccountMode(q: String?): List<HashMap<String, String>>
+    suspend fun getAccountMode(q: String?, glCode: String?): List<HashMap<String, String>>
 }
