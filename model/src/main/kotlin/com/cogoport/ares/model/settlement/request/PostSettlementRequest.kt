@@ -5,6 +5,6 @@ import java.util.UUID
 
 @Introspected
 data class PostSettlementRequest(
-    var settlementIds: List<String>,
+    var settlementIds: List<Long>,
     var performedBy: UUID
 )
