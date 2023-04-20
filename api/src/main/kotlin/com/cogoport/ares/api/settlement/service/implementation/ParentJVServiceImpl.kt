@@ -172,14 +172,16 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<ParentJournalVoucherResponse> {
         val query = util.toQueryString(jvListRequest.query)
+        val sortType = jvListRequest.sortType ?: "DESC"
+        val sortBy = jvListRequest.sortBy ?: "createdAt"
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
             query,
             jvListRequest.page,
             jvListRequest.pageLimit,
-            jvListRequest.sortType,
-            jvListRequest.sortBy
+            sortType,
+            sortBy
         )
         val totalRecords =
             parentJVRepository.countDocument(
