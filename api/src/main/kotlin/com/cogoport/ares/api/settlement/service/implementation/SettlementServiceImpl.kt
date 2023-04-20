@@ -343,6 +343,7 @@ open class SettlementServiceImpl : SettlementService {
         settledDocuments.forEach {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
             it.id = it.id?.let { it1 -> Hashids.encode(it1.toLong()) }
+            it.settlementId = Hashids.encode(it.settlementId.toLong())
         }
         return ResponseList(
             list = settledDocuments,

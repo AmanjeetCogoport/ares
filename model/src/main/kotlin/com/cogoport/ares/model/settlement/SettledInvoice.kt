@@ -35,5 +35,6 @@ data class SettledInvoice(
     var signFlag: Short,
     var sid: String?,
     var nostroAmount: BigDecimal,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var settlementId: String
 )

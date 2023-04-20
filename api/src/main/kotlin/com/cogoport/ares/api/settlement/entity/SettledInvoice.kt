@@ -33,5 +33,6 @@ data class SettledInvoice(
     val exchangeRate: BigDecimal,
     var settledTds: BigDecimal,
     var nostroAmount: BigDecimal,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var settlementId: String
 )
