@@ -47,7 +47,8 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
             FROM 
             gl_code_masters
             where account_type != ' ' and account_type::VARCHAR ILIKE :q
+            AND account_code::VARCHAR ILIKE :glCode
             """
     )
-    fun getDistinctAccType(q: String?): List<String>
+    fun getDistinctAccType(q: String?, glCode: String?): List<String>
 }

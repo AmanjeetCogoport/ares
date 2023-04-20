@@ -208,7 +208,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
         if (request.jvLineItems.any { it.glCode == null }) throw AresException(AresError.ERR_1003, "GL Code")
 
-        if (request.jvLineItems.groupBy { it.entityCode }.values.first().filter { it.type == "DEBIT" }.sumOf { it.amount } != request.jvLineItems.groupBy { it.entityCode }.values.first().filter { it.type == "CREDIT" }.sumOf { it.amount }) {
+        if (request.jvLineItems.filter { it.type == "DEBIT" }.sumOf { it.amount } != request.jvLineItems.filter { it.type == "CREDIT" }.sumOf { it.amount }) {
             throw AresException(AresError.ERR_1527, "")
         }
     }
@@ -660,10 +660,11 @@ open class ParentJVServiceImpl : ParentJVService {
         return journalCodeRepository.getJournalCode(query, updatedPageLimit)
     }
 
-    override suspend fun getAccountMode(q: String?): List<HashMap<String, String>> {
+    override suspend fun getAccountMode(q: String?, glCode: String?): List<HashMap<String, String>> {
         val query = util.toQueryString(q)
+        val updatedGlCode = util.toQueryString(glCode)
 
-        val uniqueAccountModes = glCodeMasterRepository.getDistinctAccType(query)
+        val uniqueAccountModes = glCodeMasterRepository.getDistinctAccType(query, updatedGlCode)
 
         val uniqueAccountModeList = mutableListOf<HashMap<String, String>>()
 
