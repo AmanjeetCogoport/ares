@@ -1,8 +1,8 @@
 ALTER TABLE parent_journal_vouchers
 ADD COLUMN entity_code int2 DEFAULT NULL,
 ADD COLUMN transaction_date DATE DEFAULT NULL,
-ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-ADD COLUMN is_utilized BOOL DEFAULT FALSE;
+ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL,
+ADD COLUMN is_utilized BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE parent_journal_vouchers DROP COLUMN amount;
 ALTER TABLE parent_journal_vouchers DROP COLUMN acc_mode;
@@ -24,6 +24,17 @@ ALTER TABLE journal_voucher_codes DROP COLUMN jv_category_id;
 ALTER TABLE journal_voucher_codes DROP COLUMN created_by;
 ALTER TABLE journal_voucher_codes DROP COLUMN updated_by;
 
+CREATE TABLE public.account_classes (
+    id BIGSERIAL CONSTRAINT account_class_PK PRIMARY KEY,
+    led_account VARCHAR,
+    account_category VARCHAR,
+    class_code INT,
+    created_by UUID,
+    updated_by UUID,
+    created_at TIMESTAMP not null default now(),
+    updated_at TIMESTAMP not null default now()
+);
+
 CREATE TABLE public.gl_code_masters (
     id BIGSERIAL CONSTRAINT gl_code_master_PK PRIMARY KEY,
     account_code INT,
@@ -32,17 +43,6 @@ CREATE TABLE public.gl_code_masters (
     account_type VARCHAR,
     class_code INT,
     account_class_id BIGINT NOT NULL REFERENCES account_classes (id) ON DELETE CASCADE,
-    created_by UUID,
-    updated_by UUID,
-    created_at TIMESTAMP not null default now(),
-    updated_at TIMESTAMP not null default now()
-);
-
-CREATE TABLE public.account_classes (
-    id BIGSERIAL CONSTRAINT account_class_PK PRIMARY KEY,
-    led_account VARCHAR,
-    account_category VARCHAR,
-    class_code INT,
     created_by UUID,
     updated_by UUID,
     created_at TIMESTAMP not null default now(),
