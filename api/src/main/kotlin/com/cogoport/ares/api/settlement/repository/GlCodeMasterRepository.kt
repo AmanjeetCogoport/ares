@@ -28,7 +28,7 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
                 FROM 
                     gl_code_masters
                 WHERE 
-                    account_code::VARCHAR ILIKE :q OR description::VARCHAR ILIKE :q
+                    (account_code::VARCHAR ILIKE :q OR description::VARCHAR ILIKE :q)
                 AND
                     (:accMode IS NULL OR account_type::VARCHAR = :accMode)
                 AND 
