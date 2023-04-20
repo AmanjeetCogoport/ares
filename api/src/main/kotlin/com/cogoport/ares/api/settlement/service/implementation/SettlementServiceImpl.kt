@@ -2518,14 +2518,14 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun matchingSettlementOnSage(settlementIds: List<String>, performedBy: UUID): FailedSettlementIds {
+    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
-                val settlementId = Hashids.decode(it)[0]
+                val settlementId = it
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")

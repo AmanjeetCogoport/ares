@@ -112,7 +112,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         lineItems.forEach { lineItem ->
             val jvLineItem = JvLineItemResponse(
                 id = Hashids.encode(lineItem.id!!),
-                accMode = lineItem.accMode,
+                accMode = if (lineItem.accMode == AccMode.OTHER) null else lineItem.accMode,
                 tradePartyId = lineItem.tradePartyId,
                 tradePartyName = lineItem.tradePartyName,
                 amount = lineItem.amount!!,

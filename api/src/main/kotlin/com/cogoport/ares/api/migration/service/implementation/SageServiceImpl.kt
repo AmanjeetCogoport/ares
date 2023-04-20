@@ -496,11 +496,23 @@ class SageServiceImpl : SageService {
 
     override suspend fun getGLCode(): List<GlCodeMaster> {
         val sqlQuery = """
-            select ACC_0 as account_code, DES_0 as description, 
-            COA_0 as led_account, ACCSHO_0 as account_type, CLSCOD_0 as class_code,
-            'c4f72139-e4b9-4cea-b590-32cea179f441' as created_by, 'c4f72139-e4b9-4cea-b590-32cea179f441' as updated_by,
-            CREDAT_0 as created_at, UPDDAT_0 as updated_at
-            from COGO2.GACCOUNT
+            SELECT 
+                ACC_0 AS account_code,
+                DES_0 AS description,
+                COA_0 AS led_account, 
+                CASE 
+                    WHEN ACCSHO_0 ='SC'
+                    THEN 'AP'
+                ELSE
+                    ACCSHO_0 
+                END AS account_type,
+                CLSCOD_0 AS class_code,
+                'c4f72139-e4b9-4cea-b590-32cea179f441' AS created_by,
+                'c4f72139-e4b9-4cea-b590-32cea179f441' AS updated_by,
+                CREDAT_0 AS created_at, 
+                UPDDAT_0 as updated_at
+            FROM 
+                COGO2.GACCOUNT
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val glCodeRecords = ObjectMapper().readValue(result, GlCodeRecordsManager::class.java)
