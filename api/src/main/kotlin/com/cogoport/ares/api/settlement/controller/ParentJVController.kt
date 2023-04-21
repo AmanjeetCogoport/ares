@@ -64,7 +64,7 @@ class ParentJVController {
 
     @Put
     suspend fun editJv(@Valid @Body request: ParentJournalVoucherRequest): Response<String> {
-        return Response<String>().ok("Request Sent", parentJVService.editJv(request))
+        return Response<String>().ok("Journal Voucher Edited Successfully", parentJVService.editJv(request))
     }
 
     @Post("/post-to-sage")

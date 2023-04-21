@@ -19,6 +19,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -116,6 +117,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
+    lateinit var accutilizationRepo: AccountUtilizationRepo
 
     @Inject
     lateinit var settlementRepository: SettlementRepository
@@ -316,6 +320,11 @@ open class SettlementServiceImpl : SettlementService {
             } else {
                 mutableListOf(request.accountType!!)
             }
+        if (request.accountType == AresConstants.ALL) {
+            settlementServiceHelper.getJvList(AccountType::class.java).map {
+                accountTypes.add(it.name)
+            }
+        }
         return accountTypes
     }
 
@@ -592,7 +601,7 @@ open class SettlementServiceImpl : SettlementService {
         val accType = accTypeMode.accType
         val accMode = accTypeMode.accMode
         val documentEntity =
-            accountUtilizationRepository.getDocumentList(
+            accutilizationRepo.getDocumentList(
                 request.pageLimit,
                 offset,
                 accType,
@@ -603,7 +612,8 @@ open class SettlementServiceImpl : SettlementService {
                 "${request.query}%",
                 accMode,
                 request.sortBy,
-                request.sortType
+                request.sortType,
+                request.documentPaymentStatus
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
@@ -616,7 +626,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%"
+                "${request.query}%",
+                request.documentPaymentStatus
             )
 
         val billListIds = documentModel.filter { it.accountType in listOf("PINV", "PREIMB") }.map { it.documentNo }
