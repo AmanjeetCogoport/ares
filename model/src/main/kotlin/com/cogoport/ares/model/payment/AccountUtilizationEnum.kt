@@ -1,7 +1,7 @@
 package com.cogoport.ares.model.payment
 
 enum class AccMode {
-    AR, AP, OTHER, CSD, PDA, EMD, SUSS, SUSA;
+    AR, AP, OTHER, CSD, PDA, EMD, SUSS, SUSA, RE, PREF, EMP, RI, PC;
 }
 
 enum class ServiceType {
@@ -53,12 +53,59 @@ enum class DocStatus(val value: String) {
 }
 
 enum class InvoiceType(val value: String) {
-    SINV("Sales Invoice"), SCN("Sales Credit Note"), SDN("Sales Debit Note"), REC("Sales Payment"),
-    PINV("Purchase Invoice"), PCN("Purchase Credit Note"), PDN("Purchase Debit Note"), PAY("Purchase Payment"),
-    WOFF("Write Off Voucher"), ROFF("Round Off Voucher"), EXCH("Exchange Voucher"), OUTST("Outstanding Voucher"), JVNOS("Nostro Voucher"),
+    SINV("Sales Invoice"),
+    SCN("Sales Credit Note"),
+    SDN("Sales Debit Note"),
+    REC("Sales Payment"),
+    PINV("Purchase Invoice"),
+    PCN("Purchase Credit Note"),
+    PDN("Purchase Debit Note"),
+    PAY("Purchase Payment"),
+    WOFF("Write Off Voucher"),
+    ROFF("Round Off Voucher"),
+    EXCH("Exchange Voucher"),
+    OUTST("Outstanding Voucher"),
+    JVNOS("Nostro Voucher"),
     SREIMB("Reimbursement Sales Invoice"),
     PREIMB("Reimbursement Purchase Invoice"),
-    ICJV("Inter Company Journal Voucher")
+    ICJV("Inter Company Journal Voucher"),
+    DBTRC("Faltas pagamento"),
+    STMNT("Relevés de factures"),
+    RECPT("Payment Receipt"),
+    CSTRV("Révision coût standard"),
+    NEWPR("New Period"),
+    SPDIR("Achats - Factures directes"),
+    CLOSE("Fecho"),
+    STOCK("Movimentos Stock"),
+    GENAJ("Pagamento"),
+    PREPY("Acomptes"),
+    FAIS3("OD Inmo simulación IAS"),
+    FAAR2("OD Imob anal."),
+    MFIRC("Interface Produção - Recep."),
+    CURVR("Desvio de conversão"),
+    INTER("Miscellaneous entry"),
+    ZSMEM("Customer Memo"),
+    FAS12("OD Imno simul. social & ana"),
+    CSINV("Customer Invoice"),
+    PAYRL("OD de nómina"),
+    GENSM("Simulação Geral"),
+    FAIR3("OD Imob IAS"),
+    WIPCS("Em Curso"),
+    MFIIS("Interface Produção"),
+    BANK("Bank Entry"),
+    MSCOP("Opérations Diverses"),
+    RECJL("Pagos"),
+    MFIOP("Interface Prod Oper."),
+    FAR12("OD Imob. social & anal."),
+    EXPNS("Notas de Despesa"),
+    CSDIR("Прямые продажи (сф)"),
+    CLOS1("Closing Year End / Legal"),
+    SPMEM("Supplier Credit Memo"),
+    GEN("Opérations diverses"),
+    MISC("Miscellaneous entry"),
+    CSMEM("Customer Memo"),
+    OPDIV("Miscellaneous entry"),
+    CONTR("CONTRA"),
 }
 
 /**

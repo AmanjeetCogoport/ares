@@ -51,8 +51,14 @@ enum class AresError(
     ERR_1524("ERR_1524", "Payment is not approved", HttpStatus.BAD_REQUEST),
     ERR_1525("ERR_1525", "Payment entry already exist on sage", HttpStatus.NOT_ACCEPTABLE),
     ERR_1526("ERR_1526", "Unauthorised", HttpStatus.UNAUTHORIZED),
-    ERR_1527("ERR_1527", "Payment must be posted", HttpStatus.BAD_REQUEST),
-    ERR_1528("ERR_1528", "Payment is not posted from sage", HttpStatus.BAD_REQUEST);
+    ERR_1527("ERR_1527", "Credit Amount is not equal to Debit Amount", HttpStatus.NOT_ACCEPTABLE),
+    ERR_1528("ERR_1528", "Jv is yet not been approved.", HttpStatus.NOT_ACCEPTABLE),
+    ERR_1529("ERR_1529", "No value exists for this Acc Mode: ", HttpStatus.BAD_REQUEST),
+    ERR_1530("ERR_1530", "No Organization is present with this Trade Party Id ", HttpStatus.BAD_REQUEST),
+    ERR_1531("ERR_1531", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
+    ERR_1532("ERR_1532", "Posting failed because of following org issue:", HttpStatus.BAD_REQUEST),
+    ERR_1533("ERR_1533", "Payment must be posted", HttpStatus.BAD_REQUEST),
+    ERR_1534("ERR_1534", "Payment is not posted from sage", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

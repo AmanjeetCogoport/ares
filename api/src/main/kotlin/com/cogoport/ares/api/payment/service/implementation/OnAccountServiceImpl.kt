@@ -1380,7 +1380,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
                 if (records?.size != 0) {
                     val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
-                    paymentRepository.updateSageReferenceNumber(paymentId, queryResult.toString())
+                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
                 } else {
                     thirdPartyApiAuditService.createAudit(
                         ThirdPartyApiAudit(

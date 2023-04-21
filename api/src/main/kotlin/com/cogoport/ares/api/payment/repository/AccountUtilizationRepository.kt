@@ -45,6 +45,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
 
     @NewSpan
+    @Query("SELECT * FROM account_utilizations WHERE document_no = :documentNo AND acc_type = :accType::account_type LIMIT 1")
+    suspend fun findByDocumentNo(documentNo: Long, accType: AccountType): AccountUtilization
+
+    @NewSpan
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
@@ -477,7 +481,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.updated_at as last_edited_date,
             COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
             COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
-            COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url 
+            COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url,
+            COALESCE((ARRAY_AGG(s1.id)), null) as settlement_ids
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -1474,4 +1479,22 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                account_utilizations 
+            SET 
+                deleted_at = NOW(), 
+                updated_at = NOW() 
+            WHERE 
+                document_value = :docValue 
+            AND 
+                acc_type = :accType::ACCOUNT_TYPE
+            AND
+                deleted_at IS NULL
+        """
+    )
+    suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
 }

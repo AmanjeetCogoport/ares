@@ -17,5 +17,6 @@ interface PayableFileToAccountUtilMapper {
     @Mapping(source = "currencyAmount", target = "amountCurr")
     @Mapping(source = "ledgerCurrency", target = "ledCurrency")
     @Mapping(source = "ledgerAmount", target = "amountLoc")
+    @Mapping(target = "isVoid", expression = "java(false)")
     fun convertToEntity(accPayFile: AccountPayablesFile): AccountUtilization
 }
