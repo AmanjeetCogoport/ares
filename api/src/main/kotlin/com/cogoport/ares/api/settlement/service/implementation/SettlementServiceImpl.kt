@@ -309,10 +309,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
-                mutableListOf(
-                    AccountType.PCN.toString(), AccountType.REC.toString(), AccountType.PAY.toString(),
-                    AccountType.SINV.toString(), AccountType.SCN.toString()
-                )
+                settlementServiceHelper.getJvList(AccountType::class.java).map { it -> it.name }.toMutableList()
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else if (request.accountType == "SINV") {
@@ -320,11 +317,6 @@ open class SettlementServiceImpl : SettlementService {
             } else {
                 mutableListOf(request.accountType!!)
             }
-        if (request.accountType == AresConstants.ALL) {
-            settlementServiceHelper.getJvList(AccountType::class.java).map {
-                accountTypes.add(it.name)
-            }
-        }
         return accountTypes
     }
 
@@ -620,7 +612,7 @@ open class SettlementServiceImpl : SettlementService {
         val documentModel = calculatingTds(documentEntity)
 
         val total =
-            accountUtilizationRepository.getDocumentCount(
+            accutilizationRepo.getDocumentCount(
                 accType,
                 orgId,
                 request.entityCode,

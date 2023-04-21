@@ -730,39 +730,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             count(id)
                 FROM account_utilizations
                 WHERE 
-                    amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
-                    AND document_status = 'FINAL'
-                    AND organization_id in (:orgId)
-                    AND acc_type::varchar in (:accType)
-                    AND (:entityCode is null OR entity_code = :entityCode)
-                    AND (:startDate is null OR transaction_date >= :startDate::date)
-                    AND (:endDate is null OR transaction_date <= :endDate::date)
-                    AND document_value ilike :query
-                    AND deleted_at is null  and is_void = false
-                    AND 
-                    (
-                        :documentPaymentStatus is null OR 
-                        (
-                            CASE 
-                                WHEN :documentPaymentStatus = 'partial_paid' THEN amount_curr - pay_curr > 0
-                                WHEN :documentPaymentStatus = 'unpaid' THEN pay_curr = 0
-                                WHEN :documentPaymentStatus = 'partially_utilized' THEN amount_curr - pay_curr > 0
-                                WHEN :documentPaymentStatus = 'unutilized' THEN pay_curr = 0
-                            END
-                        )
-            )
-    """
-    )
-    suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
-
-    @NewSpan
-    @Query(
-        """
-        SELECT 
-            count(id)
-                FROM account_utilizations
-                WHERE 
                     amount_curr <> 0
                     AND document_status in ('FINAL','PROFORMA')
                     AND organization_id in (:orgId)

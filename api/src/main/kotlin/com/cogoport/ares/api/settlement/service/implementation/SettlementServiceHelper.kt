@@ -169,7 +169,12 @@ class SettlementServiceHelper {
                 SettlementType.MTCCV,
                 SettlementType.MISC,
                 SettlementType.STMNT,
-                SettlementType.FAAR2
+                SettlementType.FAAR2,
+                SettlementType.PCN,
+                SettlementType.PINV,
+                SettlementType.SINV,
+                SettlementType.SCN
+
             ) as List<T>
         } else {
             listOf(
@@ -229,6 +234,9 @@ class SettlementServiceHelper {
                 AccountType.STMNT,
                 AccountType.PAY,
                 AccountType.FAAR2,
+                AccountType.PCN,
+                AccountType.PINV,
+                AccountType.SINV, AccountType.SCN
             ) as List<T>
         }
     }
