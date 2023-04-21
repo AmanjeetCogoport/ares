@@ -33,6 +33,7 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
@@ -180,6 +181,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var cogoBackLowLevelClient: CogoBackLowLevelClient
+
+    @Inject
+    lateinit var sageServiceImpl: SageServiceImpl
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -1497,7 +1501,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 val payment = paymentRepository.findByPaymentId(id)
 
                 if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    throw AresException(AresError.ERR_1527, "")
+                    throw AresException(AresError.ERR_1533, "")
                 }
 
                 val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
@@ -1561,8 +1565,8 @@ open class OnAccountServiceImpl : OnAccountService {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
 
-                if (isPaymentPostedFromSage(payment.paymentNumValue!!)) {
-                    throw AresException(AresError.ERR_1528, "")
+                if (sageServiceImpl.isPaymentPostedFromSage(payment.paymentNumValue!!) == null) {
+                    throw AresException(AresError.ERR_1534, "")
                 }
 
                 val result = SageClient.cancelPaymentFromSage(payment.sageRefNumber!!)
@@ -1618,14 +1622,5 @@ open class OnAccountServiceImpl : OnAccountService {
         return SageFailedResponse(
             failedIdsList = failedIds
         )
-    }
-
-    private fun isPaymentPostedFromSage(paymentValue: String): Boolean {
-        val query = "Select UMRNUM_0 from $sageDatabase where UMRNUM_0='$paymentValue' and STA_0 = 9"
-        val resultFromQuery = SageClient.sqlQuery(query)
-        val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
-            .get("recordset") as ArrayList<String>
-
-        return records.size != 0
     }
 }
