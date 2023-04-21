@@ -15,7 +15,7 @@ data class ParentJournalVoucherRequest(
     var currency: String,
     var ledCurrency: String,
     var entityCode: Int,
-    var entityId: UUID,
+    var entityId: UUID?,
     var jvCodeNum: String,
     var exchangeRate: BigDecimal,
     var description: String,

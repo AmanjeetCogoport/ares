@@ -43,7 +43,7 @@ class ParentJVController {
 
     @Post
     suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String?> {
-        return Response<String?>().ok("Request Sent", parentJVService.createJournalVoucher(request))
+        return Response<String?>().ok("Journal Voucher Created Successfully", parentJVService.createJournalVoucher(request))
     }
 
     @Auth

@@ -333,6 +333,9 @@ open class ParentJVServiceImpl : ParentJVService {
      */
 
     override suspend fun editJv(request: ParentJournalVoucherRequest): String {
+        if (request.id.isNullOrEmpty()) {
+            throw AresException(AresError.ERR_1003, "Parent JV Id")
+        }
         validateCreateRequest(request)
         val parentJvData = parentJVRepository.findById(Hashids.decode(request.id!!)[0])
         val transactionDate = request.transactionDate
