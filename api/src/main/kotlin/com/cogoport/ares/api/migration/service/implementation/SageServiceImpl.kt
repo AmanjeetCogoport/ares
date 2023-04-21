@@ -514,7 +514,7 @@ class SageServiceImpl : SageService {
             from COGO2.GACCDUDATE where TYP_0 = 'NEWPR' and SAC_0 in ('$accMode') and cast(DUDDAT_0 as date) between'20220401' and '20220401'
         """.trimIndent()
         if (bpr != null) {
-            sqlQuery += """ and BPR_0 in '$bpr'"""
+            sqlQuery += """ and BPR_0 = '$bpr'"""
         }
         val result = Client.sqlQuery(sqlQuery)
         val newPeriodRecords = ObjectMapper().readValue(result, NewPeriodRecordManager::class.java)
