@@ -421,40 +421,37 @@ open class SettlementServiceImpl : SettlementService {
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         settlements.forEach { settlement ->
-            when (request.settlementType) {
-                SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
-                    // Calculate Settled Amount in Invoice Currency
-                    settlement.settledAmount =
-                        getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
-                    // Calculate Tds in Invoice Currency
-                    settlement.tds = getAmountInInvoiceCurrency(settlement, payments, settlement.tds)
-                    // Calculate Nostro in Invoice Currency
-                    settlement.nostroAmount =
-                        getAmountInInvoiceCurrency(settlement, payments, settlement.nostroAmount)
+            if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(request.settlementType)) {
+                // Calculate Settled Amount in Invoice Currency
+                settlement.settledAmount =
+                    getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
+                // Calculate Tds in Invoice Currency
+                settlement.tds = getAmountInInvoiceCurrency(settlement, payments, settlement.tds)
+                // Calculate Nostro in Invoice Currency
+                settlement.nostroAmount =
+                    getAmountInInvoiceCurrency(settlement, payments, settlement.nostroAmount)
 
-                    // Convert To Model
-                    val settledDoc = settledInvoiceConverter.convertToModel(settlement)
-                    settledDoc.settledAmount -= (settledDoc.tds + settledDoc.nostroAmount)
-                    settledDoc.balanceAmount = settledDoc.currentBalance
-                    settledDoc.allocationAmount = settledDoc.settledAmount
-                    settledDoc.afterTdsAmount -= settledDoc.settledTds
-                    settledDoc.currentBalance += (settledDoc.tds + settledDoc.nostroAmount)
-                    settledDoc.settledTds -= settledDoc.tds
+                // Convert To Model
+                val settledDoc = settledInvoiceConverter.convertToModel(settlement)
+                settledDoc.settledAmount -= (settledDoc.tds + settledDoc.nostroAmount)
+                settledDoc.balanceAmount = settledDoc.currentBalance
+                settledDoc.allocationAmount = settledDoc.settledAmount
+                settledDoc.afterTdsAmount -= settledDoc.settledTds
+                settledDoc.currentBalance += (settledDoc.tds + settledDoc.nostroAmount)
+                settledDoc.settledTds -= settledDoc.tds
 
-                    // Assign Sid
-                    settledDoc.sid = sids?.find { it.documentId == settledDoc.documentNo.toLong() }?.jobNumber
-                    // Assign Status
-                    val paid = (settledDoc.documentAmount - (settledDoc.settledAmount + settledDoc.tds + settledDoc.nostroAmount))
-                    if (paid.compareTo(BigDecimal.ZERO) == 0) {
-                        settledDoc.status = DocStatus.KNOCKED_OFF.value
-                    } else if (paid.compareTo(settledDoc.documentAmount) == 0) {
-                        settledDoc.status = DocStatus.UNPAID.value
-                    } else {
-                        settledDoc.status = DocStatus.PARTIAL_PAID.value
-                    }
-                    settledDocuments.add(settledDoc)
+                // Assign Sid
+                settledDoc.sid = sids?.find { it.documentId == settledDoc.documentNo.toLong() }?.jobNumber
+                // Assign Status
+                val paid = (settledDoc.documentAmount - (settledDoc.settledAmount + settledDoc.tds + settledDoc.nostroAmount))
+                if (paid.compareTo(BigDecimal.ZERO) == 0) {
+                    settledDoc.status = DocStatus.KNOCKED_OFF.value
+                } else if (paid.compareTo(settledDoc.documentAmount) == 0) {
+                    settledDoc.status = DocStatus.UNPAID.value
+                } else {
+                    settledDoc.status = DocStatus.PARTIAL_PAID.value
                 }
-                else -> {}
+                settledDocuments.add(settledDoc)
             }
         }
         return settledDocuments
@@ -518,18 +515,16 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         var settlements = mutableListOf<SettledInvoice>()
-        when (request.settlementType) {
-            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN -> {
-                @Suppress("UNCHECKED_CAST")
-                settlements =
-                    settlementRepository.findSettlement(
-                    request.documentNo.toLong(),
-                    request.settlementType,
-                    request.page,
-                    request.pageLimit
-                ) as MutableList<SettledInvoice>
-            }
-            else -> {}
+
+        if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(request.settlementType)) {
+            @Suppress("UNCHECKED_CAST")
+            settlements =
+                settlementRepository.findSettlement(
+                request.documentNo.toLong(),
+                request.settlementType,
+                request.page,
+                request.pageLimit
+            ) as MutableList<SettledInvoice>
         }
         // Group Invoices And Calculate settled Tds
         return settlements.groupBy { it.id }
