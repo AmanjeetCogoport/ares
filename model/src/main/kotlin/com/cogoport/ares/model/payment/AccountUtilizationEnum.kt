@@ -84,9 +84,7 @@ enum class InvoiceType(val value: String) {
     MFIRC("Interface Produção - Recep."),
     CURVR("Desvio de conversão"),
     INTER("Miscellaneous entry"),
-    ZSMEM("Customer Memo"),
     FAS12("OD Imno simul. social & ana"),
-    CSINV("Customer Invoice"),
     PAYRL("OD de nómina"),
     GENSM("Simulação Geral"),
     FAIR3("OD Imob IAS"),
@@ -100,12 +98,11 @@ enum class InvoiceType(val value: String) {
     EXPNS("Notas de Despesa"),
     CSDIR("Прямые продажи (сф)"),
     CLOS1("Closing Year End / Legal"),
-    SPMEM("Supplier Credit Memo"),
     GEN("Opérations diverses"),
     MISC("Miscellaneous entry"),
-    CSMEM("Customer Memo"),
     OPDIV("Miscellaneous entry"),
     CONTR("CONTRA"),
+    CRRCV("N/Créd. a receber")
 }
 
 /**
