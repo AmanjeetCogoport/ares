@@ -199,9 +199,6 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
         payments = data.hits().hits().map { it.source() }
-        payments.forEach {
-            it?.isSuspense = false
-        }
         total = data.hits().total().value().toInt()
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
