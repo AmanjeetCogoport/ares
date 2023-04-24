@@ -1314,7 +1314,7 @@ open class OnAccountServiceImpl : OnAccountService {
             when (paymentDetails.payMode) {
                 PayMode.RAZORPAY -> {
                     bankCode = PaymentSageGLCodes.RAZO.name
-                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    entityCode = paymentDetails.entityCode.toString()
                     currency = PaymentSageGLCodes.RAZO.currency
                 }
                 else -> {
