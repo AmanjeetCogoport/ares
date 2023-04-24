@@ -7,15 +7,12 @@ import java.math.BigDecimal
 data class OrgOutstanding(
     val organizationId: String?,
     val currency: String?,
-    val openInvoicesCount: Int,
-    val openInvoicesAmount: BigDecimal,
-    val openInvoicesLedAmount: BigDecimal,
-    val creditNoteCount: Int,
-    val creditNoteAmount: BigDecimal,
-    val creditNoteLedAmount: BigDecimal,
-    val paymentsCount: Int,
-    val paymentsAmount: BigDecimal,
-    val paymentsLedAmount: BigDecimal,
-    val outstandingAmount: BigDecimal,
-    val outstandingLedAmount: BigDecimal,
+    val openInvoicesCount: Int?,
+    val openInvoicesAmount: BigDecimal?,
+    val openInvoicesLedAmount: BigDecimal?,
+    val paymentsCount: Int?,
+    val paymentsAmount: BigDecimal?,
+    val paymentsLedAmount: BigDecimal?,
+    val outstandingAmount: BigDecimal?,
+    val outstandingLedAmount: BigDecimal?
 )

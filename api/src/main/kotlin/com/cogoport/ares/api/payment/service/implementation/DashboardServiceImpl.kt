@@ -1,6 +1,11 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.AresConstants.AIR_SERVICES
+import com.cogoport.ares.api.common.AresConstants.ENTITY_ID
+import com.cogoport.ares.api.common.AresConstants.OCEAN_SERVICES
+import com.cogoport.ares.api.common.AresConstants.SURFACE_SERVICES
+import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
@@ -11,16 +16,33 @@ import com.cogoport.ares.api.common.models.TradeAndServiceLevelOutstanding
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.BfReceivableAndPayable
 import com.cogoport.ares.api.payment.entity.DailySalesStats
 import com.cogoport.ares.api.payment.entity.KamWiseOutstanding
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.mapper.OverallAgeingMapper
+import com.cogoport.ares.api.payment.model.requests.BfIncomeExpenseReq
+import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
+import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
+import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
+import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
+import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
+import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
+import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
+import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DocumentType
@@ -59,9 +81,12 @@ import java.math.RoundingMode
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDate.now
 import java.time.Month
+import java.time.Year
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Singleton
@@ -91,23 +116,28 @@ class DashboardServiceImpl : DashboardService {
         Client.createIndex(index)
     }
 
-    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): List<OverallAgeingStatsResponse> {
+    override suspend fun getOutStandingByAge(request: OutstandingAgeingRequest): LinkedHashMap<String, OverallAgeingStatsResponse> {
         val defaultersOrgIds = getDefaultersOrgIds()
         val entityCode = request.entityCode ?: 301
 
-        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
-        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, request.companyType?.value, entityCode)
+        val updatedCompanyType = getCompanyType(request.companyType)
 
-        val durationKey = listOf("1-30", "31-60", "61-90", "91-180", "181-365", ">365", "Not Due")
+        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
+        val outstandingResponse = unifiedDBRepo.getOutstandingByAge(request.serviceType, defaultersOrgIds, updatedCompanyType, entityCode)
+
+        val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
+
+        val formattedData = LinkedHashMap<String, OverallAgeingStatsResponse>()
 
         if (outstandingResponse.isEmpty()) {
-            return durationKey.map {
-                OverallAgeingStatsResponse(
+            durationKey.map {
+                formattedData[it] = OverallAgeingStatsResponse(
                     ageingDuration = it,
                     amount = 0.toBigDecimal(),
                     dashboardCurrency = ledgerCurrency!!
                 )
             }
+            return formattedData
         }
 
         val data = mutableListOf<OverallAgeingStatsResponse>()
@@ -117,7 +147,22 @@ class DashboardServiceImpl : DashboardService {
             data.add(overallAgeingConverter.convertToModel(response))
         }
 
-        return data
+        durationKey.map { key ->
+            val durationData = data.filter { it.ageingDuration == key }
+            if (!durationData.isNullOrEmpty()) {
+                formattedData.put(key, durationData[0])
+            } else {
+                formattedData[key] = OverallAgeingStatsResponse(
+                    ageingDuration = key,
+                    amount = 0.toBigDecimal(),
+                    dashboardCurrency = ledgerCurrency!!
+                )
+            }
+        }
+
+        formattedData.values.sortedBy { it.ageingDuration }
+
+        return formattedData
     }
 
     override suspend fun getQuarterlyOutstanding(request: QuarterlyOutstandingRequest): QuarterlyOutstanding {
@@ -125,6 +170,8 @@ class DashboardServiceImpl : DashboardService {
         val entityCode = request.entityCode ?: 301
         val year = request.year ?: AresConstants.CURR_YEAR
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
+
+        val updatedCompanyType = getCompanyType(request.companyType)
 
         val companyType = request.companyType
 
@@ -137,7 +184,7 @@ class DashboardServiceImpl : DashboardService {
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
-        val quarterOutstandingData = unifiedDBRepo.generateQuarterlyOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
+        val quarterOutstandingData = unifiedDBRepo.generateQuarterlyOutstanding(year, serviceType, defaultersOrgIds, entityCode, updatedCompanyType)
         val qsoResponseList = mutableListOf<QsoResponse>()
 
         (1..4).toList().map { quarter ->
@@ -191,7 +238,9 @@ class DashboardServiceImpl : DashboardService {
         val companyType = request.companyType
         val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
-        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, companyType?.value)
+        val updatedCompanyType = getCompanyType(companyType)
+
+        val dailySalesZoneServiceTypeData = unifiedDBRepo.generateDailySalesOutstanding(year, serviceType, defaultersOrgIds, entityCode, updatedCompanyType)
 
         val dsoResponse = mutableListOf<DsoResponse>()
 
@@ -368,6 +417,8 @@ class DashboardServiceImpl : DashboardService {
         val companyType = req.companyType
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
+        val updatedCompanyType = getCompanyType(companyType)
+
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
@@ -377,7 +428,7 @@ class DashboardServiceImpl : DashboardService {
 
         val salesFunnelResponse = SalesFunnelResponse()
 
-        val data = unifiedDBRepo.getFunnelData(entityCode, companyType?.value, serviceType?.name?.lowercase(), year, monthKey)
+        val data = unifiedDBRepo.getFunnelData(entityCode, updatedCompanyType, serviceType?.name?.lowercase(), year, monthKey)
 
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
@@ -412,6 +463,8 @@ class DashboardServiceImpl : DashboardService {
         val month = req.month
         val year = req.year ?: AresModelConstants.CURR_YEAR
 
+        val updatedCompanyType = getCompanyType(companyType)
+
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
@@ -419,7 +472,7 @@ class DashboardServiceImpl : DashboardService {
             else -> AresModelConstants.CURR_MONTH
         }
 
-        val data = unifiedDBRepo.getInvoices(year, monthKey, entityCode, companyType?.value, serviceType?.name?.lowercase())
+        val data = unifiedDBRepo.getInvoiceTatStats(year, monthKey, entityCode, updatedCompanyType, serviceType?.name?.lowercase())
 
         val objectMapper = ObjectMapper()
 
@@ -523,43 +576,73 @@ class DashboardServiceImpl : DashboardService {
 
         val defaultersOrgIds = getDefaultersOrgIds()
 
+        val possibleServiceAndTradeType = mapOf(
+            "ocean" to listOf("FCL_FREIGHT_IMPORT", "FCL_FREIGHT_EXPORT", "LCL_FREIGHT_IMPORT", "LCL_FREIGHT_EXPORT"),
+            "air" to listOf("AIR_CUSTOMS_IMPORT", "AIR_FREIGHT_IMPORT", "AIR_CUSTOMS_EXPORT", "AIR_FREIGHT_EXPORT"),
+            "surface" to listOf("FTL_FREIGHT_IMPORT", "FTL_FREIGHT_EXPORT", "LTL_FREIGHT_IMPORT", "LTL_FREIGHT_EXPORT")
+        )
+
         val data = unifiedDBRepo.getOutstandingData(updatedEntityCode, defaultersOrgIds)
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
-        if (!data.isNullOrEmpty()) {
-            val onAccountAmount = unifiedDBRepo.getOnAccountAmount(updatedEntityCode, defaultersOrgIds)
-            val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
-            val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
-
-            data.map { it.tradeType = it.tradeType?.uppercase() }
-            data.map { it.serviceType = it.serviceType?.uppercase() }
-
-            data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
-                mapData[k.toString()] = ServiceLevelOutstanding(
-                    openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+        if (data.isNullOrEmpty()) {
+            possibleServiceAndTradeType.entries.map { (k, v) ->
+                mapData[k] = ServiceLevelOutstanding(
+                    openInvoiceAmount = BigDecimal.ZERO,
                     currency = dashboardCurrency,
-                    tradeType = getTradeAndServiceWiseData(v)
+                    tradeType = v.map { value ->
+                        TradeAndServiceLevelOutstanding(
+                            key = value,
+                            name = value.replace("_", " "),
+                            openInvoiceAmount = BigDecimal.ZERO,
+                            currency = dashboardCurrency
+                        )
+                    }
                 )
             }
-
-            val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
-                true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
-                    ?.times(100.toBigDecimal())?.toLong()
-                else -> BigDecimal.ZERO
-            }
+            openSearchData.overallStats = OverallStats(
+                dashboardCurrency = dashboardCurrency!!
+            )
 
             openSearchData.outstandingServiceWise = mapData
-            openSearchData.overallStats = OverallStats(
-                totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
-                customersCount = data.sumOf { it.customersCount!! },
-                dashboardCurrency = data.first().currency!!,
-                openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
-                openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
-                onAccountAmount = onAccountAmount?.setScale(4, RoundingMode.UP),
-                onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
+
+            return openSearchData
+        }
+
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
+        val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+        val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
+
+        data.map { it.tradeType = it.tradeType?.uppercase() }
+        data.map { it.serviceType = it.serviceType?.uppercase() }
+
+        data.groupBy { it.groupedServices }.filter { it.key != null }.entries.map { (k, v) ->
+            mapData[k.toString()] = ServiceLevelOutstanding(
+                openInvoiceAmount = v.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+                currency = dashboardCurrency,
+                tradeType = getTradeAndServiceWiseData(v)
             )
         }
+
+        val onAccountAmountForPastSevenDaysPercentage = when (onAccountAmount != BigDecimal.ZERO) {
+            true -> onAccountAmountForPastSevenDays?.div(onAccountAmount?.setScale(4, RoundingMode.UP)!!)
+                ?.times(100.toBigDecimal())?.toLong()
+            else -> BigDecimal.ZERO
+        }
+
+        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount!!)
+
+        openSearchData.outstandingServiceWise = mapData
+        openSearchData.overallStats = OverallStats(
+            totalOutstandingAmount = totalOutstandingAmount.setScale(4, RoundingMode.UP),
+            openInvoicesAmount = data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP),
+            customersCount = data.sumOf { it.customersCount!! },
+            dashboardCurrency = data.first().currency!!,
+            openInvoicesCount = data.sumOf { it.openInvoicesCount!! },
+            openInvoiceAmountForPastSevenDaysPercentage = openInvoiceAmountForPastSevenDays?.div(data.sumOf { it.openInvoiceAmount }.setScale(4, RoundingMode.UP))?.times(100.toBigDecimal())?.toLong(),
+            onAccountAmount = onAccountAmount.setScale(4, RoundingMode.UP),
+            onAccountAmountForPastSevenDaysPercentage = onAccountAmountForPastSevenDaysPercentage?.toLong()
+        )
 
         return openSearchData
     }
@@ -607,7 +690,8 @@ class DashboardServiceImpl : DashboardService {
         val entityCode = req.entityCode ?: 301
         val dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
 
-        val defaultersOrgIds = getDefaultersOrgIds()
+        val updatedCompanyType = getCompanyType(companyType)
+
         val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
 
         var dailySalesStats = mutableListOf<DailySalesStats>()
@@ -619,14 +703,13 @@ class DashboardServiceImpl : DashboardService {
             dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                 unifiedDBRepo.generateYearlySalesStats(
                     endDate,
-                    getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                    defaultersOrgIds,
+                    getAccTypeAnDocStatus(documentType),
                     entityCode,
-                    companyType?.value,
-                    serviceType
+                    updatedCompanyType,
+                    serviceType?.name?.lowercase()
                 )!!
             } else {
-                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                unifiedDBRepo.generateYearlyShipmentCreatedAt(endDate, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
             }
         } else {
             if ((month != null && year != null) || (month != null && year == null)) {
@@ -639,53 +722,100 @@ class DashboardServiceImpl : DashboardService {
                     unifiedDBRepo.generateMonthlySalesStats(
                         quarterStart,
                         quarterEnd,
-                        getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                        defaultersOrgIds,
+                        getAccTypeAnDocStatus(documentType),
                         entityCode,
-                        companyType?.value,
-                        serviceType
+                        updatedCompanyType,
+                        serviceType?.name?.lowercase()
                     )!!
                 } else {
-                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterEnd, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateMonthlyShipmentCreatedAt(quarterStart, quarterEnd, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
                 }
             } else {
                 val endDate = asOnDate ?: "${AresConstants.CURR_YEAR}-${generateMonthKeyIndex(AresConstants.CURR_MONTH)}-${generateMonthKeyIndex(AresConstants.CURR_DATE.toLocalDateTime().dayOfMonth)}".format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 dailySalesStats = if (documentType != DocumentType.SHIPMENT_CREATED) {
                     unifiedDBRepo.generateDailySalesStats(
                         endDate,
-                        getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
-                        defaultersOrgIds,
+                        getAccTypeAnDocStatus(documentType),
                         entityCode,
-                        companyType?.value,
-                        serviceType
+                        updatedCompanyType,
+                        serviceType?.name?.lowercase()
                     )!!
                 } else {
-                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, entityCode, companyType?.value, serviceType?.name?.lowercase())!!
+                    unifiedDBRepo.generateDailyShipmentCreatedAt(endDate, entityCode, updatedCompanyType, serviceType?.name?.lowercase())!!
                 }
             }
         }
 
         if (!dailySalesStats.isNullOrEmpty()) {
             dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
-                val dailySalesStats = DailySalesStats(
-                    amount = 0.toBigDecimal(),
-                    duration = key,
-                    dashboardCurrency = dashboardCurrency,
-                    count = 0L
-                )
 
                 value.map { item ->
-                    dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
-                    dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
-                }
+                    val dailySalesStats = DailySalesStats(
+                        amount = 0.toBigDecimal(),
+                        duration = key,
+                        dashboardCurrency = dashboardCurrency,
+                        count = 0L
+                    )
 
-                if (hashMap.keys.contains(documentType.name)) {
-                    hashMap[documentType.name]?.add(dailySalesStats)
-                } else {
-                    hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                    if (documentType == DocumentType.SALES_INVOICE) {
+                        dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
+                        dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                        dailySalesStats.invoiceType = item.invoiceType
+
+                        if (hashMap.keys.contains(documentType.name)) {
+                            hashMap[documentType.name]?.add(dailySalesStats)
+                        } else {
+                            hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                        }
+                    } else {
+                        dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
+                        dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                        dailySalesStats.invoiceType = item.invoiceType
+
+                        if (hashMap.keys.contains(documentType.name)) {
+                            hashMap[documentType.name]?.add(dailySalesStats)
+                        } else {
+                            hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                        }
+                    }
                 }
             }
         }
+        if (documentType == DocumentType.SALES_INVOICE) {
+            hashMap[documentType.name]?.groupBy { it.duration }?.entries?.map { (k, v) ->
+                listOf("INVOICE", "CREDIT_NOTE").map { type ->
+                    if (v.none { value -> value.invoiceType == type }) {
+                        val dummyEntry = DailySalesStats(
+                            amount = BigDecimal.ZERO,
+                            duration = k,
+                            dashboardCurrency = dashboardCurrency,
+                            count = 0,
+                            invoiceType = type
+                        )
+                        hashMap[documentType.name]?.add(dummyEntry)
+                    }
+                }
+            }
+
+            hashMap[documentType.name]?.removeIf { it.invoiceType == null }
+
+            val data = hashMap[documentType.name]?.groupBy { it.duration }?.values?.toMutableList()
+
+            data?.map {
+                val revenue = DailySalesStats(
+                    amount = it.first { it.invoiceType == "INVOICE" }.amount.minus(it.first { it.invoiceType == "CREDIT_NOTE" }.amount),
+                    duration = it[0].duration,
+                    dashboardCurrency = it[0].dashboardCurrency,
+                    count = 0,
+                    invoiceType = "REVENUE"
+                )
+
+                hashMap[documentType.name]?.add(revenue)
+            }
+        }
+
+        hashMap[documentType.name]?.sortedBy { it.duration }
+
         return hashMap
     }
 
@@ -712,50 +842,384 @@ class DashboardServiceImpl : DashboardService {
 
         val hashMap = hashMapOf<String, ArrayList<DailySalesStats>>()
 
+        val updatedCompanyType = getCompanyType(companyType)
+
         val dailySalesStats = if (req.documentType != DocumentType.SHIPMENT_CREATED) {
             unifiedDBRepo.generateLineGraphViewDailyStats(
                 asOnDate,
-                getAccTypeAnDocStatus(documentType)?.get("accType").toString(),
+                getAccTypeAnDocStatus(documentType),
                 defaultersOrgIds,
                 entityCode,
-                companyType?.value,
-                serviceType
+                updatedCompanyType,
+                serviceType?.name?.lowercase()
             )!!
         } else {
-            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, entityCode, req.companyType?.value, req.serviceType?.name?.lowercase())!!
+            unifiedDBRepo.generateLineGraphViewShipmentCreated(asOnDate, entityCode, updatedCompanyType, req.serviceType?.name?.lowercase())!!
         }
 
-        if (dailySalesStats.size > 0) {
+        if (!dailySalesStats.isNullOrEmpty()) {
             dailySalesStats.groupBy { it -> it.duration }.entries.map { (key, value) ->
-                val dailySalesStats = DailySalesStats(
-                    amount = 0.toBigDecimal(),
-                    duration = key,
-                    dashboardCurrency = dashboardCurrency,
-                    count = 0L
-                )
 
                 value.map { item ->
-                    dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
-                    dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
-                }
+                    val dailySalesStats = DailySalesStats(
+                        amount = 0.toBigDecimal(),
+                        duration = key,
+                        dashboardCurrency = dashboardCurrency,
+                        count = 0L
+                    )
 
-                if (hashMap.keys.contains(documentType.name)) {
-                    hashMap[documentType.name]?.add(dailySalesStats)
-                } else {
-                    hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                    if (documentType == DocumentType.SALES_INVOICE) {
+                        dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
+                        dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                        dailySalesStats.invoiceType = item.invoiceType
+
+                        if (hashMap.keys.contains(documentType.name)) {
+                            hashMap[documentType.name]?.add(dailySalesStats)
+                        } else {
+                            hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                        }
+                    } else {
+                        dailySalesStats.amount = dailySalesStats.amount.plus(item.amount)
+                        dailySalesStats.count = dailySalesStats.count?.plus(item.count!!)
+                        dailySalesStats.invoiceType = item.invoiceType
+
+                        if (hashMap.keys.contains(documentType.name)) {
+                            hashMap[documentType.name]?.add(dailySalesStats)
+                        } else {
+                            hashMap[documentType.name] = arrayListOf(dailySalesStats)
+                        }
+                    }
                 }
+            }
+        }
+        if (documentType == DocumentType.SALES_INVOICE) {
+            hashMap[documentType.name]?.groupBy { it.duration }?.entries?.map { (k, v) ->
+                listOf("INVOICE", "CREDIT_NOTE").map { type ->
+                    if (v.none { value -> value.invoiceType == type }) {
+                        val dummyEntry = DailySalesStats(
+                            amount = BigDecimal.ZERO,
+                            duration = k,
+                            dashboardCurrency = dashboardCurrency,
+                            count = 0,
+                            invoiceType = type
+                        )
+                        hashMap[documentType.name]?.add(dummyEntry)
+                    }
+                }
+            }
+
+            hashMap[documentType.name]?.removeIf { it.invoiceType == null }
+
+            val data = hashMap[documentType.name]?.groupBy { it.duration }?.values?.toMutableList()
+
+            data?.map {
+                val revenue = DailySalesStats(
+                    amount = it.first { it.invoiceType == "INVOICE" }.amount.minus(it.first { it.invoiceType == "CREDIT_NOTE" }.amount),
+                    duration = it[0].duration,
+                    dashboardCurrency = it[0].dashboardCurrency,
+                    count = 0,
+                    invoiceType = "REVENUE"
+                )
+
+                hashMap[documentType.name]?.add(revenue)
             }
         }
 
         return hashMap
     }
 
-    private fun getAccTypeAnDocStatus(documentType: DocumentType): Map<String, Any>? {
+    private fun getAccTypeAnDocStatus(documentType: DocumentType): List<String>? {
         val accTypeDocStatusMapping = mapOf(
-            DocumentType.SALES_INVOICE to mapOf("accType" to "SINV"),
-            DocumentType.CREDIT_NOTE to mapOf("accType" to "SCN"),
-            DocumentType.ON_ACCOUNT_PAYMENT to mapOf("accType" to "REC")
+            DocumentType.SALES_INVOICE to listOf("INVOICE", "CREDIT_NOTE"),
+            DocumentType.CREDIT_NOTE to listOf("CREDIT_NOTE")
         )
         return accTypeDocStatusMapping[documentType]
+    }
+
+    override suspend fun getFinanceReceivableData(request: BfPendingAmountsReq): BfReceivableAndPayable {
+        val response: BfReceivableAndPayable?
+        val onAccountPayment: BigDecimal?
+        val pieChartData: MutableList<OnAccountAndOutstandingResp> = mutableListOf()
+        var receivableOrPayableTillYesterday: BigDecimal?
+        val onAccountTillYesterday: BigDecimal?
+        if (request.accountMode == AccMode.AP) {
+            response = unifiedDBRepo.getBfPayable(
+                request.serviceTypes, request.startDate,
+                request.endDate, request.tradeType, request.entityCode,
+            )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
+        } else {
+            val defaultOrgIds = getDefaultersOrgIds()
+            val customerTypes = mapOf(
+                "cp" to listOf("channel_partner"),
+                "ie" to listOf("mid_size", "long_tail"),
+                "enterprise" to listOf("enterprise")
+            )
+            response = unifiedDBRepo.getBfReceivable(
+                request.serviceTypes, request.startDate, request.endDate,
+                request.tradeType, request.entityCode, customerTypes[request.buyerType],
+                defaultOrgIds
+            )
+            receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
+        }
+        var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
+        if (request.accountMode == AccMode.AP) {
+            totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
+            receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
+        }
+        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
+        val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
+        response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {
+            onAccountTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (onAccountPaymentChangeFromYesterday.divide(onAccountTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        response.outstandingChangeFromYesterday = totalOutStandingChangeFromYesterday?.let {
+            totalOutStandingTillYesterday.takeIf { it != BigDecimal.ZERO }?.let {
+                (totalOutStandingChangeFromYesterday.divide(totalOutStandingTillYesterday?.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+        pieChartData.add(OnAccountAndOutstandingResp("outstanding", totalOutStanding))
+        pieChartData.add(OnAccountAndOutstandingResp("onAccount", onAccountPayment))
+        response.onAccountAndOutStandingData = pieChartData
+        return response
+    }
+
+    override suspend fun getFinanceIncomeExpense(request: BfIncomeExpenseReq): MutableList<BfIncomeExpenseResponse> {
+        val thisYear = Year.now().toString()
+        if ((request.financeYearStart == null && request.financeYearEnd != null) || (request.financeYearStart != null && request.financeYearEnd == null)) {
+            throw AresException(AresError.ERR_1006, "One of the finance Year is null")
+        }
+        val startYear = request.financeYearStart ?: request.calenderYear ?: thisYear
+        var endYear = request.financeYearEnd ?: request.calenderYear ?: thisYear
+        var isLeapYear = Year.isLeap(endYear.toLong())
+
+        val monthlyIncomes = unifiedDBRepo.getBfIncomeMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+            request.entityCode,
+            isLeapYear
+        )
+        val monthlyExpenses = unifiedDBRepo.getBfExpenseMonthly(
+            request.serviceTypes,
+            startYear,
+            endYear,
+            request.isPostTax!!,
+            request.entityCode,
+            isLeapYear
+        )
+        var response = mutableListOf<BfIncomeExpenseResponse>()
+        for (monthIndex in 1..12) {
+            var monthName = Month.of(monthIndex)
+            response.add(
+                BfIncomeExpenseResponse(
+                    month = monthName,
+                    income = getMonthData(monthlyIncomes, monthName),
+                    expense = getMonthData(monthlyExpenses, monthName)
+                )
+            )
+        }
+        if (request.financeYearStart != null) {
+            for (index in 0..2) {
+                val monthData = response.removeAt(0)
+                response.add(monthData)
+            }
+        }
+        return response
+    }
+
+    private fun getMonthData(data: LogisticsMonthlyData, month: Month): BigDecimal? {
+        return when (month) {
+            Month.JANUARY -> data.january
+            Month.FEBRUARY -> data.february
+            Month.MARCH -> data.march
+            Month.APRIL -> data.april
+            Month.MAY -> data.may
+            Month.JUNE -> data.june
+            Month.JULY -> data.july
+            Month.AUGUST -> data.august
+            Month.SEPTEMBER -> data.september
+            Month.OCTOBER -> data.october
+            Month.NOVEMBER -> data.november
+            Month.DECEMBER -> data.december
+            else -> null
+        }
+    }
+
+    override suspend fun getFinanceTodayStats(request: BfTodayStatReq): BfTodayStatsResp {
+        val todaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, now())
+        val todayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, now())
+        val response = BfTodayStatsResp(
+            todaySalesStats = todaySalesData,
+            todayPurchaseStats = todayPurchaseData,
+        )
+        var yesterday = now().minus(1, ChronoUnit.DAYS)
+        val yesterdaySalesData = unifiedDBRepo.getSalesStatsByDate(request.serviceTypes, request.entityCode, yesterday)
+        val yesterdayPurchaseData = unifiedDBRepo.getPurchaseStatsByDate(request.serviceTypes, request.entityCode, yesterday)
+        val todayCashFlow = todaySalesData.totalRevenue?.minus(todayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val yesterdayCashFlow = yesterdaySalesData.totalRevenue?.minus(yesterdayPurchaseData.totalExpense ?: 0.toBigDecimal())
+        val cashFlowChange = todayCashFlow?.minus(yesterdayCashFlow!!)
+        val cashFlowChangePercentage = cashFlowChange?.let {
+            yesterdayCashFlow?.takeIf { it != BigDecimal.ZERO }?.let {
+                (cashFlowChange.divide(yesterdayCashFlow.abs(), 5, RoundingMode.HALF_UP)).multiply(BigDecimal.valueOf(100))
+            }
+        } ?: BigDecimal.ZERO
+
+        response.totalCashFlow = todayCashFlow
+        response.yesterdayCashFlow = yesterdayCashFlow
+        response.cashFlowDiffFromYesterday = cashFlowChangePercentage
+        return response
+    }
+
+    override suspend fun getFinanceShipmentProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        var taggedEntityCode = mutableListOf<String>()
+        request.entityCode?.forEach {
+            taggedEntityCode.add(ENTITY_ID[it]!!)
+        }
+        val listResponse = unifiedDBRepo.listShipmentProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.jobStatus,
+            request.sortBy,
+            request.sortType,
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceTypes
+        )
+        listResponse.forEach {
+            it.entity = TAGGED_ENTITY_ID_MAPPINGS[it.taggedEntityId].toString()
+        }
+        val totalRecords = unifiedDBRepo.findTotalCountShipment(
+            query,
+            request.jobStatus,
+            taggedEntityCode,
+            request.startDate,
+            request.endDate,
+            request.serviceTypes
+        )
+        return ShipmentProfitResp(
+            shipmentList = listResponse,
+            averageShipmentProfit = totalRecords.averageProfit,
+            averageCustomerProfit = null,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
+    }
+
+    override suspend fun getFinanceCustomerProfit(request: BfProfitabilityReq): ShipmentProfitResp {
+        var query: String? = null
+        if (request.q != null) query = "%${request.q}%"
+        val listResponse = unifiedDBRepo.listCustomerProfitability(
+            request.pageIndex!!,
+            request.pageSize!!,
+            query,
+            request.sortBy,
+            request.sortType,
+            request.entityCode
+        )
+        val totalRecords = unifiedDBRepo.findTotalCountCustomer(
+            query,
+            request.entityCode
+        )
+        return ShipmentProfitResp(
+            customerList = listResponse,
+            averageShipmentProfit = null,
+            averageCustomerProfit = totalRecords.averageProfit,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            totalRecord = totalRecords.totalCount
+        )
+    }
+
+    override suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp> {
+        val response = mutableListOf<ServiceWiseRecPayResp>()
+        val entityCode = request.entityCode
+        val defaultersOrgIds = getDefaultersOrgIds()
+        val oceanReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
+        val oceanPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), OCEAN_SERVICES, entityCode, request.startDate, request.endDate)
+        val airReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), AIR_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
+        val airPayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), AIR_SERVICES, entityCode, request.startDate, request.endDate)
+        val surfaceReceivable = unifiedDBRepo.getTotalRemainingAmountAR(AccMode.AR, listOf(AccountType.SREIMB, AccountType.SCN, AccountType.SINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate, defaultersOrgIds)
+        val surfacePayable = unifiedDBRepo.getTotalRemainingAmountAP(AccMode.AP, listOf(AccountType.PREIMB, AccountType.PCN, AccountType.PINV), SURFACE_SERVICES, entityCode, request.startDate, request.endDate)
+
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Ocean",
+                accountPay = oceanPayable,
+                accountRec = oceanReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Air",
+                accountPay = airPayable,
+                accountRec = airReceivable
+            )
+        )
+        response.add(
+            ServiceWiseRecPayResp(
+                service = "Surface",
+                accountPay = surfacePayable,
+                accountRec = surfaceReceivable
+            )
+        )
+        return response
+    }
+
+    override suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp {
+        val tradeTypes = when (request.tradeType) {
+            "import" -> listOf("import", "IMPORT")
+            "export" -> listOf("export", "EXPORT")
+            "other" -> listOf("domestic", "DOMESTIC", "LOCAL", "local")
+            "domestic" -> listOf("domestic", "DOMESTIC")
+            "local" -> listOf("LOCAL", "local")
+            else -> null
+        }
+        val defaultersOrgIds = getDefaultersOrgIds()
+        return when (request.interfaceType) {
+            "ocean" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(OCEAN_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
+                cardDataAp = unifiedDBRepo.getFinanceApCardDate(OCEAN_SERVICES, request.startDate, request.endDate, request.entityCode)
+            )
+            "air" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(AIR_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(AIR_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
+                cardDataAp = unifiedDBRepo.getFinanceApCardDate(AIR_SERVICES, request.startDate, request.endDate, request.entityCode)
+            )
+            "surface" -> ServiceWiseOverdueResp(
+                arData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AR, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                apData = getFinanceReceivableData(BfPendingAmountsReq(SURFACE_SERVICES, AccMode.AP, null, request.startDate, request.endDate, tradeTypes, request.entityCode)),
+                cardDataAr = unifiedDBRepo.getFinanceArCardData(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode, defaultersOrgIds),
+                cardDataAp = unifiedDBRepo.getFinanceApCardDate(SURFACE_SERVICES, request.startDate, request.endDate, request.entityCode)
+            )
+            else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
+        }
+    }
+
+    private fun getCompanyType(companyType: CompanyType?): List<String>? {
+        return when (companyType != null) {
+            true -> when (companyType == CompanyType.IE) {
+                true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
+                else -> listOf(companyType.value)
+            }
+            else -> null
+        }
     }
 }

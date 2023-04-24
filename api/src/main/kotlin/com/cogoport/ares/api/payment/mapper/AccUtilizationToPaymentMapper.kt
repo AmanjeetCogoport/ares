@@ -10,6 +10,7 @@ import org.mapstruct.ReportingPolicy
 interface AccUtilizationToPaymentMapper {
 
     @Mapping(source = "amount", target = "currencyAmount")
+    @Mapping(target = "isVoid", expression = "java(false)")
     fun convertEntityToModel(
         accUtilization: com.cogoport.ares.api.payment.entity.Payment
     ): AccUtilizationRequest
@@ -19,5 +20,6 @@ interface AccUtilizationToPaymentMapper {
     @Mapping(source = "currencyPayment", target = "payCurr")
     @Mapping(source = "ledgerPayment", target = "payLoc")
     @Mapping(source = "docStatus", target = "documentStatus")
+    @Mapping(target = "isVoid", expression = "java(false)")
     fun convertModelToEntity(accUtilization: AccUtilizationRequest): AccountUtilization
 }

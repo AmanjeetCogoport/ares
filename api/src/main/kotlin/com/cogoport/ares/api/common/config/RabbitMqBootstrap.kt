@@ -12,7 +12,6 @@ class RabbitMqBootstrap : ChannelInitializer() {
     fun onStartupEvent(@Suppress("UNUSED_PARAMETER") event: ServerStartupEvent) {
         initialize(null, "")
     }
-
     override fun initialize(channel: Channel?, name: String) {
         channel?.exchangeDeclare("ares", "topic", true)
 
@@ -73,5 +72,14 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("tagged-bill-auto-knockoff", true, false, false, null)
         channel?.queueBind("tagged-bill-auto-knockoff", "ares", "tagged.bill.auto.knockoff", null)
+
+        channel?.queueDeclare("delete-invoices-not-present-in-plutus", true, false, false, null)
+        channel?.queueBind("delete-invoices-not-present-in-plutus", "ares", "delete.invoices.not.present.in.plutus", null)
+
+        channel?.queueDeclare("ares-migrate-gl-codes", true, false, false, null)
+        channel?.queueBind("ares-migrate-gl-codes", "ares", "ares.migrate.gl.codes", null)
+
+        channel?.queueDeclare("ares-post-jv-to-sage", true, false, false, null)
+        channel?.queueBind("ares-post-jv-to-sage", "ares", "ares.post.jv.to.sage", null)
     }
 }

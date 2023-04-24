@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
@@ -14,11 +15,13 @@ import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
+import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.CollectionTrend
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -32,6 +35,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -39,6 +43,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query("select exists(select id from account_utilizations where document_no=:documentNo and acc_type=:accType::account_type and deleted_at is null)")
     suspend fun isDocumentNumberExists(documentNo: Long, accType: String): Boolean
+
+    @NewSpan
+    @Query("SELECT * FROM account_utilizations WHERE document_no = :documentNo AND acc_type = :accType::account_type LIMIT 1")
+    suspend fun findByDocumentNo(documentNo: Long, accType: AccountType): AccountUtilization
 
     @NewSpan
     @Query(
@@ -473,7 +481,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.updated_at as last_edited_date,
             COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
             COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
-            COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url 
+            COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url,
+            COALESCE((ARRAY_AGG(s1.id)), null) as settlement_ids
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
@@ -614,115 +623,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND (amount_curr - pay_curr) > 0
-                AND organization_id in (:orgId)
-                AND document_status = 'FINAL'
-                AND acc_type::varchar in (:accType)
-                AND (:entityCode is null OR entity_code = :entityCode)
-                AND (:startDate is null OR transaction_date >= :startDate::date)
-                AND (:endDate is null OR transaction_date <= :endDate::date)
-                AND document_value ilike :query
-                AND (:accMode is null OR acc_mode::varchar = :accMode)
-                AND deleted_at is null
-            ORDER BY transaction_date DESC, id
-            LIMIT :limit
-            OFFSET :offset
-        ), 
-         MAPPINGS AS (
-        	select jsonb_array_elements(account_utilization_ids)::int as id 
-        	from incident_mappings
-        	where incident_status = 'REQUESTED'
-        	and incident_type = 'SETTLEMENT_APPROVAL'
-        )
-        SELECT 
-            au.id,
-            s.source_id,
-            s.source_type,
-            coalesce(s.amount,0) as settled_tds,
-            s.currency as tds_currency,
-            au.organization_id,
-            au.trade_party_mapping_id as mapping_id,
-            document_no, 
-            document_value, 
-            acc_type as document_type,
-            acc_type as account_type,
-            au.transaction_date as document_date,
-            due_date, 
-            COALESCE(amount_curr, 0) as document_amount, 
-            COALESCE(amount_loc, 0) as document_led_amount, 
-            COALESCE(amount_loc - pay_loc, 0) as document_led_balance,
-            COALESCE(taxable_amount, 0) as taxable_amount,  
-            COALESCE(amount_curr, 0) as after_tds_amount, 
-            COALESCE(pay_curr, 0) as settled_amount, 
-            COALESCE(amount_curr - pay_curr, 0) as balance_amount,
-            COALESCE(tds_amount, 0) as tds,
-            au.currency, 
-            au.led_currency, 
-            au.sign_flag,
-            au.acc_mode,
-            CASE WHEN 
-            	au.id in (select id from MAPPINGS) 
-        	THEN
-        		false
-        	ELSE
-        		true
-        	END as approved,
-            COALESCE(
-                CASE WHEN 
-                    (p.exchange_rate is not null) 
-                    THEN p.exchange_rate 
-                    ELSE ((case when amount_curr != 0 then amount_loc / amount_curr else 1 END)) 
-                    END,
-                 1) AS exchange_rate
-            FROM account_utilizations au
-            LEFT JOIN payments p ON 
-                p.payment_num = au.document_no
-            LEFT JOIN settlements s ON 
-                s.destination_id = au.document_no 
-                AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
-            WHERE au.id in (
-                SELECT id from FILTERS
-            )
-            AND au.deleted_at is null
-            AND s.deleted_at is null
-            AND p.deleted_at is null  and au.is_void = false
-            ORDER BY
-            CASE WHEN :sortType = 'Desc' THEN
-                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
-                         WHEN :sortBy = 'dueDate' THEN au.due_date
-                    END
-            END 
-            Desc,
-            CASE WHEN :sortType = 'Asc' THEN
-                    CASE WHEN :sortBy = 'transactionDate' THEN au.transaction_date
-                         WHEN :sortBy = 'dueDate' THEN au.due_date
-                    END        
-            END 
-            Asc
-        """
-    )
-    suspend fun getDocumentList(
-        limit: Int? = null,
-        offset: Int? = null,
-        accType: List<AccountType>,
-        orgId: List<UUID>,
-        entityCode: Int?,
-        startDate: Timestamp?,
-        endDate: Timestamp?,
-        query: String?,
-        accMode: AccMode?,
-        sortBy: String?,
-        sortType: String?
-    ): List<Document?>
-
-    @NewSpan
-    @Query(
-        """
-        WITH FILTERS AS (
-            SELECT id 
-            FROM account_utilizations
-            WHERE amount_curr <> 0 
                 AND pay_curr <> 0
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
@@ -822,27 +722,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sortBy: String?,
         sortType: String?
     ): List<Document?>
-
-    @NewSpan
-    @Query(
-        """
-        SELECT 
-            count(id)
-                FROM account_utilizations
-                WHERE 
-                    amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
-                    AND document_status = 'FINAL'
-                    AND organization_id in (:orgId)
-                    AND acc_type::varchar in (:accType)
-                    AND (:entityCode is null OR entity_code = :entityCode)
-                    AND (:startDate is null OR transaction_date >= :startDate::date)
-                    AND (:endDate is null OR transaction_date <= :endDate::date)
-                    AND document_value ilike :query
-                    AND deleted_at is null  and is_void = false
-    """
-    )
-    suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?): Long?
 
     @NewSpan
     @Query(
@@ -1418,5 +1297,74 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             group by organization_id, currency
         """
     )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
+    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<CustomerOrgOutstanding>
+
+    @NewSpan
+    @Query(
+        """
+        SELECT SUM(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getAccountPayables(entity: Int?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
+        SELECT SUM(CASE WHEN acc_type IN ('PINV','PREIMB') THEN (amount_loc-pay_loc) ELSE 0 END) AS open_invoice_amount,
+        SUM(CASE WHEN acc_type in ('PINV','PREIMB') THEN 1 ELSE 0 END) AS open_invoice_count,
+        SUM(CASE WHEN acc_type IN ('PAY') THEN (amount_loc-pay_loc) ELSE 0 END) AS on_account_amount,
+        SUM(CASE WHEN acc_type IN ('PCN') THEN (amount_loc-pay_loc) ELSE 0 END) AS credit_note_amount
+        FROM account_utilizations WHERE acc_mode = 'AP' AND deleted_at IS NULL AND migrated = false AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getAccountPayablesStats(entity: Int?): AccountPayablesStats
+    @NewSpan
+    @Query(
+        """
+        SELECT  COUNT(distinct trade_party_mapping_id) FROM account_utilizations
+        WHERE acc_mode = 'AP' AND acc_type IN ('PINV','PREIMB') AND deleted_at IS NULL AND migrated = false AND amount_curr > pay_curr AND
+        CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END
+    """
+    )
+    suspend fun getOrganizationCount(entity: Int?): Long?
+
+    @Query(
+        """
+        SELECT
+            organization_id as trade_party_detail_id,
+            SUM((amount_loc - pay_loc) * sign_flag) AS balance_amount,
+            led_currency as ledger_currency
+        FROM
+            account_utilizations
+        WHERE
+            document_status = 'FINAL'
+            AND entity_code = :entityCode 
+            AND transaction_date <= :transactionDate::DATE
+            AND acc_type != 'NEWPR'
+        GROUP BY
+            trade_party_detail_id, led_currency
+    """
+    )
+    suspend fun getLedgerBalances(transactionDate: Date, entityCode: Int): List<GetOpeningBalances>?
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                account_utilizations 
+            SET 
+                deleted_at = NOW(), 
+                updated_at = NOW() 
+            WHERE 
+                document_value = :docValue 
+            AND 
+                acc_type = :accType::ACCOUNT_TYPE
+            AND
+                deleted_at IS NULL
+        """
+    )
+    suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
 }

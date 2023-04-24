@@ -214,7 +214,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        if (receivableRequest.docType == null){
+        if (receivableRequest.docType == null) {
             throw AresException(AresError.ERR_1003, "docType")
         }
 
@@ -248,11 +248,11 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
         receivableRequest.signFlag = when (receivableRequest.docType == "TDS") {
-            true -> when (receivableRequest.accMode == AccMode.AR){
+            true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
                 else -> SignSuffix.VTDS.sign
             }
-            else -> when (receivableRequest.accMode == AccMode.AR){
+            else -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.REC.sign
                 else -> SignSuffix.PAY.sign
             }
@@ -311,23 +311,25 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.documentNo = payment.paymentNum!!
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
 
-        accUtilEntity.accCode = when (receivableRequest.docType == "TDS"){
+        accUtilEntity.accCode = when (receivableRequest.docType == "TDS") {
             true -> {
-                when (receivableRequest.accMode == AccMode.AR){
+                when (receivableRequest.accMode == AccMode.AR) {
                     true -> AresModelConstants.TDS_AR_ACCOUNT_CODE
                     false -> AresModelConstants.TDS_AP_ACCOUNT_CODE
                 }
             }
             else -> {
-                when (receivableRequest.accMode == AccMode.AR){
+                when (receivableRequest.accMode == AccMode.AR) {
                     true -> AresModelConstants.AR_ACCOUNT_CODE
                     false -> AresModelConstants.AP_ACCOUNT_CODE
                 }
             }
         }
 
-        //need to verify
+        // need to verify
         if (receivableRequest.docType == "TDS") {
             accUtilEntity.isVoid = false
             accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
@@ -654,7 +656,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment, docType: String?) {
-        when (docType == "TDS"){
+        when (docType == "TDS") {
             true -> {
                 if (payment.accMode == AccMode.AR) {
                     payment.accCode = AresModelConstants.TDS_AR_ACCOUNT_CODE
@@ -696,11 +698,11 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun setAccountUtilizationModel(accUtilizationModel: AccUtilizationRequest, receivableRequest: Payment) {
-        accUtilizationModel.accType = when (receivableRequest.docType == "TDS"){
+        accUtilizationModel.accType = when (receivableRequest.docType == "TDS") {
             true -> {
                 when (receivableRequest.accMode == AccMode.AR) {
                     true -> {
-                        when (receivableRequest.entityType == 301){
+                        when (receivableRequest.entityType == 301) {
                             true -> AccountType.CTDSP
                             else -> AccountType.CTDS
                         }
@@ -1235,6 +1237,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
             val responseMap = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery)
             val records = responseMap["recordset"] as? ArrayList<*>
+            logger().info("Payment Present On Sage Response: $responseMap with size ${records?.size} ")
             if (records?.size != 0) {
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
@@ -1313,9 +1316,9 @@ open class OnAccountServiceImpl : OnAccountService {
             lateinit var result: SageResponse
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
 
-            val bankCode: String
-            val entityCode: String
-            val currency: String
+            var bankCode: String
+            var entityCode: String
+            var currency: String
             var bankCodeDetails = hashMapOf<String, String>()
 
             if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
@@ -1337,21 +1340,21 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
                 return false
             }
-
-            when (paymentDetails.payMode) {
-                PayMode.RAZORPAY -> {
-                    bankCode = PaymentSageGLCodes.RAZO.name
-                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
-                    currency = PaymentSageGLCodes.RAZO.currency
-                }
-                else -> {
-                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
-                    bankCode = bankCodeDetails["bankCode"]!!
-                    entityCode = bankCodeDetails["entityCode"].toString()
-                    currency = bankCodeDetails["currency"]!!
-                }
+            if (paymentDetails.payMode == PayMode.RAZORPAY) {
+                bankCode = PaymentSageGLCodes.RAZO.name
+                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                currency = PaymentSageGLCodes.RAZO.currency
+            } else {
+                bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                bankCode = bankCodeDetails["bankCode"]!!
+                entityCode = bankCodeDetails["entityCode"].toString()
+                currency = bankCodeDetails["currency"]!!
             }
-
+            if (paymentDetails.paymentCode == PaymentCode.CTDS) {
+                bankCode = "CTDSP"
+                entityCode = paymentDetails.entityCode.toString()
+                currency = paymentDetails.currency
+            }
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
             if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
                 result = SageClient.postPaymentToSage(
@@ -1398,6 +1401,31 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
                 openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTED
                 Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+
+                val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
+                val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+                val records = mappedResponse["recordset"] as? ArrayList<*>
+
+                if (records?.size != 0) {
+                    val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
+                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
+                } else {
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentToSage",
+                            "Payment",
+                            paymentId,
+                            "PAYMENT",
+                            "500",
+                            records.toString(),
+                            "Sage Payment Num Value not present",
+                            false
+                        )
+                    )
+                }
+
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,

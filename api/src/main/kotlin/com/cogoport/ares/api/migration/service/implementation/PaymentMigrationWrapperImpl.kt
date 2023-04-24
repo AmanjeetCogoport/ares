@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -8,8 +9,13 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.settlement.repository.AccountClassRepository
+import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -25,7 +31,15 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
+    @Inject
+    lateinit var glCodeMasterRepository: GlCodeMasterRepository
+
+    @Inject lateinit var accountClassRepo: AccountClassRepository
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -47,7 +61,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             }
             jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
         }
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+//        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
 //            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
@@ -107,7 +122,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun updateUtilizationAmount(startDate: String?, endDate: String?, updatedAt: String?): Int {
         val paymentRecords = sageService.migratePaymentsByDate(startDate, endDate, updatedAt)
         for (paymentRecord in paymentRecords) {
-            val payLocRecord = getPayLocRecord(paymentRecord)
+            val payLocRecord = getPayLocRecord(paymentRecord, MigrationRecordType.PAYMENT)
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
@@ -122,7 +137,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
         val paymentRecords = sageService.migratePaymentByPaymentNum(payments.substring(0, payments.length - 1).toString())
         for (paymentRecord in paymentRecords) {
-            val payLocRecord = getPayLocRecord(paymentRecord)
+            val payLocRecord = getPayLocRecord(paymentRecord, MigrationRecordType.PAYMENT)
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return paymentRecords.size
@@ -146,7 +161,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         val invoices = invoiceNums.substring(0, invoiceNums.length - 1).toString()
         val invoiceDetails = sageService.getInvoicesPayLocDetails(startDate, endDate, updatedAt, "$invoices)")
         for (invoiceDetail in invoiceDetails) {
-            val payLocRecord = getPayLocRecordForInvoice(invoiceDetail)
+            val payLocRecord = getPayLocRecordForInvoice(invoiceDetail, MigrationRecordType.INVOICE)
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return invoiceDetails.size
@@ -155,7 +170,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun updateUtilizationForBill(startDate: String?, endDate: String?, updatedAt: String?): Int {
         val billDetails = sageService.getBillPayLocDetails(startDate, endDate, updatedAt)
         for (billDetail in billDetails) {
-            val payLocRecord = getPayLocRecordForInvoice(billDetail)
+            val payLocRecord = getPayLocRecordForInvoice(billDetail, MigrationRecordType.BILL)
             aresMessagePublisher.emitUtilizationUpdateRecord(payLocRecord)
         }
         return billDetails.size
@@ -183,24 +198,26 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         return jvParentRecords.size
     }
 
-    private fun getPayLocRecord(paymentRecord: PaymentRecord): PayLocUpdateRequest {
+    private fun getPayLocRecord(paymentRecord: PaymentRecord, recordType: MigrationRecordType): PayLocUpdateRequest {
         return PayLocUpdateRequest(
             sageOrganizationId = paymentRecord.sageOrganizationId,
-            documentValue = paymentRecord.paymentNum,
+            documentValue = paymentRecord.sageRefNumber,
             amtLoc = paymentRecord.accountUtilAmtLed,
             payCurr = paymentRecord.accountUtilPayCurr,
             payLoc = paymentRecord.accountUtilPayLed,
-            accMode = paymentRecord.accMode
+            accMode = paymentRecord.accMode,
+            recordType = recordType
         )
     }
-    private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails): PayLocUpdateRequest {
+    private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails, recordType: MigrationRecordType): PayLocUpdateRequest {
         return PayLocUpdateRequest(
             sageOrganizationId = invoiceDetails.sageOrganizationId,
             documentValue = invoiceDetails.invoiceNumber,
             amtLoc = invoiceDetails.ledgerTotal,
             payCurr = invoiceDetails.currencyAmountPaid,
             payLoc = invoiceDetails.ledgerAmountPaid,
-            accMode = invoiceDetails.accMode
+            accMode = invoiceDetails.accMode,
+            recordType = recordType
         )
     }
 
@@ -212,7 +229,50 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
-            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            val account = accountUtilizationRepository.findRecord(it.documentNo, null, AccMode.AP.name)
+            if (account != null) {
+                accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            }
         }
+    }
+
+    override suspend fun migrateGlAccount(): Int {
+        val glRecords = sageService.getGLCode()
+        logger().info("Total number of gl account records to process: ${glRecords.size}")
+        for (glRecord in glRecords) {
+            val glCode = GlCodeMaster(
+                accountCode = glRecord.accountCode,
+                description = glRecord.description,
+                ledAccount = glRecord.ledAccount,
+                accountType = glRecord.accountType,
+                classCode = glRecord.classCode,
+                createdBy = glRecord.createdBy,
+                updatedBy = glRecord.updatedBy,
+                createdAt = glRecord.createdAt,
+                updatedAt = glRecord.updatedAt,
+                accountClassId = null
+            )
+            aresMessagePublisher.emitGLCode(glCode)
+        }
+        return glRecords.size
+    }
+
+    override suspend fun createGLCode(request: GlCodeMaster) {
+        val classCodeDetails = accountClassRepo.getAccountClass(request.ledAccount, request.classCode)
+
+        val glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
+            id = null,
+            accountCode = request.accountCode,
+            description = request.description,
+            ledAccount = request.ledAccount,
+            accountType = request.accountType,
+            classCode = request.classCode,
+            accountClassId = classCodeDetails.id!!,
+            createdBy = request.createdBy,
+            updatedAt = request.updatedAt,
+            updatedBy = request.updatedBy,
+            createdAt = request.createdAt
+        )
+        glCodeMasterRepository.save(glAccount)
     }
 }

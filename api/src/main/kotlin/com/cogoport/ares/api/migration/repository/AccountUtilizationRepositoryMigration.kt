@@ -36,6 +36,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
             UPDATE account_utilizations 
             SET pay_loc = :payLedger 
             ,pay_curr = :payCurrency
+            ,updated_at = now()
             WHERE 
             document_value = :documentValue
             AND
@@ -67,4 +68,21 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         accMode: String,
         organizationId: UUID
     ): PayLocUpdateResponse
+
+    @NewSpan
+    @Query(
+        """
+            select payment_num_value from payments 
+            WHERE 
+            sage_ref_number = :sageRefNumber
+            AND
+            acc_mode = :accMode::account_mode
+            AND organization_id = :organizationId
+        """
+    )
+    fun getPaymentDetails(
+        sageRefNumber: String,
+        accMode: String,
+        organizationId: UUID
+    ): String?
 }

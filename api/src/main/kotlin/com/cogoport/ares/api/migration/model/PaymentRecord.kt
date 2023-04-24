@@ -17,7 +17,7 @@ data class PaymentRecord(
     val organizationSerialId: UUID? = null,
 
     @JsonProperty("sage_organization_id")
-    val sageOrganizationId: String? = null,
+    var sageOrganizationId: String? = null,
 
     @JsonProperty("organization_id")
     val organizationId: UUID? = null,
@@ -53,7 +53,7 @@ data class PaymentRecord(
     val paymentCode: String? = null,
 
     @JsonProperty("payment_num")
-    val paymentNum: String? = null,
+    var paymentNum: Long? = null,
 
     @JsonProperty("account_util_amt_curr")
     val accountUtilAmtCurr: BigDecimal,
@@ -119,5 +119,11 @@ data class PaymentRecord(
     val bankShortCode: String? = null,
 
     @JsonProperty("utilized_updated_at")
-    val utilizedUpdatedAt: Timestamp? = null
+    val utilizedUpdatedAt: Timestamp? = null,
+
+    @JsonProperty("payment_num_value")
+    var paymentNumValue: String? = null,
+
+    @JsonProperty("sage_ref_number")
+    var sageRefNumber: String? = null
 )

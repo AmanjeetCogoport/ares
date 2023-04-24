@@ -38,7 +38,42 @@ class SettlementServiceHelper {
             AccountType.SREIMB -> InvoiceType.SREIMB.value
             AccountType.PREIMB -> InvoiceType.PREIMB.value
             AccountType.ICJV -> getVoucherType(signFlag) + InvoiceType.ICJV.value
-            else -> throw AresException(AresError.ERR_1009, "accountType")
+            AccountType.DBTRC -> getVoucherType(signFlag) + InvoiceType.DBTRC.value
+            AccountType.STMNT -> getVoucherType(signFlag) + InvoiceType.STMNT.value
+            AccountType.RECPT -> getVoucherType(signFlag) + InvoiceType.RECPT.value
+            AccountType.FAR12 -> getVoucherType(signFlag) + InvoiceType.FAR12.value
+            AccountType.CSTRV -> getVoucherType(signFlag) + InvoiceType.CSTRV.value
+            AccountType.NEWPR -> getVoucherType(signFlag) + InvoiceType.NEWPR.value
+            AccountType.SPDIR -> getVoucherType(signFlag) + InvoiceType.SPDIR.value
+            AccountType.CLOSE -> getVoucherType(signFlag) + InvoiceType.CLOSE.value
+            AccountType.STOCK -> getVoucherType(signFlag) + InvoiceType.STOCK.value
+            AccountType.GENAJ -> getVoucherType(signFlag) + InvoiceType.GENAJ.value
+            AccountType.PREPY -> getVoucherType(signFlag) + InvoiceType.PREPY.value
+            AccountType.FAIS3 -> getVoucherType(signFlag) + InvoiceType.FAIS3.value
+            AccountType.FAAR2 -> getVoucherType(signFlag) + InvoiceType.FAAR2.value
+            AccountType.MFIRC -> getVoucherType(signFlag) + InvoiceType.MFIRC.value
+            AccountType.CURVR -> getVoucherType(signFlag) + InvoiceType.CURVR.value
+            AccountType.INTER -> getVoucherType(signFlag) + InvoiceType.INTER.value
+            AccountType.FAS12 -> getVoucherType(signFlag) + InvoiceType.FAS12.value
+            AccountType.PAYRL -> getVoucherType(signFlag) + InvoiceType.PAYRL.value
+            AccountType.GENSM -> getVoucherType(signFlag) + InvoiceType.GENSM.value
+            AccountType.FAIR3 -> getVoucherType(signFlag) + InvoiceType.FAIR3.value
+            AccountType.WIPCS -> getVoucherType(signFlag) + InvoiceType.WIPCS.value
+            AccountType.MFIIS -> getVoucherType(signFlag) + InvoiceType.MFIIS.value
+            AccountType.BANK -> getVoucherType(signFlag) + InvoiceType.BANK.value
+            AccountType.MSCOP -> getVoucherType(signFlag) + InvoiceType.MSCOP.value
+            AccountType.RECJL -> getVoucherType(signFlag) + InvoiceType.RECJL.value
+            AccountType.MFIOP -> getVoucherType(signFlag) + InvoiceType.MFIOP.value
+            AccountType.EXPNS -> getVoucherType(signFlag) + InvoiceType.EXPNS.value
+            AccountType.CSDIR -> getVoucherType(signFlag) + InvoiceType.CSDIR.value
+            AccountType.CLOS1 -> getVoucherType(signFlag) + InvoiceType.CLOS1.value
+            AccountType.GEN -> getVoucherType(signFlag) + InvoiceType.GEN.value
+            AccountType.MISC -> getVoucherType(signFlag) + InvoiceType.MISC.value
+            AccountType.OPDIV -> getVoucherType(signFlag) + InvoiceType.OPDIV.value
+            AccountType.CONTR -> getVoucherType(signFlag) + InvoiceType.CONTR.value
+            AccountType.BANK -> getVoucherType(signFlag) + InvoiceType.BANK.value
+            AccountType.CRRCV -> getVoucherType(signFlag) + InvoiceType.CRRCV.value
+            else -> throw AresException(AresError.ERR_1009, "accountType $accType")
         }
     }
 
@@ -82,11 +117,126 @@ class SettlementServiceHelper {
     fun <T : Any> getJvList(classType: Class<T>): List<T> {
         return if (classType == SettlementType::class.java) {
             listOf(
-                SettlementType.WOFF, SettlementType.ROFF, SettlementType.EXCH, SettlementType.JVNOS, SettlementType.OUTST, SettlementType.ICJV
+                SettlementType.WOFF,
+                SettlementType.ROFF,
+                SettlementType.EXCH,
+                SettlementType.JVNOS,
+                SettlementType.OUTST,
+                SettlementType.ICJV,
+                SettlementType.GENSM,
+                SettlementType.ZSMEP,
+                SettlementType.PAYMT,
+                SettlementType.FAIS3,
+                SettlementType.SPDIR,
+                SettlementType.GEN,
+                SettlementType.NEWPR,
+                SettlementType.PAYRL,
+                SettlementType.BANK,
+                SettlementType.CONTR,
+                SettlementType.STOCK,
+                SettlementType.MTC,
+                SettlementType.WIPCO,
+                SettlementType.RECP,
+                SettlementType.MSCOP,
+                SettlementType.INTER,
+                SettlementType.FAS12,
+                SettlementType.RECJL,
+                SettlementType.OPDIV,
+                SettlementType.CLOS1,
+                SettlementType.ZDN,
+                SettlementType.UNRIN,
+                SettlementType.MFIRC,
+                SettlementType.PREPY,
+                SettlementType.FIXDP,
+                SettlementType.FAIR3,
+                SettlementType.DBTRC,
+                SettlementType.WIPCS,
+                SettlementType.MFIOP,
+                SettlementType.CSTRV,
+                SettlementType.RECPT,
+                SettlementType.CRRCV,
+                SettlementType.CLOSE,
+                SettlementType.ZSMFR,
+                SettlementType.SAINV,
+                SettlementType.RPI,
+                SettlementType.EXPNS,
+                SettlementType.MFIIS,
+                SettlementType.FAR12,
+                SettlementType.CURVR,
+                SettlementType.GENAJ,
+                SettlementType.ZSDN,
+                SettlementType.CSDIR,
+                SettlementType.MTCCV,
+                SettlementType.MISC,
+                SettlementType.STMNT,
+                SettlementType.FAAR2,
+                SettlementType.PCN,
+                SettlementType.PINV,
+                SettlementType.SINV,
+                SettlementType.SCN
+
             ) as List<T>
         } else {
             listOf(
-                AccountType.WOFF, AccountType.ROFF, AccountType.EXCH, AccountType.JVNOS, AccountType.OUTST, AccountType.ICJV
+                AccountType.WOFF,
+                AccountType.ROFF,
+                AccountType.EXCH,
+                AccountType.JVNOS,
+                AccountType.OUTST,
+                AccountType.ICJV,
+                AccountType.GENSM,
+                AccountType.ZSMEP,
+                AccountType.PAYMT,
+                AccountType.FAIS3,
+                AccountType.SPDIR,
+                AccountType.GEN,
+                AccountType.NEWPR,
+                AccountType.PAYRL,
+                AccountType.BANK,
+                AccountType.CONTR,
+                AccountType.STOCK,
+                AccountType.MTC,
+                AccountType.WIPCO,
+                AccountType.RECP,
+                AccountType.MSCOP,
+                AccountType.INTER,
+                AccountType.REC,
+                AccountType.FAS12,
+                AccountType.RECJL,
+                AccountType.OPDIV,
+                AccountType.CLOS1,
+                AccountType.ZDN,
+                AccountType.UNRIN,
+                AccountType.MFIRC,
+                AccountType.PREPY,
+                AccountType.FIXDP,
+                AccountType.FAIR3,
+                AccountType.DBTRC,
+                AccountType.WIPCS,
+                AccountType.MFIOP,
+                AccountType.CSTRV,
+                AccountType.RECPT,
+                AccountType.CRRCV,
+                AccountType.CLOSE,
+                AccountType.ZSMFR,
+                AccountType.SAINV,
+                AccountType.ZSMEM,
+                AccountType.RPI,
+                AccountType.EXPNS,
+                AccountType.MFIIS,
+                AccountType.FAR12,
+                AccountType.CURVR,
+                AccountType.GENAJ,
+                AccountType.ZSDN,
+                AccountType.CSDIR,
+                AccountType.MTCCV,
+                AccountType.MISC,
+                AccountType.STMNT,
+                AccountType.PAY,
+                AccountType.FAAR2,
+                AccountType.PCN,
+                AccountType.PINV,
+                AccountType.SINV, AccountType.SCN
             ) as List<T>
         }
     }

@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -12,6 +13,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import java.math.BigDecimal
 
@@ -41,4 +43,9 @@ interface OutStandingService {
     suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?>
 
     suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?>
+
+    suspend fun getPayablesInfo(entity: Int?): PayblesInfoRes
+
+    suspend fun uploadPayblesStats()
+    suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders
 }
