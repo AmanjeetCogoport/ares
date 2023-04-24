@@ -190,25 +190,19 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
         val total: Int
-        var payments: List<PaymentResponse?>?
+        val payments: List<PaymentResponse?>?
         var startDate: Timestamp? = null
         var endDate: Timestamp? = null
         if (request.startDate != null && request.endDate != null) {
             startDate = Timestamp.valueOf(request.startDate)
             endDate = Timestamp.valueOf(request.endDate)
         }
-        if (request.isSuspense == false) {
-            val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
-            payments = data.hits().hits().map { it.source() }
-            payments.forEach {
-                it?.isSuspense = false
-            }
-            total = data.hits().total().value().toInt()
-        } else {
-            val data = suspenseAccountRepo.getSuspenseAccounts(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
-            payments = paymentConverter.convertSuspenseEntityListToPaymentResponse(data)
-            total = suspenseAccountRepo.getSuspenseCount(request.entityType, startDate, endDate, request.currencyType, request.page, request.pageLimit, request.query)
+        val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
+        payments = data.hits().hits().map { it.source() }
+        payments.forEach {
+            it?.isSuspense = false
         }
+        total = data.hits().total().value().toInt()
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
 

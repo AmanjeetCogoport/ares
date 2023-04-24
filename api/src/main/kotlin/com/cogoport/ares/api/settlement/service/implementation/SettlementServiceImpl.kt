@@ -1839,12 +1839,13 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
-        val tdsType =
-            if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
-                SettlementType.CTDS
-            } else {
-                SettlementType.VTDS
-            }
+        val tdsType = if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType)) {
+            SettlementType.CTDSP
+        } else if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType)) {
+            SettlementType.CTDS
+        } else {
+            SettlementType.VTDS
+        }
 
         val tdsAsPaymentNum = createTdsAsPaymentEntry(
             destId,
@@ -2177,6 +2178,9 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PCN, SettlementType.PAY)
             }
             SettlementType.CTDS -> {
+                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
+            }
+            SettlementType.CTDSP -> {
                 listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
             }
             SettlementType.VTDS -> {
@@ -2674,11 +2678,18 @@ open class SettlementServiceImpl : SettlementService {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
 
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
-            AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.AR_ACCOUNT_CODE)
-            else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.AP_ACCOUNT_CODE)
+            AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.TDS_AR_ACCOUNT_CODE)
+            else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.TDS_AP_ACCOUNT_CODE)
         }
 
-        val paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.TDS.prefix)
+        val paymentNum = when (invoiceAndBillData?.accMode) {
+            AccMode.AR -> when (invoiceAndBillData.entityCode == 301) {
+                true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
+                else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
+            }
+            else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
+        }
+
         val paymentNumValue = "$tdsType$paymentNum"
         val serviceType = when (invoiceAndBillData?.serviceType.isNullOrEmpty()) {
             true -> ServiceType.NA
