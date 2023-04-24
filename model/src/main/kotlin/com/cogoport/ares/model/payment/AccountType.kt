@@ -26,7 +26,8 @@ enum class AccountType(val dbValue: String) {
     ICJV("ICJV"),
     EXP("EXP"),
     VTDS("VTDS"),
-    CTDS("CTDS");
+    CTDS("CTDS"),
+    CTDSP("CTDSP");
 
     open operator fun contains(value: String?): Boolean {
         for (c in AccountType.values()) {
@@ -39,7 +40,7 @@ enum class AccountType(val dbValue: String) {
 }
 
 enum class PaymentCode {
-    PAY, REC, CTDS, VTDS, CPRE, APRE
+    PAY, REC, CTDS, VTDS, CPRE, APRE, CTDSP
 }
 
 enum class Operator {

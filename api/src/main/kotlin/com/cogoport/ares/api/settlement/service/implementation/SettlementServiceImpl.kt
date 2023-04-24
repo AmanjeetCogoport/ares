@@ -2605,7 +2605,8 @@ open class SettlementServiceImpl : SettlementService {
             remarks = "tds against $destType$destId",
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
-            payMode = PayMode.BANK
+            payMode = PayMode.BANK,
+            docType = "TDS"
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)

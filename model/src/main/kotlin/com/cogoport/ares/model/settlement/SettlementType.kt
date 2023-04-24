@@ -13,6 +13,7 @@ enum class SettlementType(val dbValue: String) {
     PECH("PECH"),
     VTDS("VTDS"),
     CTDS("CTDS"),
+    CTDSP("CTDSP"),
     NOSTRO("NOSTRO"),
     WOFF("WOFF"),
     ROFF("ROFF"),
