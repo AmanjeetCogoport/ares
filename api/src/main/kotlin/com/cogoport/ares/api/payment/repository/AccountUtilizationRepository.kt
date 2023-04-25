@@ -482,7 +482,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
             COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
             COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url,
-            COALESCE((ARRAY_AGG(s1.id)), null) as settlement_ids
+            COALESCE((ARRAY_AGG( CASE WHEN s1.settlement_status IN ('CREATED','POSTING_FAILED') THEN s1.id ELSE NULL END)), null) as not_posted_settlement_ids
             FROM account_utilizations au
             LEFT JOIN settlements s ON
 				s.destination_id = au.document_no
