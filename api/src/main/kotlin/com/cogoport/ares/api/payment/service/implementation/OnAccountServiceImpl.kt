@@ -1282,14 +1282,20 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
             if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
+                val jvSageAccount = when (paymentDetails.paymentCode) {
+                    PaymentCode.CTDS -> JVSageAccount.CTDS.value
+                    PaymentCode.CTDSP -> JVSageAccount.CTDSP.value
+                    PaymentCode.VTDS -> JVSageAccount.VTDS.value
+                    else -> if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+                }
                 result = SageClient.postPaymentToSage(
                     PaymentRequest
                     (
-                        paymentDetails.paymentCode?.name!!,
+                        if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
                         paymentDetails.paymentNumValue!!,
                         sageOrganization.sageOrganizationId!!,
                         "IND",
-                        if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value,
+                        jvSageAccount,
                         bankCode,
                         paymentDetails.transactionDate!!,
                         currency,
