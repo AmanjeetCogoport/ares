@@ -226,7 +226,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
 //        setOrganizations(receivableRequest)
 //        setTradePartyOrganizations(receivableRequest)
-        setTradePartyInfo(receivableRequest)
+        setTradePartyInfo(receivableRequest, null)
 
         when (receivableRequest.isPosted ?: false) {
             true -> {
@@ -394,7 +394,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
 //            setOrganizations(receivableRequest)
 //            setTradePartyOrganizations(receivableRequest)
-            setTradePartyInfo(receivableRequest)
+            setTradePartyInfo(receivableRequest, paymentEntity)
 
             /*SET PAYMENT ENTITY DATA FOR UPDATE*/
             updatePaymentEntity(receivableRequest, paymentEntity)
@@ -454,37 +454,38 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private fun updatePaymentEntity(receivableRequest: Payment, paymentEntity: com.cogoport.ares.api.payment.entity.Payment) {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
-        val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
-        paymentEntity.entityCode = receivableRequest.entityType!!
-        paymentEntity.bankName = receivableRequest.bankName
-        paymentEntity.payMode = receivableRequest.payMode
+        val paymentDate = (receivableRequest.paymentDate ?: paymentEntity.transactionDate).toString()
+        val filterDateFromTs = Timestamp(dateFormat.parse(paymentDate).time)
+        paymentEntity.entityCode = receivableRequest.entityType!! ?: paymentEntity.entityCode
+        paymentEntity.bankName = receivableRequest.bankName ?: paymentEntity.bankName
+        paymentEntity.payMode = receivableRequest.payMode ?: paymentEntity.payMode
         paymentEntity.transactionDate = filterDateFromTs
-        paymentEntity.transRefNumber = receivableRequest.utr
-        paymentEntity.amount = receivableRequest.amount!!
-        paymentEntity.currency = receivableRequest.currency!!
-        paymentEntity.ledAmount = receivableRequest.amount!! * receivableRequest.exchangeRate!!
-        paymentEntity.ledCurrency = receivableRequest.ledCurrency
-        paymentEntity.exchangeRate = receivableRequest.exchangeRate
-        paymentEntity.orgSerialId = receivableRequest.orgSerialId
-        paymentEntity.organizationId = receivableRequest.organizationId
-        paymentEntity.organizationName = receivableRequest.organizationName
-        paymentEntity.bankName = receivableRequest.bankName
-        paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber
+        paymentEntity.transRefNumber = receivableRequest.utr ?: paymentEntity.transRefNumber
+        paymentEntity.amount = receivableRequest.amount!! ?: paymentEntity.amount
+        paymentEntity.currency = receivableRequest.currency!! ?: paymentEntity.currency
+        paymentEntity.ledAmount = (receivableRequest.amount!! * receivableRequest.exchangeRate!!) ?: paymentEntity.ledAmount
+        paymentEntity.ledCurrency = receivableRequest.ledCurrency ?: paymentEntity.ledCurrency
+        paymentEntity.exchangeRate = receivableRequest.exchangeRate ?: paymentEntity.exchangeRate
+        paymentEntity.orgSerialId = receivableRequest.orgSerialId ?: paymentEntity.orgSerialId
+        paymentEntity.organizationId = receivableRequest.organizationId ?: paymentEntity.organizationId
+        paymentEntity.organizationName = receivableRequest.organizationName ?: paymentEntity.organizationName
+        paymentEntity.bankName = receivableRequest.bankName ?: paymentEntity.bankName
+        paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber ?: paymentEntity.cogoAccountNo
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
-        paymentEntity.bankId = receivableRequest.bankId
+        paymentEntity.bankId = receivableRequest.bankId ?: paymentEntity.bankId
     }
 
     private fun updateAccountUtilizationEntity(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization) {
-        accountUtilizationEntity.entityCode = receivableRequest.entityType!!
-        accountUtilizationEntity.orgSerialId = receivableRequest.orgSerialId
-        accountUtilizationEntity.organizationId = receivableRequest.organizationId
-        accountUtilizationEntity.organizationName = receivableRequest.organizationName
-        accountUtilizationEntity.amountCurr = receivableRequest.amount!!
-        accountUtilizationEntity.currency = receivableRequest.currency!!
-        accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!!
-        accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!!
+        accountUtilizationEntity.entityCode = receivableRequest.entityType!! ?: accountUtilizationEntity.entityCode
+        accountUtilizationEntity.orgSerialId = receivableRequest.orgSerialId ?: accountUtilizationEntity.orgSerialId
+        accountUtilizationEntity.organizationId = receivableRequest.organizationId ?: accountUtilizationEntity.organizationId
+        accountUtilizationEntity.organizationName = (receivableRequest.organizationName ?: accountUtilizationEntity.organizationName).toString()
+        accountUtilizationEntity.amountCurr = receivableRequest.amount!! ?: accountUtilizationEntity.amountCurr
+        accountUtilizationEntity.currency = receivableRequest.currency!! ?: accountUtilizationEntity.currency
+        accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!! ?: accountUtilizationEntity.amountLoc
+        accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!! ?: accountUtilizationEntity.ledCurrency
         accountUtilizationEntity.updatedAt = Timestamp.from(Instant.now())
-        accountUtilizationEntity.zoneCode = receivableRequest.zone
+        accountUtilizationEntity.zoneCode = receivableRequest.zone ?: accountUtilizationEntity.zoneCode
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
@@ -726,11 +727,13 @@ open class OnAccountServiceImpl : OnAccountService {
         return orgStatsResponse
     }
 
-    private suspend fun setTradePartyInfo(receivableRequest: Payment) {
+    private suspend fun setTradePartyInfo(receivableRequest: Payment, paymentDetails: com.cogoport.ares.api.payment.entity.Payment?) {
         val clientResponse: TradePartyOrganizationResponse?
 
+        val tradePartyMappingId = receivableRequest.tradePartyMappingId ?: paymentDetails?.tradePartyMappingId
+
         val reqBody = MappingIdDetailRequest(
-            receivableRequest.tradePartyMappingId.toString()
+            tradePartyMappingId.toString()
         )
 
         clientResponse = authClient.getTradePartyInfo(reqBody)
@@ -1282,7 +1285,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 result = SageClient.postPaymentToSage(
                     PaymentRequest
                     (
-                        if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
+                        paymentDetails.paymentCode?.name!!,
                         paymentDetails.paymentNumValue!!,
                         sageOrganization.sageOrganizationId!!,
                         "IND",
