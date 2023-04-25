@@ -18,7 +18,6 @@ import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.PaymentFile
-import com.cogoport.ares.api.payment.entity.SuspenseAccount
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
 import com.cogoport.ares.api.payment.mapper.OrgStatsMapper
@@ -30,7 +29,6 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
-import com.cogoport.ares.api.payment.repository.SuspenseAccountRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
@@ -172,9 +170,6 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var settlementService: SettlementService
 
     @Inject
-    lateinit var suspenseAccountRepo: SuspenseAccountRepo
-
-    @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     @Inject
@@ -205,10 +200,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun createPaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
-        if (receivableRequest.docType == null) {
-            throw AresException(AresError.ERR_1003, "docType")
-        }
-
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
@@ -217,22 +208,6 @@ open class OnAccountServiceImpl : OnAccountService {
         val paymentId = createNonSuspensePaymentEntry(receivableRequest)
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_CREATED, isSuccess = true)
-    }
-
-    private suspend fun createSuspensePaymentEntry(receivableRequest: Payment): Long {
-        val suspenseEntity = paymentConverter.convertPaymentToSuspenseEntity(receivableRequest)
-        val savedSuspense = suspenseAccountRepo.save(suspenseEntity)
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.SUSPENSE_ACCOUNT,
-                objectId = savedSuspense.id,
-                actionName = AresConstants.CREATE,
-                data = savedSuspense,
-                performedBy = receivableRequest.createdBy,
-                performedByUserType = receivableRequest.performedByUserType
-            )
-        )
-        return savedSuspense.id!!
     }
 
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
@@ -409,31 +384,6 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun updateSuspensePayment(receivableRequest: Payment, suspenseEntity: SuspenseAccount): OnAccountApiCommonResponse {
-        if (receivableRequest.tradePartyMappingId != null) {
-            val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
-            val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
-            receivableRequest.transactionDate = filterDateFromTs
-            val id = createNonSuspensePaymentEntry(receivableRequest)
-            suspenseEntity.tradePartyDocumentUrl = receivableRequest.tradePartyDocument
-            suspenseEntity.paymentId = id
-        }
-        updateSuspenseAccountEntity(receivableRequest, suspenseEntity)
-        val updatedEntity = suspenseAccountRepo.update(suspenseEntity)
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.SUSPENSE_ACCOUNT,
-                objectId = suspenseEntity.id,
-                actionName = AresConstants.UPDATE,
-                data = suspenseEntity,
-                performedBy = receivableRequest.createdBy.toString(),
-                performedByUserType = receivableRequest.performedByUserType
-            )
-        )
-        return OnAccountApiCommonResponse(id = updatedEntity.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
-    }
-
-    @Transactional(rollbackOn = [Exception::class, AresException::class])
     open suspend fun updateNonSuspensePayment(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization, paymentEntity: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
         if (receivableRequest.isPosted != null && receivableRequest.isPosted == true) {
@@ -500,25 +450,6 @@ open class OnAccountServiceImpl : OnAccountService {
             logger().error(ex.stackTraceToString())
         }
         return OnAccountApiCommonResponse(id = accUtilRes.id!!, message = Messages.PAYMENT_UPDATED, isSuccess = true)
-    }
-
-    private fun updateSuspenseAccountEntity(receivableRequest: Payment, suspenseEntity: SuspenseAccount) {
-        val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
-        val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
-        suspenseEntity.entityCode = receivableRequest.entityType!!
-        suspenseEntity.bankName = receivableRequest.bankName
-        suspenseEntity.paymentMode = receivableRequest.payMode
-        suspenseEntity.transactionDate = filterDateFromTs
-        suspenseEntity.transRefNumber = receivableRequest.utr
-        suspenseEntity.amount = receivableRequest.amount!!
-        suspenseEntity.currency = receivableRequest.currency!!
-        suspenseEntity.ledgerAmount = receivableRequest.amount!! * receivableRequest.exchangeRate!!
-        suspenseEntity.ledgerCurrency = receivableRequest.ledCurrency
-        suspenseEntity.exchangeRate = receivableRequest.exchangeRate
-        suspenseEntity.bankName = receivableRequest.bankName
-        suspenseEntity.cogoAccountNo = receivableRequest.bankAccountNumber
-        suspenseEntity.updatedAt = Timestamp.from(Instant.now())
-        suspenseEntity.bankId = receivableRequest.bankId
     }
 
     private fun updatePaymentEntity(receivableRequest: Payment, paymentEntity: com.cogoport.ares.api.payment.entity.Payment) {

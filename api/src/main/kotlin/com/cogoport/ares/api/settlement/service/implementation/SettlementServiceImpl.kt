@@ -1839,9 +1839,11 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
-        val tdsType = if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType)) {
+        val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
+
+        val tdsType = if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType) && invoiceAndBillData?.entityCode == 301) {
             SettlementType.CTDSP
-        } else if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType)) {
+        } else if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
             SettlementType.CTDS
         } else {
             SettlementType.VTDS
@@ -1856,7 +1858,8 @@ open class SettlementServiceImpl : SettlementService {
             tdsLedAmount,
             createdBy,
             createdByUserType,
-            tdsType
+            tdsType,
+            invoiceAndBillData
         )
 
         createSettlement(
@@ -2673,10 +2676,9 @@ open class SettlementServiceImpl : SettlementService {
         tdsLedAmount: BigDecimal,
         createdBy: UUID?,
         createdByUserType: String?,
-        tdsType: SettlementType?
+        tdsType: SettlementType?,
+        invoiceAndBillData: AccountUtilization?
     ): Long? {
-        val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
-
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
             AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.TDS_AR_ACCOUNT_CODE)
             else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.TDS_AP_ACCOUNT_CODE)
