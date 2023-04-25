@@ -35,5 +35,5 @@ data class HistoryDocument(
     var status: String?,
     var accMode: AccMode,
     var supportingDocUrl: String? = null,
-    var settlementIds: MutableList<Long>? = null
+    var notPostedSettlementIds: MutableList<Long>? = null
 )

@@ -27,5 +27,5 @@ data class HistoryDocument(
     val settledTds: BigDecimal,
     val accMode: AccMode,
     val supportingDocUrl: String? = null,
-    val settlementIds: MutableList<Long>? = null
+    val notPostedSettlementIds: MutableList<Long>? = null
 )
