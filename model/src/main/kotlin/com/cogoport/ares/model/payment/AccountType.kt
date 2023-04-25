@@ -28,13 +28,11 @@ enum class AccountType(val dbValue: String) {
     GENSM("GENSM"),
     ZSMEP("ZSMEP"),
     PAYMT("PAYMT"),
-    SPMEM("SPMEM"),
     FAIS3("FAIS3"),
     SPDIR("SPDIR"),
     GEN("GEN"),
     NEWPR("NEWPR"),
     PAYRL("PAYRL"),
-    CSMEM("CSMEM"),
     STOCK("STOCK"),
     WIPCO("WIPCO"),
     RECP("RECP"),
@@ -66,7 +64,6 @@ enum class AccountType(val dbValue: String) {
     GENAJ("GENAJ"),
     ZSDN("ZSDN"),
     CSDIR("CSDIR"),
-    CSINV("CSINV"),
     STMNT("STMNT"),
     FAAR2("FAAR2");
 
