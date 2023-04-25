@@ -714,9 +714,10 @@ class PaymentMigrationImpl : PaymentMigration {
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
             }
-            if (platformUtilizedPayment.toBigInteger().compareTo(payLocUpdateRequest.payLoc?.toBigInteger()) == 1) {
-                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
-            } else {
+//            if (platformUtilizedPayment.toBigInteger().compareTo(payLocUpdateRequest.payLoc?.toBigInteger()) == 1) {
+//                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
+//            }
+            else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
                         payLocUpdateRequest.documentValue!!,
