@@ -456,14 +456,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val paymentDate = (receivableRequest.paymentDate ?: paymentEntity.transactionDate).toString()
         val filterDateFromTs = Timestamp(dateFormat.parse(paymentDate).time)
-        paymentEntity.entityCode = receivableRequest.entityType!! ?: paymentEntity.entityCode
+        paymentEntity.entityCode = receivableRequest.entityType ?: paymentEntity.entityCode
         paymentEntity.bankName = receivableRequest.bankName ?: paymentEntity.bankName
         paymentEntity.payMode = receivableRequest.payMode ?: paymentEntity.payMode
         paymentEntity.transactionDate = filterDateFromTs
         paymentEntity.transRefNumber = receivableRequest.utr ?: paymentEntity.transRefNumber
-        paymentEntity.amount = receivableRequest.amount!! ?: paymentEntity.amount
-        paymentEntity.currency = receivableRequest.currency!! ?: paymentEntity.currency
-        paymentEntity.ledAmount = (receivableRequest.amount!! * receivableRequest.exchangeRate!!) ?: paymentEntity.ledAmount
+        paymentEntity.amount = receivableRequest.amount ?: paymentEntity.amount
+        paymentEntity.currency = receivableRequest.currency ?: paymentEntity.currency
+        paymentEntity.ledAmount = (receivableRequest.amount?.times(receivableRequest.exchangeRate!!)) ?: paymentEntity.ledAmount
         paymentEntity.ledCurrency = receivableRequest.ledCurrency ?: paymentEntity.ledCurrency
         paymentEntity.exchangeRate = receivableRequest.exchangeRate ?: paymentEntity.exchangeRate
         paymentEntity.orgSerialId = receivableRequest.orgSerialId ?: paymentEntity.orgSerialId
@@ -476,14 +476,14 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun updateAccountUtilizationEntity(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization) {
-        accountUtilizationEntity.entityCode = receivableRequest.entityType!! ?: accountUtilizationEntity.entityCode
+        accountUtilizationEntity.entityCode = receivableRequest.entityType ?: accountUtilizationEntity.entityCode
         accountUtilizationEntity.orgSerialId = receivableRequest.orgSerialId ?: accountUtilizationEntity.orgSerialId
         accountUtilizationEntity.organizationId = receivableRequest.organizationId ?: accountUtilizationEntity.organizationId
         accountUtilizationEntity.organizationName = (receivableRequest.organizationName ?: accountUtilizationEntity.organizationName).toString()
-        accountUtilizationEntity.amountCurr = receivableRequest.amount!! ?: accountUtilizationEntity.amountCurr
-        accountUtilizationEntity.currency = receivableRequest.currency!! ?: accountUtilizationEntity.currency
-        accountUtilizationEntity.amountLoc = receivableRequest.ledAmount!! ?: accountUtilizationEntity.amountLoc
-        accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency!! ?: accountUtilizationEntity.ledCurrency
+        accountUtilizationEntity.amountCurr = receivableRequest.amount ?: accountUtilizationEntity.amountCurr
+        accountUtilizationEntity.currency = receivableRequest.currency ?: accountUtilizationEntity.currency
+        accountUtilizationEntity.amountLoc = receivableRequest.ledAmount ?: accountUtilizationEntity.amountLoc
+        accountUtilizationEntity.ledCurrency = receivableRequest.ledCurrency ?: accountUtilizationEntity.ledCurrency
         accountUtilizationEntity.updatedAt = Timestamp.from(Instant.now())
         accountUtilizationEntity.zoneCode = receivableRequest.zone ?: accountUtilizationEntity.zoneCode
     }
