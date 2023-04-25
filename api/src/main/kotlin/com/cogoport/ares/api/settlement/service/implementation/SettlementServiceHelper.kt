@@ -173,8 +173,9 @@ class SettlementServiceHelper {
                 SettlementType.PCN,
                 SettlementType.PINV,
                 SettlementType.SINV,
-                SettlementType.SCN
-
+                SettlementType.SCN,
+                SettlementType.PAY,
+                SettlementType.REC
             ) as List<T>
         } else {
             listOf(
