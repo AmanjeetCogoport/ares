@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -56,4 +57,6 @@ interface AresMessagePublisher {
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
     @Binding("migrate.new.period")
     suspend fun emitNewPeriodRecords(newPeriodRecord: NewPeriodRecord)
+    @Binding("migrate.jv.pay.loc")
+    suspend fun emitJVUtilization(record: JVRecordsScheduler)
 }

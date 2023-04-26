@@ -156,4 +156,20 @@ class MigratePaymentsController {
             "request received to migrate new period"
         )
     }
+
+    @Get("/migrate-jv-utilization")
+    suspend fun migrateJVUtilization(@QueryValue startDate: String, @QueryValue endDate: String): String {
+        paymentMigration.migrateJVUtilization(startDate, endDate, null)
+        return Response<String>().ok(
+            "request received to migrate new period"
+        )
+    }
+
+    @Post("/migrate-jv-utilization-by-jv-num")
+    suspend fun migrateJVUtilizationByJvNum(@Body jvNums: List<String>): String {
+        paymentMigration.migrateJVUtilization(null, null, jvNums)
+        return Response<String>().ok(
+            "request received to migrate new period"
+        )
+    }
 }

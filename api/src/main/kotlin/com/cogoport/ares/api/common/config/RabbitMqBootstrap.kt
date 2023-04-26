@@ -78,5 +78,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("migrate-new-period", true, false, false, null)
         channel?.queueBind("migrate-new-period", "ares", "migrate.new.period", null)
+
+        channel?.queueDeclare("migrate-jv-pay-loc", true, false, false, null)
+        channel?.queueBind("migrate-jv-pay-loc", "ares", "migrate.jv.pay.loc", null)
     }
 }

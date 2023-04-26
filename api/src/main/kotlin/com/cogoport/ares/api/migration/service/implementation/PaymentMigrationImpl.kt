@@ -27,6 +27,7 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
@@ -977,6 +978,42 @@ class PaymentMigrationImpl : PaymentMigration {
         } catch (ex: Exception) {
             val message = "${record.sageOrganizationId}: Error while migrating newPR record"
             migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, message)
+        }
+    }
+
+    override suspend fun migrateJVUtilization(record: JVRecordsScheduler) {
+        try {
+            val organizationType = if (record.accMode == "AP") "expense" else "income"
+            val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
+                GetOrgDetailsRequest(
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationType = organizationType
+                )
+            ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
+            var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val accUtilId = journalVoucherRepoMigration.getAccUtilId(
+                record.sageUniqueId!!,
+                record.paymentNum!!,
+                AccMode.valueOf(record.accMode!!),
+                tradePartyDetailId
+            ) ?: throw AresException(AresError.ERR_1003, "jv records not found in account_utilization")
+            accountUtilizationRepositoryMigration.updateJVUtilizationAmount(
+                accUtilId,
+                record.accountUtilPayCurr!!.toBigDecimal(),
+                record.accountUtilPayLed!!.toBigDecimal()
+            )
+            migrationLogService.saveMigrationLogs(null, null, null, record.paymentNum, migrationStatus)
+        } catch (ex: AresException) {
+            migrationLogService.saveMigrationLogs(
+                null, null, ex.context,
+                record.paymentNum, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
+        } catch (ex: Exception) {
+            logger().info("error message $ex")
+            migrationLogService.saveMigrationLogs(
+                null, null, "error while migrating jv utilization record",
+                record.paymentNum, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
         }
     }
 

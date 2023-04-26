@@ -65,4 +65,11 @@ class UtilizationUpdateScheduler {
             aresMessagePublisher.emitJournalVoucherMigration(it)
         }
     }
+
+    @Scheduled(cron = "0 30 8 ? * *")
+    fun migrateJVUtilizationScheduler() = runBlocking {
+        val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+        val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
+        paymentMigrationWrapper.migrateJVUtilization(startDate, endDate, null)
+    }
 }

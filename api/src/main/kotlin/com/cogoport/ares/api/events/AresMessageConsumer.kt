@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
@@ -150,5 +151,10 @@ class AresMessageConsumer {
     @Queue("migrate-new-period", prefetch = 1)
     fun migrateNewPeriodRecord(newPeriodRecord: NewPeriodRecord) = runBlocking {
         paymentMigration.migrateNewPeriodRecords(newPeriodRecord)
+    }
+
+    @Queue("migrate-jv-pay-loc", prefetch = 1)
+    suspend fun migrateJVPayLoc(record: JVRecordsScheduler) = runBlocking {
+        paymentMigration.migrateJVUtilization(record)
     }
 }

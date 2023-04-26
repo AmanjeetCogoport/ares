@@ -234,4 +234,21 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             aresMessagePublisher.emitNewPeriodRecords(it)
         }
     }
+
+    override suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?) {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val records = sageService.getJVDetailsForScheduler(startDate, endDate, jvNumAsString)
+        records.forEach {
+            aresMessagePublisher.emitJVUtilization(it)
+        }
+    }
 }
