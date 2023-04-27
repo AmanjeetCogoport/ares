@@ -2673,7 +2673,7 @@ open class SettlementServiceImpl : SettlementService {
             else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
         }
 
-        val paymentNumValue = "$tdsType$paymentNum"
+        val paymentNumValue = "$tdsType${AresConstants.CURR_YEAR}$paymentNum"
         val serviceType = when (invoiceAndBillData?.serviceType.isNullOrEmpty()) {
             true -> ServiceType.NA
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)

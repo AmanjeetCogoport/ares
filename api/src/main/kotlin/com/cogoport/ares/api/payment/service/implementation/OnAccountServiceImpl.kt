@@ -591,12 +591,12 @@ open class OnAccountServiceImpl : OnAccountService {
                         true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
                         else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
                     }
-                    payment.paymentNumValue = payment.paymentCode.toString() + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + AresConstants.CURR_YEAR + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.TDS_AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.VTDS
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
-                    payment.paymentNumValue = payment.paymentCode.toString() + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + AresConstants.CURR_YEAR + payment.paymentNum
                 }
             }
             else -> {
@@ -604,12 +604,12 @@ open class OnAccountServiceImpl : OnAccountService {
                     payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.REC
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + AresConstants.CURR_YEAR + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.PAY
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + AresConstants.CURR_YEAR + payment.paymentNum
                 }
             }
         }
