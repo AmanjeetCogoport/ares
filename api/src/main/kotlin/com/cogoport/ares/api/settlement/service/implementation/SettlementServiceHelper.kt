@@ -79,6 +79,8 @@ class SettlementServiceHelper {
             AccountType.CSMEM -> getVoucherType(signFlag) + InvoiceType.CSMEM.value
             AccountType.ZSMEM -> getVoucherType(signFlag) + InvoiceType.ZSMEM.value
             AccountType.SPMEM -> getVoucherType(signFlag) + InvoiceType.SPMEM.value
+            AccountType.RECJV -> getVoucherType(signFlag) + InvoiceType.RECJV.value
+            AccountType.PAYJV -> getVoucherType(signFlag) + InvoiceType.PAYJV.value
             else -> throw AresException(AresError.ERR_1009, "accountType $accType")
         }
     }
@@ -182,8 +184,8 @@ class SettlementServiceHelper {
                 SettlementType.CSMEM,
                 SettlementType.SPMEM,
                 SettlementType.ZSMEM,
-                SettlementType.PAY,
-                SettlementType.REC
+                SettlementType.PAYJV,
+                SettlementType.RECJV
             ) as List<T>
         } else {
             listOf(
@@ -247,8 +249,8 @@ class SettlementServiceHelper {
                 AccountType.CSMEM,
                 AccountType.SPMEM,
                 AccountType.ZSMEM,
-                AccountType.PAY,
-                AccountType.REC
+                AccountType.PAYJV,
+                AccountType.RECJV
             ) as List<T>
         }
     }

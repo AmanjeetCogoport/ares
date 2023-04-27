@@ -108,7 +108,9 @@ enum class InvoiceType(val value: String) {
     SPINV("Purchase Invoice"),
     SPMEM("Purchase Credit Note"),
     CSMEM("Customer Credit Note"),
-    ZSMEM("Customer Credit Note");
+    ZSMEM("Customer Credit Note"),
+    RECJV("AR Payment Jv"),
+    PAYJV("AP Payment Jv");
 }
 
 /**

@@ -326,13 +326,15 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
-        val jvList = settlementServiceHelper.getJvList(AccountType::class.java).map { it -> it.name }.toMutableList() + mutableListOf(
+        val possibleAccountTypes = settlementServiceHelper.getJvList(AccountType::class.java).map { it -> it.name }.toMutableList() + mutableListOf(
             AccountType.PCN.toString(),
-            AccountType.SINV.toString(), AccountType.SCN.toString()
+            AccountType.SINV.toString(), AccountType.SCN.toString(),
+            AccountType.REC.toString(),
+            AccountType.PAY.toString()
         )
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
-                jvList.toMutableList()
+                possibleAccountTypes.toMutableList()
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else if (request.accountType == "SINV") {
