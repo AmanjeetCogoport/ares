@@ -396,7 +396,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 amount = lineItem.amount.multiply(request.exchangeRate),
                 ledAmount = lineItem.amount,
                 description = request.description,
-                entityCode = lineItem.entityCode,
+                entityCode = lineItem.entityCode ?: request.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[lineItem.entityCode]),
                 exchangeRate = request.exchangeRate,
                 glCode = lineItem.glCode,
@@ -450,7 +450,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     sageOrganization = authClient.getSageOrganization(
                         SageOrganizationRequest(
                             organization.list[0]["serial_id"]!!.toString(),
-                            if (lineItem.accMode == AccMode.AP) "service_provider" else "importer_exporter"
+                            if (lineItem.accMode == AccMode.AP || lineItem.accMode == AccMode.EMD) "service_provider" else "importer_exporter"
                         )
                     )
 

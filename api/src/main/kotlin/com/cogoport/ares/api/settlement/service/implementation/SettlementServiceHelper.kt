@@ -184,7 +184,7 @@ class SettlementServiceHelper {
                 SettlementType.ZSMEM,
                 SettlementType.PAY,
                 SettlementType.REC
-                ) as List<T>
+            ) as List<T>
         } else {
             listOf(
                 AccountType.WOFF,
