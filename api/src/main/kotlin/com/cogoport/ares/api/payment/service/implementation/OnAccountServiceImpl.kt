@@ -31,6 +31,8 @@ import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
+import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
@@ -77,6 +79,7 @@ import com.cogoport.ares.model.payment.response.PaymentResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
@@ -119,7 +122,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
-import kotlin.math.abs
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
 
@@ -174,6 +176,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var cogoBackLowLevelClient: CogoBackLowLevelClient
+
+    @Inject
+    lateinit var sageServiceImpl: SageServiceImpl
+
+    @Inject
+    lateinit var openSearchService: OpenSearchService
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -1186,6 +1194,9 @@ open class OnAccountServiceImpl : OnAccountService {
             val sageOrganizationQuery = if (paymentDetails.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
+                throw AresException(AresError.ERR_1002, "BPR")
+            }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
             val sageOrganization = authClient.getSageOrganization(
@@ -1242,89 +1253,102 @@ open class OnAccountServiceImpl : OnAccountService {
             lateinit var result: SageResponse
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
 
-            var bankCode: String
-            var entityCode: String
-            var currency: String
+            var bankCode: String? = null
+            var entityCode: String? = null
+            var currency: String? = null
             var bankCodeDetails = hashMapOf<String, String>()
 
-            if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
-                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "PostPaymentToSage",
-                        "Payment",
-                        paymentId,
-                        "PAYMENT",
-                        "500",
-                        sageOrganization.toString(),
-                        "Cogo bank account number is null",
-                        false
-                    )
-                )
-                return false
-            }
-            if (paymentDetails.payMode == PayMode.RAZORPAY) {
-                bankCode = PaymentSageGLCodes.RAZO.name
-                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
-                currency = PaymentSageGLCodes.RAZO.currency
-            } else {
-                bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
-                bankCode = bankCodeDetails["bankCode"]!!
-                entityCode = bankCodeDetails["entityCode"].toString()
-                currency = bankCodeDetails["currency"]!!
-            }
             if (paymentDetails.paymentCode == PaymentCode.CTDS) {
-                bankCode = "CTDSP"
-                entityCode = paymentDetails.entityCode.toString()
-                currency = paymentDetails.currency
-            }
-            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
-            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
-                val jvSageAccount = when (paymentDetails.paymentCode) {
-                    PaymentCode.CTDS -> JVSageAccount.CTDS.value
-                    PaymentCode.CTDSP -> JVSageAccount.CTDSP.value
-                    PaymentCode.VTDS -> JVSageAccount.VTDS.value
-                    else -> if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+                when (paymentDetails.entityCode) {
+                    101 -> {
+                        bankCode = "CTDS"
+                        entityCode = paymentDetails.entityCode.toString()
+                        currency = paymentDetails.currency
+                    }
+                    301 -> {
+                        bankCode = "CTDSP"
+                        entityCode = paymentDetails.entityCode.toString()
+                        currency = paymentDetails.currency
+                    }
                 }
-                result = SageClient.postPaymentToSage(
-                    PaymentRequest
-                    (
-                        if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
-                        paymentDetails.paymentNumValue!!,
-                        sageOrganization.sageOrganizationId!!,
-                        "IND",
-                        jvSageAccount,
-                        bankCode,
-                        paymentDetails.transactionDate!!,
-                        currency,
-                        entityCode,
-                        if (paymentDetails.accMode == AccMode.AP) 1 else 2,
-                        paymentDetails.amount,
-                        paymentLineItemDetails
-                    )
-                )
             } else {
-                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "PostPaymentToSage",
-                        "Payment",
-                        paymentId,
-                        "PAYMENT",
-                        "500",
-                        sageOrganization.toString(),
-                        "Bank Account details does not match",
-                        false
+                if (paymentDetails.payMode == PayMode.RAZORPAY) {
+                    bankCode = PaymentSageGLCodes.RAZO.name
+                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    currency = PaymentSageGLCodes.RAZO.currency
+                } else {
+                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                    bankCode = bankCodeDetails["bankCode"]!!
+                    entityCode = bankCodeDetails["entityCode"].toString()
+                    currency = bankCodeDetails["currency"]!!
+                }
+
+                if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
+                    paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                    openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentToSage",
+                            "Payment",
+                            paymentId,
+                            "PAYMENT",
+                            "500",
+                            sageOrganization.toString(),
+                            "Cogo bank account number is null",
+                            false
+                        )
                     )
-                )
-                return false
+                    return false
+                }
             }
+
+            var jvSageAccount: String? = ""
+
+            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
+            if (!bankDetails?.cogoAccountNo.isNullOrEmpty()) {
+                if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
+                    jvSageAccount = if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+                } else {
+                    paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                    openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostPaymentToSage",
+                            "Payment",
+                            paymentId,
+                            "PAYMENT",
+                            "500",
+                            sageOrganization.toString(),
+                            "Bank Account details does not match",
+                            false
+                        )
+                    )
+                    return false
+                }
+            }
+
+            result = SageClient.postPaymentToSage(
+                PaymentRequest
+                (
+                    if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
+                    paymentDetails.paymentNumValue!!,
+                    sageOrganization.sageOrganizationId!!,
+                    AresConstants.IND,
+                    jvSageAccount!!,
+                    bankCode,
+                    paymentDetails.transactionDate!!,
+                    currency!!,
+                    entityCode!!,
+                    if (paymentDetails.accMode == AccMode.AP) 1 else 2,
+                    paymentDetails.amount,
+                    paymentDetails.transRefNumber,
+                    paymentLineItemDetails
+                )
+            )
 
             val processedResponse = XML.toJSONObject(result.response)
             val status = getStatus(processedResponse)
@@ -1449,5 +1473,86 @@ open class OnAccountServiceImpl : OnAccountService {
             ?.getJSONObject("status")
             ?.get("content")
         return status as Int?
+    }
+
+    override suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        for (id in paymentIds) {
+            try {
+                val payment = paymentRepository.findByPaymentId(id)
+                val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
+
+                if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
+                    throw AresException(AresError.ERR_1535, "")
+                }
+
+                val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+                if (status == 1) {
+                    createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
+                    paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                    paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
+                } else {
+                    createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
+                    failedIds.add(id)
+                }
+            } catch (e: Exception) {
+                createThirdPartyAudit(id, "PostPaymentFromSage", "", e.toString(), false)
+                failedIds.add(id)
+            }
+        }
+        return SageFailedResponse(
+            failedIdsList = failedIds
+        )
+    }
+
+    override suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        for (id in paymentIds) {
+            try {
+                val payment = paymentRepository.findByPaymentId(id)
+                val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
+
+                if (sageServiceImpl.isPaymentPostedFromSage(payment.paymentNumValue!!) == null) {
+                    throw AresException(AresError.ERR_1536, "")
+                }
+                val result = SageClient.cancelPaymentFromSage(payment.sageRefNumber!!)
+                val processedResponse = XML.toJSONObject(result.response)
+                val status = getStatus(processedResponse)
+                if (status == 1) {
+                    createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, true)
+                    paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
+                    paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.POSTED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
+                } else {
+                    createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, false)
+                    failedIds.add(id)
+                }
+            } catch (e: Exception) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", "", e.toString(), false)
+                failedIds.add(id)
+            }
+        }
+        return SageFailedResponse(
+            failedIdsList = failedIds
+        )
+    }
+
+    private suspend fun createThirdPartyAudit(id: Long, apiName: String, request: String, response: String, isSuccess: Boolean) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                apiName,
+                "Payment",
+                id,
+                "PAYMENT",
+                if (isSuccess) "200" else "500",
+                request,
+                response,
+                isSuccess
+            )
+        )
     }
 }

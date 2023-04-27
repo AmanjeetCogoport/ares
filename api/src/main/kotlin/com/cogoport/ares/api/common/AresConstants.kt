@@ -75,6 +75,7 @@ object AresConstants {
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
     const val TDS = "TDS"
+    const val IND = "IND"
 
     const val UNIFIED = "dms"
 

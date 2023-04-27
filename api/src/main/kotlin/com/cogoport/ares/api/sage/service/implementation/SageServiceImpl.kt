@@ -61,7 +61,7 @@ class SageServiceImpl : SageService {
         return null
     }
 
-    private fun isPaymentPostedFromSage(paymentValue: String): String? {
+    open fun isPaymentPostedFromSage(paymentValue: String): String? {
 
         val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
         val resultFromQuery = Client.sqlQuery(query)
