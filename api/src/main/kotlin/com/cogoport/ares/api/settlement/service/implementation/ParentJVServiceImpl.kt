@@ -450,7 +450,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     sageOrganization = authClient.getSageOrganization(
                         SageOrganizationRequest(
                             organization.list[0]["serial_id"]!!.toString(),
-                            if (lineItem.accMode == AccMode.AP || lineItem.accMode == AccMode.EMD) "service_provider" else "importer_exporter"
+                            if (lineItem.accMode == AccMode.AP) "service_provider" else "importer_exporter"
                         )
                     )
 
