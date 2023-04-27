@@ -58,7 +58,9 @@ enum class AresError(
     ERR_1531("ERR_1531", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
     ERR_1532("ERR_1532", "Posting failed because of following org issue:", HttpStatus.BAD_REQUEST),
     ERR_1533("ERR_1533", "Date format must be dd/MM/yyyy", HttpStatus.BAD_REQUEST),
-    ERR_1534("ERR_1534", "Invalid Date Format : ", HttpStatus.BAD_REQUEST);
+    ERR_1534("ERR_1534", "Invalid Date Format : ", HttpStatus.BAD_REQUEST),
+    ERR_1535("ERR_1535", "Payment must be posted", HttpStatus.BAD_REQUEST),
+    ERR_1536("ERR_1536", "Payment is not posted from sage", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
