@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull
 @Introspected
 data class JvLineItemRequest(
     var id: String?,
-    var entityCode: Int,
+    var entityCode: Int?,
     var entityId: UUID?,
     var accMode: AccMode?,
     @field:NotNull(message = "glCode is mandatory")

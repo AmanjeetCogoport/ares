@@ -73,6 +73,17 @@ class SettlementServiceHelper {
             AccountType.CONTR -> getVoucherType(signFlag) + InvoiceType.CONTR.value
             AccountType.BANK -> getVoucherType(signFlag) + InvoiceType.BANK.value
             AccountType.CRRCV -> getVoucherType(signFlag) + InvoiceType.CRRCV.value
+            AccountType.CSINV -> getVoucherType(signFlag) + InvoiceType.CSINV.value
+            AccountType.ZSINV -> getVoucherType(signFlag) + InvoiceType.ZSINV.value
+            AccountType.SPINV -> getVoucherType(signFlag) + InvoiceType.SPINV.value
+            AccountType.CSMEM -> getVoucherType(signFlag) + InvoiceType.CSMEM.value
+            AccountType.ZSMEM -> getVoucherType(signFlag) + InvoiceType.ZSMEM.value
+            AccountType.SPMEM -> getVoucherType(signFlag) + InvoiceType.SPMEM.value
+            AccountType.RECJV -> getVoucherType(signFlag) + InvoiceType.RECJV.value
+            AccountType.PAYJV -> getVoucherType(signFlag) + InvoiceType.PAYJV.value
+            AccountType.CTDS -> getVoucherType(signFlag) + InvoiceType.CTDS.value
+            AccountType.CTDSP -> getVoucherType(signFlag) + InvoiceType.CTDSP.value
+            AccountType.VTDS -> getVoucherType(signFlag) + InvoiceType.VTDS.value
             else -> throw AresException(AresError.ERR_1009, "accountType $accType")
         }
     }
@@ -170,12 +181,17 @@ class SettlementServiceHelper {
                 SettlementType.MISC,
                 SettlementType.STMNT,
                 SettlementType.FAAR2,
-                SettlementType.PCN,
-                SettlementType.PINV,
-                SettlementType.SINV,
-                SettlementType.SCN,
-                SettlementType.PAY,
-                SettlementType.REC
+                SettlementType.CSINV,
+                SettlementType.ZSINV,
+                SettlementType.SPINV,
+                SettlementType.CSMEM,
+                SettlementType.SPMEM,
+                SettlementType.ZSMEM,
+                SettlementType.PAYJV,
+                SettlementType.RECJV,
+                SettlementType.CTDSP,
+                SettlementType.CTDS,
+                SettlementType.VTDS
             ) as List<T>
         } else {
             listOf(
@@ -233,11 +249,17 @@ class SettlementServiceHelper {
                 AccountType.MTCCV,
                 AccountType.MISC,
                 AccountType.STMNT,
-                AccountType.PAY,
-                AccountType.FAAR2,
-                AccountType.PCN,
-                AccountType.PINV,
-                AccountType.SINV, AccountType.SCN
+                AccountType.CSINV,
+                AccountType.ZSINV,
+                AccountType.SPINV,
+                AccountType.CSMEM,
+                AccountType.SPMEM,
+                AccountType.ZSMEM,
+                AccountType.PAYJV,
+                AccountType.RECJV,
+                AccountType.VTDS,
+                AccountType.CTDS,
+                AccountType.CTDSP
             ) as List<T>
         }
     }

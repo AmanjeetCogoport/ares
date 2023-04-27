@@ -102,7 +102,18 @@ enum class InvoiceType(val value: String) {
     MISC("Miscellaneous entry"),
     OPDIV("Miscellaneous entry"),
     CONTR("CONTRA"),
-    CRRCV("N/Créd. a receber")
+    CRRCV("N/Créd. a receber"),
+    CSINV("Customer Invoice"),
+    ZSINV("Customer Invoice"),
+    SPINV("Purchase Invoice"),
+    SPMEM("Purchase Credit Note"),
+    CSMEM("Customer Credit Note"),
+    ZSMEM("Customer Credit Note"),
+    RECJV("AR Payment Jv"),
+    PAYJV("AP Payment Jv"),
+    CTDS("Customer TDS"),
+    CTDSP("Customer TDS 301"),
+    VTDS("Vendor TDS");
 }
 
 /**
