@@ -5,25 +5,18 @@ DELETE FROM journal_voucher_categories where category ='SCN';
 
 Insert into journal_voucher_categories (category, description)
 VALUES ('CTDS', 'Customer TDS'),
-('CTDSP', 'Customer TDS 301'),
 ('VTDS', 'Vendor TDS');
 
 INSERT INTO payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
 VALUES('CTDS',1,now(),now());
 
 INSERT INTO payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
-VALUES('CTDSP',1,now(),now());
-
-INSERT INTO payment_sequence_numbers(sequence_type,next_sequence_number,created_at,updated_at)
 VALUES('VTDS',1,now(),now());
 
-ALTER TYPE ACCOUNT_TYPE ADD VALUE IF NOT EXISTS 'CTDSP';
 ALTER TYPE ACCOUNT_TYPE ADD VALUE IF NOT EXISTS 'VTDS';
 ALTER TYPE ACCOUNT_TYPE ADD VALUE IF NOT EXISTS 'CTDS';
-ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'CTDSP';
 ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'CTDS';
 ALTER TYPE SETTLEMENT_TYPE ADD VALUE IF NOT EXISTS 'VTDS';
-ALTER TYPE PAYMENT_CODE ADD VALUE IF NOT EXISTS 'CTDSP';
 ALTER TYPE PAYMENT_CODE ADD VALUE IF NOT EXISTS 'CTDS';
 ALTER TYPE PAYMENT_CODE ADD VALUE IF NOT EXISTS 'VTDS';
 

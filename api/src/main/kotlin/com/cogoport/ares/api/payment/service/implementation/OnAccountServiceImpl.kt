@@ -592,14 +592,8 @@ open class OnAccountServiceImpl : OnAccountService {
             true -> {
                 if (payment.accMode == AccMode.AR) {
                     payment.accCode = AresModelConstants.TDS_AR_ACCOUNT_CODE
-                    payment.paymentCode = when (payment.entityCode == 301) {
-                        true -> PaymentCode.CTDSP
-                        else -> PaymentCode.CTDS
-                    }
-                    payment.paymentNum = when (payment.entityCode == 301) {
-                        true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
-                        else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
-                    }
+                    payment.paymentCode = PaymentCode.CTDS
+                    payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
                     payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.TDS_AP_ACCOUNT_CODE
@@ -633,12 +627,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.accType = when (receivableRequest.docType == "TDS") {
             true -> {
                 when (receivableRequest.accMode == AccMode.AR) {
-                    true -> {
-                        when (receivableRequest.entityType == 301) {
-                            true -> AccountType.CTDSP
-                            else -> AccountType.CTDS
-                        }
-                    }
+                    true -> AccountType.CTDS
                     else -> AccountType.VTDS
                 }
             }

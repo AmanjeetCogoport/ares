@@ -67,7 +67,6 @@ enum class AccountType(val dbValue: String) {
     EXP("EXP"),
     VTDS("VTDS"),
     CTDS("CTDS"),
-    CTDSP("CTDSP"),
     CSINV("CSINV"),
     ZSINV("ZSINV"),
     SPINV("SPINV"),
@@ -88,7 +87,7 @@ enum class AccountType(val dbValue: String) {
 }
 
 enum class PaymentCode {
-    PAY, REC, CTDS, VTDS, CPRE, APRE, CTDSP
+    PAY, REC, CTDS, VTDS, CPRE, APRE
 }
 
 enum class Operator {
