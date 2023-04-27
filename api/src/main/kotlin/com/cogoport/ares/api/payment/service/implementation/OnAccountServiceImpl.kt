@@ -1473,52 +1473,16 @@ open class OnAccountServiceImpl : OnAccountService {
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "PostPaymentFromSage",
-                            "Payment",
-                            id,
-                            "PAYMENT",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            true
-                        )
-                    )
+                    createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
                     paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
                     paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED
                     Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
                 } else {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "PostPaymentFromSage",
-                            "Payment",
-                            id,
-                            "PAYMENT",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            false
-                        )
-                    )
+                    createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
             } catch (e: Exception) {
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "PostPaymentFromSage",
-                        "Payment",
-                        id,
-                        "PAYMENT",
-                        "500",
-                        "",
-                        e.toString(),
-                        false
-                    )
-                )
+                createThirdPartyAudit(id, "PostPaymentFromSage", "", e.toString(), false)
                 failedIds.add(id)
             }
         }
@@ -1541,57 +1505,37 @@ open class OnAccountServiceImpl : OnAccountService {
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "CancelPaymentFromSage",
-                            "Payment",
-                            id,
-                            "PAYMENT",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            true
-                        )
-                    )
+                    createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, true)
                     paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
                     paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.POSTED
                     Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
                 } else {
-                    thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                            null,
-                            "CancelPaymentFromSage",
-                            "Payment",
-                            id,
-                            "PAYMENT",
-                            "200",
-                            result.requestString,
-                            result.response,
-                            false
-                        )
-                    )
+                    createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
             } catch (e: Exception) {
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "CancelPaymentFromSage",
-                        "Payment",
-                        id,
-                        "PAYMENT",
-                        "500",
-                        "",
-                        e.toString(),
-                        false
-                    )
-                )
+                createThirdPartyAudit(id, "CancelPaymentFromSage", "", e.toString(), false)
                 failedIds.add(id)
             }
         }
         return SageFailedResponse(
             failedIdsList = failedIds
+        )
+    }
+
+    private suspend fun createThirdPartyAudit(id: Long, apiName: String, request: String, response: String, isSuccess: Boolean) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                apiName,
+                "Payment",
+                id,
+                "PAYMENT",
+                if (isSuccess) "200" else "500",
+                request,
+                response,
+                isSuccess
+            )
         )
     }
 }
