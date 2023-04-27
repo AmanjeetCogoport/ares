@@ -1927,6 +1927,7 @@ open class SettlementServiceImpl : SettlementService {
         if (settlementServiceHelper.getJvList(AccountType::class.java).contains(accountUtilization.accType)) {
             journalVoucherService.updateJournalVoucherStatus(
                 id = accountUtilization.documentNo,
+                documentValue = accountUtilization.documentValue,
                 isUtilized = true,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType
