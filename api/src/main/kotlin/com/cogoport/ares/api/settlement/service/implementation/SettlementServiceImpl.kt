@@ -1927,6 +1927,7 @@ open class SettlementServiceImpl : SettlementService {
         if (settlementServiceHelper.getJvList(AccountType::class.java).contains(accountUtilization.accType)) {
             journalVoucherService.updateJournalVoucherStatus(
                 id = accountUtilization.documentNo,
+                documentValue = accountUtilization.documentValue,
                 isUtilized = true,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType
@@ -2101,11 +2102,11 @@ open class SettlementServiceImpl : SettlementService {
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-        try {
-            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-        }
+//        try {
+//            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
+//        } catch (e: Exception) {
+//            logger().error(e.stackTraceToString())
+//        }
 
         auditService.createAudit(
             AuditRequest(
