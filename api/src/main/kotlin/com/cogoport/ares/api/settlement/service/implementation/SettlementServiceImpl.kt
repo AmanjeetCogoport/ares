@@ -2102,11 +2102,11 @@ open class SettlementServiceImpl : SettlementService {
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-//        try {
-//            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
-//        } catch (e: Exception) {
-//            logger().error(e.stackTraceToString())
-//        }
+        try {
+            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
 
         auditService.createAudit(
             AuditRequest(
