@@ -1244,19 +1244,24 @@ open class OnAccountServiceImpl : OnAccountService {
             lateinit var result: SageResponse
             val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
 
-            val bankCode: String
-            val entityCode: String
-            val currency: String
+            var bankCode: String? = null
+            var entityCode: String? = null
+            var currency: String? = null
             var bankCodeDetails = hashMapOf<String, String>()
 
-            if (paymentDetails.paymentCode == PaymentCode.CTDS && paymentDetails.entityCode == 101) {
-                bankCode = PaymentCode.CTDS.name
-                entityCode = paymentDetails.entityCode.toString()
-                currency = paymentDetails.currency
-            } else if (paymentDetails.paymentCode == PaymentCode.CTDSP && paymentDetails.entityCode == 301) {
-                bankCode = PaymentCode.CTDSP.name
-                entityCode = paymentDetails.entityCode.toString()
-                currency = paymentDetails.currency
+            if (paymentDetails.paymentCode == PaymentCode.CTDS) {
+                when (paymentDetails.entityCode) {
+                    101 -> {
+                        bankCode = "CTDS"
+                        entityCode = paymentDetails.entityCode.toString()
+                        currency = paymentDetails.currency
+                    }
+                    301 -> {
+                        bankCode = "CTDSP"
+                        entityCode = paymentDetails.entityCode.toString()
+                        currency = paymentDetails.currency
+                    }
+                }
             } else {
                 if (paymentDetails.payMode == PayMode.RAZORPAY) {
                     bankCode = PaymentSageGLCodes.RAZO.name
@@ -1293,7 +1298,6 @@ open class OnAccountServiceImpl : OnAccountService {
             var jvSageAccount: String? = ""
 
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
-
             if (!bankDetails?.cogoAccountNo.isNullOrEmpty()) {
                 if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
                     jvSageAccount = if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
@@ -1328,8 +1332,8 @@ open class OnAccountServiceImpl : OnAccountService {
                     jvSageAccount!!,
                     bankCode,
                     paymentDetails.transactionDate!!,
-                    currency,
-                    entityCode,
+                    currency!!,
+                    entityCode!!,
                     if (paymentDetails.accMode == AccMode.AP) 1 else 2,
                     paymentDetails.amount,
                     paymentDetails.transRefNumber,
