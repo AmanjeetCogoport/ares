@@ -520,9 +520,6 @@ open class SettlementServiceImpl : SettlementService {
                         SettlementType.CTDS -> tdsType.addAll(
                             listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
                         )
-                        SettlementType.CTDSP -> tdsType.addAll(
-                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
-                        )
                         SettlementType.VTDS -> tdsType.addAll(
                             listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
                         )
@@ -830,8 +827,8 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
-            docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS, AccountType.CTDSP) }
-            docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS, AccountType.CTDSP) }
+            docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS) }
+            docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
             docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.JV && accMode != null -> { jvList }
             docType == null && accMode == AccMode.AR -> {
@@ -1824,9 +1821,7 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
 
-        val tdsType = if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType) && invoiceAndBillData?.entityCode == 301) {
-            SettlementType.CTDSP
-        } else if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
+        val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
             SettlementType.CTDS
         } else {
             SettlementType.VTDS
@@ -2166,9 +2161,6 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PCN, SettlementType.PAY)
             }
             SettlementType.CTDS -> {
-                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
-            }
-            SettlementType.CTDSP -> {
                 listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
             }
             SettlementType.VTDS -> {
@@ -2671,10 +2663,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val paymentNum = when (invoiceAndBillData?.accMode) {
-            AccMode.AR -> when (invoiceAndBillData.entityCode == 301) {
-                true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
-                else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
-            }
+            AccMode.AR -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
             else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
         }
 
