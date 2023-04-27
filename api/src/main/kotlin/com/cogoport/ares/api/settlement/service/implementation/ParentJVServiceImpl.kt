@@ -396,7 +396,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 amount = lineItem.amount.multiply(request.exchangeRate),
                 ledAmount = lineItem.amount,
                 description = request.description,
-                entityCode = lineItem.entityCode,
+                entityCode = lineItem.entityCode ?: request.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[lineItem.entityCode]),
                 exchangeRate = request.exchangeRate,
                 glCode = lineItem.glCode,
