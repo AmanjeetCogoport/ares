@@ -56,7 +56,8 @@ enum class AresError(
     ERR_1529("ERR_1529", "No value exists for this Acc Mode: ", HttpStatus.BAD_REQUEST),
     ERR_1530("ERR_1530", "No Organization is present with this Trade Party Id ", HttpStatus.BAD_REQUEST),
     ERR_1531("ERR_1531", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
-    ERR_1532("ERR_1532", "Posting failed because of following org issue:", HttpStatus.BAD_REQUEST);
+    ERR_1532("ERR_1532", "Posting failed because of following org issue:", HttpStatus.BAD_REQUEST),
+    ERR_1533("ERR_1533", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
