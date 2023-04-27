@@ -74,6 +74,7 @@ object AresConstants {
     const val INVOICE = "INVOICE"
     const val CREDIT_NOTE = "CREDIT_NOTE"
     const val JV = "JV"
+    const val IND = "IND"
 
     const val UNIFIED = "dms"
 
