@@ -22,5 +22,5 @@ interface PaymentMigrationWrapper {
 
     suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 
-    suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?)
+    suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?) :Int
 }

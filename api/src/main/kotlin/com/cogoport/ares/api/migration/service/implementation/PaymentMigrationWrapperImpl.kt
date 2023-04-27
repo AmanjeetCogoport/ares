@@ -235,7 +235,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
     }
 
-    override suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?) {
+    override suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?) : Int {
         var jvNumbersList = java.lang.StringBuilder()
         var jvNumAsString: String? = null
         if (jvNums != null) {
@@ -250,5 +250,6 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         records.forEach {
             aresMessagePublisher.emitJVUtilization(it)
         }
+        return records.size
     }
 }
