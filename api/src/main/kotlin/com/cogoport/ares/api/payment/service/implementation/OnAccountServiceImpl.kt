@@ -119,7 +119,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
-import kotlin.math.abs
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
 
@@ -1185,6 +1184,9 @@ open class OnAccountServiceImpl : OnAccountService {
             val sageOrganizationQuery = if (paymentDetails.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+            if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
+                throw AresException(AresError.ERR_1002, "BPR")
+            }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
             val sageOrganization = authClient.getSageOrganization(
@@ -1246,48 +1248,60 @@ open class OnAccountServiceImpl : OnAccountService {
             var currency: String
             var bankCodeDetails = hashMapOf<String, String>()
 
-            if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
-                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
-                openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
-                Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "PostPaymentToSage",
-                        "Payment",
-                        paymentId,
-                        "PAYMENT",
-                        "500",
-                        sageOrganization.toString(),
-                        "Cogo bank account number is null",
-                        false
-                    )
-                )
-                return false
-            }
-            if (paymentDetails.payMode == PayMode.RAZORPAY) {
-                bankCode = PaymentSageGLCodes.RAZO.name
-                entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
-                currency = PaymentSageGLCodes.RAZO.currency
-            } else {
-                bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
-                bankCode = bankCodeDetails["bankCode"]!!
-                entityCode = bankCodeDetails["entityCode"].toString()
-                currency = bankCodeDetails["currency"]!!
-            }
-            if (paymentDetails.paymentCode == PaymentCode.CTDS) {
-                bankCode = "CTDSP"
+            if (paymentDetails.paymentCode == PaymentCode.CTDS && paymentDetails.entityCode == 101) {
+                bankCode = PaymentCode.CTDS.name
                 entityCode = paymentDetails.entityCode.toString()
                 currency = paymentDetails.currency
-            }
-            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
-            if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
-                val jvSageAccount = when (paymentDetails.paymentCode) {
-                    PaymentCode.CTDS -> JVSageAccount.CTDS.value
-                    PaymentCode.CTDSP -> JVSageAccount.CTDSP.value
-                    PaymentCode.VTDS -> JVSageAccount.VTDS.value
-                    else -> if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+            } else if (paymentDetails.paymentCode == PaymentCode.CTDSP && paymentDetails.entityCode == 301) {
+                bankCode = PaymentCode.CTDSP.name
+                entityCode = paymentDetails.entityCode.toString()
+                currency = paymentDetails.currency
+            } else {
+                if (paymentDetails.payMode == PayMode.RAZORPAY) {
+                    bankCode = PaymentSageGLCodes.RAZO.name
+                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    currency = PaymentSageGLCodes.RAZO.currency
+                } else {
+                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                    bankCode = bankCodeDetails["bankCode"]!!
+                    entityCode = bankCodeDetails["entityCode"].toString()
+                    currency = bankCodeDetails["currency"]!!
                 }
+
+                if (paymentDetails.cogoAccountNo.isNullOrEmpty() && paymentDetails.payMode != PayMode.RAZORPAY) {
+                    paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
+                    openSearchPaymentModel.paymentDocumentStatus = PaymentDocumentStatus.POSTING_FAILED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, paymentId.toString(), openSearchPaymentModel, true)
+                    thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                    null,
+                                    "PostPaymentToSage",
+                                    "Payment",
+                                    paymentId,
+                                    "PAYMENT",
+                                    "500",
+                                    sageOrganization.toString(),
+                                    "Cogo bank account number is null",
+                                    false
+                            )
+                    )
+                    return false
+                }
+            }
+
+            var jvSageAccount: String?
+
+            val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
+                if(((!bankDetails?.cogoAccountNo.isNullOrEmpty()) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
+                    jvSageAccount = if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+                } else {
+                    jvSageAccount = when (paymentDetails.paymentCode) {
+                        PaymentCode.CTDS -> JVSageAccount.CTDS.value
+                        PaymentCode.CTDSP -> JVSageAccount.CTDSP.value
+                        PaymentCode.VTDS -> JVSageAccount.VTDS.value
+                        else -> {""}
+                }
+
                 result = SageClient.postPaymentToSage(
                     PaymentRequest
                     (
@@ -1302,6 +1316,7 @@ open class OnAccountServiceImpl : OnAccountService {
                         entityCode,
                         if (paymentDetails.accMode == AccMode.AP) 1 else 2,
                         paymentDetails.amount,
+                        paymentDetails.transRefNumber,
                         paymentLineItemDetails
                     )
                 )
