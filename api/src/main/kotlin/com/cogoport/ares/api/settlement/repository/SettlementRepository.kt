@@ -125,13 +125,13 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
         ),
         TAX AS (
             SELECT s.destination_id, s.currency, s.source_id as tds_document_no, s.source_type as tds_type,
-                sum(CASE WHEN s.source_id = :sourceId AND s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS tds,
+                sum(CASE WHEN s.source_id = :sourceId AND s.source_type IN ('CTDS','VTDS', 'CTDSP') THEN s.amount ELSE 0 END) AS tds,
                 sum(CASE WHEN s.source_type IN ('NOSTRO') THEN s.amount ELSE 0 END) AS nostro_amount,
-                sum(CASE WHEN s.source_type IN ('CTDS','VTDS') THEN s.amount ELSE 0 END) AS settled_tds
+                sum(CASE WHEN s.source_type IN ('CTDS','VTDS', 'CTDSP') THEN s.amount ELSE 0 END) AS settled_tds
             FROM settlements s
             WHERE s.destination_id in (SELECT DISTINCT destination_id FROM INVOICES) 
                 AND s.destination_type in (SELECT DISTINCT destination_type from INVOICES)
-                AND s.source_type IN ('NOSTRO','VTDS','CTDS')
+                AND s.source_type IN ('NOSTRO','VTDS','CTDS', 'CTDSP')
                 AND s.deleted_at is null  and s.is_void = false
             GROUP BY s.destination_id, s.currency, s.source_id, s.source_type
         )
@@ -182,7 +182,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                     AND s.destination_type::varchar = au.acc_type::varchar
             WHERE 
                 au.document_value ILIKE :query || '%'
-                AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
+                AND s.source_type NOT IN ('NOSTRO','SECH','PECH')
                 AND s.deleted_at is null and s.is_void = false
                 AND au.deleted_at is null and au.is_void = false
         """
