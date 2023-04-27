@@ -154,7 +154,7 @@ class AresMessageConsumer {
     }
 
     @Queue("migrate-jv-pay-loc", prefetch = 1)
-    suspend fun migrateJVPayLoc(record: JVRecordsScheduler) = runBlocking {
+    fun migrateJVPayLoc(record: JVRecordsScheduler) = runBlocking {
         paymentMigration.migrateJVUtilization(record)
     }
 }

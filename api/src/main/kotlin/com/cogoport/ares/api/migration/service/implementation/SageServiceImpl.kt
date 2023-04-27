@@ -538,7 +538,6 @@ class SageServiceImpl : SageService {
             ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
             ,G.TYP_0 as account_type
             ,GD.ROWID as sage_unique_id
-            ,G.UPDDATTIM_0 as updated_at
             from  COGO2.GACCENTRY GC 
             INNER JOIN
             (

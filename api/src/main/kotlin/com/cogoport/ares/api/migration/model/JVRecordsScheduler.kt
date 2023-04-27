@@ -2,7 +2,6 @@ package com.cogoport.ares.api.migration.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
-import java.sql.Timestamp
 
 @Introspected
 data class JVRecordsScheduler(
@@ -32,6 +31,4 @@ data class JVRecordsScheduler(
     val accountType: String?,
     @JsonProperty("sage_unique_id")
     val sageUniqueId: String?,
-    @JsonProperty("updated_at")
-    val updatedAt: Timestamp?
 )
