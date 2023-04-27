@@ -31,6 +31,7 @@ import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -121,7 +122,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
-import kotlin.math.abs
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
 
@@ -179,6 +179,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var sageServiceImpl: SageServiceImpl
+
+    @Inject
+    lateinit var openSearchService: OpenSearchService
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -1455,11 +1458,12 @@ open class OnAccountServiceImpl : OnAccountService {
         return status as Int?
     }
 
-    override suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+    override suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         val failedIds: MutableList<Long?> = mutableListOf()
         for (id in paymentIds) {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
+                val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
 
                 if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
                     throw AresException(AresError.ERR_1533, "")
@@ -1482,6 +1486,9 @@ open class OnAccountServiceImpl : OnAccountService {
                             true
                         )
                     )
+                    paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                    paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
                 } else {
                     thirdPartyApiAuditService.createAudit(
                         ThirdPartyApiAudit(
@@ -1520,16 +1527,16 @@ open class OnAccountServiceImpl : OnAccountService {
         )
     }
 
-    override suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
+    override suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         val failedIds: MutableList<Long?> = mutableListOf()
         for (id in paymentIds) {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
+                val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
 
                 if (sageServiceImpl.isPaymentPostedFromSage(payment.paymentNumValue!!) == null) {
                     throw AresException(AresError.ERR_1534, "")
                 }
-
                 val result = SageClient.cancelPaymentFromSage(payment.sageRefNumber!!)
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
@@ -1547,6 +1554,9 @@ open class OnAccountServiceImpl : OnAccountService {
                             true
                         )
                     )
+                    paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
+                    paymentFromOpenSearch.paymentDocumentStatus = PaymentDocumentStatus.POSTED
+                    Client.updateDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, id.toString(), paymentFromOpenSearch, true)
                 } else {
                     thirdPartyApiAuditService.createAudit(
                         ThirdPartyApiAudit(

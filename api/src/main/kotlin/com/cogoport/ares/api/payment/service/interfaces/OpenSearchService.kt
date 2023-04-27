@@ -7,4 +7,6 @@ interface OpenSearchService {
     suspend fun pushOutstandingData(request: OpenSearchRequest)
     suspend fun pushOutstandingListData(request: OpenSearchListRequest)
     suspend fun paymentDocumentStatusMigration()
+
+    suspend fun fetchPaymentFromOpenSearch(id: Long): com.cogoport.ares.model.payment.Payment
 }

@@ -34,6 +34,6 @@ interface OnAccountService {
     suspend fun onAccountBulkAPPayments(req: BulkUploadRequest): UploadSummary
     suspend fun onAccountTotalAmountService(req: OnAccountTotalAmountRequest): MutableList<OnAccountTotalAmountResponse>
     suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean
-    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse
-    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse
+    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse
+    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse
 }

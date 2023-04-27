@@ -111,12 +111,12 @@ class OnAccountController {
     }
 
     @Post("/post-from-sage")
-    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
-        return onAccountService.postPaymentFromSage(paymentIds)
+    suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
+        return onAccountService.postPaymentFromSage(paymentIds, performedBy)
     }
 
     @Post("/cancel-from-sage")
-    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>): SageFailedResponse {
-        return onAccountService.cancelPaymentFromSage(paymentIds)
+    suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
+        return onAccountService.cancelPaymentFromSage(paymentIds, performedBy)
     }
 }
