@@ -189,7 +189,8 @@ open class KnockoffServiceImpl : KnockoffService {
         /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
         if (!isTDSEntry) {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-            paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + AresConstants.CURR_YEAR + paymentEntity.paymentNum
+            val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
+            paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + paymentEntity.paymentNum
         }
         paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/

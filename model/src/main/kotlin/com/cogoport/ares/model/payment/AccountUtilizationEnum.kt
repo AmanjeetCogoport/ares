@@ -110,7 +110,10 @@ enum class InvoiceType(val value: String) {
     CSMEM("Customer Credit Note"),
     ZSMEM("Customer Credit Note"),
     RECJV("AR Payment Jv"),
-    PAYJV("AP Payment Jv");
+    PAYJV("AP Payment Jv"),
+    CTDS("Customer TDS"),
+    CTDSP("Customer TDS 301"),
+    VTDS("Vendor TDS");
 }
 
 /**

@@ -830,6 +830,9 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
+            docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS, AccountType.CTDSP) }
+            docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS, AccountType.CTDSP) }
+            docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.JV && accMode != null -> { jvList }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList
@@ -2660,6 +2663,7 @@ open class SettlementServiceImpl : SettlementService {
         tdsType: SettlementType?,
         invoiceAndBillData: AccountUtilization?
     ): Long? {
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
             AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.TDS_AR_ACCOUNT_CODE)
             else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.TDS_AP_ACCOUNT_CODE)
@@ -2673,7 +2677,7 @@ open class SettlementServiceImpl : SettlementService {
             else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
         }
 
-        val paymentNumValue = "$tdsType${AresConstants.CURR_YEAR}$paymentNum"
+        val paymentNumValue = "$tdsType${financialYearSuffix}$paymentNum"
         val serviceType = when (invoiceAndBillData?.serviceType.isNullOrEmpty()) {
             true -> ServiceType.NA
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
@@ -2704,7 +2708,7 @@ open class SettlementServiceImpl : SettlementService {
             orgSerialId = invoiceAndBillData?.orgSerialId,
             organizationName = invoiceAndBillData?.organizationName,
             zone = invoiceAndBillData?.zoneCode,
-            utr = paymentNumValue,
+            utr = "tds against $destType$destId",
             remarks = "tds against $destType$destId",
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),

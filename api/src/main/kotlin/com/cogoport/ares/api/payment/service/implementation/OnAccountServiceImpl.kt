@@ -579,6 +579,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment, docType: String?) {
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         when (docType == "TDS") {
             true -> {
                 if (payment.accMode == AccMode.AR) {
@@ -591,12 +592,12 @@ open class OnAccountServiceImpl : OnAccountService {
                         true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
                         else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
                     }
-                    payment.paymentNumValue = payment.paymentCode.toString() + AresConstants.CURR_YEAR + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.TDS_AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.VTDS
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
-                    payment.paymentNumValue = payment.paymentCode.toString() + AresConstants.CURR_YEAR + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
                 }
             }
             else -> {
@@ -604,12 +605,12 @@ open class OnAccountServiceImpl : OnAccountService {
                     payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.REC
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + AresConstants.CURR_YEAR + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + financialYearSuffix + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.PAY
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + AresConstants.CURR_YEAR + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + payment.paymentNum
                 }
             }
         }
