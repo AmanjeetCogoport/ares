@@ -108,7 +108,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-          SELECT EXISTS( SELECT id FROM payments WHERE trans_ref_number = 'CITIN22379871158' AND acc_mode = :accMode 
+          SELECT EXISTS( SELECT id FROM payments WHERE trans_ref_number = :transRefNumber AND acc_mode = :accMode 
           and payment_code NOT IN ('CTDS', 'CTDSP', 'VTDS') AND deleted_at IS NULL);    
         """
     )
