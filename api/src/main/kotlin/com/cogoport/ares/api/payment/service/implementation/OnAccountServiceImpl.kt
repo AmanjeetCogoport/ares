@@ -587,6 +587,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment, docType: String?) {
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         when (docType == "TDS") {
             true -> {
                 if (payment.accMode == AccMode.AR) {
@@ -599,12 +600,12 @@ open class OnAccountServiceImpl : OnAccountService {
                         true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
                         else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
                     }
-                    payment.paymentNumValue = payment.paymentCode.toString() + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.TDS_AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.VTDS
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
-                    payment.paymentNumValue = payment.paymentCode.toString() + payment.paymentNum
+                    payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
                 }
             }
             else -> {
@@ -612,12 +613,12 @@ open class OnAccountServiceImpl : OnAccountService {
                     payment.accCode = AresModelConstants.AR_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.REC
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.RECEIVED.prefix)
-                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.RECEIVED.prefix + financialYearSuffix + payment.paymentNum
                 } else {
                     payment.accCode = AresModelConstants.AP_ACCOUNT_CODE
                     payment.paymentCode = PaymentCode.PAY
                     payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + payment.paymentNum
+                    payment.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + payment.paymentNum
                 }
             }
         }
@@ -1466,7 +1467,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
 
                 if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    throw AresException(AresError.ERR_1533, "")
+                    throw AresException(AresError.ERR_1535, "")
                 }
 
                 val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
@@ -1499,7 +1500,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 val paymentFromOpenSearch = openSearchService.fetchPaymentFromOpenSearch(id)
 
                 if (sageServiceImpl.isPaymentPostedFromSage(payment.paymentNumValue!!) == null) {
-                    throw AresException(AresError.ERR_1534, "")
+                    throw AresException(AresError.ERR_1536, "")
                 }
                 val result = SageClient.cancelPaymentFromSage(payment.sageRefNumber!!)
                 val processedResponse = XML.toJSONObject(result.response)
