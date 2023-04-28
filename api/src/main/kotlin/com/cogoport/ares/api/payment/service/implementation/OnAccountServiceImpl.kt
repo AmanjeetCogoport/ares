@@ -221,6 +221,14 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
+        var isUtrExit: Boolean? = false
+        if (receivableRequest.accMode == AccMode.AR) {
+            isUtrExit = paymentRepository.isARTransRefNumberExists(accMode = AccMode.AR.name, transRefNumber = receivableRequest.utr!!)
+        }
+
+        if (isUtrExit == true) {
+            throw AresException(AresError.ERR_1537, "")
+        }
         receivableRequest.signFlag = when (receivableRequest.docType == "TDS") {
             true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
