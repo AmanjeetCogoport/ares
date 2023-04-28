@@ -1820,8 +1820,7 @@ open class SettlementServiceImpl : SettlementService {
         supportingDocUrl: String?
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
-
-        val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
+        val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
             SettlementType.CTDS
         } else {
             SettlementType.VTDS
