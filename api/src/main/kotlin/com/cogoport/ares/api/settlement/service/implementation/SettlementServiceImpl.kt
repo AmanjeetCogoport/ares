@@ -446,8 +446,7 @@ open class SettlementServiceImpl : SettlementService {
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         val possibleAccType = settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList() + mutableListOf(
-            AccountType.PCN.toString(),
-            AccountType.SINV.toString(), AccountType.SCN.toString()
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN
         )
         settlements.forEach { settlement ->
             if (possibleAccType.contains(request.settlementType)) {
@@ -518,10 +517,10 @@ open class SettlementServiceImpl : SettlementService {
                 it.tdsType?.let { it1 ->
                     when (it1) {
                         SettlementType.CTDS -> tdsType.addAll(
-                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
+                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV, SettlementType.CTDS)
                         )
                         SettlementType.VTDS -> tdsType.addAll(
-                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
                         )
                         else -> tdsType.add(it1)
                     }
@@ -1820,8 +1819,7 @@ open class SettlementServiceImpl : SettlementService {
         supportingDocUrl: String?
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
-
-        val tdsType = if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
+        val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
             SettlementType.CTDS
         } else {
             SettlementType.VTDS
@@ -2402,11 +2400,14 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = calculateTds(
-                    rate = rate,
-                    settledTds = doc.settledTds!!,
-                    taxableAmount = doc.taxableAmount
-                )
+                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                    true -> calculateTds(
+                        rate = rate,
+                        settledTds = doc.settledTds!!,
+                        taxableAmount = doc.taxableAmount
+                    )
+                    else -> BigDecimal.ZERO
+                }
             }
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds

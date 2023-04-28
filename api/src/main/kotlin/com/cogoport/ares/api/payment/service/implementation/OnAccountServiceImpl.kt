@@ -221,6 +221,14 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
+        var isUtrExit: Boolean? = false
+        if (receivableRequest.accMode == AccMode.AR) {
+            isUtrExit = paymentRepository.isARTransRefNumberExists(accMode = AccMode.AR.name, transRefNumber = receivableRequest.utr!!)
+        }
+
+        if (isUtrExit == true) {
+            throw AresException(AresError.ERR_1537, "")
+        }
         receivableRequest.signFlag = when (receivableRequest.docType == "TDS") {
             true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
@@ -1129,6 +1137,15 @@ open class OnAccountServiceImpl : OnAccountService {
         return file
     }
 
+    private fun isPaymentPresentOnSage(paymentNumValue: String): Boolean {
+        val paymentOnSage = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '$paymentNumValue'"
+        val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
+        val responseMap = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery)
+        val records = responseMap["recordset"] as? ArrayList<*>
+        logger().info("Payment Present On Sage Response: $responseMap with size ${records?.size} ")
+        return records?.size != 0
+    }
+
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
@@ -1156,12 +1173,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 throw AresException(AresError.ERR_1524, "")
             }
 
-            val paymentOnSage = "Select UMRNUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
-            val resultForPaymentOnSageQuery = SageClient.sqlQuery(paymentOnSage)
-            val responseMap = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentOnSageQuery)
-            val records = responseMap["recordset"] as? ArrayList<*>
-            logger().info("Payment Present On Sage Response: $responseMap with size ${records?.size} ")
-            if (records?.size != 0) {
+            val isPaymentPresentOnSage = isPaymentPresentOnSage(paymentDetails.paymentNumValue!!)
+            if (isPaymentPresentOnSage) {
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1473,6 +1486,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
                 if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
                     throw AresException(AresError.ERR_1535, "")
+                }
+                if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
+                    throw AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")
                 }
 
                 val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
