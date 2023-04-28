@@ -2402,11 +2402,14 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = calculateTds(
-                    rate = rate,
-                    settledTds = doc.settledTds!!,
-                    taxableAmount = doc.taxableAmount
-                )
+                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                    true -> calculateTds(
+                        rate = rate,
+                        settledTds = doc.settledTds!!,
+                        taxableAmount = doc.taxableAmount
+                    )
+                    else -> BigDecimal.ZERO
+                }
             }
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
