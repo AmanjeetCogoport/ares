@@ -125,7 +125,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 type = lineItem.type,
                 parentId = parentJVId,
                 glCode = lineItem.glCode,
-                entityId = lineItem.entityId
+                entityId = lineItem.entityId,
+                currency = lineItem.currency,
+                ledCurrency = lineItem.ledCurrency,
+                description = lineItem.description,
+                category = lineItem.category
             )
             jvLineItems.add(jvLineItem)
         }
