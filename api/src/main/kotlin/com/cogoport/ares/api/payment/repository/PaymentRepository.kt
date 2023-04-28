@@ -109,7 +109,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @Query(
         """
           SELECT EXISTS( SELECT id FROM payments WHERE trans_ref_number = :transRefNumber AND acc_mode = :accMode 
-          and payment_code NOT IN ('CTDS', 'CTDSP', 'VTDS') AND deleted_at IS NULL);    
+          and payment_code NOT IN ('CTDS', 'VTDS') AND deleted_at IS NULL);    
         """
     )
     suspend fun isARTransRefNumberExists(accMode: String, transRefNumber: String): Boolean
