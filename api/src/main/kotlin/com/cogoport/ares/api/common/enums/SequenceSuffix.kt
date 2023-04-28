@@ -6,7 +6,6 @@ enum class SequenceSuffix(val prefix: String) {
     TDS("TDS"),
     JV("JV"),
     SETTLEMENT("SETL"),
-    CTDSP("CTDSP"),
     CTDS("CTDS"),
     VTDS("VTDS")
 }

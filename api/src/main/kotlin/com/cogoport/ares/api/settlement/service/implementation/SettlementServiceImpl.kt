@@ -326,9 +326,15 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun stringAccountTypes(request: SettlementHistoryRequest): MutableList<String> {
+        val possibleAccountTypes = settlementServiceHelper.getJvList(AccountType::class.java).map { it -> it.name }.toMutableList() + mutableListOf(
+            AccountType.PCN.toString(),
+            AccountType.SINV.toString(), AccountType.SCN.toString(),
+            AccountType.REC.toString(),
+            AccountType.PAY.toString()
+        )
         val accountTypes =
             if (request.accountType == AresConstants.ALL) {
-                settlementServiceHelper.getJvList(AccountType::class.java).map { it -> it.name }.toMutableList()
+                possibleAccountTypes.toMutableList()
             } else if (request.accountType == "REC") {
                 mutableListOf(AccountType.REC.toString(), AccountType.PAY.toString())
             } else if (request.accountType == "SINV") {
@@ -439,8 +445,11 @@ open class SettlementServiceImpl : SettlementService {
         sids: List<Sid>?
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
+        val possibleAccType = settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList() + mutableListOf(
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN
+        )
         settlements.forEach { settlement ->
-            if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(request.settlementType)) {
+            if (possibleAccType.contains(request.settlementType)) {
                 // Calculate Settled Amount in Invoice Currency
                 settlement.settledAmount =
                     getAmountInInvoiceCurrency(settlement, payments, settlement.settledAmount)
@@ -508,10 +517,10 @@ open class SettlementServiceImpl : SettlementService {
                 it.tdsType?.let { it1 ->
                     when (it1) {
                         SettlementType.CTDS -> tdsType.addAll(
-                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV)
+                            listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV, SettlementType.CTDS)
                         )
                         SettlementType.VTDS -> tdsType.addAll(
-                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV)
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
                         )
                         else -> tdsType.add(it1)
                     }
@@ -533,18 +542,15 @@ open class SettlementServiceImpl : SettlementService {
      * @return: Map<Long?, List<SettledInvoice>>
      */
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
-        var settlements = mutableListOf<SettledInvoice>()
-
-        if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(request.settlementType)) {
-            @Suppress("UNCHECKED_CAST")
-            settlements =
-                settlementRepository.findSettlement(
+        @Suppress("UNCHECKED_CAST")
+        var settlements =
+            settlementRepository.findSettlement(
                 request.documentNo.toLong(),
                 request.settlementType,
                 request.page,
                 request.pageLimit
             ) as MutableList<SettledInvoice>
-        }
+
         // Group Invoices And Calculate settled Tds
         return settlements.groupBy { it.id }
     }
@@ -820,6 +826,9 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
+            docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS) }
+            docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
+            docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.JV && accMode != null -> { jvList }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList
@@ -1033,37 +1042,7 @@ open class SettlementServiceImpl : SettlementService {
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
-        // If request is coming through incident management check
-        return if (request.throughIncident) {
-            // Validate Request
-            if (request.incidentMappingId == null) throw AresException(AresError.ERR_1003, "incidentMappingId")
-            if (request.incidentId == null) throw AresException(AresError.ERR_1003, "incidentId")
-
-            // Update Status of Incident in incident_mappings table
-            incidentMappingsRepository.updateStatus(
-                incidentMappingId = Hashids.decode(request.incidentMappingId!!)[0],
-                status = IncidentStatus.APPROVED
-            )
-
-            // Perform Settlement
-            val response = runSettlement(request, true, isAutoKnockOff)
-
-            // Update status of incident at incident management
-            hadesClient.updateIncident(
-                request = UpdateIncidentRequest(
-                    status = com.cogoport.hades.model.incident.enums.IncidentStatus.APPROVED,
-                    data = null,
-                    remark = request.remark,
-                    updatedBy = request.createdBy!!
-                ),
-                id = request.incidentId!!
-            )
-
-            // return response
-            response
-        } else {
-            runSettlement(request, true, isAutoKnockOff)
-        }
+        return runSettlement(request, true, isAutoKnockOff)
     }
 
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
@@ -1840,10 +1819,7 @@ open class SettlementServiceImpl : SettlementService {
         supportingDocUrl: String?
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
-
-        val tdsType = if (fetchSettlingDocs(SettlementType.CTDSP).contains(destType) && invoiceAndBillData?.entityCode == 301) {
-            SettlementType.CTDSP
-        } else if (fetchSettlingDocs(SettlementType.CTDS).contains(destType)) {
+        val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
             SettlementType.CTDS
         } else {
             SettlementType.VTDS
@@ -1941,16 +1917,18 @@ open class SettlementServiceImpl : SettlementService {
         isAutoKnockOff: Boolean = false,
         isDelete: Boolean = false
     ) {
+        if (settlementServiceHelper.getJvList(AccountType::class.java).contains(accountUtilization.accType)) {
+            journalVoucherService.updateJournalVoucherStatus(
+                id = accountUtilization.documentNo,
+                documentValue = accountUtilization.documentValue,
+                isUtilized = true,
+                performedBy = performedBy,
+                performedByUserType = performedByUserType
+            )
+        }
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
-            AccountType.EXCH, AccountType.ROFF, AccountType.OUTST, AccountType.WOFF, AccountType.JVNOS, AccountType.ICJV ->
-                journalVoucherService.updateJournalVoucherStatus(
-                    id = accountUtilization.documentNo,
-                    isUtilized = true,
-                    performedBy = performedBy,
-                    performedByUserType = performedByUserType
-                )
             else -> {}
         }
     }
@@ -2152,7 +2130,7 @@ open class SettlementServiceImpl : SettlementService {
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
 
         if (jvList.contains(accType)) {
-            return jvSettleList
+            return jvSettleList + jvList
         }
 
         return when (accType) {
@@ -2181,9 +2159,6 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PCN, SettlementType.PAY)
             }
             SettlementType.CTDS -> {
-                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
-            }
-            SettlementType.CTDSP -> {
                 listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
             }
             SettlementType.VTDS -> {
@@ -2425,11 +2400,14 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = calculateTds(
-                    rate = rate,
-                    settledTds = doc.settledTds!!,
-                    taxableAmount = doc.taxableAmount
-                )
+                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                    true -> calculateTds(
+                        rate = rate,
+                        settledTds = doc.settledTds!!,
+                        taxableAmount = doc.taxableAmount
+                    )
+                    else -> BigDecimal.ZERO
+                }
             }
             doc.afterTdsAmount -= (doc.tds + doc.settledTds!!)
             doc.balanceAmount -= doc.tds
@@ -2679,20 +2657,18 @@ open class SettlementServiceImpl : SettlementService {
         tdsType: SettlementType?,
         invoiceAndBillData: AccountUtilization?
     ): Long? {
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
             AccMode.AR -> hashMapOf("signFlag" to -1, "accCode" to AresModelConstants.TDS_AR_ACCOUNT_CODE)
             else -> hashMapOf("signFlag" to 1, "accCode" to AresModelConstants.TDS_AP_ACCOUNT_CODE)
         }
 
         val paymentNum = when (invoiceAndBillData?.accMode) {
-            AccMode.AR -> when (invoiceAndBillData.entityCode == 301) {
-                true -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDSP.prefix)
-                else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
-            }
+            AccMode.AR -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CTDS.prefix)
             else -> sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
         }
 
-        val paymentNumValue = "$tdsType$paymentNum"
+        val paymentNumValue = "$tdsType${financialYearSuffix}$paymentNum"
         val serviceType = when (invoiceAndBillData?.serviceType.isNullOrEmpty()) {
             true -> ServiceType.NA
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
@@ -2723,7 +2699,7 @@ open class SettlementServiceImpl : SettlementService {
             orgSerialId = invoiceAndBillData?.orgSerialId,
             organizationName = invoiceAndBillData?.organizationName,
             zone = invoiceAndBillData?.zoneCode,
-            utr = paymentNumValue,
+            utr = "tds against $destType$destId",
             remarks = "tds against $destType$destId",
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
@@ -2771,6 +2747,9 @@ open class SettlementServiceImpl : SettlementService {
         accUtilEntity.documentValue = payment.paymentNumValue
         accUtilEntity.taxableAmount = BigDecimal.ZERO
         accUtilEntity.accCode = accCodeAndSignFlag["accCode"]!!
+        accUtilEntity.tdsAmount = BigDecimal.ZERO
+        accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
+        accUtilEntity.isVoid = false
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
         auditService.createAudit(

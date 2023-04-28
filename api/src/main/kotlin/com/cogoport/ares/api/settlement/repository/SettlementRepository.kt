@@ -182,7 +182,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                     AND s.destination_type::varchar = au.acc_type::varchar
             WHERE 
                 au.document_value ILIKE :query || '%'
-                AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
+                AND s.source_type NOT IN ('NOSTRO','SECH','PECH')
                 AND s.deleted_at is null and s.is_void = false
                 AND au.deleted_at is null and au.is_void = false
         """
