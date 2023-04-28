@@ -7,6 +7,7 @@ import io.micronaut.rabbitmq.exception.RabbitListenerException
 import io.micronaut.rabbitmq.exception.RabbitListenerExceptionHandler
 import io.sentry.Sentry
 import jakarta.inject.Singleton
+import org.json.JSONObject
 
 @Replaces(DefaultRabbitListenerExceptionHandler::class)
 @Singleton
@@ -33,6 +34,7 @@ class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
                 "routingKey" to envelope?.routingKey,
                 "redeliver" to envelope?.isRedeliver
             )
+            properties?.headers?.set("exception", exception.cause.toString())
             properties?.headers?.set("x-info", messageEnvelope)
             channel?.basicPublish("error-exchange", "${envelope?.exchange}.error", properties, data)
             handleNormal(exception)
@@ -41,10 +43,16 @@ class RabbitMQListenerExceptionHandler : RabbitListenerExceptionHandler {
     private fun handleNormal(exception: RabbitListenerException) {
         val messageState = exception.messageState
         if (messageState.isPresent) {
+            val data = String(messageState.get().body, Charsets.UTF_8)
             logger().error(
-                "Error processing a message for RabbitMQ consumer [" + exception.listener + "]",
+                "Error processing a message for RabbitMQ consumer [" + exception.listener + "] with binding key [${messageState.get().envelope.routingKey}] and message $data",
                 exception
             )
+            Sentry.configureScope {
+                it.setContexts("message", data)
+                it.setContexts("binding_key", messageState.get().envelope.routingKey)
+                it.setContexts("properties", JSONObject(messageState.get().properties).toString())
+            }
         } else {
             logger().error(
                 "RabbitMQ consumer [" + exception.listener + "] produced an error",

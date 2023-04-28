@@ -236,6 +236,13 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         }
     }
 
+    override suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String) {
+        val records = sageService.getNewPeriodRecord(startDate, endDate, bpr, accMode)
+        records.forEach {
+            aresMessagePublisher.emitNewPeriodRecords(it)
+        }
+    }
+
     override suspend fun migrateGlAccount(): Int {
         val glRecords = sageService.getGLCode()
         logger().info("Total number of gl account records to process: ${glRecords.size}")
