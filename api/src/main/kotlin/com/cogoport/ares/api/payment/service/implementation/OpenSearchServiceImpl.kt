@@ -15,6 +15,7 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
+import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -132,5 +133,20 @@ class OpenSearchServiceImpl : OpenSearchService {
             }.refresh(true)
             s
         }
+    }
+
+    override suspend fun fetchPaymentFromOpenSearch(id: Long): Payment {
+        val payment = Client.search(
+            { s ->
+                s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX)
+                    .query { q ->
+                        q.ids { i ->
+                            i.values(id.toString())
+                        }
+                    }
+            },
+            Payment::class.java
+        )?.hits()?.hits()?.get(0)?.source()
+        return payment ?: throw AresException(AresError.ERR_1002, "Could not find Payment for id $id on OpenSearch")
     }
 }

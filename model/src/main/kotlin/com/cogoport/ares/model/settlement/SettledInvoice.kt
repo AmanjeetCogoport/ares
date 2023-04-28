@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
 import java.util.Date
@@ -35,5 +36,6 @@ data class SettledInvoice(
     var signFlag: Short,
     var sid: String?,
     var nostroAmount: BigDecimal,
-    var accMode: AccMode
+    var accMode: AccMode,
+    var settlementStatus: SettlementStatus
 )

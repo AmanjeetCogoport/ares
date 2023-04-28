@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
 import com.cogoport.ares.model.common.TdsAmountReq
+import com.cogoport.ares.model.settlement.GlCodeMaster
 
 interface PaymentMigrationWrapper {
     suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int
@@ -19,6 +20,10 @@ interface PaymentMigrationWrapper {
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
     suspend fun migrateTdsAmount(req: List<TdsAmountReq>)
+
+    suspend fun migrateGlAccount(): Int
+
+    suspend fun createGLCode(request: GlCodeMaster)
 
     suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 }

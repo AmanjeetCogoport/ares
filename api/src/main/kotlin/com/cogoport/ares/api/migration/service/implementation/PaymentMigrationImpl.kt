@@ -63,6 +63,7 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
 import jakarta.inject.Inject
@@ -680,7 +681,8 @@ class PaymentMigrationImpl : PaymentMigration {
             createdAt = settlementRecord.createdAt,
             updatedBy = MigrationConstants.createdUpdatedBy,
             updatedAt = settlementRecord.updatedAt,
-            settlementNum = null
+            settlementNum = null,
+            settlementStatus = SettlementStatus.POSTED
         )
     }
     private fun getSignFlag(sourceType: String): Short {
