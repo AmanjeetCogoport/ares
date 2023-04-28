@@ -17,5 +17,9 @@ data class JvLineItemResponse(
     var amount: BigDecimal,
     var ledAmount: BigDecimal,
     var parentId: String,
-    var entityId: UUID?
+    var entityId: UUID?,
+    var currency: String?,
+    var ledCurrency: String?,
+    var description: String?,
+    var category: String?
 )
