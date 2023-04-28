@@ -1,25 +1,25 @@
-* @platform-engineering @bhanunadar @abhishekkumar65 @shikhartyagi1
+* @Cogoport/platform-engineering @bhanunadar @abhishekkumar65 @shikhartyagi1
 
 # API
-/api/db/ @platform-engineering @bhanunadar @aniljaiswal
-/api/build.gradle @platform-engineering @bhanunadar @aniljaiswal
-/api/docker-compose* @platform-engineering @bhanunadar @aniljaiswal
-/api/Dockerfile @platform-engineering @bhanunadar @aniljaiswal
-/api/micronaut-cli.yml @platform-engineering @bhanunadar @aniljaiswal
-/api/src/main/resources/application* @platform-engineering @bhanunadar @aniljaiswal
-/api/src/main/resources/logback.xml @platform-engineering @bhanunadar @aniljaiswal
+/api/db/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/docker-compose* @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/Dockerfile @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/micronaut-cli.yml @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/src/main/resources/application* @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/src/main/resources/logback.xml @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Client
-/client/build.gradle @platform-engineering @bhanunadar @aniljaiswal
+/client/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Model
-/model/build.gradle @platform-engineering @bhanunadar @aniljaiswal
+/model/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Root
-/buildSrc/ @platform-engineering @aniljaiswal
-/scripts/ @platform-engineering @bhanunadar @aniljaiswal
-/.github/ @platform-engineering @bhanunadar @aniljaiswal
-/Dockerfile @platform-engineering @bhanunadar @aniljaiswal
-/flyway.conf @platform-engineering @bhanunadar @aniljaiswal
-/gradle.properties @platform-engineering @bhanunadar @aniljaiswal
-/settings.gradle @platform-engineering @bhanunadar @aniljaiswal
+/buildSrc/ @Cogoport/platform-engineering @aniljaiswal
+/scripts/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/.github/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/Dockerfile @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/flyway.conf @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/gradle.properties @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/settings.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
