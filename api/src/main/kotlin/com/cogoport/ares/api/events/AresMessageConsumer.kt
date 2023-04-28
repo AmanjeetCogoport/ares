@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -165,5 +166,10 @@ class AresMessageConsumer {
     @Queue("ares-post-jv-to-sage", prefetch = 1)
     fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
         parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
+    }
+
+    @Queue("migrate-new-period", prefetch = 1)
+    fun migrateNewPeriodRecord(newPeriodRecord: NewPeriodRecord) = runBlocking {
+        paymentMigration.migrateNewPeriodRecords(newPeriodRecord)
     }
 }
