@@ -1479,7 +1479,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 if (payment?.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
                     throw AresException(AresError.ERR_1535, "")
                 }
-                if (isPaymentPresentOnSage(payment.paymentNumValue!!)) {
+                if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
                     throw AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")
                 }
 
