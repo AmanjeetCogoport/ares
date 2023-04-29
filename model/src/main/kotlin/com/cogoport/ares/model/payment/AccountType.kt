@@ -24,7 +24,6 @@ enum class AccountType(val dbValue: String) {
     SREIMB("SREIMB"),
     PREIMB("PREIMB"),
     ICJV("ICJV"),
-    EXP("EXP"),
     GENSM("GENSM"),
     ZSMEP("ZSMEP"),
     PAYMT("PAYMT"),
@@ -55,7 +54,6 @@ enum class AccountType(val dbValue: String) {
     CLOSE("CLOSE"),
     ZSMFR("ZSMFR"),
     SAINV("SAINV"),
-    ZSMEM("ZSMEM"),
     RPI("RPI"),
     EXPNS("EXPNS"),
     MFIIS("MFIIS"),
@@ -65,7 +63,18 @@ enum class AccountType(val dbValue: String) {
     ZSDN("ZSDN"),
     CSDIR("CSDIR"),
     STMNT("STMNT"),
-    FAAR2("FAAR2");
+    FAAR2("FAAR2"),
+    EXP("EXP"),
+    VTDS("VTDS"),
+    CTDS("CTDS"),
+    CSINV("CSINV"),
+    ZSINV("ZSINV"),
+    SPINV("SPINV"),
+    SPMEM("SPMEM"),
+    CSMEM("CSMEM"),
+    ZSMEM("ZSMEM"),
+    RECJV("RECJV"),
+    PAYJV("PAYJV");
 
     open operator fun contains(value: String?): Boolean {
         for (c in AccountType.values()) {

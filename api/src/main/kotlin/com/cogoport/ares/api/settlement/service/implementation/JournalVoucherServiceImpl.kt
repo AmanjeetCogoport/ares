@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.payment.AccMode
@@ -39,14 +40,17 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
 
-    override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?) {
-        journalVoucherRepository.updateIsUtilizedColumn(id, isUtilized, performedBy)
+    @Inject
+    lateinit var parentJvRepo: ParentJVRepository
+
+    override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?, documentValue: String?) {
+        val jvDetails = parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
-                objectId = id,
+                objectId = jvDetails.id,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to id, "status" to "UTILIZED"),
+                data = mapOf("id" to jvDetails.id, "status" to "UTILIZED"),
                 performedBy = performedBy.toString(),
                 performedByUserType = performedByUserType
             )
@@ -121,7 +125,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 type = lineItem.type,
                 parentId = parentJVId,
                 glCode = lineItem.glCode,
-                entityId = lineItem.entityId
+                entityId = lineItem.entityId,
+                currency = lineItem.currency,
+                ledCurrency = lineItem.ledCurrency,
+                description = lineItem.description,
+                category = lineItem.category
             )
             jvLineItems.add(jvLineItem)
         }

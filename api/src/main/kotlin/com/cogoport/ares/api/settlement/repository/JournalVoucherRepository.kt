@@ -99,21 +99,4 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             """
     )
     suspend fun deletingLineItemsWithParentJvId(parentJVId: Long)
-
-    @NewSpan
-    @Query(
-        """
-            UPDATE 
-                journal_vouchers 
-            SET 
-                is_utilized = :isUtilized, 
-                updated_by = :performedBy, 
-                updated_at = NOW() 
-            WHERE 
-                parent_jv_id = :id
-            AND 
-                deleted_at IS NULL
-        """
-    )
-    suspend fun updateIsUtilizedColumn(id: Long, isUtilized: Boolean, performedBy: UUID)
 }

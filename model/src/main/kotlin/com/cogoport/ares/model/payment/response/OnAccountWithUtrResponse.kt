@@ -8,8 +8,8 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @ReflectiveAccess
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class OnAccountWithUtrResponse(
-  var message: String?,
-  var paymentId: Long?,
-  var isSuccess: Boolean,
-  var transactionRefNo: String
+    var message: String?,
+    var paymentId: Long?,
+    var isSuccess: Boolean,
+    var transactionRefNo: String
 )
