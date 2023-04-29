@@ -9,8 +9,13 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.settlement.repository.AccountClassRepository
+import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
@@ -26,7 +31,15 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     lateinit var aresMessagePublisher: AresMessagePublisher
 
     @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
+
+    @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
+    @Inject
+    lateinit var glCodeMasterRepository: GlCodeMasterRepository
+
+    @Inject lateinit var accountClassRepo: AccountClassRepository
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -48,7 +61,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             }
             jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
         }
-        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+//        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
 //            aresMessagePublisher.emitJournalVoucherMigration(jvRecord)
@@ -215,7 +229,50 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     override suspend fun migrateTdsAmount(req: List<TdsAmountReq>) {
         req.forEach {
-            accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            val account = accountUtilizationRepository.findRecord(it.documentNo, null, AccMode.AP.name)
+            if (account != null) {
+                accountUtilizationRepo.updateTdsAmount(it.documentNo, it.tdsAmount, it.tdsAmountLoc)
+            }
         }
+    }
+
+    override suspend fun migrateGlAccount(): Int {
+        val glRecords = sageService.getGLCode()
+        logger().info("Total number of gl account records to process: ${glRecords.size}")
+        for (glRecord in glRecords) {
+            val glCode = GlCodeMaster(
+                accountCode = glRecord.accountCode,
+                description = glRecord.description,
+                ledAccount = glRecord.ledAccount,
+                accountType = glRecord.accountType,
+                classCode = glRecord.classCode,
+                createdBy = glRecord.createdBy,
+                updatedBy = glRecord.updatedBy,
+                createdAt = glRecord.createdAt,
+                updatedAt = glRecord.updatedAt,
+                accountClassId = null
+            )
+            aresMessagePublisher.emitGLCode(glCode)
+        }
+        return glRecords.size
+    }
+
+    override suspend fun createGLCode(request: GlCodeMaster) {
+        val classCodeDetails = accountClassRepo.getAccountClass(request.ledAccount, request.classCode)
+
+        val glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
+            id = null,
+            accountCode = request.accountCode,
+            description = request.description,
+            ledAccount = request.ledAccount,
+            accountType = request.accountType,
+            classCode = request.classCode,
+            accountClassId = classCodeDetails.id!!,
+            createdBy = request.createdBy,
+            updatedAt = request.updatedAt,
+            updatedBy = request.updatedBy,
+            createdAt = request.createdAt
+        )
+        glCodeMasterRepository.save(glAccount)
     }
 }

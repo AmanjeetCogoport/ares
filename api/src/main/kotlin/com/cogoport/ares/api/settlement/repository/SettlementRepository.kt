@@ -6,6 +6,7 @@ import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -47,7 +48,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.is_void,
             s.supporting_doc_url,
-            settlement_num
+            settlement_num,
+            s.settlement_status
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and is_void = false
         """
@@ -75,7 +77,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             s.updated_by,
             s.is_void,
             s.supporting_doc_url,
-            s.settlement_num
+            s.settlement_num,
+            s.settlement_status
             FROM settlements s
             where source_id = :sourceId and deleted_at is null and source_type::varchar in (:sourceType) and is_void = false
         """
@@ -106,7 +109,8 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 sum(COALESCE(s.amount, 0)) AS tds,
                 au.transaction_date,
                 au.amount_loc/au.amount_curr AS exchange_rate,
-                au.acc_mode
+                au.acc_mode,
+                s.settlement_status
             FROM settlements s
             JOIN account_utilizations au ON
                 s.destination_id = au.document_no
@@ -116,7 +120,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 AND s.source_type = :sourceType::SETTLEMENT_TYPE
                 AND s.deleted_at is null  and s.is_void = false
                 AND au.deleted_at is null  and au.is_void = false
-            GROUP BY au.id, s.source_id, s.destination_id, s.destination_type, s.currency, s.led_currency
+            GROUP BY au.id, s.source_id, s.destination_id, s.destination_type, s.currency, s.led_currency, s.settlement_status
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
         ),
         TAX AS (
@@ -132,7 +136,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             GROUP BY s.destination_id, s.currency, s.source_id, s.source_type
         )
         SELECT I.id, I.payment_document_no, I.destination_id, I.document_value, I.destination_type, I.organization_id,
-            I.acc_type, I.current_balance, I.currency, I.payment_currency, I.document_amount, I.settled_amount, 
+            I.acc_type, I.current_balance, I.currency, I.payment_currency, I.document_amount, I.settled_amount,I.settlement_status,
             I.led_currency, I.led_amount, I.sign_flag, I.taxable_amount, I.transaction_date, I.exchange_rate,
             T.tds_document_no, T.tds_type, COALESCE(T.tds,0) as tds, COALESCE(T.nostro_amount,0) as nostro_amount, 
             COALESCE(T.settled_tds,0) as settled_tds, T.currency AS tds_currency, I.acc_mode
@@ -178,7 +182,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                     AND s.destination_type::varchar = au.acc_type::varchar
             WHERE 
                 au.document_value ILIKE :query || '%'
-                AND s.source_type NOT IN ('CTDS','VTDS','NOSTRO','SECH','PECH')
+                AND s.source_type NOT IN ('NOSTRO','SECH','PECH')
                 AND s.deleted_at is null and s.is_void = false
                 AND au.deleted_at is null and au.is_void = false
         """
@@ -298,7 +302,6 @@ ORDER BY
         """
     )
     suspend fun getSettlementDateBySourceId(documentNo: Long?): SettlementNumInfo
-
     @NewSpan
     @Query(
         """
@@ -328,7 +331,7 @@ ORDER BY
     @Query(
         """
           SELECT id,source_id, source_type, destination_id,destination_type, currency, amount,settlement_num,
-          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_void
+          led_currency, led_amount, sign_flag, settlement_date, created_by, created_at, updated_by, updated_at, supporting_doc_url, is_void,settlement_status
           FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
           deleted_at is null and is_void = false and source_type not in ('VTDS') order by created_at desc limit 1
         """
@@ -372,7 +375,8 @@ ORDER BY
             s.updated_by,
             s.supporting_doc_url,
             is_void,
-            settlement_num
+            settlement_num,
+            settlement_status
             FROM settlements s
             where destination_id = :destId and deleted_at is null and destination_type::varchar = :destType and source_type::varchar = :sourceType
             and deleted_at IS NULL  and is_void = false
@@ -380,4 +384,17 @@ ORDER BY
         """
     )
     suspend fun findByDestIdAndDestTypeAndSourceType(destId: Long, destType: SettlementType, sourceType: SettlementType): List<Settlement?>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE 
+                settlements
+            SET 
+                settlement_status = :settlementStatus, updated_at = NOW(), updated_by = :performedBy
+            WHERE 
+                id = :id
+            """
+    )
+    suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
 }

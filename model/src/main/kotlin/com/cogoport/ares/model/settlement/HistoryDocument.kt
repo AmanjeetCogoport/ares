@@ -34,5 +34,6 @@ data class HistoryDocument(
     val lastEditedDate: Date,
     var status: String?,
     var accMode: AccMode,
-    var supportingDocUrl: String? = null
+    var supportingDocUrl: String? = null,
+    var notPostedSettlementIds: MutableList<Long>? = null
 )
