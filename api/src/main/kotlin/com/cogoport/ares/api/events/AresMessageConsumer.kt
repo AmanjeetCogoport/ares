@@ -6,15 +6,13 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
-import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
-import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
-import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
-import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.payment.service.interfaces.*
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
@@ -61,6 +59,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var parentJVService: ParentJVService
+
+    @Inject
+    lateinit var onAccountService: OnAccountService
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -166,4 +167,10 @@ class AresMessageConsumer {
     fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
         parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
     }
+
+    @Queue("ares-send-payment-details", prefetch = 1)
+    fun sendPaymentDetailsForOnAccount(req: Payment) = runBlocking {
+        onAccountService.createPaymentEntryAndReturnUtr(req)
+    }
+
 }

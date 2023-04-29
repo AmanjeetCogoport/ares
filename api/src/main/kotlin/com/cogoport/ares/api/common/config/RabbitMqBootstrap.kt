@@ -81,5 +81,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("ares-post-jv-to-sage", true, false, false, null)
         channel?.queueBind("ares-post-jv-to-sage", "ares", "ares.post.jv.to.sage", null)
+
+        channel?.queueDeclare("ares-send-payment-details", true, false, false, null)
+        channel?.queueBind("ares-send-payment-details", "ares", "ares.send.payment.details", null)
     }
 }

@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -69,15 +70,7 @@ import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
-import com.cogoport.ares.model.payment.response.AccountCollectionResponse
-import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.BulkPaymentResponse
-import com.cogoport.ares.model.payment.response.BulkUploadErrorResponse
-import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
-import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
-import com.cogoport.ares.model.payment.response.PaymentResponse
-import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
-import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.payment.response.*
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
@@ -121,7 +114,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.UUID
 import javax.transaction.Transactional
-import kotlin.math.abs
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
 
@@ -156,6 +148,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Inject
     lateinit var auditService: AuditService
@@ -225,7 +220,6 @@ open class OnAccountServiceImpl : OnAccountService {
             createSuspensePaymentEntry(receivableRequest)
         else
             createNonSuspensePaymentEntry(receivableRequest)
-
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
@@ -1488,5 +1482,27 @@ open class OnAccountServiceImpl : OnAccountService {
             ?.getJSONObject("status")
             ?.get("content")
         return status as Int?
+    }
+
+    override suspend fun createPaymentEntryAndReturnUtr(request: Payment) {
+        val response: OnAccountApiCommonResponse
+        try {
+            response = createPaymentEntry(request)
+            val onAccountWithUtrResponse = OnAccountWithUtrResponse(
+                paymentId = response.id,
+                message = response.message,
+                isSuccess = response.isSuccess,
+                transactionRefNo = request.utr!!
+            )
+            kuberMessagePublisher.updateAdvanceDocumentStatus(onAccountWithUtrResponse)
+        } catch (e: Exception) {
+            val onAccountWithUtrResponse = OnAccountWithUtrResponse(
+                paymentId = null,
+                message = null,
+                isSuccess = false,
+                transactionRefNo = request.utr!!
+            )
+            kuberMessagePublisher.updateAdvanceDocumentStatus(onAccountWithUtrResponse)
+        }
     }
 }
