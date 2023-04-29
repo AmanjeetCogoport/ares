@@ -172,4 +172,10 @@ class MigratePaymentsController {
             "request received to migrate new period"
         )
     }
+
+    @Get("/gl-account")
+    suspend fun migratePaymentNum(): Response<String> {
+        val size = paymentMigration.migrateGlAccount()
+        return Response<String>().ok(HttpStatus.OK.name, "Request for GL code migration received, total number of GL to migrate is $size")
+    }
 }

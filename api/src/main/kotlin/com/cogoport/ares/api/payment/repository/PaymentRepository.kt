@@ -96,4 +96,29 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun getPaymentDocumentStatusWiseIds(): List<PaymentDocumentStatusForPayments>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id
+        """
+    )
+    suspend fun updateSagePaymentNumValue(id: Long, sageRefNumber: String)
+
+    @NewSpan
+    @Query(
+        """
+          SELECT EXISTS( SELECT id FROM payments WHERE trans_ref_number = :transRefNumber AND acc_mode::varchar = :accMode 
+          and payment_code NOT IN ('CTDS', 'VTDS') AND deleted_at IS NULL)
+        """
+    )
+    suspend fun isARTransRefNumberExists(accMode: String, transRefNumber: String): Boolean
+
+    @NewSpan
+    @Query(
+        """
+          SELECT payment_document_status FROM payments where id = :paymentId
+        """
+    )
+    suspend fun getPaymentDocumentStatus(paymentId: Long): PaymentDocumentStatus
 }

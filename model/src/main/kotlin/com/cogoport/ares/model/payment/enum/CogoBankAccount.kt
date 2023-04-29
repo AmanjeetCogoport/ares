@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.payment.enum
 
-enum class CogoBankAccount(val cogoAccountNo: String) {
+enum class CogoBankAccount(val cogoAccountNo: String?) {
     RBLCP("609000842058"),
     RBLP("409001406475"),
     INDC("201015563832"),

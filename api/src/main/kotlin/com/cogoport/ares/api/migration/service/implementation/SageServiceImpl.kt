@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.migration.constants.MigrationConstants
+import com.cogoport.ares.api.migration.model.GlCodeRecordsManager
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
@@ -18,6 +19,7 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
@@ -557,5 +559,30 @@ class SageServiceImpl : SageService {
         val result = Client.sqlQuery(sqlQuery)
         val jvRecords = ObjectMapper().readValue(result, JVRecordsForSchedulerManager::class.java)
         return jvRecords.recordSets!![0]
+    }
+
+    override suspend fun getGLCode(): List<GlCodeMaster> {
+        val sqlQuery = """
+            SELECT 
+                ACC_0 AS account_code,
+                DES_0 AS description,
+                COA_0 AS led_account, 
+                CASE 
+                    WHEN ACCSHO_0 ='SC'
+                    THEN 'AP'
+                ELSE
+                    ACCSHO_0 
+                END AS account_type,
+                CLSCOD_0 AS class_code,
+                'c4f72139-e4b9-4cea-b590-32cea179f441' AS created_by,
+                'c4f72139-e4b9-4cea-b590-32cea179f441' AS updated_by,
+                CREDAT_0 AS created_at, 
+                UPDDAT_0 as updated_at
+            FROM 
+                COGO2.GACCOUNT
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val glCodeRecords = ObjectMapper().readValue(result, GlCodeRecordsManager::class.java)
+        return glCodeRecords.recordSets!![0]
     }
 }

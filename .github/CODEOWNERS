@@ -1,25 +1,25 @@
-* @bhanunadar @abhishekkumar65 @shikhartyagi1
+* @Cogoport/platform-engineering @bhanunadar @abhishekkumar65 @shikhartyagi1
 
 # API
-/api/db/ @bhanunadar @aniljaiswal
-/api/build.gradle @bhanunadar @aniljaiswal
-/api/docker-compose* @bhanunadar @aniljaiswal
-/api/Dockerfile @bhanunadar @aniljaiswal
-/api/micronaut-cli.yml @bhanunadar @aniljaiswal
-/api/src/main/resources/application* @bhanunadar @aniljaiswal
-/api/src/main/resources/logback.xml @bhanunadar @aniljaiswal
+/api/db/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/docker-compose* @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/Dockerfile @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/micronaut-cli.yml @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/src/main/resources/application* @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/api/src/main/resources/logback.xml @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Client
-/client/build.gradle @bhanunadar @aniljaiswal
+/client/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Model
-/model/build.gradle @bhanunadar @aniljaiswal
+/model/build.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal
 
 # Root
-/buildSrc/ @aniljaiswal
-/scripts/ @bhanunadar @aniljaiswal
-/.github/ @bhanunadar @aniljaiswal
-/Dockerfile @bhanunadar @aniljaiswal
-/flyway.conf @bhanunadar @aniljaiswal
-/gradle.properties @bhanunadar @aniljaiswal
-/settings.gradle @bhanunadar @aniljaiswal
+/buildSrc/ @Cogoport/platform-engineering @aniljaiswal
+/scripts/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/.github/ @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/Dockerfile @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/flyway.conf @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/gradle.properties @Cogoport/platform-engineering @bhanunadar @aniljaiswal
+/settings.gradle @Cogoport/platform-engineering @bhanunadar @aniljaiswal

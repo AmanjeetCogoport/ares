@@ -15,6 +15,7 @@ import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
+import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
@@ -31,6 +32,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.authentication.Auth
@@ -191,5 +193,10 @@ class SettlementController {
     @Post("/settle-tagged-invoice-payment")
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest) {
         return taggedSettlementService.settleOnAccountInvoicePayment(req)
+    }
+
+    @Post("/matching-on-sage")
+    suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): FailedSettlementIds {
+        return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementIds, postSettlementRequest.performedBy)
     }
 }
