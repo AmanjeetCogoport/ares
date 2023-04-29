@@ -5,7 +5,6 @@ import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
-import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
@@ -23,9 +22,6 @@ import jakarta.inject.Singleton
 class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
-
-    @Inject
-    lateinit var paymentMigration: PaymentMigration
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
@@ -241,6 +237,24 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         records.forEach {
             aresMessagePublisher.emitNewPeriodRecords(it)
         }
+    }
+
+    override suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?): Int {
+        var jvNumbersList = java.lang.StringBuilder()
+        var jvNumAsString: String? = null
+        if (jvNums != null) {
+            for (jvNum in jvNums) {
+                jvNumbersList.append("'")
+                jvNumbersList.append(jvNum)
+                jvNumbersList.append("',")
+            }
+            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+        }
+        val records = sageService.getJVDetailsForScheduler(startDate, endDate, jvNumAsString)
+        records.forEach {
+            aresMessagePublisher.emitJVUtilization(it)
+        }
+        return records.size
     }
 
     override suspend fun migrateGlAccount(): Int {

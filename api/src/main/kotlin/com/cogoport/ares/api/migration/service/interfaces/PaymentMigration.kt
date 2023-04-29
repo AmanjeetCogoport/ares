@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -18,4 +19,6 @@ interface PaymentMigration {
     suspend fun migrateSettlementNum(ids: Long)
 
     suspend fun migrateNewPeriodRecords(records: NewPeriodRecord)
+
+    suspend fun migrateJVUtilization(record: JVRecordsScheduler)
 }

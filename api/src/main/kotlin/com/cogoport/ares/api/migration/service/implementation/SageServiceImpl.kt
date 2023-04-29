@@ -7,6 +7,8 @@ import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVParentRecordManger
+import com.cogoport.ares.api.migration.model.JVRecordsForSchedulerManager
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JVRecordsWithoutBprManager
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.JournalVoucherRecordManager
@@ -521,6 +523,42 @@ class SageServiceImpl : SageService {
         val result = Client.sqlQuery(sqlQuery)
         val newPeriodRecords = ObjectMapper().readValue(result, NewPeriodRecordManager::class.java)
         return newPeriodRecords.recordSets!![0]
+    }
+
+    override suspend fun getJVDetailsForScheduler(startDate: String?, endDate: String?, jvNum: String?): List<JVRecordsScheduler> {
+        var sqlQuery = """
+            SELECT G.FCY_0 as entity_code 
+            ,G.BPR_0 as sage_organization_id 
+            ,G.NUM_0 as payment_num
+            ,GD.ACC_0 as acc_code
+            ,case when G.SAC_0='SC' then 'AP' else G.SAC_0 end as acc_mode
+            ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
+            ,G.AMTCUR_0 as account_util_amt_curr    
+            ,G.AMTLOC_0 as account_util_amt_led
+            ,G.PAYCUR_0 as account_util_pay_curr
+            ,G.PAYLOC_0 as account_util_pay_led
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
+            ,G.TYP_0 as account_type
+            ,GD.ROWID as sage_unique_id
+            from  COGO2.GACCENTRY GC 
+            INNER JOIN
+            (
+            select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0, AMTCUR_0 as AMTCUR_0, AMTLOC_0 as AMTLOC_0, PAYCUR_0 as PAYCUR_0, PAYLOC_0 as PAYLOC_0
+            ,SNS_0 as sign_flag, LIG_0, UPDDATTIM_0
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+            ) G 
+            on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
+            INNER JOIN COGO2.GACCENTRYD GD on (GD.NUM_0 = GC.NUM_0 and GD.TYP_0 = G.TYP_0 and GD.SAC_0 = G.SAC_0 and GD.AMTCUR_0 = G.AMTCUR_0 and GD.BPR_0 = G.BPR_0)
+            where G.SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV') and G.LIG_0 = GD.LIN_0
+        """.trimIndent()
+        sqlQuery += if (jvNum.isNullOrEmpty()) {
+            """ and G.UPDDATTIM_0 between '$startDate' and '$endDate'"""
+        } else {
+            """ and G.NUM_0 in ($jvNum)"""
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val jvRecords = ObjectMapper().readValue(result, JVRecordsForSchedulerManager::class.java)
+        return jvRecords.recordSets!![0]
     }
 
     override suspend fun getGLCode(): List<GlCodeMaster> {
