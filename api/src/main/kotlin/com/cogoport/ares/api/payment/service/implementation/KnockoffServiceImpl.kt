@@ -351,7 +351,7 @@ open class KnockoffServiceImpl : KnockoffService {
     }
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
-        val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
+        val accountUtilization = accountUtilizationRepository.findRecord(documentNo = reverseUtrRequest.documentNo, accMode = AccMode.AP.name)
         val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
         var tdsPaid = 0.toBigDecimal()
         var ledTdsPaid = 0.toBigDecimal()
