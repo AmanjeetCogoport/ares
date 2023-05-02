@@ -28,7 +28,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import javax.validation.Valid
 
-@Client(value = "\${cogoport.api_url}")
+@Client(id = "bf-rails")
 @Headers(
     Header(name = HttpHeaders.AUTHORIZATION, value = "Bearer: \${cogoport.bearer_token}"),
     Header(name = HttpHeaders.ACCEPT, value = "application/json"),
