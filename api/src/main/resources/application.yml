@@ -39,7 +39,11 @@ r2dbc:
       dialect: POSTGRES
 
 services:
-  service: https://api.stage.cogoport.io
+  service:
+    - id: bf-rails
+      url: https://api-spark2.dev.cogoport.io
+      enabledLocally: true
+  staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
@@ -67,6 +71,8 @@ cogoport:
     url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://api.cogoport.com/athena`}
     version: v1
     auth_token: ${EXCHANGE_API_AUTH_TOKEN:`a4f2243a-402e-4f24-825a-2747f66421c7`}
+  internal_url: ${INTERNAL_URL:https://api-mustangs5.dev.cogoport.io}
+
 
 sage:
   soapUrl: http://13.126.196.22:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
@@ -90,3 +96,7 @@ aws:
 rabbitmq:
   uri: amqp://guest@localhost:5672
   consumer-executor: rabbit
+
+port_mapping:
+  auth: ${AUTH_PORT:8088}
+  common: ${COMMON_PORT:8089}
