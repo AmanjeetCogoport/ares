@@ -104,7 +104,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
         return listOf<ServiceInstance>(ServiceInstance.of(serviceId, URI(services.staging!!)))
     }
 
-
     private fun buildRequest(serviceName: String?): DiscoverInstancesRequest {
         return DiscoverInstancesRequest.builder().namespaceName(services.namespace).serviceName(serviceName).build()
     }
@@ -135,7 +134,6 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
         }
         return serviceIds
     }
-
 
     private fun getServiceForStaging(serviceId: String?): List<ServiceInstance>? {
         val serviceMap = services.service!!.firstOrNull { it?.id == serviceId && it?.enabledLocally!! }

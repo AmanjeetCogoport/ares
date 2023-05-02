@@ -71,7 +71,7 @@ cogoport:
     url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://api.cogoport.com/athena`}
     version: v1
     auth_token: ${EXCHANGE_API_AUTH_TOKEN:`a4f2243a-402e-4f24-825a-2747f66421c7`}
-  internal_url: ${INTERNAL_URL:https://api-mustangs5.dev.cogoport.io}
+  internal_url: ${INTERNAL_URL:`https://api-mustangs5.dev.cogoport.io`}
 
 
 sage:
