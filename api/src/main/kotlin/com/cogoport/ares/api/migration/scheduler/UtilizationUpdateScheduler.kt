@@ -60,7 +60,7 @@ class UtilizationUpdateScheduler {
         records.forEach {
             aresMessagePublisher.emitPaymentMigration(it)
         }
-        val jvRecords = sageService.getJVDetails(startDate, endDate, null)
+        val jvRecords = sageService.getJVDetails(startDate, endDate, null, null)
         jvRecords.forEach {
             aresMessagePublisher.emitJournalVoucherMigration(it)
         }

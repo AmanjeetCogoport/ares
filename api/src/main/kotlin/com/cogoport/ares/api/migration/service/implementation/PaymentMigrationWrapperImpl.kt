@@ -47,17 +47,11 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     }
 
     override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?, jvNums: List<String>?): Int {
-        var jvNumbersList = java.lang.StringBuilder()
         var jvNumAsString: String? = null
         if (jvNums != null) {
-            for (jvNum in jvNums) {
-                jvNumbersList.append("'")
-                jvNumbersList.append(jvNum)
-                jvNumbersList.append("',")
-            }
-            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+            jvNumAsString = getFormattedJVNums(jvNums)
         }
-        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString, null)
 //        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
@@ -175,19 +169,18 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun migrateJournalVoucherRecordNew(
         startDate: String?,
         endDate: String?,
-        jvNums: List<String>?
+        jvNums: List<String>?,
+        sageJvId: List<String>?
     ): Int {
-        var jvNumbersList = java.lang.StringBuilder()
         var jvNumAsString: String? = null
+        var jvIdAsString: String? = null
         if (jvNums != null) {
-            for (jvNum in jvNums) {
-                jvNumbersList.append("'")
-                jvNumbersList.append(jvNum)
-                jvNumbersList.append("',")
-            }
-            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+            jvNumAsString = getFormattedJVNums(jvNums)
         }
-        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString)
+        if(sageJvId != null) {
+            jvIdAsString = getFormattedJVNums(sageJvId)
+        }
+        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)
         jvParentRecords.forEach {
             aresMessagePublisher.emitJournalVoucherMigration(it)
         }
@@ -295,5 +288,16 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             createdAt = request.createdAt
         )
         glCodeMasterRepository.save(glAccount)
+    }
+
+    private fun getFormattedJVNums(documentValue: List<String>): String {
+
+        var formattedData = java.lang.StringBuilder()
+        for (jvNum in documentValue) {
+            formattedData.append("'")
+            formattedData.append(jvNum)
+            formattedData.append("',")
+        }
+        return formattedData.substring(0, formattedData.length - 1).toString()
     }
 }
