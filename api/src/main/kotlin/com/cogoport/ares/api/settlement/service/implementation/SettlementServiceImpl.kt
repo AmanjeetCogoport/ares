@@ -2675,6 +2675,8 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
+        val transactionDate = Timestamp.valueOf(invoiceAndBillData?.transactionDate?.toString())
+
         val paymentsRequest = Payment(
             id = null,
             entityType = invoiceAndBillData?.entityCode,
@@ -2705,7 +2707,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS"
+            docType = "TDS",
+            transactionDate = transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
