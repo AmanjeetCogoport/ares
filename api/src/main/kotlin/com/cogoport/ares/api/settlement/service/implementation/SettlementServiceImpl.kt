@@ -2567,7 +2567,7 @@ open class SettlementServiceImpl : SettlementService {
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
-                    logger().info("$result")
+                    logger().info("settlementResponse: $result")
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
