@@ -270,7 +270,8 @@ open class KnockoffServiceImpl : KnockoffService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId,
-            migrated = false
+            migrated = false,
+            isSettlement = true
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
 

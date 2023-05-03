@@ -178,7 +178,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 accMode = invoiceUtilization.accMode,
                 transactionDate = request.transactionDate,
                 dueDate = request.transactionDate,
-                migrated = false
+                migrated = false,
+                isSettlement = true
             )
 
         val isTdsApplied =
@@ -326,8 +327,9 @@ class CpSettlementServiceImpl : CpSettlementService {
         )
 
         val accUtilObj = accountUtilizationRepository.save(accountUtilization)
-
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+        if (accUtilObj.accMode == AccMode.AR) {
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+        }
 
         auditService.createAudit(
             AuditRequest(

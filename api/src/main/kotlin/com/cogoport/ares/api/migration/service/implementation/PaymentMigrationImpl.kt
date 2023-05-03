@@ -441,7 +441,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = paymentEntity.tradePartyMappingId,
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
             taxableAmount = BigDecimal.ZERO,
-            migrated = true
+            migrated = true,
+            isSettlement = true
         )
     }
 
@@ -493,7 +494,8 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            taggedBillId = null
+            taggedBillId = null,
+            isSettlement = true
         )
     }
 

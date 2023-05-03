@@ -2750,6 +2750,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
         accUtilEntity.isVoid = false
+        accUtilEntity.isSettlement = true
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
         auditService.createAudit(
@@ -2768,6 +2769,9 @@ open class SettlementServiceImpl : SettlementService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())

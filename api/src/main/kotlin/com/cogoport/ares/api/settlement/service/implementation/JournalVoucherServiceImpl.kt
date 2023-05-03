@@ -88,11 +88,14 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             accCode = AresModelConstants.AR_ACCOUNT_CODE,
-            migrated = false
+            migrated = false,
+            isSettlement = true
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        if (accUtilObj.accMode == AccMode.AR) {
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        }
 
         auditService.createAudit(
             AuditRequest(

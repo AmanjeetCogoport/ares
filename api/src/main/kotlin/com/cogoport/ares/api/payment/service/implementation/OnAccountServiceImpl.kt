@@ -420,6 +420,7 @@ open class OnAccountServiceImpl : OnAccountService {
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             updateAccountUtilizationEntity(receivableRequest, accountUtilizationEntity)
             accountUtilizationEntity.transactionDate = paymentEntity.transactionDate
+            accountUtilizationEntity.isSettlement = true
         }
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
@@ -440,8 +441,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
-
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
 
         auditService.createAudit(
             AuditRequest(
@@ -464,6 +463,10 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+            // EMITTING RABITMQ MESSAGE TO UPDATE CUSTOMER OUTSTANDING
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+            }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
