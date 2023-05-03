@@ -51,5 +51,6 @@ data class AccUtilizationRequest(
     var performedByType: String? = null,
     var migrated: Boolean?,
     var isVoid: Boolean? = false,
-    val tagBillIds: List<Long>? = null
+    val tagBillIds: List<Long>? = null,
+    var isSettlement: Boolean? = false
 )

@@ -295,6 +295,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.taxableAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
+        accUtilEntity.isSettlement = true
 
         accUtilEntity.accCode = when (receivableRequest.docType == "TDS") {
             true -> {
@@ -320,8 +321,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
-
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -338,6 +337,9 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())

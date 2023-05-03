@@ -11,6 +11,7 @@ interface AccUtilizationToPaymentMapper {
 
     @Mapping(source = "amount", target = "currencyAmount")
     @Mapping(target = "isVoid", expression = "java(false)")
+    @Mapping(target = "isSettlement", expression = "java(false)")
     fun convertEntityToModel(
         accUtilization: com.cogoport.ares.api.payment.entity.Payment
     ): AccUtilizationRequest

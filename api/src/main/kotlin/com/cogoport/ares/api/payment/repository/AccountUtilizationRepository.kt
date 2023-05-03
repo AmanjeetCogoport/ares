@@ -52,7 +52,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc, is_settlement
             from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_void = false"""
     )
@@ -62,7 +62,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
            ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_bill_id, is_void, tds_amount, tds_amount_loc
+           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_bill_id, is_void, tds_amount, tds_amount_loc, is_settlement
             from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
             and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
     )
@@ -930,10 +930,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 is_void,
                 tagged_bill_id,
                 migrated,
-                 tds_amount, tds_amount_loc
+                tds_amount,
+                tds_amount_loc,
+                is_settlement
                 FROM account_utilizations
                 WHERE document_value = :documentValue
-                AND   acc_type = :accType::account_type
+                AND acc_type = :accType::account_type
                 AND deleted_at is null and is_void = false
             """
     )
@@ -974,8 +976,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 tagged_organization_id,
                 is_void,
                 tagged_bill_id,
-                tds_amount, tds_amount_loc
-                migrated
+                tds_amount,
+                tds_amount_loc,
+                migrated,
+                is_settlement
                 FROM account_utilizations
                 WHERE document_no = :documentNo
                 AND   acc_type = :accType::account_type
@@ -1144,13 +1148,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
            au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
            au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
            au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at, au.is_void, au.tagged_bill_id, au. tds_amount, au.tds_amount_loc
+           au.migrated,au.created_at, au.is_void, au.tagged_bill_id, au.tds_amount, au.tds_amount_loc, au.is_settlement
            FROM 
            payments p
            JOIN payment_invoice_mapping pim ON 
            pim.payment_id = p.id AND pim.document_no = :documentNo
            JOIN account_utilizations au ON 
-           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP'  and is_void = false
+           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP' and is_void = false
            ORDER by au.created_at desc
         """
     )
