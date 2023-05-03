@@ -2552,7 +2552,7 @@ open class SettlementServiceImpl : SettlementService {
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                        throw AresException(AresError.ERR_1527, "")
+                        throw AresException(AresError.ERR_1531, "")
                     }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
@@ -2567,6 +2567,7 @@ open class SettlementServiceImpl : SettlementService {
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+                    logger().info("$result")
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
