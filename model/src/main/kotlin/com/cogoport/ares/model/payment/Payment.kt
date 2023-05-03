@@ -88,12 +88,6 @@ data class Payment(
     @JsonProperty("transactionDate")
     var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
 
-    @JsonProperty("isPosted")
-    var isPosted: Boolean? = false,
-
-    @JsonProperty("isDeleted")
-    var isDeleted: Boolean? = false,
-
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
 

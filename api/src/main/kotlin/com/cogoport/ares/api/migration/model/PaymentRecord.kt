@@ -106,12 +106,6 @@ data class PaymentRecord(
     @JsonProperty("trans_ref_number")
     val transRefNumber: String? = null,
 
-    @JsonProperty("is_posted")
-    val isPosted: Boolean = true,
-
-    @JsonProperty("is_deleted")
-    val isDeleted: Boolean = false,
-
     @JsonProperty("bank_id")
     val bankId: UUID? = null,
 

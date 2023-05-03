@@ -31,7 +31,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
     @NewSpan
     @Query(
         """
-            select coalesce(count(*), 0) from payment_invoice_mapping where payment_id=:paymentId
+            select coalesce(count(*), 0) from payment_invoice_mapping where payment_id=:paymentId 
         """
     )
     suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
