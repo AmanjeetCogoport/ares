@@ -25,7 +25,7 @@ class SageServiceImpl : SageService {
         }
 
         // Check if REC, PAY exists and it is posted in sage
-        if (arrayListOf(AccountType.REC, AccountType.PAY, AccountType.CTDS, AccountType.VTDS).contains(documentType)) {
+        if (arrayListOf(AccountType.REC, AccountType.PAY, AccountType.VTDS, AccountType.CTDS).contains(documentType)) {
             return isPaymentPostedFromSage(documentValue)
         }
 

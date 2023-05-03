@@ -98,4 +98,20 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     """
     )
     fun checkIfNewRecordIsPresent(documentValue: String, sageOrganizationId: String): Boolean
+
+    @Query(
+        """
+            update account_utilizations 
+            set 
+            pay_curr = :payCurr
+            ,pay_loc = :payLoc
+            ,updated_at = now()
+            where id = :id
+        """
+    )
+    fun updateJVUtilizationAmount(
+        id: Long,
+        payCurr: BigDecimal,
+        payLoc: BigDecimal
+    )
 }
