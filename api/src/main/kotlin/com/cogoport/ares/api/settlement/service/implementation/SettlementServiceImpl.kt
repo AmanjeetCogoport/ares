@@ -2536,7 +2536,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
@@ -2678,6 +2678,8 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
+        val transactionDate = Timestamp.valueOf(invoiceAndBillData?.transactionDate?.toString())
+
         val paymentsRequest = Payment(
             id = null,
             entityType = invoiceAndBillData?.entityCode,
@@ -2708,7 +2710,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS"
+            docType = "TDS",
+            transactionDate = transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
