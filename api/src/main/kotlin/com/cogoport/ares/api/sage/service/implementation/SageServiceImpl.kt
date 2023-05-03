@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.sage.service.implementation
 
 import com.cogoport.ares.api.sage.service.interfaces.SageService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -24,7 +25,7 @@ class SageServiceImpl : SageService {
         }
 
         // Check if REC, PAY exists and it is posted in sage
-        if (arrayListOf(AccountType.REC, AccountType.PAY).contains(documentType)) {
+        if (arrayListOf(AccountType.REC, AccountType.PAY, AccountType.CTDS, AccountType.VTDS).contains(documentType)) {
             return isPaymentPostedFromSage(documentValue)
         }
 
@@ -41,6 +42,7 @@ class SageServiceImpl : SageService {
             	            AND BP.XX1P4PANNO_0 = '$registrationNumber'
         """.trimIndent()
         val resultFromQuery = Client.sqlQuery(query)
+        logger().info("billData: $resultFromQuery")
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery).get("recordset") as ArrayList<*>
         if (records.size != 0) {
             val recordMap = records.toArray()[0] as HashMap<String, String>
@@ -52,6 +54,7 @@ class SageServiceImpl : SageService {
     private fun isInvoiceDataPostedFromSage(key: String, sageDatabase: String?, invoiceNumber: String?): String? {
         val query = "Select $key from $sageDatabase where $key='$invoiceNumber' and STA_0 = 3"
         val resultFromQuery = Client.sqlQuery(query)
+        logger().info("invoiceData: $resultFromQuery")
         val records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
         if (records.size != 0) {
@@ -65,6 +68,7 @@ class SageServiceImpl : SageService {
 
         val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
         val resultFromQuery = Client.sqlQuery(query)
+        logger().info("paymentData: $resultFromQuery")
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
         if (records.size != 0) {
@@ -77,6 +81,7 @@ class SageServiceImpl : SageService {
     private fun isJvPostedOnSage(jvNumber: String): String? {
         val query = "SELECT NUM_0 FROM $sageDatabase.GACCENTRY WHERE NUM_0 = '$jvNumber'"
         val resultFromQuery = Client.sqlQuery(query)
+        logger().info("jvData: $resultFromQuery")
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
             .get("recordset") as ArrayList<String>
         if (records.size != 0) {
