@@ -752,7 +752,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
         receivableRequest.organizationName = clientResponse.organizationTradePartyName
-        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase() ?: "EAST"
         receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
