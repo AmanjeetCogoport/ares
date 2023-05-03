@@ -177,7 +177,7 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
         if (jvNums != null) {
             jvNumAsString = getFormattedJVNums(jvNums)
         }
-        if(sageJvId != null) {
+        if (sageJvId != null) {
             jvIdAsString = getFormattedJVNums(sageJvId)
         }
         val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)

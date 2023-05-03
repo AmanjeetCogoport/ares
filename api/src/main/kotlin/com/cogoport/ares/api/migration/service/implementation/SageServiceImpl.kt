@@ -348,7 +348,7 @@ class SageServiceImpl : SageService {
             select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, CURLED_0 as ledger_currency
             ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
         """.trimIndent()
-        sqlQuery += if(sageJvId != null) {
+        sqlQuery += if (sageJvId != null) {
             """ and ROWID = $sageJvId"""
         } else if (startDate != null && endDate != null) {
             """ and CREDAT_0 between '$startDate' and '$endDate'"""

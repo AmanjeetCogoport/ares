@@ -15,7 +15,7 @@ interface PaymentMigrationWrapper {
     suspend fun updateUtilizationAmountByPaymentNum(paymentNums: List<String>): Int
     suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?, updatedAt: String?, invoiceNumbers: List<String>?): Int
     suspend fun updateUtilizationForBill(startDate: String?, endDate: String?, updatedAt: String?): Int
-    suspend fun migrateJournalVoucherRecordNew(startDate: String?, endDate: String?, jvNums: List<String>?,sageJvId: List<String>?): Int
+    suspend fun migrateJournalVoucherRecordNew(startDate: String?, endDate: String?, jvNums: List<String>?, sageJvId: List<String>?): Int
 
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
