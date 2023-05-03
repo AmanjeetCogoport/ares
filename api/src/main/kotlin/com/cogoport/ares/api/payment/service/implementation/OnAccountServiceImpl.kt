@@ -885,7 +885,8 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         val serialClientResponse = authClient.getSerialIdDetails(
             SerialIdDetailsRequest(
-                organizationTradePartyMappings = orgTradeSerialIdMap
+                organizationTradePartyMappings = orgTradeSerialIdMap,
+                cogoEntityId = null
             )
         )
 

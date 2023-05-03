@@ -206,7 +206,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             payCurr = paymentRecord.accountUtilPayCurr,
             payLoc = paymentRecord.accountUtilPayLed,
             accMode = paymentRecord.accMode,
-            recordType = recordType
+            recordType = recordType,
+            entityCode = paymentRecord.entityCode
         )
     }
     private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails, recordType: MigrationRecordType): PayLocUpdateRequest {
@@ -217,7 +218,8 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             payCurr = invoiceDetails.currencyAmountPaid,
             payLoc = invoiceDetails.ledgerAmountPaid,
             accMode = invoiceDetails.accMode,
-            recordType = recordType
+            recordType = recordType,
+            entityCode = invoiceDetails.entityCodeNum?.toInt()
         )
     }
 
