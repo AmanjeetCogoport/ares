@@ -2544,6 +2544,9 @@ open class SettlementServiceImpl : SettlementService {
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    if (settlement.settlementStatus == SettlementStatus.POSTED) {
+                        return@forEach
+                    }
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
