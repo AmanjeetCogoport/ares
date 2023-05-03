@@ -113,4 +113,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun isARTransRefNumberExists(accMode: String, transRefNumber: String): Boolean
+
+    @NewSpan
+    @Query(
+        """
+          SELECT payment_document_status FROM payments where id = :paymentId
+        """
+    )
+    suspend fun getPaymentDocumentStatus(paymentId: Long): PaymentDocumentStatus
 }
