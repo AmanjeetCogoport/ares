@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -53,6 +55,9 @@ class AresMessageConsumer {
     lateinit var paymentMigration: PaymentMigration
 
     @Inject
+    lateinit var onAccountService: OnAccountService
+
+    @Inject
     lateinit var accountUtilService: AccountUtilizationService
 
     @Inject
@@ -63,9 +68,6 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var parentJVService: ParentJVService
-
-    @Inject
-    lateinit var onAccountService: OnAccountService
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -170,6 +172,16 @@ class AresMessageConsumer {
     @Queue("ares-post-jv-to-sage", prefetch = 1)
     fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
         parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
+    }
+
+    @Queue("migrate-new-period", prefetch = 1)
+    fun migrateNewPeriodRecord(newPeriodRecord: NewPeriodRecord) = runBlocking {
+        paymentMigration.migrateNewPeriodRecords(newPeriodRecord)
+    }
+
+    @Queue("migrate-jv-pay-loc", prefetch = 1)
+    fun migrateJVPayLoc(record: JVRecordsScheduler) = runBlocking {
+        paymentMigration.migrateJVUtilization(record)
     }
 
     @Queue("ares-send-payment-details", prefetch = 1)
