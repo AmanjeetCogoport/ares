@@ -11,7 +11,7 @@ import com.cogoport.ares.model.settlement.GlCodeMaster
 
 interface SageService {
     suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord>
-    suspend fun getJournalVoucherFromSageCorrected(startDate: String?, endDate: String?, jvNums: String?): ArrayList<JournalVoucherRecord>
+    suspend fun getJournalVoucherFromSageCorrected(startDate: String?, endDate: String?, jvNums: String?, jvType: String?): ArrayList<JournalVoucherRecord>
 
     suspend fun migratePaymentsByDate(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<PaymentRecord>
     suspend fun migratePaymentByPaymentNum(paymentNums: String): ArrayList<PaymentRecord>
@@ -21,7 +21,7 @@ interface SageService {
 
     suspend fun getBillPayLocDetails(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<InvoiceDetails>
 
-    suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails>
+    suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?, sageJvId: String?): List<JVParentDetails>
 
     suspend fun getJournalVoucherFromSage(startDate: String?, endDate: String?, jvNums: String?): ArrayList<JournalVoucherRecord>
 
