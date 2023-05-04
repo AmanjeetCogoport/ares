@@ -67,6 +67,7 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.kuber.client.KuberClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -108,6 +109,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject lateinit var journalVoucherRepoMigration: JournalVoucherRepoMigration
+
+    @Inject lateinit var kuberClient: KuberClient
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -711,6 +714,11 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
                 if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
             }
+
+            if (payLocUpdateRequest.recordType == MigrationRecordType.PAYMENT) {
+                payLocUpdateRequest.documentValue = paymentMigrationRepository.getPaymentNumValueFromSageRefNumber(payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!)
+            }
+
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
                 payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return

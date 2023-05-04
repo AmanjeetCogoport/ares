@@ -119,4 +119,9 @@ class OnAccountController {
     suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         return onAccountService.cancelPaymentFromSage(paymentIds, performedBy)
     }
+
+    @Get("/post-payment-info")
+    suspend fun getPostPaymentSageInfo(paymentNumValue: String?, accountMode: String?): SageFailedResponse {
+        return onAccountService.getPostPaymentSageInfo(paymentNumValue, accountMode)
+    }
 }

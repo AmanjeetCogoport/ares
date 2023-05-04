@@ -15,6 +15,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
+import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.PaymentFile
@@ -179,6 +180,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var sageServiceImpl: SageServiceImpl
+
+    @Inject lateinit var sageService: SageService
 
     @Inject
     lateinit var openSearchService: OpenSearchService
@@ -1562,5 +1565,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 isSuccess
             )
         )
+    }
+
+    override suspend fun getPostPaymentSageInfo(paymentNumValue: String?, accountMode: String?, entityCode: Long?): SageFailedResponse {
+        val paymentDetailsInfo = sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accountMode)
     }
 }
