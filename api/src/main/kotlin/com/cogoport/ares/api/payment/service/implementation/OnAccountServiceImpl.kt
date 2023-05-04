@@ -536,6 +536,7 @@ open class OnAccountServiceImpl : OnAccountService {
             throw AresException(AresError.ERR_1007, "")
 
         payment.deletedAt = Timestamp.from(Instant.now())
+        payment.paymentDocumentStatus = PaymentDocumentStatus.DELETED
         /*MARK THE PAYMENT AS DELETED IN DATABASE*/
         val paymentResponse = paymentRepository.update(payment)
         auditService.createAudit(

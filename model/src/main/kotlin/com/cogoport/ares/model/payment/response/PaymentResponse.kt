@@ -87,5 +87,8 @@ data class PaymentResponse(
     var paymentNumValue: String? = "",
 
     @JsonProperty("createdAt")
-    var createdAt: Timestamp? = Timestamp.from(Instant.now())
+    var createdAt: Timestamp? = Timestamp.from(Instant.now()),
+
+    @JsonProperty("deletedAt")
+    var deletedAt: Timestamp? = Timestamp.from(Instant.now())
 )

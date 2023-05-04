@@ -145,7 +145,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             exchange_rate,
             payment_num,
             payment_num_value,
-            created_at
+            created_at,
+            deleted_at
             FROM 
             payments
             WHERE 
