@@ -2678,7 +2678,8 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
-        val transactionDate = Timestamp.valueOf(invoiceAndBillData?.transactionDate?.toString())
+        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
+        val transactionDate = Timestamp(dateFormat.parse(invoiceAndBillData?.transactionDate.toString()).time)
 
         val paymentsRequest = Payment(
             id = null,
