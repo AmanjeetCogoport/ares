@@ -821,7 +821,6 @@ class PaymentMigrationImpl : PaymentMigration {
                         migrated = true,
                         currency = jvParentDetail.currency,
                         led_currency = jvParentDetail.ledgerCurrency,
-                        amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum
