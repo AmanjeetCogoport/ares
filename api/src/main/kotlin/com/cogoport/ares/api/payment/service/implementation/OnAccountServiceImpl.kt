@@ -179,9 +179,6 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var sageServiceImpl: SageServiceImpl
 
-    @Inject
-    lateinit var openSearchService: OpenSearchService
-
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
@@ -195,7 +192,7 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
         val query = util.toQueryString(request.query)
-        val sortType = request.sortType ?: "createdAt"
+        val sortType = request.sortType ?: "transactionDate"
         val sortBy = request.sortBy ?: "Desc"
         val pageLimit = request.pageLimit
         val page = request.page
@@ -495,12 +492,15 @@ open class OnAccountServiceImpl : OnAccountService {
 
     private fun updatePaymentEntity(receivableRequest: Payment, paymentEntity: com.cogoport.ares.api.payment.entity.Payment) {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
-        val paymentDate = (receivableRequest.paymentDate ?: paymentEntity.transactionDate).toString()
-        val filterDateFromTs = Timestamp(dateFormat.parse(paymentDate).time)
+        val paymentDate = if (receivableRequest.paymentDate != null) {
+            dateFormat.parse(receivableRequest.paymentDate)
+        } else {
+            paymentEntity.transactionDate
+        }
         paymentEntity.entityCode = receivableRequest.entityType ?: paymentEntity.entityCode
         paymentEntity.bankName = receivableRequest.bankName ?: paymentEntity.bankName
         paymentEntity.payMode = receivableRequest.payMode ?: paymentEntity.payMode
-        paymentEntity.transactionDate = filterDateFromTs
+        paymentEntity.transactionDate = paymentDate
         paymentEntity.transRefNumber = receivableRequest.utr ?: paymentEntity.transRefNumber
         paymentEntity.amount = receivableRequest.amount ?: paymentEntity.amount
         paymentEntity.currency = receivableRequest.currency ?: paymentEntity.currency
@@ -1448,8 +1448,9 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun getPaymentGLCode(cogoAccountNo: String): HashMap<String, String> {
-        val bankCode = CogoBankAccount.values().find { it.cogoAccountNo == cogoAccountNo }?.name
-        val currency = PaymentSageGLCodes.valueOf(bankCode!!).currency
+        val bankCode = CogoBankAccount.values().find { it.cogoAccountNo == cogoAccountNo }?.name ?: throw AresException(AresError.ERR_1538, "")
+
+        val currency = PaymentSageGLCodes.valueOf(bankCode).currency
         val entityCode = PaymentSageGLCodes.valueOf(bankCode).entityCode
         return hashMapOf(
             "bankCode" to bankCode,
