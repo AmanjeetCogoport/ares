@@ -2536,7 +2536,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
@@ -2544,6 +2544,9 @@ open class SettlementServiceImpl : SettlementService {
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    if (settlement.settlementStatus == SettlementStatus.POSTED) {
+                        return@forEach
+                    }
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
@@ -2675,6 +2678,9 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
+        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
+        val transactionDate = Timestamp(dateFormat.parse(invoiceAndBillData?.transactionDate.toString()).time)
+
         val paymentsRequest = Payment(
             id = null,
             entityType = invoiceAndBillData?.entityCode,
@@ -2705,7 +2711,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS"
+            docType = "TDS",
+            transactionDate = transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
