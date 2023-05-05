@@ -196,10 +196,15 @@ open class OnAccountServiceImpl : OnAccountService {
         val pageLimit = request.pageLimit
         val page = request.page
 
-        val documentTypes = if (request.docType != null) {
-            if (request.docType == "TDS") { listOf(PaymentCode.CTDS.name, PaymentCode.VTDS.name) } else { listOf(PaymentCode.PAY.name, PaymentCode.REC.name) }
-        } else {
-            null
+        val documentTypes = when (request.docType != null) {
+            true -> {
+                when (request.docType) {
+                    "TDS" -> listOf(PaymentCode.CTDS.name, PaymentCode.VTDS.name)
+                    "RECEIPT" -> listOf(PaymentCode.REC.name)
+                    else -> listOf(PaymentCode.PAY.name)
+                }
+            }
+            else -> null
         }
 
         val paymentsData = paymentRepository.getOnAccountList(
