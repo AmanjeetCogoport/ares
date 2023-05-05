@@ -180,7 +180,7 @@ class MigratePaymentsController {
     }
 
     @Post("/remove-duplicates")
-    suspend fun removeDuplicatePayNums(@Body paymentIds: List<String>) {
-        paymentMigration.removeDuplicatePayNums(paymentIds)
+    suspend fun removeDuplicatePayNums(@Body paymentNums: List<Long>) {
+        paymentMigration.removeDuplicatePayNums(paymentNums)
     }
 }

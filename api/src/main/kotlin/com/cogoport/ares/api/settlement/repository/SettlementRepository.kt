@@ -13,8 +13,6 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
-import java.math.BigDecimal
-import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -399,19 +397,4 @@ ORDER BY
             """
     )
     suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
-
-    @NewSpan
-    @Query(
-        """
-            UPDATE 
-                settlements
-            SET 
-                source_id = :newSourceId
-            WHERE
-                source_id = :paymentNum
-                AND amount = :amount
-                AND settlement_date = :transactionDate::DATE
-        """
-    )
-    suspend fun updateSettlementForPayment(paymentNum: Long, amount: BigDecimal, transactionDate: Date, newSourceId: Long)
 }

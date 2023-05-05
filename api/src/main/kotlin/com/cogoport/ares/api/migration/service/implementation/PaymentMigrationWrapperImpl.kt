@@ -306,9 +306,9 @@ class PaymentMigrationWrapperImpl(
         glCodeMasterRepository.save(glAccount)
     }
 
-    override suspend fun removeDuplicatePayNums(paymentIds: List<String>) {
-        paymentIds.forEach { it ->
-            val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach
+    override suspend fun removeDuplicatePayNums(paymentNums: List<Long>) {
+        paymentNums.forEach { it ->
+            val payments = paymentRepository.findByPaymentNum(it) ?: return@forEach
             val groupedPayments = payments.groupBy { it.narration }
 
             groupedPayments.forEach {
@@ -340,13 +340,6 @@ class PaymentMigrationWrapperImpl(
             val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
             amount += tdsPayment?.amount!!
             val newPayNumAndValueForTds = sequenceGeneratorImpl.getPaymentNumAndValue(tdsPayment.paymentCode!!, newPayNumAndValue.second)
-            // source type
-//            settlementRepository.updateSettlementForPayment(
-//                tdsPayment.paymentNum!!,
-//                tdsPayment.amount,
-//                tdsPayment.transactionDate!!,
-//                newPayNumAndValueForTds.second
-//            )
             tdsPayment.paymentNum = newPayNumAndValueForTds.second
             tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
             paymentRepository.update(tdsPayment)
@@ -361,12 +354,6 @@ class PaymentMigrationWrapperImpl(
             newPayNumAndValue.first,
             newPayNumAndValue.second
         )
-//        settlementRepository.updateSettlementForPayment(
-//            payment.paymentNum!!,
-//            payment.amount,
-//            payment.transactionDate!!,
-//            newPayNumAndValue.second
-//        )
         payment.paymentNum = newPayNumAndValue.second
         payment.paymentNumValue = newPayNumAndValue.first
         paymentRepository.update(payment)
