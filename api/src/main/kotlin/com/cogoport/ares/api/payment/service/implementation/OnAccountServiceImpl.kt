@@ -879,14 +879,14 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentData.forEach {
             val input = SerialIdsInput(
                 organizationSerialId = it["organization_serial_id"].toString().toLong(),
-                tradePartyDetailSerialId = it["trade_party_serial_id"].toString().toLong()
+                tradePartyDetailSerialId = it["trade_party_serial_id"].toString().toLong(),
+                cogoEntityId = AresConstants.ENTITY_ID[it["entity_type"].toString().toInt()]
             )
             if (input !in orgTradeSerialIdMap) orgTradeSerialIdMap.add(input)
         }
         val serialClientResponse = authClient.getSerialIdDetails(
             SerialIdDetailsRequest(
-                organizationTradePartyMappings = orgTradeSerialIdMap,
-                cogoEntityId = null
+                organizationTradePartyMappings = orgTradeSerialIdMap
             )
         )
 

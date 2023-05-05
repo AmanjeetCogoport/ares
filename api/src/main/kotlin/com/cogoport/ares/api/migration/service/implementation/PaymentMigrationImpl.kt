@@ -363,11 +363,10 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
-            organizationTradePartyMappings = arrayListOf(serialIdInputs),
-            cogoEntityId = AresConstants.ENTITY_ID[receivableRequest.entityCode]
+            organizationTradePartyMappings = arrayListOf(serialIdInputs)
         )
         val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
 
@@ -458,11 +457,10 @@ class PaymentMigrationImpl : PaymentMigration {
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
         // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
-            organizationTradePartyMappings = arrayListOf(serialIdInputs),
-            cogoEntityId = AresConstants.ENTITY_ID[receivableRequest.entityCode]
+            organizationTradePartyMappings = arrayListOf(serialIdInputs)
         )
         val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
 
@@ -527,10 +525,9 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong()) } }
+        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong(), AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]) } }
         val serialIdRequest = SerialIdDetailsRequest(
-            organizationTradePartyMappings = arrayListOf(serialIdInputs!!),
-            cogoEntityId = AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]
+            organizationTradePartyMappings = arrayListOf(serialIdInputs!!)
         )
         val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)
         return JournalVoucherRequest(
