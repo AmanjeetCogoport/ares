@@ -774,7 +774,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 document_no = :newDocNo
             WHERE
                 document_value = :docValue
-                AND pay_curr = :amount
+                AND amount_curr = :amount
                 AND transaction_date = :transactionDate::DATE
                 AND organization_id = :organizationId
                 AND tagged_organization_id = :taggedOrganizationId

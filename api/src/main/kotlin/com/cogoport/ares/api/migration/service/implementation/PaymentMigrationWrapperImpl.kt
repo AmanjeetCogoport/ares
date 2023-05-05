@@ -327,7 +327,6 @@ class PaymentMigrationWrapperImpl(
     private suspend fun updatePaymentValue(payments: List<Payment>) {
         val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
         val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
-//        val payNumValCheck = listOf(newPayNumAndValueForTds.first, tdsPayment.paymentNumValue)
         if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0) {
             updatePaymentNumAndValue(payments)
             return
