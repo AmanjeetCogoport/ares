@@ -202,6 +202,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         val data = OpenSearchClient().onAccountSearch(request, PaymentResponse::class.java)!!
         payments = data.hits().hits().map { it.source() }
+        payments.map {
+            it?.paymentDocumentStatus = paymentRepository.getPaymentDocumentStatus(it?.id!!)
+        }
         total = data.hits().total().value().toInt()
         return AccountCollectionResponse(list = payments, totalRecords = total, totalPage = ceil(total.toDouble() / request.pageLimit.toDouble()).toInt(), page = request.page)
     }
@@ -759,7 +762,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
         receivableRequest.organizationName = clientResponse.organizationTradePartyName
-        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase() ?: "EAST"
         receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
@@ -1286,7 +1289,7 @@ open class OnAccountServiceImpl : OnAccountService {
             } else {
                 if (paymentDetails.payMode == PayMode.RAZORPAY) {
                     bankCode = PaymentSageGLCodes.RAZO.name
-                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    entityCode = paymentDetails.entityCode.toString()
                     currency = PaymentSageGLCodes.RAZO.currency
                 } else {
                     bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
