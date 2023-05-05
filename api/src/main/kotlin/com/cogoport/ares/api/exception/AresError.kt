@@ -61,7 +61,8 @@ enum class AresError(
     ERR_1534("ERR_1534", "Invalid Date Format : ", HttpStatus.BAD_REQUEST),
     ERR_1535("ERR_1535", "Payment must be posted", HttpStatus.BAD_REQUEST),
     ERR_1536("ERR_1536", "Payment is not posted from sage", HttpStatus.BAD_REQUEST),
-    ERR_1537("ERR_1537", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST);
+    ERR_1537("ERR_1537", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST),
+    ERR_1538("ERR_1538", "JV is Posted and could not get deleted from sage for Jv Number", HttpStatus.INTERNAL_SERVER_ERROR);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

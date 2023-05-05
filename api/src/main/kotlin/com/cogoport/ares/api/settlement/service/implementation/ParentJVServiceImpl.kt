@@ -303,6 +303,14 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun deleteJournalVoucherById(id: String, performedBy: UUID): String {
         val parentJvId = Hashids.decode(id)[0]
+        val parentJv = parentJVRepository.findById(parentJvId)
+        if (parentJv?.status == JVStatus.POSTED) {
+            val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJv.jvNum!!)
+            if (!isDeletedFromSage) {
+                throw AresException(AresError.ERR_1538, parentJv.jvNum!!)
+            }
+        }
+
         parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
         val jvLineItemData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
         jvLineItemData.forEach { lineItem ->
@@ -635,6 +643,24 @@ open class ParentJVServiceImpl : ParentJVService {
         return status as Int?
     }
 
+    private fun getZstatus(processedResponse: JSONObject?): String {
+        val content = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("resultXml")
+            ?.get("content")
+
+        val response = XML.toJSONObject(content.toString())
+        val status = response?.getJSONObject("RESULT")
+            ?.getJSONObject("GRP")
+            ?.getJSONArray("FLD")
+            ?.getJSONObject(1)
+            ?.get("content")
+
+        return status.toString()
+    }
+
     override suspend fun getJvCategory(q: String?, pageLimit: Int?): List<JvCategory> {
         val query = util.toQueryString(q)
         val updatedPageLimit = pageLimit ?: 10
@@ -678,5 +704,22 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         return uniqueAccountModeList
+    }
+
+    private suspend fun deleteJvFromSage(jvId: Long, jvNum: String): Boolean {
+        try {
+            val result = Client.deleteJvFromSage(jvNum)
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getZstatus(processedResponse)
+            if (status == "DONE") {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "200", result.requestString, result.response, true))
+                return true
+            } else {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "500", result.requestString, result.response, false))
+            }
+        } catch (err: Exception) {
+            thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "500", jvNum, err.toString(), false))
+        }
+        return false
     }
 }
