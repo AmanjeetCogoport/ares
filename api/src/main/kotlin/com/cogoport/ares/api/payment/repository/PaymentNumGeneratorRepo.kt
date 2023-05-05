@@ -5,18 +5,19 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import kotlinx.coroutines.runBlocking
 import javax.transaction.Transactional
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 abstract class PaymentNumGeneratorRepo : CoroutineCrudRepository<PaymentSequenceNumbers, Int> {
 
     @NewSpan
-    abstract suspend fun findBySequenceTypeForUpdate(sequenceType: String): PaymentSequenceNumbers
+    abstract suspend fun findBySequenceType(sequenceType: String): PaymentSequenceNumbers
 
     @NewSpan
     @Transactional
-    suspend fun getNextSequenceNumber(sequenceType: String): Long {
-        var sequenceNumber: PaymentSequenceNumbers = findBySequenceTypeForUpdate(sequenceType)
+    suspend fun getNextSequenceNumber(sequenceType: String): Long = runBlocking {
+        var sequenceNumber: PaymentSequenceNumbers = findBySequenceType(sequenceType)
 
         val paymentNumber = sequenceNumber.nextSequenceNumber
 
@@ -24,6 +25,6 @@ abstract class PaymentNumGeneratorRepo : CoroutineCrudRepository<PaymentSequence
 
         update(sequenceNumber)
 
-        return paymentNumber
+        paymentNumber
     }
 }

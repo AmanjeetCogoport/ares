@@ -178,4 +178,9 @@ class MigratePaymentsController {
         val size = paymentMigration.migrateGlAccount()
         return Response<String>().ok(HttpStatus.OK.name, "Request for GL code migration received, total number of GL to migrate is $size")
     }
+
+    @Post("/remove-duplicates")
+    suspend fun removeDuplicatePayNums(@Body paymentIds: List<String>) {
+        paymentMigration.removeDuplicatePayNums(paymentIds)
+    }
 }

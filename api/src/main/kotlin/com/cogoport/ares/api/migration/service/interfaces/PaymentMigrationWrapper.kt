@@ -28,4 +28,6 @@ interface PaymentMigrationWrapper {
     suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 
     suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?): Int
+
+    suspend fun removeDuplicatePayNums(paymentIds: List<String>)
 }

@@ -38,7 +38,6 @@ import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
-import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
@@ -436,7 +435,7 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentDetails)
-        openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
+        openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toString()
         openSearchPaymentModel.uploadedBy = receivableRequest.uploadedBy
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
@@ -527,7 +526,7 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         val openSearchPaymentModel = paymentConverter.convertToModel(paymentResponse)
-        openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toLocalDate().toString()
+        openSearchPaymentModel.paymentDate = paymentResponse.transactionDate?.toString()
 
         val accType = AccountType.valueOf(payment.paymentCode?.name!!)
 
@@ -1166,7 +1165,7 @@ open class OnAccountServiceImpl : OnAccountService {
             } else {
                 ""
             }
-            openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toLocalDate().toString()
+            openSearchPaymentModel.paymentDate = paymentDetails.transactionDate?.toString()
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 throw AresException(AresError.ERR_1523, "")

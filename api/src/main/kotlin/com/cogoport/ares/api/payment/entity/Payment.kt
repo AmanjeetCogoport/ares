@@ -9,6 +9,7 @@ import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @MappedEntity(value = "payments")
@@ -34,7 +35,7 @@ data class Payment(
     var narration: String? = null,
     var transRefNumber: String?,
     var refPaymentId: String?,
-    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var transactionDate: Date? = Date(),
     var isPosted: Boolean,
     var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),

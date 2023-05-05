@@ -7,19 +7,28 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
-class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
+class PaymentMigrationWrapperImpl(
+    private var paymentRepository: PaymentRepository,
+    private var sequenceGeneratorImpl: SequenceGeneratorImpl,
+    private var settlementRepository: SettlementRepository
+) : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
 
@@ -295,5 +304,71 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             createdAt = request.createdAt
         )
         glCodeMasterRepository.save(glAccount)
+    }
+
+    override suspend fun removeDuplicatePayNums(paymentIds: List<String>) {
+        paymentIds.forEach { it ->
+            val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach
+            val groupedPayments = payments.groupBy { it.narration }
+
+            groupedPayments.forEach {
+                if (it.value.size > 1)
+                    updatePaymentValue(it.value)
+                else
+                    updatePaymentNumAndValue(it.value)
+            }
+        }
+    }
+
+    private suspend fun updatePaymentValue(payments: List<Payment>) {
+        val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+        val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
+//        val payNumValCheck = listOf(newPayNumAndValueForTds.first, tdsPayment.paymentNumValue)
+        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0) {
+            updatePaymentNumAndValue(payments)
+            return
+        }
+        tdsPayment?.paymentNumValue = newPayNumValueForTds
+        paymentRepository.update(tdsPayment!!)
+    }
+
+    private suspend fun updatePaymentNumAndValue(payments: List<Payment>) {
+        val payment = payments.find { it.paymentCode !in listOf(PaymentCode.VTDS, PaymentCode.CTDS) } ?: return
+        val newPayNumAndValue = sequenceGeneratorImpl.getPaymentNumAndValue(payment.paymentCode!!, null)
+        var amount = payment.amount
+        if (payments.size > 1) {
+            val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+            amount += tdsPayment?.amount!!
+            val newPayNumAndValueForTds = sequenceGeneratorImpl.getPaymentNumAndValue(tdsPayment.paymentCode!!, newPayNumAndValue.second)
+            // source type
+//            settlementRepository.updateSettlementForPayment(
+//                tdsPayment.paymentNum!!,
+//                tdsPayment.amount,
+//                tdsPayment.transactionDate!!,
+//                newPayNumAndValueForTds.second
+//            )
+            tdsPayment.paymentNum = newPayNumAndValueForTds.second
+            tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
+            paymentRepository.update(tdsPayment)
+        }
+        accountUtilizationRepo.updateAccountUtilizationForPayment(
+            payment.paymentNumValue!!,
+            amount,
+            payment.transactionDate!!,
+            payment.organizationId!!,
+            payment.taggedOrganizationId!!,
+            payment.paymentCode?.name!!,
+            newPayNumAndValue.first,
+            newPayNumAndValue.second
+        )
+//        settlementRepository.updateSettlementForPayment(
+//            payment.paymentNum!!,
+//            payment.amount,
+//            payment.transactionDate!!,
+//            newPayNumAndValue.second
+//        )
+        payment.paymentNum = newPayNumAndValue.second
+        payment.paymentNumValue = newPayNumAndValue.first
+        paymentRepository.update(payment)
     }
 }
