@@ -35,7 +35,7 @@ data class Payment(
     var narration: String? = null,
     var transRefNumber: String?,
     var refPaymentId: String?,
-    var transactionDate: Date?,
+    var transactionDate: Date? = Date(),
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var cogoAccountNo: String?,

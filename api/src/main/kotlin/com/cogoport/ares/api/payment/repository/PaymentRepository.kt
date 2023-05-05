@@ -146,7 +146,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             payment_num,
             payment_num_value,
             created_at,
-            deleted_at
+            deleted_at,
+            narration
             FROM 
             payments
             WHERE 
