@@ -52,5 +52,5 @@ data class Payment(
     var createdBy: UUID? = null,
     var updatedBy: UUID? = null,
     var sageRefNumber: String?,
-    var deletedAt: Timestamp?
+    var deletedAt: Timestamp? = null
 )

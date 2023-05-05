@@ -138,7 +138,7 @@ data class Payment(
     val performedByUserType: String? = null,
 
     @JsonProperty("paymentDocumentStatus")
-    var paymentDocumentStatus: PaymentDocumentStatus? = null,
+    var paymentDocumentStatus: PaymentDocumentStatus? = PaymentDocumentStatus.CREATED,
 
     @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null,
