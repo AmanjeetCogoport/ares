@@ -22,9 +22,10 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import javax.transaction.Transactional
 
 @Singleton
-class PaymentMigrationWrapperImpl(
+open class PaymentMigrationWrapperImpl(
     private var paymentRepository: PaymentRepository,
     private var sequenceGeneratorImpl: SequenceGeneratorImpl,
     private var settlementRepository: SettlementRepository
@@ -310,6 +311,7 @@ class PaymentMigrationWrapperImpl(
         return formattedData.substring(0, formattedData.length - 1).toString()
     }
 
+    @Transactional
     override suspend fun removeDuplicatePayNums(paymentNums: List<Long>) {
         paymentNums.forEach { it ->
             val payments = paymentRepository.findByPaymentNum(it) ?: return@forEach
@@ -324,7 +326,8 @@ class PaymentMigrationWrapperImpl(
         }
     }
 
-    private suspend fun updatePaymentValue(payments: List<Payment>) {
+    @Transactional
+    open suspend fun updatePaymentValue(payments: List<Payment>) {
         val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
         val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
         if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0) {
@@ -335,7 +338,8 @@ class PaymentMigrationWrapperImpl(
         paymentRepository.update(tdsPayment!!)
     }
 
-    private suspend fun updatePaymentNumAndValue(payments: List<Payment>) {
+    @Transactional
+    open suspend fun updatePaymentNumAndValue(payments: List<Payment>) {
         val payment = payments.find { it.paymentCode !in listOf(PaymentCode.VTDS, PaymentCode.CTDS) } ?: return
         val newPayNumAndValue = sequenceGeneratorImpl.getPaymentNumAndValue(payment.paymentCode!!, null)
         var amount = payment.amount
