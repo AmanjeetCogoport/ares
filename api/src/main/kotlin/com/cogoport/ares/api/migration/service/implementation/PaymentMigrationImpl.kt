@@ -442,7 +442,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            isSettlement = true
+            settlementEnabled = true
         )
     }
 
@@ -495,7 +495,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
             taggedBillId = null,
-            isSettlement = true
+            settlementEnabled = true
         )
     }
 

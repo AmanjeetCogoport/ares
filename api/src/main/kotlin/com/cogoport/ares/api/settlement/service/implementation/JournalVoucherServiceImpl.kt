@@ -89,7 +89,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             updatedAt = Timestamp.from(Instant.now()),
             accCode = AresModelConstants.AR_ACCOUNT_CODE,
             migrated = false,
-            isSettlement = true
+            settlementEnabled = true
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 

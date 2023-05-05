@@ -2750,7 +2750,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
         accUtilEntity.isVoid = false
-        accUtilEntity.isSettlement = true
+        accUtilEntity.settlementEnabled = true
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
         auditService.createAudit(

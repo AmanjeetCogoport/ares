@@ -277,7 +277,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
         accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
-        accountUtilization.isSettlement = updateInvoiceRequest.isSettlement ?: accountUtilization.isSettlement
+        accountUtilization.settlementEnabled = updateInvoiceRequest.settlementEnabled ?: accountUtilization.settlementEnabled
 
         val data = accUtilRepository.update(accountUtilization)
 

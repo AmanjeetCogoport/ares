@@ -49,5 +49,5 @@ data class AccountUtilizationMigration(
     var taggedBillId: String? = null,
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
     var tdsAmount: BigDecimal? = BigDecimal.ZERO,
-    var isSettlement: Boolean? = false
+    var settlementEnabled: Boolean? = false
 )

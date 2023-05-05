@@ -179,7 +179,7 @@ class CpSettlementServiceImpl : CpSettlementService {
                 transactionDate = request.transactionDate,
                 dueDate = request.transactionDate,
                 migrated = false,
-                isSettlement = true
+                settlementEnabled = true
             )
 
         val isTdsApplied =

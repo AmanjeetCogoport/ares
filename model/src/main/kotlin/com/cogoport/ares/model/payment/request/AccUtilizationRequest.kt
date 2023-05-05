@@ -52,5 +52,5 @@ data class AccUtilizationRequest(
     var migrated: Boolean?,
     var isVoid: Boolean? = false,
     val tagBillIds: List<Long>? = null,
-    var isSettlement: Boolean? = false
+    var settlementEnabled: Boolean? = false
 )

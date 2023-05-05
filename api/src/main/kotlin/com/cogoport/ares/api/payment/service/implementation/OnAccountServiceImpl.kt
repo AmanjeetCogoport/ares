@@ -295,7 +295,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.taxableAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
-        accUtilEntity.isSettlement = true
+        accUtilEntity.settlementEnabled = true
 
         accUtilEntity.accCode = when (receivableRequest.docType == "TDS") {
             true -> {
@@ -408,6 +408,7 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentEntity.isPosted = true
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
             paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            accountUtilizationEntity.settlementEnabled = true
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -420,7 +421,7 @@ open class OnAccountServiceImpl : OnAccountService {
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             updateAccountUtilizationEntity(receivableRequest, accountUtilizationEntity)
             accountUtilizationEntity.transactionDate = paymentEntity.transactionDate
-            accountUtilizationEntity.isSettlement = true
+            accountUtilizationEntity.settlementEnabled = true
         }
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
@@ -663,6 +664,10 @@ open class OnAccountServiceImpl : OnAccountService {
             false -> DocumentStatus.PROFORMA
         }
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = when (accUtilizationModel.docStatus == DocumentStatus.FINAL) {
+            true -> true
+            false -> false
+        }
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {

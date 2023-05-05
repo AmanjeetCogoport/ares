@@ -271,11 +271,9 @@ open class KnockoffServiceImpl : KnockoffService {
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId,
             migrated = false,
-            isSettlement = true
+            settlementEnabled = true
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
-
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
 
         auditService.createAudit(
             AuditRequest(
@@ -287,6 +285,15 @@ open class KnockoffServiceImpl : KnockoffService {
                 performedByUserType = knockOffRecord.performedByType
             )
         )
+
+        try {
+            if (accUtilObj.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
+            }
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
+        }
     }
 
     private suspend fun saveSettlements(
