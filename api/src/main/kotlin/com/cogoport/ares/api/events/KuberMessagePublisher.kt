@@ -2,6 +2,7 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
 import com.cogoport.ares.model.payment.RestoreUtrResponse
 import com.cogoport.ares.model.payment.event.PayableKnockOffProduceEvent
+import com.cogoport.ares.model.payment.response.OnAccountWithUtrResponse
 import com.cogoport.kuber.model.bills.request.UpdatePaymentStatusRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -26,4 +27,7 @@ interface KuberMessagePublisher {
 
     @Binding("update.bill.status.migration")
     suspend fun emitBIllStatus(paidUnpaidStatus: PaidUnpaidStatus)
+
+    @Binding("kuber.update.advance.document.status")
+    suspend fun updateAdvanceDocumentStatus(request: OnAccountWithUtrResponse)
 }
