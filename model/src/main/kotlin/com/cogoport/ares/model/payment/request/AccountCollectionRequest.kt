@@ -21,6 +21,6 @@ data class AccountCollectionRequest(
     @QueryValue(AresModelConstants.ACC_MODE) val accMode: AccMode?,
     @QueryValue("docType") val docType: String?,
     @QueryValue("paymentDocumentStatus") val paymentDocumentStatus: PaymentDocumentStatus?,
-    @QueryValue("sortType") val sortType: String? = "transactionDate",
-    @QueryValue("sortBy") val sortBy: String? = "Desc"
+    @QueryValue("sortType") val sortType: String? = "Desc",
+    @QueryValue("sortBy") val sortBy: String? = "createdAt"
 )

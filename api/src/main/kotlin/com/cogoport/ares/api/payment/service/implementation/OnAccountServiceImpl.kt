@@ -31,7 +31,6 @@ import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
-import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -192,8 +191,8 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
         val query = util.toQueryString(request.query)
-        val sortType = request.sortType ?: "transactionDate"
-        val sortBy = request.sortBy ?: "Desc"
+        val sortType = request.sortType ?: "Desc"
+        val sortBy = request.sortBy ?: "createdAt"
         val pageLimit = request.pageLimit
         val page = request.page
 

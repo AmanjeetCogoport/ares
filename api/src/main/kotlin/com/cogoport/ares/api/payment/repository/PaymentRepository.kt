@@ -165,12 +165,14 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                      CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
-                         WHEN :sortBy = 'amount' THEN amount
+                          WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM created_at)::numeric
+                          WHEN :sortBy = 'amount' THEN amount
                     END
             END 
             Desc,
             CASE WHEN :sortType = 'Asc' THEN
                      CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                          WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM created_at)::numeric
                          WHEN :sortBy = 'amount' THEN amount
                     END        
             END 
