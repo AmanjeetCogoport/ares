@@ -769,7 +769,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
         receivableRequest.orgSerialId = clientResponse.organizationTradePartySerialId
         receivableRequest.organizationName = clientResponse.organizationTradePartyName
-        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase()
+        receivableRequest.zone = clientResponse.organizationTradePartyZone?.uppercase() ?: "EAST"
         receivableRequest.organizationId = clientResponse.organizationTradePartyDetailId
     }
 
@@ -842,8 +842,8 @@ open class OnAccountServiceImpl : OnAccountService {
 
         var recordsInserted = 0
         if (successCount != 0 && paymentModelList.size > 0) {
-            var res = createBulkPayments(paymentModelList)
-            recordsInserted = res?.recordsInserted
+            val res = createBulkPayments(paymentModelList)
+            recordsInserted = res.recordsInserted
         }
 
         if (recordsInserted != 0)
@@ -916,7 +916,7 @@ open class OnAccountServiceImpl : OnAccountService {
         )
 
         paymentData.forEach {
-            var errors = StringBuilder()
+            val errors = StringBuilder()
             hasErrors = false
             recordCount++
 
@@ -1277,7 +1277,7 @@ open class OnAccountServiceImpl : OnAccountService {
             } else {
                 if (paymentDetails.payMode == PayMode.RAZORPAY) {
                     bankCode = PaymentSageGLCodes.RAZO.name
-                    entityCode = PaymentSageGLCodes.RAZO.entityCode.toString()
+                    entityCode = paymentDetails.entityCode.toString()
                     currency = PaymentSageGLCodes.RAZO.currency
                 } else {
                     bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)

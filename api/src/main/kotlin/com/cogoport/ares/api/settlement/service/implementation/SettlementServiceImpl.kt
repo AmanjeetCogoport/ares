@@ -1689,8 +1689,8 @@ open class SettlementServiceImpl : SettlementService {
 
         val isNotJv = payment.accountType !in jvList
 
-        val amount = paidAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentTds + paymentNostro else BigDecimal.ZERO
-        val ledAmount = paidLedAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentTdsLed + paymentNostroLed else BigDecimal.ZERO
+        val amount = paidAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostro else BigDecimal.ZERO
+        val ledAmount = paidLedAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostroLed else BigDecimal.ZERO
         // Create Documents Settlement Entry
         if (amount.compareTo(BigDecimal.ZERO) != 0) {
             createSettlement(
@@ -2536,7 +2536,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
@@ -2552,7 +2552,7 @@ open class SettlementServiceImpl : SettlementService {
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                        throw AresException(AresError.ERR_1527, "")
+                        throw AresException(AresError.ERR_1531, "")
                     }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
@@ -2567,6 +2567,7 @@ open class SettlementServiceImpl : SettlementService {
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+                    logger().info("settlementResponse: $result")
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
@@ -2674,6 +2675,9 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
+        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
+        val transactionDate = Timestamp(dateFormat.parse(invoiceAndBillData?.transactionDate.toString()).time)
+
         val paymentsRequest = Payment(
             id = null,
             entityType = invoiceAndBillData?.entityCode,
@@ -2704,7 +2708,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS"
+            docType = "TDS",
+            transactionDate = transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
