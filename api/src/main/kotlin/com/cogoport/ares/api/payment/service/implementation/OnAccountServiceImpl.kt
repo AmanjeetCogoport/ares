@@ -298,7 +298,6 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.taxableAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
-        accUtilEntity.settlementEnabled = true
 
         accUtilEntity.accCode = when (receivableRequest.docType == "TDS") {
             true -> {
@@ -424,7 +423,6 @@ open class OnAccountServiceImpl : OnAccountService {
             /*SET ACCOUNT UTILIZATION DATA FOR UPDATE*/
             updateAccountUtilizationEntity(receivableRequest, accountUtilizationEntity)
             accountUtilizationEntity.transactionDate = paymentEntity.transactionDate
-            accountUtilizationEntity.settlementEnabled = true
         }
 
         /*UPDATE THE DATABASE WITH UPDATED PAYMENT ENTRY*/
@@ -667,7 +665,7 @@ open class OnAccountServiceImpl : OnAccountService {
             false -> DocumentStatus.PROFORMA
         }
         accUtilizationModel.migrated = false
-        accUtilizationModel.settlementEnabled = when (accUtilizationModel.docStatus == DocumentStatus.FINAL) {
+        accUtilizationModel.settlementEnabled = when (receivableRequest.isPosted!!) {
             true -> true
             false -> false
         }

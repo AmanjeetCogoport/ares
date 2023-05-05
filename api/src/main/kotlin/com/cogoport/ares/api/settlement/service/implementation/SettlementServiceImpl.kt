@@ -2745,6 +2745,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilizationModel.currency = currency!!
         accUtilizationModel.docStatus = DocumentStatus.FINAL
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = true
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -2755,7 +2756,6 @@ open class SettlementServiceImpl : SettlementService {
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
         accUtilEntity.isVoid = false
-        accUtilEntity.settlementEnabled = true
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
         auditService.createAudit(
@@ -2769,7 +2769,6 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
         Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
