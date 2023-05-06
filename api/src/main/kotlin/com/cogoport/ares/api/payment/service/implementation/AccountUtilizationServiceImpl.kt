@@ -340,6 +340,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
         accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+        accountUtilization.settlementEnabled = updateInvoiceStatusRequest.settlementEnabled
 
         if (updateInvoiceStatusRequest.transactionDate != null) {
             accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate

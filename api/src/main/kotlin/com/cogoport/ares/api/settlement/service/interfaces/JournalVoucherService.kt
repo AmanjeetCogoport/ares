@@ -10,7 +10,7 @@ interface JournalVoucherService {
 
     suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?, documentValue: String?)
 
-    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization
+    suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short, settlementEnabled: Boolean): AccountUtilization
 
     suspend fun getJVLineItems(parentJVId: String): MutableList<JvLineItemResponse>
 }

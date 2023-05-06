@@ -287,7 +287,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 val signFlag = getSignFlag(it.type!!)
 
                 if (it.tradePartyId != null) {
-                    journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+                    journalVoucherService.createJvAccUtil(it, accMode, signFlag, true)
                 }
             }
         }
@@ -416,7 +416,7 @@ open class ParentJVServiceImpl : ParentJVService {
             if (jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
                 val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
                 val signFlag = getSignFlag(lineItem.type)
-                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)
+                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag, true)
             }
         }
     }
@@ -604,7 +604,7 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     private fun getAccModeValue(accMode: AccMode): String {
-        val accMode = when (accMode) {
+        val accModeName = when (accMode) {
             AccMode.AP -> JVSageControls.AP.value
             AccMode.AR -> JVSageControls.AR.value
             AccMode.PDA -> JVSageControls.PDA.value
@@ -622,7 +622,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
         }
-        return accMode
+        return accModeName
     }
 
     private fun getStatus(processedResponse: JSONObject?): Int? {
