@@ -36,4 +36,5 @@ interface OnAccountService {
     suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean
     suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse
     suspend fun cancelPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse
+    suspend fun createPaymentEntryAndReturnUtr(request: Payment)
 }
