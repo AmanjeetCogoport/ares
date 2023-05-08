@@ -715,8 +715,9 @@ class PaymentMigrationImpl : PaymentMigration {
                 if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
             }
 
-            if (payLocUpdateRequest.recordType == MigrationRecordType.PAYMENT) {
-                payLocUpdateRequest.documentValue = paymentMigrationRepository.getPaymentNumValueFromSageRefNumber(payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!)
+            if (payLocUpdateRequest.recordType == MigrationRecordType.BILL) {
+                val billDetails = kuberClient.getBillNumberFromSageNumber(payLocUpdateRequest.documentValue!!)
+                payLocUpdateRequest.documentValue = billDetails.billNumber
             }
 
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
@@ -796,10 +797,10 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
-        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
-        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
@@ -829,7 +830,6 @@ class PaymentMigrationImpl : PaymentMigration {
                         migrated = true,
                         currency = jvParentDetail.currency,
                         led_currency = jvParentDetail.ledgerCurrency,
-                        amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum

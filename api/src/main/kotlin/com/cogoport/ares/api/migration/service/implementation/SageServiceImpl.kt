@@ -347,12 +347,14 @@ class SageServiceImpl : SageService {
         return invoiceDetails.recordSets!![0]
     }
 
-    override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?): List<JVParentDetails> {
+    override suspend fun getJVDetails(startDate: String?, endDate: String?, jvNum: String?, sageJvId: String?): List<JVParentDetails> {
         var sqlQuery = """
             select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, CURLED_0 as ledger_currency
             ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
         """.trimIndent()
-        sqlQuery += if (startDate != null && endDate != null) {
+        sqlQuery += if (sageJvId != null) {
+            """ and ROWID = $sageJvId"""
+        } else if (startDate != null && endDate != null) {
             """ and CREDAT_0 between '$startDate' and '$endDate'"""
         } else {
             """ and NUM_0 in ($jvNum)"""
@@ -362,7 +364,7 @@ class SageServiceImpl : SageService {
         return parentDetails.recordSets!![0]
     }
 
-    suspend fun getJVLineItemWithNoBPR(jvNum: String): List<JVLineItemNoBPR> {
+    suspend fun getJVLineItemWithNoBPR(jvNum: String, jvType: String): List<JVLineItemNoBPR> {
         val sqlQuery = """
             select FCYLIN_0 as entityCode
             ,GD.NUM_0 as jvNum
@@ -382,10 +384,11 @@ class SageServiceImpl : SageService {
             , GD.ACC_0 as gl_code 
             ,GD.BPR_0 as sage_organization_id
             ,case when SAC_0 = 'SC' then 'AP' else SAC_0 end as acc_mode
-            from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0) 
+            from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0 and G.TYP_0 = GD.TYP_0)  
             where BPR_0 = '' and SAC_0 = ''
-            and GD.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+            and GD.TYP_0 in ('$jvType')
             and GD.NUM_0 = '$jvNum'
+            and GD.BPR_0 not in ${MigrationConstants.administrativeExpense}
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
@@ -395,7 +398,8 @@ class SageServiceImpl : SageService {
     override suspend fun getJournalVoucherFromSageCorrected(
         startDate: String?,
         endDate: String?,
-        jvNums: String?
+        jvNums: String?,
+        jvType: String?
     ): ArrayList<JournalVoucherRecord> {
         var sqlQuery = """
          SELECT G.FCY_0 as entity_code 
@@ -430,11 +434,11 @@ class SageServiceImpl : SageService {
             (
             select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0, AMTCUR_0 as AMTCUR_0, AMTLOC_0 as AMTLOC_0, PAYCUR_0 as PAYCUR_0, PAYLOC_0 as PAYLOC_0
             ,SNS_0 as sign_flag, LIG_0
-            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV')
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and TYP_0 in ('$jvType')
             ) G 
             on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
             INNER JOIN COGO2.GACCENTRYD GD on (GD.NUM_0 = GC.NUM_0 and GD.TYP_0 = G.TYP_0 and GD.SAC_0 = G.SAC_0 and GD.AMTCUR_0 = G.AMTCUR_0 and GD.BPR_0 = G.BPR_0)
-            where G.SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and G.TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV') and G.LIG_0 = GD.LIN_0
+            where G.SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and G.TYP_0 in ('$jvType') and G.LIG_0 = GD.LIN_0
             and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
             """
         if (startDate == null && endDate == null) {
