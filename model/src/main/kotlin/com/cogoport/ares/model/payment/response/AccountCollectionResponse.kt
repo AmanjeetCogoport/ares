@@ -14,8 +14,8 @@ import io.micronaut.core.annotation.ReflectiveAccess
 @JsonInclude
 data class AccountCollectionResponse(
     @JsonProperty("list")
-    val list: List<PaymentResponse?>? = null,
-    val totalRecords: Int,
+    var list: List<PaymentResponse?>? = null,
+    var totalRecords: Int,
     val totalPage: Int,
     val page: Int
 )

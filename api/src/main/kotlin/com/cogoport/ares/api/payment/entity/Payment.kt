@@ -36,8 +36,6 @@ data class Payment(
     var transRefNumber: String?,
     var refPaymentId: String?,
     var transactionDate: Date? = Date(),
-    var isPosted: Boolean,
-    var isDeleted: Boolean,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
     var cogoAccountNo: String?,
@@ -53,5 +51,6 @@ data class Payment(
     var paymentDocumentStatus: PaymentDocumentStatus?,
     var createdBy: UUID? = null,
     var updatedBy: UUID? = null,
-    var sageRefNumber: String?
+    var sageRefNumber: String?,
+    var deletedAt: Timestamp? = null
 )

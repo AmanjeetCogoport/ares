@@ -247,8 +247,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
-            isPosted = true,
-            isDeleted = false,
             createdAt = paymentRecord.createdAt!!,
             updatedAt = paymentRecord.updatedAt!!,
             cogoAccountNo = getCogoAccountNo(paymentRecord.bankShortCode!!),
@@ -346,8 +344,6 @@ class PaymentMigrationImpl : PaymentMigration {
 
         val accUtilEntity = setAccountUtilizations(receivableRequest, payment)
         val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -396,8 +392,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = receivableRequest.transRefNumber,
             refPaymentId = null,
             transactionDate = receivableRequest.transactionDate,
-            isPosted = receivableRequest.isPosted,
-            isDeleted = receivableRequest.isDeleted,
             createdAt = receivableRequest.createdAt,
             updatedAt = receivableRequest.updatedAt,
             paymentCode = receivableRequest.paymentCode,
