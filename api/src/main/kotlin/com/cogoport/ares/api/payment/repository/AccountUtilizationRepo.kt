@@ -675,7 +675,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             )
             AND au.deleted_at is null
             AND s.deleted_at is null
-            AND p.deleted_at is null  and au.is_void = false
+            AND p.deleted_at is null 
+            AND au.is_void = false
+            AND au.settlement_enabled = true
             AND 
             (
                 :documentPaymentStatus is null OR 
