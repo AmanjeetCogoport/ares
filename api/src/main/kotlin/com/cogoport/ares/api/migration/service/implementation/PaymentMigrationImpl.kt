@@ -67,6 +67,7 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.kuber.client.KuberClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -108,6 +109,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject lateinit var journalVoucherRepoMigration: JournalVoucherRepoMigration
+
+    @Inject lateinit var kuberClient: KuberClient
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -711,6 +714,12 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
                 if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
             }
+
+            if (payLocUpdateRequest.recordType == MigrationRecordType.BILL) {
+                val billDetails = kuberClient.getBillNumberFromSageNumber(payLocUpdateRequest.documentValue!!)
+                payLocUpdateRequest.documentValue = billDetails.billNumber
+            }
+
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
                 payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
@@ -788,10 +797,10 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
-        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
-        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
@@ -821,7 +830,6 @@ class PaymentMigrationImpl : PaymentMigration {
                         migrated = true,
                         currency = jvParentDetail.currency,
                         led_currency = jvParentDetail.ledgerCurrency,
-                        amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum
