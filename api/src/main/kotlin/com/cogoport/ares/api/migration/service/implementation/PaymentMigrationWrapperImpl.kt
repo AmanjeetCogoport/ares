@@ -330,12 +330,12 @@ open class PaymentMigrationWrapperImpl(
     open suspend fun updatePaymentValue(payments: List<Payment>) {
         val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
         val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
-        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0) {
+        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0 || tdsPayment == null) {
             updatePaymentNumAndValue(payments)
             return
         }
-        tdsPayment?.paymentNumValue = newPayNumValueForTds
-        paymentRepository.update(tdsPayment!!)
+        tdsPayment.paymentNumValue = newPayNumValueForTds
+        paymentRepository.update(tdsPayment)
     }
 
     @Transactional
@@ -343,9 +343,9 @@ open class PaymentMigrationWrapperImpl(
         val payment = payments.find { it.paymentCode !in listOf(PaymentCode.VTDS, PaymentCode.CTDS) } ?: return
         val newPayNumAndValue = sequenceGeneratorImpl.getPaymentNumAndValue(payment.paymentCode!!, null)
         var amount = payment.amount
-        if (payments.size > 1) {
-            val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
-            amount += tdsPayment?.amount!!
+        val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+        if (payments.size > 1 && tdsPayment != null) {
+            amount += tdsPayment.amount
             val newPayNumAndValueForTds = sequenceGeneratorImpl.getPaymentNumAndValue(tdsPayment.paymentCode!!, newPayNumAndValue.second)
             tdsPayment.paymentNum = newPayNumAndValueForTds.second
             tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
