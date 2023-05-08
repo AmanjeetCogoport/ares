@@ -1566,8 +1566,4 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
     }
-
-    override suspend fun getPostPaymentSageInfo(paymentNumValue: String?, accountMode: String?, entityCode: Long?): SageFailedResponse {
-        val paymentDetailsInfo = sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accountMode)
-    }
 }

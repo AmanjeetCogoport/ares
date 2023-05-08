@@ -19,7 +19,9 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.model.payment.PostInvoiceInfo
 import com.cogoport.ares.model.payment.PostPaymentInfo
+import com.cogoport.ares.model.payment.SagePostInvoiceDetails
 import com.cogoport.ares.model.payment.SagePostPaymentDetails
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.brahma.sage.Client
@@ -31,7 +33,7 @@ import jakarta.inject.Singleton
 class SageServiceImpl : SageService {
 
     @Value("\${sage.databaseName}")
-    var sageSchema: String? = null
+    var sageDatabase: String? = null
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """
@@ -588,7 +590,7 @@ class SageServiceImpl : SageService {
         return glCodeRecords.recordSets!![0]
     }
 
-    override suspend fun getPaymentPostSageInfo(paymentNumValue: String?, entityCode: Long?, accMode: String): List<SagePostPaymentDetails> {
+    override suspend fun getPaymentPostSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): List<SagePostPaymentDetails> {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
             case WHEN STA_0 = 9 THEN 'POSTED'
@@ -598,10 +600,30 @@ class SageServiceImpl : SageService {
                  CUR_0 as currency, 
                  FCY_0 as entity_code, 
                  AMTCUR_0 as amount
-            from COGO2.PAYMENTH where NUM_0 = :paymentNumValue and FCY_0 = :entityCode and BPRSAC_0 = :accMode
+            from $sageDatabase.PAYMENTH where UMRNUM_0 in ('$paymentNumValue') and FCY_0 = $entityCode and BPRSAC_0 = '$accMode'
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
-        val glCodeRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
-        return glCodeRecords.recordSets!![0]
+        val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
+        return paymentRecords.recordSets!![0]
+    }
+
+    override suspend fun getInvoicePostSageInfo(InvoiceNumber: String): List<SagePostInvoiceDetails> {
+        val sqlQuery = """
+            select NUM_0 as invoice_number,
+                case when STA_0 = 3 then 'POSTED'
+                    WHEN STA_0 = 1 THEN 'NOT-POSTED' end as sage_status, 
+                    BPR_0 as bpr_number, 
+                    BPYNAM_0 as name,
+                    AMTTAX_0 as tax_amount, 
+                    AMTATI_0 as grand_total, 
+                    AMTATIL_0 as ledger_total,
+                    CUR_0 as currency, 
+                    RATMLT_0 as exchange_rate, 
+                    CCE_0 as job_number
+                from $sageDatabase.SINVOICE where NUM_0 in ('$InvoiceNumber')
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val invoiceRecords = ObjectMapper().readValue(result, PostInvoiceInfo::class.java)
+        return invoiceRecords.recordSets!![0]
     }
 }

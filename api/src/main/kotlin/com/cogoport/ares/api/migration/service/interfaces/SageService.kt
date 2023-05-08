@@ -7,6 +7,7 @@ import com.cogoport.ares.api.migration.model.JournalVoucherRecord
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.model.payment.SagePostInvoiceDetails
 import com.cogoport.ares.model.payment.SagePostPaymentDetails
 import com.cogoport.ares.model.settlement.GlCodeMaster
 
@@ -34,5 +35,7 @@ interface SageService {
 
     suspend fun getJVDetailsForScheduler(startDate: String?, endDate: String?, jvNum: String?): List<JVRecordsScheduler>
 
-    suspend fun getPaymentPostSageInfo(paymentNumValue: String?, entityCode: Long?, accMode: String): List<SagePostPaymentDetails>
+    suspend fun getPaymentPostSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): List<SagePostPaymentDetails>
+
+    suspend fun getInvoicePostSageInfo(InvoiceNumber: String): List<SagePostInvoiceDetails>
 }

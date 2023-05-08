@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
@@ -8,6 +9,7 @@ import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.SagePostPaymentDetails
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
@@ -42,6 +44,8 @@ class OnAccountController {
 
     @Inject
     lateinit var openSearchService: OpenSearchService
+
+    @Inject lateinit var sageService: SageService
 
     @Get("{?request*}")
     suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
@@ -120,8 +124,8 @@ class OnAccountController {
         return onAccountService.cancelPaymentFromSage(paymentIds, performedBy)
     }
 
-    @Get("/post-payment-info")
-    suspend fun getPostPaymentSageInfo(paymentNumValue: String?, accountMode: String?): SageFailedResponse {
-        return onAccountService.getPostPaymentSageInfo(paymentNumValue, accountMode)
+    @Post("payment/final-post-sage-info")
+    suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: String): List<SagePostPaymentDetails> {
+        return sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accMode)
     }
 }
