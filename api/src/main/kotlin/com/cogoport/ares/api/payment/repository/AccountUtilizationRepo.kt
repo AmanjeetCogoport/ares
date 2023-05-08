@@ -613,6 +613,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
                 AND deleted_at is null
+                AND settlement_enabled = true
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
