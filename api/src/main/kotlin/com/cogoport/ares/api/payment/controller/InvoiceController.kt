@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.controller
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
-import com.cogoport.ares.model.payment.PostInvoiceInfo
 import com.cogoport.ares.model.payment.SagePostInvoiceDetails
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
@@ -67,7 +66,7 @@ class InvoiceController {
         return scheduler.deleteInvoicesNotPresentInPlutus()
     }
 
-    @Post("final-post-sage")
+    @Post("final-post-sage-info")
     suspend fun finalPostSageCheck(invoiceNumbers: String): List<SagePostInvoiceDetails> {
         return sageService.getInvoicePostSageInfo(invoiceNumbers)
     }
