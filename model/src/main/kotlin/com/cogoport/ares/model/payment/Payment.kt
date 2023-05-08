@@ -145,7 +145,7 @@ data class Payment(
     val tradePartyDocument: String? = null,
 
     @JsonProperty("docType")
-    val docType: String? = null,
+    val docType: DocType?,
 
     @JsonProperty("sageRefNumber")
     var sageRefNumber: String? = null
