@@ -34,7 +34,7 @@ class MigratePaymentsController {
                 "Request for payment migration received, total number of payments to migrate is $size"
             )
         } else {
-            val size = paymentMigration.migrateJournalVoucher(startDate, endDate, null)
+            val size = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null, null)
             return Response<String>().ok(
                 HttpStatus.OK.name,
                 "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -56,7 +56,7 @@ class MigratePaymentsController {
 
     @Post("/JVNum-migrate")
     suspend fun migrateJVNum(@Body jvNums: List<String>): Response<String> {
-        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums)
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -142,7 +142,7 @@ class MigratePaymentsController {
 
     @Get("/migrate-jv")
     suspend fun migrateJvByDate(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
-        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null)
+        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
@@ -177,5 +177,14 @@ class MigratePaymentsController {
     suspend fun migratePaymentNum(): Response<String> {
         val size = paymentMigration.migrateGlAccount()
         return Response<String>().ok(HttpStatus.OK.name, "Request for GL code migration received, total number of GL to migrate is $size")
+    }
+
+    @Post("/migrate-sage-jv-id")
+    suspend fun migrateJVNumById(@Body sageJvIds: List<String>): Response<String> {
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, null, sageJvIds)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for journal voucher migration received, total number of jv to migrate is $size"
+        )
     }
 }
