@@ -15,6 +15,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -765,4 +766,32 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     """
     )
     suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE
+                account_utilizations
+            SET 
+                document_value = :newDocValue,
+                document_no = :newDocNo
+            WHERE
+                document_value = :docValue
+                AND amount_curr = :amount
+                AND transaction_date = :transactionDate::DATE
+                AND organization_id = :organizationId
+                AND tagged_organization_id = :taggedOrganizationId
+                AND acc_type = :accType::account_type
+        """
+    )
+    suspend fun updateAccountUtilizationForPayment(
+        docValue: String,
+        amount: BigDecimal,
+        transactionDate: Date,
+        organizationId: UUID,
+        taggedOrganizationId: UUID,
+        accType: String,
+        newDocValue: String,
+        newDocNo: Long
+    )
 }
