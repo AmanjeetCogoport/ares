@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import com.cogoport.ares.api.utils.Time
+import com.cogoport.ares.model.payment.PaymentCode
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.LocalDate
@@ -38,7 +39,7 @@ class SequenceGeneratorImpl() {
         val endYear = endOfFinancialYear.format(formatter)
         return startYear.plus(endYear)
     }
-    suspend fun getFinancialYearSuffix(): String {
+    fun getFinancialYearSuffix(): String {
         val startYear = Time.getBeginningOfFinancialYear().toString()
         val endYear = Time.getEndOfFinancialYear().toString()
 
@@ -46,5 +47,11 @@ class SequenceGeneratorImpl() {
         val endYearSuffix = "${endYear[2]}${endYear[3]}"
 
         return (startYearSuffix + endYearSuffix).replace("\\s".toRegex(), "")
+    }
+
+    suspend fun getPaymentNumAndValue(paymentCode: PaymentCode, paymentNum: Long?): Pair<String, Long> {
+        val financialYearSuffix = getFinancialYearSuffix()
+        val payNum = paymentNum ?: getPaymentNumber(paymentCode.name)
+        return Pair(paymentCode.toString() + financialYearSuffix + payNum, payNum)
     }
 }

@@ -228,4 +228,10 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         documentTypes: List<String>?,
         paymentDocumentStatus: PaymentDocumentStatus?
     ): Int
+
+    @NewSpan
+    suspend fun findByPaymentNum(paymentNum: Long): List<Payment>?
+
+    @NewSpan
+    suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
 }

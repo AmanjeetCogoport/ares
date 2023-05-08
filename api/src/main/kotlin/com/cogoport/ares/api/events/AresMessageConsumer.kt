@@ -10,6 +10,7 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -17,6 +18,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
@@ -51,6 +53,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var paymentMigration: PaymentMigration
+
+    @Inject
+    lateinit var onAccountService: OnAccountService
 
     @Inject
     lateinit var accountUtilService: AccountUtilizationService
@@ -177,5 +182,10 @@ class AresMessageConsumer {
     @Queue("migrate-jv-pay-loc", prefetch = 1)
     fun migrateJVPayLoc(record: JVRecordsScheduler) = runBlocking {
         paymentMigration.migrateJVUtilization(record)
+    }
+
+    @Queue("ares-send-payment-details", prefetch = 1)
+    fun sendPaymentDetailsForOnAccount(req: Payment) = runBlocking {
+        onAccountService.createPaymentEntryAndReturnUtr(req)
     }
 }

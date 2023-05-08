@@ -9,6 +9,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 import javax.validation.constraints.Min
 
@@ -86,7 +87,7 @@ data class Payment(
     var refAccountNo: String?,
 
     @JsonProperty("transactionDate")
-    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
+    var transactionDate: Date? = Date(),
 
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),

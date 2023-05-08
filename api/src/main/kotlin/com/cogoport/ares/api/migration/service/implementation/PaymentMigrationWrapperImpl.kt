@@ -7,19 +7,29 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import javax.transaction.Transactional
 
 @Singleton
-class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
+open class PaymentMigrationWrapperImpl(
+    private var paymentRepository: PaymentRepository,
+    private var sequenceGeneratorImpl: SequenceGeneratorImpl,
+    private var settlementRepository: SettlementRepository
+) : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
 
@@ -47,17 +57,11 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     }
 
     override suspend fun migrateJournalVoucher(startDate: String?, endDate: String?, jvNums: List<String>?): Int {
-        var jvNumbersList = java.lang.StringBuilder()
         var jvNumAsString: String? = null
         if (jvNums != null) {
-            for (jvNum in jvNums) {
-                jvNumbersList.append("'")
-                jvNumbersList.append(jvNum)
-                jvNumbersList.append("',")
-            }
-            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+            jvNumAsString = getFormattedJVNums(jvNums)
         }
-        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString)
+        val jvRecords = sageService.getJournalVoucherFromSageCorrected(startDate, endDate, jvNumAsString, null)
 //        val jvRecords = sageService.getJournalVoucherFromSage(startDate, endDate, jvNumAsString)
         logger().info("Total number of journal voucher record to process : ${jvRecords.size}")
 //        for (jvRecord in jvRecords) {
@@ -175,19 +179,18 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
     override suspend fun migrateJournalVoucherRecordNew(
         startDate: String?,
         endDate: String?,
-        jvNums: List<String>?
+        jvNums: List<String>?,
+        sageJvId: List<String>?
     ): Int {
-        var jvNumbersList = java.lang.StringBuilder()
         var jvNumAsString: String? = null
+        var jvIdAsString: String? = null
         if (jvNums != null) {
-            for (jvNum in jvNums) {
-                jvNumbersList.append("'")
-                jvNumbersList.append(jvNum)
-                jvNumbersList.append("',")
-            }
-            jvNumAsString = jvNumbersList.substring(0, jvNumbersList.length - 1).toString()
+            jvNumAsString = getFormattedJVNums(jvNums)
         }
-        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString)
+        if (sageJvId != null) {
+            jvIdAsString = getFormattedJVNums(sageJvId)
+        }
+        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)
         jvParentRecords.forEach {
             aresMessagePublisher.emitJournalVoucherMigration(it)
         }
@@ -295,5 +298,71 @@ class PaymentMigrationWrapperImpl : PaymentMigrationWrapper {
             createdAt = request.createdAt
         )
         glCodeMasterRepository.save(glAccount)
+    }
+
+    private fun getFormattedJVNums(documentValue: List<String>): String {
+
+        var formattedData = java.lang.StringBuilder()
+        for (jvNum in documentValue) {
+            formattedData.append("'")
+            formattedData.append(jvNum)
+            formattedData.append("',")
+        }
+        return formattedData.substring(0, formattedData.length - 1).toString()
+    }
+
+    @Transactional
+    override suspend fun removeDuplicatePayNums(paymentNums: List<Long>) {
+        paymentNums.forEach { it ->
+            val payments = paymentRepository.findByPaymentNum(it) ?: return@forEach
+            val groupedPayments = payments.groupBy { it.narration }
+
+            groupedPayments.forEach {
+                if (it.value.size > 1)
+                    updatePaymentValue(it.value)
+                else
+                    updatePaymentNumAndValue(it.value)
+            }
+        }
+    }
+
+    @Transactional
+    open suspend fun updatePaymentValue(payments: List<Payment>) {
+        val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+        val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
+        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0 || tdsPayment == null) {
+            updatePaymentNumAndValue(payments)
+            return
+        }
+        tdsPayment.paymentNumValue = newPayNumValueForTds
+        paymentRepository.update(tdsPayment)
+    }
+
+    @Transactional
+    open suspend fun updatePaymentNumAndValue(payments: List<Payment>) {
+        val payment = payments.find { it.paymentCode !in listOf(PaymentCode.VTDS, PaymentCode.CTDS) } ?: return
+        val newPayNumAndValue = sequenceGeneratorImpl.getPaymentNumAndValue(payment.paymentCode!!, null)
+        var amount = payment.amount
+        val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+        if (payments.size > 1 && tdsPayment != null) {
+            amount += tdsPayment.amount
+            val newPayNumAndValueForTds = sequenceGeneratorImpl.getPaymentNumAndValue(tdsPayment.paymentCode!!, newPayNumAndValue.second)
+            tdsPayment.paymentNum = newPayNumAndValueForTds.second
+            tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
+            paymentRepository.update(tdsPayment)
+        }
+        accountUtilizationRepo.updateAccountUtilizationForPayment(
+            payment.paymentNumValue!!,
+            amount,
+            payment.transactionDate!!,
+            payment.organizationId!!,
+            payment.taggedOrganizationId!!,
+            payment.paymentCode?.name!!,
+            newPayNumAndValue.first,
+            newPayNumAndValue.second
+        )
+        payment.paymentNum = newPayNumAndValue.second
+        payment.paymentNumValue = newPayNumAndValue.first
+        paymentRepository.update(payment)
     }
 }
