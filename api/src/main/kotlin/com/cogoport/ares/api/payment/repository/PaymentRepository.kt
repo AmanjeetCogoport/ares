@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
@@ -127,4 +128,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
     @NewSpan
     suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
+
+    @NewSpan
+    @Query(
+        """
+          SELECT * FROM payments WHERE payment_num_value = :paymentNumValues AND entity_code = :entityCode AND acc_mode::varchar = :accMode
+        """
+    )
+    suspend fun getPaymentByPaymentNumValue(paymentNumValues: String, entityCode: Long?, accMode: AccMode): Payment
 }

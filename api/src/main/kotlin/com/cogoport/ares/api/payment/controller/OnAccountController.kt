@@ -6,10 +6,11 @@ import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.SagePostPaymentDetails
+import com.cogoport.ares.model.payment.PaymentDetailsInfo
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
@@ -32,7 +33,7 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.util.UUID
+import java.util.*
 import javax.validation.Valid
 
 @Validated
@@ -125,7 +126,7 @@ class OnAccountController {
     }
 
     @Post("payment/final-post-sage-info")
-    suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: String): List<SagePostPaymentDetails> {
+    suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo {
         return sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accMode)
     }
 }

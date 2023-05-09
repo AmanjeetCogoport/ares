@@ -27,30 +27,6 @@ class SagePostPaymentDetails(
 )
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-class SagePostInvoiceDetails(
-    @JsonProperty("invoice_number")
-    val invoiceNumber: String?,
-    @JsonProperty("sage_status")
-    var sageStatus: String?,
-    @JsonProperty("bpr_number")
-    var bprNumber: String?,
-    @JsonProperty("job_number")
-    var jobNumber: String?,
-    @JsonProperty("currency")
-    var currency: String?,
-    @JsonProperty("exchange_rate")
-    var exchange_rate: BigDecimal? = BigDecimal.ONE,
-    @JsonProperty("name")
-    var name: String?,
-    @JsonProperty("tax_amount")
-    var taxAmount: BigDecimal? = BigDecimal.ZERO,
-    @JsonProperty("grand_total")
-    var grandTotal: BigDecimal? = BigDecimal.ZERO,
-    @JsonProperty("ledger_total")
-    var ledgerTotal: BigDecimal? = BigDecimal.ZERO
-)
-@Introspected
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 class PostPaymentInfo {
     @JsonProperty("recordsets")
     val recordSets: ArrayList<ArrayList<SagePostPaymentDetails>>? = null
@@ -64,18 +40,30 @@ class PostPaymentInfo {
     @JsonIgnore
     val output: Any? = null
 }
+
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-class PostInvoiceInfo {
-    @JsonProperty("recordsets")
-    val recordSets: ArrayList<ArrayList<SagePostInvoiceDetails>>? = null
+class PlatformPostPaymentDetails(
+    @JsonProperty("sage_ref_number")
+    val sagePaymentNum: String?,
+    @JsonProperty("payment_num_value")
+    var platformPaymentNum: String?,
+    @JsonProperty("sage_organization_id")
+    var bprNumber: String?,
+    @JsonProperty("acc_code")
+    var glCode: Long?,
+    @JsonProperty("currency")
+    var currency: String,
+    @JsonProperty("entity_code")
+    var entityCode: Long,
+    @JsonProperty("amount")
+    var amount: BigDecimal? = BigDecimal.ZERO,
+    @JsonProperty("status") var status: String
+)
 
-    @JsonProperty("recordset")
-    val recordSet: ArrayList<SagePostInvoiceDetails>? = null
-
-    @JsonProperty("rowsAffected")
-    val recordAffected: ArrayList<Int>? = null
-
-    @JsonIgnore
-    val output: Any? = null
-}
+@Introspected
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+class PaymentDetailsInfo(
+    var sagePaymentInfo: List<SagePostPaymentDetails>,
+    var platformPaymentInfo: List<PlatformPostPaymentDetails>
+)
