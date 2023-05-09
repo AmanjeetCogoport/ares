@@ -44,6 +44,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
@@ -204,8 +205,8 @@ open class OnAccountServiceImpl : OnAccountService {
         val documentTypes = when (request.docType != null) {
             true -> {
                 when (request.docType) {
-                    "TDS" -> listOf(PaymentCode.CTDS.name, PaymentCode.VTDS.name)
-                    "RECEIPT" -> listOf(PaymentCode.REC.name)
+                    DocType.TDS -> listOf(PaymentCode.CTDS.name, PaymentCode.VTDS.name)
+                    DocType.RECEIPT -> listOf(PaymentCode.REC.name)
                     else -> listOf(PaymentCode.PAY.name)
                 }
             }
@@ -287,7 +288,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (isUtrExit == true) {
             throw AresException(AresError.ERR_1537, "")
         }
-        receivableRequest.signFlag = when (receivableRequest.docType == "TDS") {
+        receivableRequest.signFlag = when (receivableRequest.docType == DocType.TDS) {
             true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
                 else -> SignSuffix.VTDS.sign
@@ -339,7 +340,7 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilEntity.tdsAmount = BigDecimal.ZERO
         accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
 
-        accUtilEntity.accCode = when (receivableRequest.docType == "TDS") {
+        accUtilEntity.accCode = when (receivableRequest.docType == DocType.TDS) {
             true -> {
                 when (receivableRequest.accMode == AccMode.AR) {
                     true -> AresModelConstants.TDS_AR_ACCOUNT_CODE
@@ -354,7 +355,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
         }
 
-        if (receivableRequest.docType == "TDS") {
+        if (receivableRequest.docType == DocType.TDS) {
             accUtilEntity.isVoid = false
             accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
             accUtilEntity.tdsAmount = BigDecimal.ZERO
@@ -628,9 +629,9 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment, docType: String?) {
+    private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment, docType: DocType?) {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
-        when (docType == "TDS") {
+        when (docType == DocType.TDS) {
             true -> {
                 if (payment.accMode == AccMode.AR) {
                     payment.accCode = AresModelConstants.TDS_AR_ACCOUNT_CODE
@@ -665,7 +666,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun setAccountUtilizationModel(accUtilizationModel: AccUtilizationRequest, receivableRequest: Payment) {
-        accUtilizationModel.accType = when (receivableRequest.docType == "TDS") {
+        accUtilizationModel.accType = when (receivableRequest.docType == DocType.TDS) {
             true -> {
                 when (receivableRequest.accMode == AccMode.AR) {
                     true -> AccountType.CTDS
@@ -1086,7 +1087,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 errors.append("Invalid Number Format")
             }
 
-            var paymentObj = Payment(
+            val paymentObj = Payment(
                 organizationName = serialIdDetails?.tradePartyBusinessName,
                 orgSerialId = it["trade_party_serial_id"].toString().toLong(),
                 entityType = if (!it["entity_code"].toString().isNullOrEmpty()) it.get("entity_code").toString().toInt() else 0,
@@ -1108,17 +1109,19 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = ServiceType.NA,
                 bankId = null,
                 paymentDate = paymentDate,
+                createdBy = uploadedBy.toString(),
+                updatedBy = uploadedBy.toString(),
                 uploadedBy = uploadedByName?.get(0)?.userName,
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId,
                 paymentDocumentStatus = PaymentDocumentStatus.CREATED,
-                docType = "PAYMENT"
+                docType = DocType.PAYMENT
             )
 
             if (hasErrors) {
-                var s3PaymentResponse = getS3PaymentResponse(it, errors)
-                if (s3PaymentResponse.errorReason?.lastIndexOf(",") == s3PaymentResponse.errorReason?.lastIndex) {
-                    s3PaymentResponse.errorReason = s3PaymentResponse.errorReason?.substringBeforeLast(",")
+                val s3PaymentResponse = getS3PaymentResponse(it, errors)
+                if (s3PaymentResponse.errorReason.lastIndexOf(",") == s3PaymentResponse.errorReason.lastIndex) {
+                    s3PaymentResponse.errorReason = s3PaymentResponse.errorReason.substringBeforeLast(",")
                 }
                 paymentResponseList.add(s3PaymentResponse)
                 errorCount ++
