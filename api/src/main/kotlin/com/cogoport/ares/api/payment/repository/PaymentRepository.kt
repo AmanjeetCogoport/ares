@@ -1,9 +1,11 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.Payment
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
+import com.cogoport.ares.model.payment.response.PaymentResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -19,8 +21,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
              select id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
-             trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
-             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number
+             trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
+             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
+             deleted_at
              from payments where id =:id and deleted_at is null
         """
     )
@@ -47,8 +50,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
             SELECT id,entity_code,org_serial_id,sage_organization_id,organization_id,organization_name,
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
-             trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,is_posted,is_deleted,created_at,updated_at,
-             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number
+             trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
+             cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
+             deleted_at
              FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null
         """
     )
@@ -117,8 +121,117 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-          SELECT payment_document_status FROM payments where id = :paymentId
+          SELECT 
+            id, 
+            entity_code,
+            org_serial_id,
+            organization_name,
+            cogo_account_no as bank_account_number,
+            bank_name,
+            acc_code,
+            sage_organization_id,
+            organization_id,
+            currency,
+            amount,
+            led_currency,
+            led_amount,
+            updated_by,
+            trans_ref_number as utr,
+            acc_mode,
+            payment_code,
+            payment_document_status,
+            transaction_date,
+            '' as uploaded_by,
+            exchange_rate,
+            payment_num,
+            payment_num_value,
+            created_at,
+            deleted_at,
+            narration
+            FROM 
+            payments
+            WHERE 
+            deleted_at IS NULL
+            AND
+            (:currencyType IS NULL OR currency = :currencyType)
+            AND 
+            (:entityType IS NULL OR entity_code = :entityType)
+            AND
+            (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
+            AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
+            AND (:endDate IS NULL OR transaction_date::VARCHAR <= :endDate)
+            AND (:query IS NULL OR organization_name ILIKE :query OR trans_ref_number ILIKE :query OR payment_num_value ILIKE :query)
+            AND (:paymentDocumentStatus IS NULL OR payment_document_status::VARCHAR = :paymentDocumentStatus)
+            AND (COALESCE(:documentTypes) IS NULL OR payment_code::VARCHAR IN (:documentTypes))
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                     CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                          WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM created_at)::numeric
+                          WHEN :sortBy = 'amount' THEN amount
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                     CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                          WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM created_at)::numeric
+                         WHEN :sortBy = 'amount' THEN amount
+                    END        
+            END 
+            Asc
+            OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
+            LIMIT :pageLimit
         """
     )
-    suspend fun getPaymentDocumentStatus(paymentId: Long): PaymentDocumentStatus
+    suspend fun getOnAccountList(
+        currencyType: String?,
+        entityType: Int?,
+        accMode: AccMode?,
+        startDate: String?,
+        endDate: String?,
+        query: String?,
+        sortType: String?,
+        sortBy: String?,
+        pageLimit: Int?,
+        page: Int?,
+        documentTypes: List<String>?,
+        paymentDocumentStatus: PaymentDocumentStatus?
+    ): List<PaymentResponse>?
+
+    @NewSpan
+    @Query(
+        """
+          SELECT 
+          COALESCE(COUNT(*), 0)
+          FROM payments
+          WHERE 
+          deleted_at IS NULL
+          AND
+          (:currencyType IS NULL OR currency = :currencyType)
+          AND 
+          (:entityType IS NULL OR entity_code = :entityType)
+          AND
+          (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
+          AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
+          AND (:endDate IS NULL OR transaction_date::VARCHAR <= :endDate)
+          AND (:query IS NULL OR organization_name ILIKE :query OR trans_ref_number ILIKE :query OR payment_num_value ILIKE :query)
+          AND (:paymentDocumentStatus IS NULL OR payment_document_status::VARCHAR = :paymentDocumentStatus)
+          AND (COALESCE(:documentTypes) IS NULL OR payment_code::VARCHAR IN (:documentTypes))
+        """
+    )
+    suspend fun getOnAccountListCount(
+        currencyType: String?,
+        entityType: Int?,
+        accMode: AccMode?,
+        startDate: String?,
+        endDate: String?,
+        query: String?,
+        documentTypes: List<String>?,
+        paymentDocumentStatus: PaymentDocumentStatus?
+    ): Int
+
+    @NewSpan
+    suspend fun findByPaymentNumValue(paymentNumValue: String): List<Payment>?
+
+    @NewSpan
+    suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
 }

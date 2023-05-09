@@ -187,4 +187,9 @@ class MigratePaymentsController {
             "Request for journal voucher migration received, total number of jv to migrate is $size"
         )
     }
+
+    @Post("/remove-duplicates")
+    suspend fun removeDuplicatePayNums(@Body paymentNumValues: List<String>): Response<Int> {
+        return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
+    }
 }
