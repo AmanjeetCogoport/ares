@@ -33,7 +33,7 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
-import java.util.*
+import java.util.UUID
 import javax.validation.Valid
 
 @Validated
