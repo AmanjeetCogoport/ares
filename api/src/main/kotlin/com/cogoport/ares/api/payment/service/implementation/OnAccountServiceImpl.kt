@@ -686,12 +686,12 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
-        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
+        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
             true -> DocumentStatus.FINAL
             false -> DocumentStatus.PROFORMA
         }
         accUtilizationModel.migrated = false
-        accUtilizationModel.settlementEnabled = when (receivableRequest.isPosted!!) {
+        accUtilizationModel.settlementEnabled = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
             true -> true
             false -> false
         }
