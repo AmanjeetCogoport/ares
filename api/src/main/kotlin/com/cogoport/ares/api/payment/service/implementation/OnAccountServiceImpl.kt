@@ -363,8 +363,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
-
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -379,6 +377,9 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -446,6 +447,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.paymentDocumentStatus != null && receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
             paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            accountUtilizationEntity.settlementEnabled = true
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -476,8 +478,6 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
-
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -494,6 +494,10 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+            // EMITTING RABITMQ MESSAGE TO UPDATE CUSTOMER OUTSTANDING
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+            }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
@@ -683,11 +687,15 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
-        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
+        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
             true -> DocumentStatus.FINAL
             false -> DocumentStatus.PROFORMA
         }
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
+            true -> true
+            false -> false
+        }
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
