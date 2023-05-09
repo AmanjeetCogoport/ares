@@ -123,8 +123,23 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     suspend fun getPaymentDocumentStatus(paymentId: Long): PaymentDocumentStatus
 
     @NewSpan
-    suspend fun findByPaymentNum(paymentNum: Long): List<Payment>?
+    suspend fun findByPaymentNumValue(paymentNumValue: String): List<Payment>?
 
     @NewSpan
     suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                payment_num_value
+            FROM
+                payments
+            GROUP BY
+                payment_num_value
+            HAVING
+                count(*) > 1
+        """
+    )
+    suspend fun getAllDuplicatePayNumValues(): List<String>
 }

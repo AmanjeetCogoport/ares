@@ -790,5 +790,5 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         accType: String,
         newDocValue: String,
         newDocNo: Long
-    )
+    ): Int
 }
