@@ -1108,6 +1108,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = ServiceType.NA,
                 bankId = null,
                 paymentDate = paymentDate,
+                createdBy = uploadedBy.toString(),
+                updatedBy = uploadedBy.toString(),
                 uploadedBy = uploadedByName?.get(0)?.userName,
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId,
