@@ -614,6 +614,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
                 AND deleted_at is null
+                AND settlement_enabled = true
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
@@ -676,7 +677,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             )
             AND au.deleted_at is null
             AND s.deleted_at is null
-            AND p.deleted_at is null  and au.is_void = false
+            AND p.deleted_at is null 
+            AND au.is_void = false
+            AND au.settlement_enabled = true
             AND 
             (
                 :documentPaymentStatus is null OR 
