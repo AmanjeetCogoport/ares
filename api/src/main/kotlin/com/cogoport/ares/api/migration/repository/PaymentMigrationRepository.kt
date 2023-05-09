@@ -115,11 +115,4 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         sageUniqueId: String,
         jvNum: String
     ): Long?
-
-    @Query(
-        """
-            SELECT payment_num_value FROM payments WHERE sage_ref_number = 'REC62274' AND acc_mode = :accMode and deleted_at is NULL
-        """
-    )
-    suspend fun getPaymentNumValueFromSageRefNumber(sageRefNumber: String, accMode: String): String?
 }
