@@ -1105,7 +1105,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyMappingId = serialIdDetails?.mappingId,
                 taggedOrganizationId = serialIdDetails?.organizationId,
                 paymentDocumentStatus = PaymentDocumentStatus.CREATED,
-                docType = DocType.TDS
+                docType = DocType.PAYMENT
             )
 
             if (hasErrors) {
