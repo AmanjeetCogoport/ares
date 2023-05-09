@@ -57,7 +57,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
     }
 
-    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
+    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short, settlementEnabled: Boolean): AccountUtilization {
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -88,11 +88,14 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             accCode = AresModelConstants.AR_ACCOUNT_CODE,
-            migrated = false
+            migrated = false,
+            settlementEnabled = settlementEnabled
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        if (accUtilObj.accMode == AccMode.AR) {
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        }
 
         auditService.createAudit(
             AuditRequest(

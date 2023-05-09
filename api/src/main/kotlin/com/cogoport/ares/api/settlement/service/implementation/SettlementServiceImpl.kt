@@ -53,6 +53,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.PayMode
@@ -2708,7 +2709,7 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS",
+            docType = DocType.TDS,
             transactionDate = invoiceAndBillData?.transactionDate
         )
 
@@ -2717,7 +2718,6 @@ open class SettlementServiceImpl : SettlementService {
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isDeleted = false
 
         val savedPayment = paymentRepository.save(payment)
 
@@ -2745,6 +2745,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilizationModel.currency = currency!!
         accUtilizationModel.docStatus = DocumentStatus.FINAL
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = true
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -2767,12 +2768,13 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = createdByUserType
             )
         )
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())

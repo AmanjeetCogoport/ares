@@ -47,6 +47,8 @@ open class PaymentMigrationWrapperImpl(
 
     @Inject lateinit var accountClassRepo: AccountClassRepository
 
+    private var accountUtilizationUpdateCount: Int = 0
+
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
         logger().info("Total number of payment record to process : ${paymentRecords.size}")
@@ -312,30 +314,31 @@ open class PaymentMigrationWrapperImpl(
     }
 
     @Transactional
-    override suspend fun removeDuplicatePayNums(paymentNums: List<Long>) {
-        paymentNums.forEach { it ->
-            val payments = paymentRepository.findByPaymentNum(it) ?: return@forEach
+    override suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int {
+        payNumValues.forEach { it ->
+            val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach
             val groupedPayments = payments.groupBy { it.narration }
 
             groupedPayments.forEach {
                 if (it.value.size > 1)
                     updatePaymentValue(it.value)
-                else
-                    updatePaymentNumAndValue(it.value)
+//                else
+//                    updatePaymentNumAndValue(it.value)
             }
         }
+        return accountUtilizationUpdateCount
     }
 
     @Transactional
     open suspend fun updatePaymentValue(payments: List<Payment>) {
         val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
         val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
-        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0) {
-            updatePaymentNumAndValue(payments)
+        if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0 || tdsPayment == null) {
+//            updatePaymentNumAndValue(payments)
             return
         }
-        tdsPayment?.paymentNumValue = newPayNumValueForTds
-        paymentRepository.update(tdsPayment!!)
+        tdsPayment.paymentNumValue = newPayNumValueForTds
+        paymentRepository.update(tdsPayment)
     }
 
     @Transactional
@@ -343,15 +346,15 @@ open class PaymentMigrationWrapperImpl(
         val payment = payments.find { it.paymentCode !in listOf(PaymentCode.VTDS, PaymentCode.CTDS) } ?: return
         val newPayNumAndValue = sequenceGeneratorImpl.getPaymentNumAndValue(payment.paymentCode!!, null)
         var amount = payment.amount
-        if (payments.size > 1) {
-            val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
-            amount += tdsPayment?.amount!!
+        val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
+        if (payments.size > 1 && tdsPayment != null) {
+            amount += tdsPayment.amount
             val newPayNumAndValueForTds = sequenceGeneratorImpl.getPaymentNumAndValue(tdsPayment.paymentCode!!, newPayNumAndValue.second)
             tdsPayment.paymentNum = newPayNumAndValueForTds.second
             tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
             paymentRepository.update(tdsPayment)
         }
-        accountUtilizationRepo.updateAccountUtilizationForPayment(
+        val count = accountUtilizationRepo.updateAccountUtilizationForPayment(
             payment.paymentNumValue!!,
             amount,
             payment.transactionDate!!,
@@ -361,6 +364,7 @@ open class PaymentMigrationWrapperImpl(
             newPayNumAndValue.first,
             newPayNumAndValue.second
         )
+        accountUtilizationUpdateCount += count
         payment.paymentNum = newPayNumAndValue.second
         payment.paymentNumValue = newPayNumAndValue.first
         paymentRepository.update(payment)
