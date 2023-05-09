@@ -2717,7 +2717,6 @@ open class SettlementServiceImpl : SettlementService {
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isDeleted = false
 
         val savedPayment = paymentRepository.save(payment)
 
@@ -2767,8 +2766,6 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = createdByUserType
             )
         )
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {

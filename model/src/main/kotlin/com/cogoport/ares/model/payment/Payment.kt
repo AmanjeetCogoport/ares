@@ -89,12 +89,6 @@ data class Payment(
     @JsonProperty("transactionDate")
     var transactionDate: Date? = Date(),
 
-    @JsonProperty("isPosted")
-    var isPosted: Boolean? = false,
-
-    @JsonProperty("isDeleted")
-    var isDeleted: Boolean? = false,
-
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
 
@@ -145,7 +139,7 @@ data class Payment(
     val performedByUserType: String? = null,
 
     @JsonProperty("paymentDocumentStatus")
-    var paymentDocumentStatus: PaymentDocumentStatus? = null,
+    var paymentDocumentStatus: PaymentDocumentStatus? = PaymentDocumentStatus.CREATED,
 
     @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null,
