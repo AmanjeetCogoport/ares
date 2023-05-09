@@ -616,19 +616,17 @@ class SageServiceImpl : SageService {
             status = platformPaymentDetails.paymentDocumentStatus!!.name
         )
 
-        var sagePaymentDetails: List<SagePostPaymentDetails>? = null
-        if (platformPaymentDetails.migrated == true) {
-            sagePaymentDetails = getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accMode)
-        } else {
-            sagePaymentDetails = getPaymentSageInfo(paymentNumValue, entityCode, accMode)
+        val sagePaymentDetails = when (platformPaymentDetails.migrated) {
+            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accMode)
+            else -> getPaymentSageInfo(paymentNumValue, entityCode, accMode)
         }
 
         return PaymentDetailsInfo(
             sagePaymentInfo = sagePaymentDetails,
-            platformPaymentInfo = listOf(paymentDetails)
+            platformPaymentInfo = paymentDetails
         )
     }
-    private suspend fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): List<SagePostPaymentDetails> {
+    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
             case WHEN STA_0 = 9 THEN 'POSTED'
@@ -642,10 +640,14 @@ class SageServiceImpl : SageService {
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
-        return paymentRecords.recordSets!![0]
+
+        if (paymentRecords.recordSets!![0].isNullOrEmpty()) {
+            return null
+        }
+        return paymentRecords.recordSets!![0].first()
     }
 
-    private suspend fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): List<SagePostPaymentDetails> {
+    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
         val sqlQuery = """
             SELECT P.NUM_0 AS sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
             CASE WHEN P.STA_0 = 9 THEN 'POSTED'
@@ -661,6 +663,11 @@ class SageServiceImpl : SageService {
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
-        return paymentRecords.recordSets!![0]
+
+        if (paymentRecords.recordSets!![0].isNullOrEmpty()) {
+            return null
+        }
+
+        return paymentRecords.recordSets!![0].first()
     }
 }

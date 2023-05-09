@@ -18,12 +18,12 @@ class SagePostPaymentDetails(
     @JsonProperty("gl_code")
     var glCode: Long?,
     @JsonProperty("currency")
-    var currency: String,
+    var currency: String?,
     @JsonProperty("entity_code")
-    var entityCode: Long,
+    var entityCode: Long?,
     @JsonProperty("amount")
     var amount: BigDecimal? = BigDecimal.ZERO,
-    @JsonProperty("sage_status") var sageStatus: String
+    @JsonProperty("sage_status") var sageStatus: String?
 )
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -64,6 +64,6 @@ class PlatformPostPaymentDetails(
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 class PaymentDetailsInfo(
-    var sagePaymentInfo: List<SagePostPaymentDetails>,
-    var platformPaymentInfo: List<PlatformPostPaymentDetails>
+    var sagePaymentInfo: SagePostPaymentDetails?,
+    var platformPaymentInfo: PlatformPostPaymentDetails
 )
