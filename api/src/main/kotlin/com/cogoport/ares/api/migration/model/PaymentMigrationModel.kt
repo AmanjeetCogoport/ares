@@ -38,8 +38,6 @@ data class PaymentMigrationModel(
     var transRefNumber: String? = null,
     var refPaymentId: String? = null,
     var transactionDate: Timestamp? = null,
-    var isPosted: Boolean,
-    var isDeleted: Boolean,
     var createdAt: Timestamp,
     var updatedAt: Timestamp,
     var paymentCode: PaymentCode,
@@ -50,7 +48,6 @@ data class PaymentMigrationModel(
     var tradePartyMappingId: UUID? = null,
     var taggedOrganizationId: UUID? = null,
     var bankPayAmount: BigDecimal? = null,
-
     var zone: String? = null,
     var serviceType: ServiceType? = null,
     var accountUtilCurrAmount: BigDecimal,
@@ -59,5 +56,4 @@ data class PaymentMigrationModel(
     var accountUtilPayLed: BigDecimal,
     var accountType: AccountType,
     var sageRefNumber: String?
-
 )

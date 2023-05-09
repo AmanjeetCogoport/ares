@@ -31,8 +31,6 @@ data class PaymentMigrationEntity(
     var transRefNumber: String?,
     var refPaymentId: String?,
     var transactionDate: Timestamp? = null,
-    var isPosted: Boolean,
-    var isDeleted: Boolean,
     var createdAt: Timestamp? = null,
     var updatedAt: Timestamp? = null,
     var cogoAccountNo: String?,
