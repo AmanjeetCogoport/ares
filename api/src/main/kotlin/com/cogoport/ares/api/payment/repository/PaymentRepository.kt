@@ -127,19 +127,4 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
 
     @NewSpan
     suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-                payment_num_value
-            FROM
-                payments
-            GROUP BY
-                payment_num_value
-            HAVING
-                count(*) > 1
-        """
-    )
-    suspend fun getAllDuplicatePayNumValues(): List<String>
 }

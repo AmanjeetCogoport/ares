@@ -12,6 +12,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import jakarta.inject.Inject
+import javax.validation.Valid
 
 @Controller
 class MigratePaymentsController {
@@ -189,7 +190,7 @@ class MigratePaymentsController {
     }
 
     @Post("/remove-duplicates")
-    suspend fun removeDuplicatePayNums(): Response<Int> {
-        return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums())
+    suspend fun removeDuplicatePayNums(@Valid @Body paymentNumValues: List<String>): Response<Int> {
+        return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
     }
 }

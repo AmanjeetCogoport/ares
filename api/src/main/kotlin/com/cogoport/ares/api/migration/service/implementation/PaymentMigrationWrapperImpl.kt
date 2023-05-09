@@ -314,8 +314,7 @@ open class PaymentMigrationWrapperImpl(
     }
 
     @Transactional
-    override suspend fun removeDuplicatePayNums(): Int {
-        val payNumValues = paymentRepository.getAllDuplicatePayNumValues()
+    override suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int {
         payNumValues.forEach { it ->
             val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach
             val groupedPayments = payments.groupBy { it.narration }
