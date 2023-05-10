@@ -12,7 +12,6 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import jakarta.inject.Inject
-import javax.validation.Valid
 
 @Controller
 class MigratePaymentsController {
