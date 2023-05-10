@@ -514,7 +514,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.jvCodeNum!!,
                     parentJVDetails.currency!!,
                     parentJVDetails.jvNum!!,
-                    parentJVDetails.createdAt!!,
+                    parentJVDetails.transactionDate!!,
                     parentJVDetails.description!!,
                     jvLineItemsDetails
                 )
