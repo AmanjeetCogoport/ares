@@ -117,7 +117,7 @@ class OnAccountController {
     }
 
     @Post("payment/final-post-sage-info")
-    suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo {
+    suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo? {
         return sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accMode)
     }
 }

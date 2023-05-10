@@ -35,5 +35,5 @@ interface SageService {
 
     suspend fun getJVDetailsForScheduler(startDate: String?, endDate: String?, jvNum: String?): List<JVRecordsScheduler>
 
-    suspend fun getPaymentPostSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo
+    suspend fun getPaymentPostSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo?
 }

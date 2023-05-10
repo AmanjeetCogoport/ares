@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.model.GlCodeRecordsManager
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
@@ -603,17 +605,21 @@ class SageServiceImpl : SageService {
         paymentNumValue: String,
         entityCode: Long?,
         accMode: AccMode
-    ): PaymentDetailsInfo {
+    ): PaymentDetailsInfo? {
         val platformPaymentDetails = paymentRepository.getPaymentByPaymentNumValue(paymentNumValue, entityCode, accMode)
+
+        if (platformPaymentDetails == null) {
+            throw AresException(AresError.ERR_1539, "")
+        }
         val paymentDetails = PlatformPostPaymentDetails(
             sagePaymentNum = platformPaymentDetails.sageRefNumber ?: " ",
             platformPaymentNum = platformPaymentDetails.paymentNumValue,
             bprNumber = platformPaymentDetails.sageOrganizationId,
-            glCode = platformPaymentDetails.accCode.toLong(),
-            currency = platformPaymentDetails.currency,
-            entityCode = platformPaymentDetails.entityCode.toLong(),
+            glCode = platformPaymentDetails.accCode,
+            currency = platformPaymentDetails.currency!!,
+            entityCode = platformPaymentDetails.entityCode!!.toLong(),
             amount = platformPaymentDetails.amount,
-            status = platformPaymentDetails.paymentDocumentStatus!!.name
+            status = platformPaymentDetails.paymentDocumentStatus.toString()
         )
 
         val sagePaymentDetails = when (platformPaymentDetails.migrated) {

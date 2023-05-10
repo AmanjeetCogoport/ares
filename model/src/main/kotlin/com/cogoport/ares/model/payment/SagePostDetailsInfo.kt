@@ -67,3 +67,24 @@ class PaymentDetailsInfo(
     var sagePaymentInfo: SagePostPaymentDetails?,
     var platformPaymentInfo: PlatformPostPaymentDetails
 )
+
+@Introspected
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+class PlatformPayment(
+    @JsonProperty("sage_ref_number")
+    val sageRefNumber: String?,
+    @JsonProperty("payment_num_value")
+    var paymentNumValue: String?,
+    @JsonProperty("sage_organization_id")
+    var sageOrganizationId: String?,
+    @JsonProperty("acc_code")
+    var accCode: Long?,
+    @JsonProperty("currency")
+    var currency: String?,
+    @JsonProperty("entity_code")
+    var entityCode: Long?,
+    @JsonProperty("amount")
+    var amount: BigDecimal? = BigDecimal.ZERO,
+    @JsonProperty("payment_document_status") var paymentDocumentStatus: String?,
+    @JsonProperty("migrated") var migrated: Boolean? = false
+)
