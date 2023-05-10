@@ -2,7 +2,6 @@ package com.cogoport.ares.api.gateway
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
@@ -118,108 +117,6 @@ class OpenSearchClient {
                     s.index(index).query { q ->
                         q.matchPhrase { a -> a.field("_id").query(values) }
                     }
-                },
-                classType
-            )
-        return response
-    }
-
-    @NewSpan
-    fun <T : Any> onAccountSearch(
-        request: AccountCollectionRequest,
-        classType: Class<T>
-    ): SearchResponse<T>? {
-        val response =
-            Client.search(
-                { s ->
-                    s.index(AresConstants.ON_ACCOUNT_PAYMENT_INDEX)
-                        .query { q ->
-                            q.bool { b ->
-                                b.must { t ->
-                                    t.match { v ->
-                                        v.field("isDeleted").query(FieldValue.of(false))
-                                    }
-                                }
-                                if (request.currencyType != null) {
-                                    b.must { t ->
-                                        t.match { v ->
-                                            v.field("currency")
-                                                .query(
-                                                    FieldValue.of(
-                                                        request.currencyType
-                                                    )
-                                                )
-                                        }
-                                    }
-                                }
-                                if (request.entityType != null) {
-                                    b.must { t ->
-                                        t.match { v ->
-                                            v.field("entityType")
-                                                .query(
-                                                    FieldValue.of(
-                                                        request.entityType
-                                                            .toString()
-                                                    )
-                                                )
-                                        }
-                                    }
-                                }
-                                if (request.accMode != null) {
-                                    b.must { t ->
-                                        t.match { v ->
-                                            v.field("accMode")
-                                                .query(
-                                                    FieldValue.of(
-                                                        request.accMode
-                                                            .toString()
-                                                    )
-                                                )
-                                        }
-                                    }
-                                }
-                                if (request.startDate != null && request.endDate != null
-                                ) {
-                                    b.must { m ->
-                                        m.range { r ->
-                                            r.field("transactionDate")
-                                                .gte(
-                                                    JsonData.of(
-                                                        Timestamp.valueOf(
-                                                            request.startDate
-                                                        )
-                                                    )
-                                                )
-                                                .lte(
-                                                    JsonData.of(
-                                                        Timestamp.valueOf(
-                                                            request.endDate
-                                                        )
-                                                    )
-                                                )
-                                        }
-                                    }
-                                }
-                                if (request.query != null) {
-                                    b.must { m ->
-                                        m.queryString { q ->
-                                            q.query("*${request.query!!}*")
-                                                .fields("organizationName", "utr")
-                                                .lenient(true)
-                                                .escape(true)
-                                                .allowLeadingWildcard(true)
-                                                .defaultOperator(Operator.And)
-                                        }
-                                    }
-                                }
-                                b
-                            }
-                        }
-                        .from((request.page - 1) * request.pageLimit)
-                        .size(request.pageLimit)
-                        .sort { t ->
-                            t.field { f -> f.field("createdAt").order(SortOrder.Desc) }
-                        }
                 },
                 classType
             )

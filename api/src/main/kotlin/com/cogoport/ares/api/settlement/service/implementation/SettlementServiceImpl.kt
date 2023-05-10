@@ -53,6 +53,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.PayMode
@@ -1689,8 +1690,8 @@ open class SettlementServiceImpl : SettlementService {
 
         val isNotJv = payment.accountType !in jvList
 
-        val amount = paidAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentTds + paymentNostro else BigDecimal.ZERO
-        val ledAmount = paidLedAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentTdsLed + paymentNostroLed else BigDecimal.ZERO
+        val amount = paidAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostro else BigDecimal.ZERO
+        val ledAmount = paidLedAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostroLed else BigDecimal.ZERO
         // Create Documents Settlement Entry
         if (amount.compareTo(BigDecimal.ZERO) != 0) {
             createSettlement(
@@ -2536,7 +2537,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
@@ -2544,6 +2545,9 @@ open class SettlementServiceImpl : SettlementService {
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    if (settlement.settlementStatus == SettlementStatus.POSTED) {
+                        return@forEach
+                    }
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
@@ -2552,7 +2556,7 @@ open class SettlementServiceImpl : SettlementService {
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                        throw AresException(AresError.ERR_1527, "")
+                        throw AresException(AresError.ERR_1531, "")
                     }
 
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
@@ -2567,6 +2571,7 @@ open class SettlementServiceImpl : SettlementService {
                     )
 
                     val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+                    logger().info("settlementResponse: $result")
                     val processedResponse = XML.toJSONObject(result.response)
                     val status = getZstatus(processedResponse)
                     if (status == "DONE") {
@@ -2704,7 +2709,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS"
+            docType = DocType.TDS,
+            transactionDate = invoiceAndBillData?.transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
@@ -2712,7 +2718,6 @@ open class SettlementServiceImpl : SettlementService {
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isDeleted = false
 
         val savedPayment = paymentRepository.save(payment)
 
@@ -2740,6 +2745,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilizationModel.currency = currency!!
         accUtilizationModel.docStatus = DocumentStatus.FINAL
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = true
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -2762,12 +2768,13 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = createdByUserType
             )
         )
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())

@@ -25,5 +25,6 @@ data class UpdateInvoiceStatusRequest(
     var transactionDate: Date?,
     var dueDate: Date?,
     var performedBy: UUID? = null,
-    var performedByUserType: String? = null
+    var performedByUserType: String? = null,
+    var settlementEnabled: Boolean? = false
 )

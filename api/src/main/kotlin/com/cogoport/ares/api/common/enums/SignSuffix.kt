@@ -16,4 +16,5 @@ enum class SignSuffix(val sign: Short, val accountType: AccountType) {
     PURCHASE_REMS_INVOICE(-1, AccountType.PREIMB),
     CTDS(-1, AccountType.CTDS),
     VTDS(1, AccountType.VTDS),
+    SREIMB(1, AccountType.SREIMB)
 }

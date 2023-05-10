@@ -270,11 +270,10 @@ open class KnockoffServiceImpl : KnockoffService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId,
-            migrated = false
+            migrated = false,
+            settlementEnabled = true
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
-
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
 
         auditService.createAudit(
             AuditRequest(
@@ -286,6 +285,15 @@ open class KnockoffServiceImpl : KnockoffService {
                 performedByUserType = knockOffRecord.performedByType
             )
         )
+
+        try {
+            if (accUtilObj.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
+            }
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
+        }
     }
 
     private suspend fun saveSettlements(
@@ -351,7 +359,7 @@ open class KnockoffServiceImpl : KnockoffService {
     }
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
     override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
-        val accountUtilization = accountUtilizationRepository.findRecord(reverseUtrRequest.documentNo, AccountType.PINV.name, AccMode.AP.name)
+        val accountUtilization = accountUtilizationRepository.findRecord(documentNo = reverseUtrRequest.documentNo, accMode = AccMode.AP.name)
         val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
         var tdsPaid = 0.toBigDecimal()
         var ledTdsPaid = 0.toBigDecimal()
@@ -378,7 +386,9 @@ open class KnockoffServiceImpl : KnockoffService {
         settlementRepository.deleleSettlement(settlementIds)
 
         createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        if (settlementIds.size > 1) {
+            createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        }
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0].paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationPaymentData.id)
         var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)

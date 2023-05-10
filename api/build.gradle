@@ -72,7 +72,7 @@ dependencies {
     implementation("io.micronaut.tracing:micronaut-tracing-zipkin")
     implementation("io.zipkin.aws:zipkin-reporter-xray-udp:0.23.4")
     implementation("com.cogoport.brahma.hashids:hashid:0.1.0")
-    implementation("com.cogoport.brahma.sage:sage-client:1.5.2")
+    implementation("com.cogoport.brahma.sage:sage-client:1.5.3")
     implementation("com.cogoport.brahma.authentication:authentication:1.0.8")
     implementation("com.cogoport.brahma.opensearch:client:0.1.4-beta")
     implementation("org.json:json:20220320")
@@ -89,8 +89,8 @@ dependencies {
     implementation("com.cogoport.hades:hades-model:0.1.6-beta")
 
     //Kuber Client
-    implementation("com.cogoport.kuber:kuber-model:1.1.1")
-    implementation("com.cogoport.kuber:kuber-client:0.1.13.3")
+    implementation("com.cogoport.kuber:kuber-model:1.1.4")
+    implementation("com.cogoport.kuber:kuber-client:1.1.2")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")

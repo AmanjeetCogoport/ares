@@ -27,7 +27,9 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
 import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -65,9 +67,11 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.kuber.client.KuberClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
@@ -105,6 +109,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject lateinit var journalVoucherRepoMigration: JournalVoucherRepoMigration
+
+    @Inject lateinit var kuberClient: KuberClient
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -241,8 +247,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
-            isPosted = true,
-            isDeleted = false,
             createdAt = paymentRecord.createdAt!!,
             updatedAt = paymentRecord.updatedAt!!,
             cogoAccountNo = getCogoAccountNo(paymentRecord.bankShortCode!!),
@@ -340,8 +344,6 @@ class PaymentMigrationImpl : PaymentMigration {
 
         val accUtilEntity = setAccountUtilizations(receivableRequest, payment)
         val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -390,8 +392,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = receivableRequest.transRefNumber,
             refPaymentId = null,
             transactionDate = receivableRequest.transactionDate,
-            isPosted = receivableRequest.isPosted,
-            isDeleted = receivableRequest.isDeleted,
             createdAt = receivableRequest.createdAt,
             updatedAt = receivableRequest.updatedAt,
             paymentCode = receivableRequest.paymentCode,
@@ -441,7 +441,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = paymentEntity.tradePartyMappingId,
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
             taxableAmount = BigDecimal.ZERO,
-            migrated = true
+            migrated = true,
+            settlementEnabled = true
         )
     }
 
@@ -493,7 +494,8 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            taggedBillId = null
+            taggedBillId = null,
+            settlementEnabled = true
         )
     }
 
@@ -708,15 +710,22 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
                 if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
             }
+
+            if (payLocUpdateRequest.recordType == MigrationRecordType.BILL) {
+                val billDetails = kuberClient.getBillNumberFromSageNumber(payLocUpdateRequest.documentValue!!)
+                payLocUpdateRequest.documentValue = billDetails.billNumber
+            }
+
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
                 payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
             if (platformUtilizedPayment.toBigInteger() == payLocUpdateRequest.payLoc?.toBigInteger()) {
                 return
             }
-            if (platformUtilizedPayment.toBigInteger().compareTo(payLocUpdateRequest.payLoc?.toBigInteger()) == 1) {
-                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
-            } else {
+//            if (platformUtilizedPayment.toBigInteger().compareTo(payLocUpdateRequest.payLoc?.toBigInteger()) == 1) {
+//                migrationStatus = MigrationStatus.PAYLOC_EXCEEDS
+//            }
+            else {
                 accountUtilizationRepositoryMigration
                     .updateUtilizationAmount(
                         payLocUpdateRequest.documentValue!!,
@@ -784,10 +793,10 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
-        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
-        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
@@ -817,7 +826,6 @@ class PaymentMigrationImpl : PaymentMigration {
                         migrated = true,
                         currency = jvParentDetail.currency,
                         led_currency = jvParentDetail.ledgerCurrency,
-                        amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum
@@ -901,5 +909,131 @@ class PaymentMigrationImpl : PaymentMigration {
         val number = paymentNumGeneratorRepo.getNextSequenceNumber(prefix)
         val settlementNum = "${prefix}222300000000$number"
         settlementRepository.updateSettlementNumber(id, settlementNum)
+    }
+
+    override suspend fun migrateNewPeriodRecords(record: NewPeriodRecord) {
+        try {
+            val response = cogoClient.getOrgDetailsBySageOrgId(
+                GetOrgDetailsRequest(
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationType = if (record.accMode.equals("AR")) "income" else "expense"
+                )
+            )
+            val cogoOrganization = cogoClient.getCogoOrganization(
+                CogoOrganizationRequest(
+                    organizationSerialId = null,
+                    organizationId = response.organizationId
+                )
+            )
+            if (cogoOrganization.organizationSerialId == null) {
+                throw AresException(AresError.ERR_1008, "Organization serial_id information not found")
+            }
+            val organizationSerialId = cogoOrganization.organizationSerialId!!
+            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong())
+            val serialIdRequest = SerialIdDetailsRequest(
+                organizationTradePartyMappings = arrayListOf(serialIdInputs)
+            )
+            val tradePartyResponse = cogoClient.getSerialIdDetails(serialIdRequest)?.get(0)
+                ?: throw AresException(AresError.ERR_1008, "trade party information not found")
+
+            if (accountUtilizationRepositoryMigration.checkIfNewRecordIsPresent(record.documentValue!!, record.sageOrganizationId!!)) {
+                throw AresException(AresError.ERR_1008, "new period record already present")
+            }
+            accountUtilizationRepositoryMigration.save(
+                AccountUtilizationMigration(
+                    id = null,
+                    documentNo = getFormattedNumber(record.documentValue).toLong(),
+                    documentValue = record.documentValue,
+                    zoneCode = "NORTH",
+                    serviceType = "NA",
+                    documentStatus = DocumentStatus.FINAL,
+                    entityCode = record.cogoEntity!!.toInt(),
+                    category = null,
+                    orgSerialId = tradePartyResponse.tradePartySerial,
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationId = tradePartyResponse.organizationTradePartyDetailId,
+                    taggedOrganizationId = tradePartyResponse.organizationId,
+                    tradePartyMappingId = tradePartyResponse.mappingId,
+                    organizationName = tradePartyResponse.tradePartyBusinessName,
+                    accCode = if (record.accMode == "AR") 223000 else 321000,
+                    accType = AccountType.NEWPR,
+                    accMode = if (record.accMode == "AR") AccMode.AR else AccMode.AP,
+                    signFlag = record.signFlag!!.toShort(),
+                    currency = record.currency!!,
+                    ledCurrency = record.currency,
+                    amountCurr = record.amountCurr!!.toBigDecimal(),
+                    amountLoc = record.amountLoc!!.toBigDecimal(),
+                    taxableAmount = BigDecimal.ZERO,
+                    payCurr = record.payCurr!!.toBigDecimal(),
+                    payLoc = record.payLoc!!.toBigDecimal(),
+                    dueDate = SimpleDateFormat("yyyy-MM-dd").parse(record.transactionDate),
+                    transactionDate = SimpleDateFormat("yyyy-MM-dd").parse(record.transactionDate),
+                    createdAt = record.createdAt,
+                    updatedAt = record.updatedAt,
+                    migrated = true,
+                    isVoid = false,
+                    taggedBillId = null,
+                    tdsAmountLoc = BigDecimal.ZERO,
+                    tdsAmount = BigDecimal.ZERO
+                )
+            )
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, null)
+        } catch (ex: AresException) {
+            logger().info("${record.sageOrganizationId} Error while migrating newPR record")
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, "${record.sageOrganizationId} : ${ex.context}")
+        } catch (ex: Exception) {
+            val message = "${record.sageOrganizationId}: Error while migrating newPR record"
+            migrationLogService.saveMigrationLogs(null, null, record.documentValue, null, null, null, null, null, null, message)
+        }
+    }
+
+    override suspend fun migrateJVUtilization(record: JVRecordsScheduler) {
+        try {
+            val organizationType = if (record.accMode == "AP") "expense" else "income"
+            val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
+                GetOrgDetailsRequest(
+                    sageOrganizationId = record.sageOrganizationId,
+                    organizationType = organizationType
+                )
+            ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
+            var migrationStatus = MigrationStatus.PAYLOC_UPDATED
+            val accUtilId = journalVoucherRepoMigration.getAccUtilId(
+                record.sageUniqueId!!,
+                record.paymentNum!!,
+                AccMode.valueOf(record.accMode!!),
+                tradePartyDetailId
+            ) ?: throw AresException(AresError.ERR_1003, "jv records not found in account_utilization")
+            accountUtilizationRepositoryMigration.updateJVUtilizationAmount(
+                accUtilId,
+                record.accountUtilPayCurr!!.toBigDecimal(),
+                record.accountUtilPayLed!!.toBigDecimal()
+            )
+            migrationLogService.saveMigrationLogs(null, null, null, record.paymentNum, migrationStatus)
+        } catch (ex: AresException) {
+            migrationLogService.saveMigrationLogs(
+                null, null, ex.context,
+                record.paymentNum, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
+        } catch (ex: Exception) {
+            logger().info("error message $ex")
+            migrationLogService.saveMigrationLogs(
+                null, null, "error while migrating jv utilization record",
+                record.paymentNum, MigrationStatus.PAYLOC_NOT_UPDATED
+            )
+        }
+    }
+
+    private fun getFormattedNumber(record: String?): String {
+        var numString = ""
+        try {
+            record?.forEach { ch ->
+                if (ch.isDigit())
+                    numString += ch
+            }
+            return numString
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+        }
+        return "NA"
     }
 }

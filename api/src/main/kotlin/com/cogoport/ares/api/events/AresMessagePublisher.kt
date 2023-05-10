@@ -1,7 +1,9 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.migration.model.JVParentDetails
+import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
+import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
@@ -55,6 +57,10 @@ interface AresMessagePublisher {
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
     @Binding("tagged.bill.auto.knockoff")
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
+    @Binding("migrate.new.period")
+    suspend fun emitNewPeriodRecords(newPeriodRecord: NewPeriodRecord)
+    @Binding("migrate.jv.pay.loc")
+    suspend fun emitJVUtilization(record: JVRecordsScheduler)
 
     @Binding("ares.migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)

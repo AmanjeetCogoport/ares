@@ -34,7 +34,7 @@ class MigratePaymentsController {
                 "Request for payment migration received, total number of payments to migrate is $size"
             )
         } else {
-            val size = paymentMigration.migrateJournalVoucher(startDate, endDate, null)
+            val size = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null, null)
             return Response<String>().ok(
                 HttpStatus.OK.name,
                 "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -56,7 +56,7 @@ class MigratePaymentsController {
 
     @Post("/JVNum-migrate")
     suspend fun migrateJVNum(@Body jvNums: List<String>): Response<String> {
-        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums)
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, jvNums, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request for journal voucher migration received, total number of jv to migrate is $size"
@@ -142,10 +142,34 @@ class MigratePaymentsController {
 
     @Get("/migrate-jv")
     suspend fun migrateJvByDate(@QueryValue startDate: String, @QueryValue endDate: String): Response<String> {
-        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null)
+        val count = paymentMigration.migrateJournalVoucherRecordNew(startDate, endDate, null, null)
         return Response<String>().ok(
             HttpStatus.OK.name,
             "Request received to update utilizations for bill total record: $count"
+        )
+    }
+
+    @Get("/new-pr")
+    suspend fun migrateNewPrRecord(@QueryValue startDate: String, @QueryValue endDate: String, @QueryValue bpr: String?, @QueryValue accMode: String): String {
+        paymentMigration.migrateNewPR(startDate, endDate, bpr, accMode)
+        return Response<String>().ok(
+            "request received to migrate new period"
+        )
+    }
+
+    @Get("/migrate-jv-utilization")
+    suspend fun migrateJVUtilization(@QueryValue startDate: String, @QueryValue endDate: String): String {
+        paymentMigration.migrateJVUtilization(startDate, endDate, null)
+        return Response<String>().ok(
+            "request received to migrate new period"
+        )
+    }
+
+    @Post("/migrate-jv-utilization-by-jv-num")
+    suspend fun migrateJVUtilizationByJvNum(@Body jvNums: List<String>): String {
+        paymentMigration.migrateJVUtilization(null, null, jvNums)
+        return Response<String>().ok(
+            "request received to migrate new period"
         )
     }
 
@@ -153,5 +177,19 @@ class MigratePaymentsController {
     suspend fun migratePaymentNum(): Response<String> {
         val size = paymentMigration.migrateGlAccount()
         return Response<String>().ok(HttpStatus.OK.name, "Request for GL code migration received, total number of GL to migrate is $size")
+    }
+
+    @Post("/migrate-sage-jv-id")
+    suspend fun migrateJVNumById(@Body sageJvIds: List<String>): Response<String> {
+        val size = paymentMigration.migrateJournalVoucherRecordNew(null, null, null, sageJvIds)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for journal voucher migration received, total number of jv to migrate is $size"
+        )
+    }
+
+    @Post("/remove-duplicates")
+    suspend fun removeDuplicatePayNums(@Body paymentNumValues: List<String>): Response<Int> {
+        return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
     }
 }

@@ -15,7 +15,7 @@ interface PaymentMigrationWrapper {
     suspend fun updateUtilizationAmountByPaymentNum(paymentNums: List<String>): Int
     suspend fun updateUtilizationForInvoice(startDate: String?, endDate: String?, updatedAt: String?, invoiceNumbers: List<String>?): Int
     suspend fun updateUtilizationForBill(startDate: String?, endDate: String?, updatedAt: String?): Int
-    suspend fun migrateJournalVoucherRecordNew(startDate: String?, endDate: String?, jvNums: List<String>?): Int
+    suspend fun migrateJournalVoucherRecordNew(startDate: String?, endDate: String?, jvNums: List<String>?, sageJvId: List<String>?): Int
 
     suspend fun migrateSettlementNumWrapper(ids: List<Long>)
 
@@ -24,4 +24,10 @@ interface PaymentMigrationWrapper {
     suspend fun migrateGlAccount(): Int
 
     suspend fun createGLCode(request: GlCodeMaster)
+
+    suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
+
+    suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?): Int
+
+    suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int
 }

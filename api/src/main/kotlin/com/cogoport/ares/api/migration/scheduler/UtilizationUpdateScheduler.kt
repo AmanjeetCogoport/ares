@@ -52,7 +52,7 @@ class UtilizationUpdateScheduler {
         }
     }
 
-    @Scheduled(cron = "0 0 * * *")
+//    @Scheduled(cron = "0 30 4 ? * *")
     fun migratePayments() = runBlocking {
         val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
         val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
@@ -60,9 +60,16 @@ class UtilizationUpdateScheduler {
         records.forEach {
             aresMessagePublisher.emitPaymentMigration(it)
         }
-        val jvRecords = sageService.getJVDetails(startDate, endDate, null)
+        val jvRecords = sageService.getJVDetails(startDate, endDate, null, null)
         jvRecords.forEach {
             aresMessagePublisher.emitJournalVoucherMigration(it)
         }
+    }
+
+    @Scheduled(cron = "0 30 8 ? * *")
+    fun migrateJVUtilizationScheduler() = runBlocking {
+        val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+        val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
+        paymentMigrationWrapper.migrateJVUtilization(startDate, endDate, null)
     }
 }
