@@ -2,12 +2,14 @@ package com.cogoport.ares.model.payment
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties
 class SagePostPaymentDetails(
     @JsonProperty("sage_payment_num")
     val sagePaymentNum: String?,
@@ -28,6 +30,7 @@ class SagePostPaymentDetails(
 )
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties
 class PostPaymentInfo {
     @JsonProperty("recordsets")
     val recordSets: ArrayList<ArrayList<SagePostPaymentDetails>>? = null
@@ -40,10 +43,14 @@ class PostPaymentInfo {
 
     @JsonIgnore
     val output: Any? = null
+
+    @JsonProperty
+    val error: Any? = null
 }
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties
 class PlatformPostPaymentDetails(
     @JsonProperty("sage_ref_number")
     val sagePaymentNum: String?,
@@ -65,6 +72,7 @@ class PlatformPostPaymentDetails(
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties
 class PaymentDetailsInfo(
     var sagePaymentInfo: SagePostPaymentDetails?,
     var platformPaymentInfo: PlatformPostPaymentDetails
@@ -72,6 +80,7 @@ class PaymentDetailsInfo(
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonIgnoreProperties
 class PlatformPayment(
     @JsonProperty("sage_ref_number")
     val sageRefNumber: String?,
