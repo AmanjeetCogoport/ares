@@ -619,7 +619,8 @@ class SageServiceImpl : SageService {
             currency = platformPaymentDetails.currency!!,
             entityCode = platformPaymentDetails.entityCode!!.toLong(),
             amount = platformPaymentDetails.amount,
-            status = platformPaymentDetails.paymentDocumentStatus.toString()
+            status = platformPaymentDetails.paymentDocumentStatus.toString(),
+            organizationName = platformPaymentDetails.organizationName
         )
 
         val sagePaymentDetails = when (platformPaymentDetails.migrated) {
@@ -641,7 +642,8 @@ class SageServiceImpl : SageService {
                  ACC_0 as gl_code, 
                  CUR_0 as currency, 
                  FCY_0 as entity_code, 
-                 AMTCUR_0 as amount
+                 AMTCUR_0 as amount,
+                 P.BPANAM_0 as organization_name
             from $sageDatabase.PAYMENTH where UMRNUM_0 in ('$paymentNumValue') and FCY_0 = $entityCode and BPRSAC_0 = '$accMode'
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
@@ -662,7 +664,8 @@ class SageServiceImpl : SageService {
                  P.ACC_0 as gl_code, 
                  P.CUR_0 as currency, 
                  P.FCY_0 as entity_code, 
-                 P.AMTCUR_0 as amount
+                 P.AMTCUR_0 as amount,
+                 P.BPANAM_0 as organization_name
             from $sageDatabase.PAYMENTH P
             JOIN $sageDatabase.GACCENTRY GA on P.NUM_0 = GA.REF_0
             where GA.NUM_0 in ('$paymentNumValue') and P.FCY_0 = $entityCode and P.BPRSAC_0 = '$accMode'

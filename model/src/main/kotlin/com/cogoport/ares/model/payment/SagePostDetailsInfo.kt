@@ -23,7 +23,8 @@ class SagePostPaymentDetails(
     var entityCode: Long?,
     @JsonProperty("amount")
     var amount: BigDecimal? = BigDecimal.ZERO,
-    @JsonProperty("sage_status") var sageStatus: String?
+    @JsonProperty("sage_status") var sageStatus: String?,
+    @JsonProperty("organization_name") var organizationName: String?
 )
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -58,7 +59,8 @@ class PlatformPostPaymentDetails(
     var entityCode: Long,
     @JsonProperty("amount")
     var amount: BigDecimal? = BigDecimal.ZERO,
-    @JsonProperty("status") var status: String
+    @JsonProperty("status") var status: String,
+    @JsonProperty("organization_name") var organizationName: String?
 )
 
 @Introspected
@@ -86,5 +88,6 @@ class PlatformPayment(
     @JsonProperty("amount")
     var amount: BigDecimal? = BigDecimal.ZERO,
     @JsonProperty("payment_document_status") var paymentDocumentStatus: String?,
-    @JsonProperty("migrated") var migrated: Boolean? = false
+    @JsonProperty("migrated") var migrated: Boolean? = false,
+    @JsonProperty("organization_name") var organizationName: String?
 )
