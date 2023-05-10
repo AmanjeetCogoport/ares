@@ -67,6 +67,7 @@ enum class InvoiceType(val value: String) {
     OUTST("Outstanding Voucher"),
     JVNOS("Nostro Voucher"),
     SREIMB("Reimbursement Sales Invoice"),
+    SREIMBCN("Reimbursement Sales Credit Note"),
     PREIMB("Reimbursement Purchase Invoice"),
     ICJV("Inter Company Journal Voucher"),
     DBTRC("Faltas pagamento"),
