@@ -313,7 +313,6 @@ open class PaymentMigrationWrapperImpl(
         return formattedData.substring(0, formattedData.length - 1).toString()
     }
 
-    @Transactional
     override suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int {
         payNumValues.forEach { it ->
             val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach

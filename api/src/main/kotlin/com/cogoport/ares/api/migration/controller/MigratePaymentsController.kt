@@ -190,7 +190,7 @@ class MigratePaymentsController {
     }
 
     @Post("/remove-duplicates")
-    suspend fun removeDuplicatePayNums(@Valid @Body paymentNumValues: List<String>): Response<Int> {
+    suspend fun removeDuplicatePayNums(@Body paymentNumValues: List<String>): Response<Int> {
         return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
     }
 }
