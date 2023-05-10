@@ -244,7 +244,7 @@ class PaymentMigrationImpl : PaymentMigration {
             ledAmount = paymentRecord.ledgerAmount,
             payMode = PayMode.valueOf(paymentRecord.paymentMode!!), // getPaymentMode(paymentRecord)?.let { PaymentModeMapping.getPayMode(it) },
             narration = paymentRecord.narration,
-            transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
+            transRefNumber = paymentRecord.narration,
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
             createdAt = paymentRecord.createdAt!!,
