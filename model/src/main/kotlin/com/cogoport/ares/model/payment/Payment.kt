@@ -9,6 +9,7 @@ import io.micronaut.core.annotation.ReflectiveAccess
 import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 import javax.validation.constraints.Min
 
@@ -86,13 +87,7 @@ data class Payment(
     var refAccountNo: String?,
 
     @JsonProperty("transactionDate")
-    var transactionDate: Timestamp? = Timestamp(System.currentTimeMillis()),
-
-    @JsonProperty("isPosted")
-    var isPosted: Boolean? = false,
-
-    @JsonProperty("isDeleted")
-    var isDeleted: Boolean? = false,
+    var transactionDate: Date? = Date(),
 
     @JsonProperty("createdAt")
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
@@ -144,13 +139,13 @@ data class Payment(
     val performedByUserType: String? = null,
 
     @JsonProperty("paymentDocumentStatus")
-    var paymentDocumentStatus: PaymentDocumentStatus? = null,
+    var paymentDocumentStatus: PaymentDocumentStatus? = PaymentDocumentStatus.CREATED,
 
     @JsonProperty("tradePartyDocument")
     val tradePartyDocument: String? = null,
 
     @JsonProperty("docType")
-    val docType: String? = null,
+    val docType: DocType? = DocType.PAYMENT,
 
     @JsonProperty("sageRefNumber")
     var sageRefNumber: String? = null

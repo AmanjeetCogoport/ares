@@ -66,7 +66,7 @@ class SageServiceImpl : SageService {
 
     open fun isPaymentPostedFromSage(paymentValue: String): String? {
 
-        val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
+        val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue' AND STA_0 = 9"
         val resultFromQuery = Client.sqlQuery(query)
         logger().info("paymentData: $resultFromQuery")
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
