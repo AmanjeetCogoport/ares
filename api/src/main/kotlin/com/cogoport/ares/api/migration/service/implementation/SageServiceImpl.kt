@@ -636,14 +636,14 @@ class SageServiceImpl : SageService {
     private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
-            case WHEN STA_0 = 9 THEN 'POSTED'
-                 WHEN STA_0 = 1 THEN 'NOT-POSTED' end as sage_status, 
+            case WHEN STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN STA_0 = 1 THEN 'POSTED' end as sage_status, 
                  BPR_0 as bpr_number, 
                  ACC_0 as gl_code, 
                  CUR_0 as currency, 
                  FCY_0 as entity_code, 
                  AMTCUR_0 as amount,
-                 P.BPANAM_0 as organization_name
+                 BPANAM_0 as organization_name
             from $sageDatabase.PAYMENTH where UMRNUM_0 in ('$paymentNumValue') and FCY_0 = $entityCode and BPRSAC_0 = '$accMode'
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
@@ -658,8 +658,8 @@ class SageServiceImpl : SageService {
     private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
         val sqlQuery = """
             SELECT P.NUM_0 AS sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
-            CASE WHEN P.STA_0 = 9 THEN 'POSTED'
-                 WHEN P.STA_0 = 1 THEN 'NOT-POSTED' end as sage_status, 
+            CASE WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN P.STA_0 = 1 THEN 'POSTED' end as sage_status, 
                  P.BPR_0 as bpr_number, 
                  P.ACC_0 as gl_code, 
                  P.CUR_0 as currency, 
