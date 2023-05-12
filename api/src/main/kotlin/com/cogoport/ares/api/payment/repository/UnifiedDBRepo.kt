@@ -151,7 +151,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN loki.jobs lj on lj.id = pinv.job_id
             WHERE
             acc_mode = 'AR'
-            AND acc_type in ('SINV', 'SCN', 'SREIMB')
+            AND acc_type in ('SINV', 'SCN', 'SREIMB', 'SREIMBCN)
             AND aau.document_status = 'FINAL'
             AND aau.due_date IS NOT NULL
             AND aau.transaction_date::date <= Now()
@@ -763,7 +763,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
 		AND au.document_status in('FINAL')
         AND (COALESCE(:customerTypes) is null OR los.segment in(:customerTypes))
 		AND au.deleted_at IS NULL
-		AND au.acc_type IN ('SINV','SCN','SREIMB')
+		AND au.acc_type IN ('SINV','SCN','SREIMB', 'SREIMBCN)
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
@@ -1422,7 +1422,7 @@ WHERE
 		AND au.due_date IS NOT NULL
 		AND au.document_status in('FINAL')
 		AND au.deleted_at IS NULL
-		AND au.acc_type IN ('SINV','SCN','SREIMB')
+		AND au.acc_type IN ('SINV','SCN','SREIMB', 'SREIMBCN')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (COALESCE(:defaultersOrgIds) IS NULL OR au.organization_id::UUID NOT IN (:defaultersOrgIds))
