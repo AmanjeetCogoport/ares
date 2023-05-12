@@ -555,7 +555,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val settlement = settlemnetRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
             logger().info(settlement.toString())
 
-            if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already settled.")
+            if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already utilized.")
 
             if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
 
@@ -617,8 +617,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 logger().error(ex.stackTraceToString())
             }
         } catch (aresException: AresException) {
-            logger().error("${aresException.context} ${aresException.error.message}")
-            Sentry.captureException(Throwable("${aresException.context} ${aresException.error.message}"))
+            logger().error("""${mapOf("paymentId" to deletePaymentRequest.paymentId, "error" to "${aresException.context} ${aresException.error.message}")}""")
             throw aresException
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
