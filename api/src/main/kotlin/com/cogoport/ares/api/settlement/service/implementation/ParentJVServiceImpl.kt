@@ -372,13 +372,15 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, updatedParentJvData, transactionDate)
 
-        aresMessagePublisher.emitPostJvToSage(
-            PostJVToSageRequest(
-                parentJvId = Hashids.encode(updatedParentJvData.id!!),
-                performedBy = updatedParentJvData.createdBy!!
+        if (updatedParentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(updatedParentJvData.id!!),
+                    performedBy = updatedParentJvData.createdBy!!
 
+                )
             )
-        )
+        }
 
         return Hashids.encode(parentJvData.id!!)
     }
