@@ -2623,7 +2623,7 @@ open class SettlementServiceImpl : SettlementService {
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             sageOrganizationFromSageId = if (accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
         } else {
-            throw AresException(AresError.ERR_1528, "organizationId is not present")
+            throw AresException(AresError.ERR_1532, "organizationId is not present")
         }
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
@@ -2639,12 +2639,12 @@ open class SettlementServiceImpl : SettlementService {
 
         if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
             recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
-            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
+            throw AresException(AresError.ERR_1532, "sage organizationId is not present in table")
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
             recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
-            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
+            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
         }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)

@@ -52,7 +52,6 @@ enum class AresError(
     ERR_1525("ERR_1525", "Payment entry already exist on sage", HttpStatus.NOT_ACCEPTABLE),
     ERR_1526("ERR_1526", "Unauthorised", HttpStatus.UNAUTHORIZED),
     ERR_1527("ERR_1527", "Credit Amount is not equal to Debit Amount", HttpStatus.NOT_ACCEPTABLE),
-    ERR_1528("ERR_1528", "Jv is yet not been approved.", HttpStatus.NOT_ACCEPTABLE),
     ERR_1529("ERR_1529", "No value exists for this Acc Mode: ", HttpStatus.BAD_REQUEST),
     ERR_1530("ERR_1530", "No Organization is present with this Trade Party Id ", HttpStatus.BAD_REQUEST),
     ERR_1531("ERR_1531", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
@@ -63,7 +62,8 @@ enum class AresError(
     ERR_1536("ERR_1536", "Payment is not posted from sage", HttpStatus.BAD_REQUEST),
     ERR_1537("ERR_1537", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST),
     ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST),
-    ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST);
+    ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST),
+    ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
