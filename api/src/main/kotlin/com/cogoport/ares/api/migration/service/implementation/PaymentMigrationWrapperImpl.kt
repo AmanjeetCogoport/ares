@@ -321,8 +321,8 @@ open class PaymentMigrationWrapperImpl(
             groupedPayments.forEach {
                 if (it.value.size > 1)
                     updatePaymentValue(it.value)
-//                else
-//                    updatePaymentNumAndValue(it.value)
+                else
+                    updatePaymentNumAndValue(it.value)
             }
         }
         return accountUtilizationUpdateCount
@@ -333,7 +333,7 @@ open class PaymentMigrationWrapperImpl(
         val tdsPayment = payments.find { it.paymentCode in listOf(PaymentCode.VTDS, PaymentCode.CTDS) }
         val newPayNumValueForTds = tdsPayment?.paymentCode.toString() + tdsPayment?.paymentNumValue?.substring(3)
         if (paymentRepository.countByPaymentNumValueEquals(newPayNumValueForTds) > 0 || tdsPayment == null) {
-//            updatePaymentNumAndValue(payments)
+            updatePaymentNumAndValue(payments)
             return
         }
         tdsPayment.paymentNumValue = newPayNumValueForTds
