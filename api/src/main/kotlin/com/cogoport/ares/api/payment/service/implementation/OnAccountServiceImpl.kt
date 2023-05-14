@@ -110,6 +110,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -1363,7 +1364,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     currency!!,
                     entityCode!!,
                     if (paymentDetails.accMode == AccMode.AP) 1 else 2,
-                    paymentDetails.amount,
+                    paymentDetails.amount.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentDetails.transRefNumber,
                     paymentLineItemDetails
                 )
