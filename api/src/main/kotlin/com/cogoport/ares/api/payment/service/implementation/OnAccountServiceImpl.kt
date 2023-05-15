@@ -566,12 +566,11 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun deletePaymentEntry(deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
         try {
             val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId)
+            if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
+
             val settlement = settlemnetRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
             logger().info("settlementDetails: $settlement")
-
             if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already utilized.")
-
-            if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
 
             payment.deletedAt = Timestamp.from(Instant.now())
             payment.updatedAt = payment.deletedAt

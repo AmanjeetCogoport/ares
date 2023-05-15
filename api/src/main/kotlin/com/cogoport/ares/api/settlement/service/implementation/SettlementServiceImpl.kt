@@ -542,7 +542,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         @Suppress("UNCHECKED_CAST")
-        var settlements =
+        val settlements =
             settlementRepository.findSettlement(
                 request.documentNo.toLong(),
                 request.settlementType,

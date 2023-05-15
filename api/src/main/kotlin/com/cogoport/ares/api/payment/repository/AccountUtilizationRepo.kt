@@ -37,9 +37,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """ 
             select
-                id, document_no, document_value, zone_code, service_type, document_status, entity_code, category, org_serial_id, sage_organization_id,
-                organization_id, tagged_organization_id, trade_party_mapping_id, organization_name, acc_code, acc_type, acc_mode, sign_flag, currency, led_currency, amount_curr, amount_loc, pay_curr,
-                pay_loc, due_date, transaction_date, created_at, updated_at, taxable_amount, migrated, is_void, tagged_bill_id, tds_amount, tds_amount_loc, settlement_enabled, deleted_at
+                *
             from
                 account_utilizations 
             where 
