@@ -35,7 +35,6 @@ import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
-import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
@@ -67,7 +66,6 @@ import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
-import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -91,7 +89,6 @@ import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
 import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
-import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
 import com.cogoport.brahma.sage.SageException
@@ -177,9 +174,6 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var aresDocumentRepository: AresDocumentRepository
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
-
-    @Inject
-    lateinit var settlementService: SettlementService
 
     @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
@@ -615,15 +609,15 @@ open class OnAccountServiceImpl : OnAccountService {
                     performedByUserType = deletePaymentRequest.performedByUserType
                 )
             )
-            if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED && payment.paymentCode == PaymentCode.PAY) {
-                val request = DeleteSettlementRequest(
-                    documentNo = Hashids.encode(payment.paymentNum!!),
-                    deletedBy = UUID.fromString(deletePaymentRequest.performedById),
-                    deletedByUserType = deletePaymentRequest.performedByUserType,
-                    settlementType = SettlementType.PAY
-                )
-                settlementService.delete(request)
-            }
+//            if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED && payment.paymentCode == PaymentCode.PAY) {
+//                val request = DeleteSettlementRequest(
+//                    documentNo = Hashids.encode(payment.paymentNum!!),
+//                    deletedBy = UUID.fromString(deletePaymentRequest.performedById),
+//                    deletedByUserType = deletePaymentRequest.performedByUserType,
+//                    settlementType = SettlementType.PAY
+//                )
+//                settlementService.delete(request)
+//            }
             try {
                 /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
                 Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)

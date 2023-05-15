@@ -63,7 +63,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-            """
+        """
                 select
                     *
                 from
