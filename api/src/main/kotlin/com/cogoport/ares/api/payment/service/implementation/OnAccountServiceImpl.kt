@@ -551,9 +551,8 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun deletePaymentEntry(deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
         try {
             val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId)
-                ?: throw AresException(AresError.ERR_1001, "")
             val settlement = settlemnetRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
-            logger().info(settlement.toString())
+            logger().info("settlementDetails: $settlement")
 
             if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already utilized.")
 
@@ -1548,8 +1547,14 @@ open class OnAccountServiceImpl : OnAccountService {
                     createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
+            } catch (sageException: SageException) {
+                createThirdPartyAudit(id, "PostPaymentFromSage", sageException.data, sageException.context, false)
+                failedIds.add(id)
+            } catch (aresException: AresException) {
+                createThirdPartyAudit(id, "PostPaymentFromSage", id.toString(), "${aresException.error.message} ${aresException.context}", false)
+                failedIds.add(id)
             } catch (e: Exception) {
-                createThirdPartyAudit(id, "PostPaymentFromSage", "", e.toString(), false)
+                createThirdPartyAudit(id, "PostPaymentFromSage", id.toString(), e.toString(), false)
                 failedIds.add(id)
             }
         }
@@ -1576,8 +1581,16 @@ open class OnAccountServiceImpl : OnAccountService {
                     createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
-            } catch (e: Exception) {
-                createThirdPartyAudit(id, "CancelPaymentFromSage", "", e.toString(), false)
+            } catch (sageException: SageException) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", sageException.data, sageException.context, false)
+                failedIds.add(id)
+            }
+            catch (aresException: AresException) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), "${aresException.error.message} ${aresException.context}", false)
+                failedIds.add(id)
+            }
+            catch (e: Exception) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), e.toString(), false)
                 failedIds.add(id)
             }
         }

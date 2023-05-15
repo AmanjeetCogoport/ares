@@ -91,6 +91,7 @@ import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
@@ -2582,10 +2583,18 @@ open class SettlementServiceImpl : SettlementService {
                         failedSettlementIds?.add(settlementId)
                         recordAudits(settlementId, result.requestString, result.response, false)
                     }
+                } catch (sageException: SageException) {
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, sageException.data, sageException.context, false)
+                } catch (aresException: AresException) {
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
                 } catch (e: Exception) {
                     settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
                     failedSettlementIds?.add(settlementId)
-                    recordAudits(settlementId, "", e.toString(), false)
+                    recordAudits(settlementId, settlementId.toString(), e.toString(), false)
                 }
             }
         }
@@ -2603,7 +2612,7 @@ open class SettlementServiceImpl : SettlementService {
                 "Settlement",
                 id,
                 "SETTLEMENT",
-                "200",
+                if (isSuccess) "200" else "500",
                 request,
                 response,
                 isSuccess
