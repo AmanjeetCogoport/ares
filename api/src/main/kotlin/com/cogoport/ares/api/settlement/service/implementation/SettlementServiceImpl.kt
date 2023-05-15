@@ -41,7 +41,6 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
-import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -73,6 +72,7 @@ import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -196,9 +196,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
-
-    @Inject
-    lateinit var journalVoucherRepository: JournalVoucherRepository
 
     @Inject
     lateinit var sageService: SageService
@@ -2777,6 +2774,17 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = createdByUserType
             )
         )
+
+        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+            aresMessagePublisher.emitPostPaymentToSage(
+                PostPaymentToSage(
+                    paymentId = savedPayment.id!!,
+                    performedBy = savedPayment.createdBy!!
+
+                )
+            )
+        }
+
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {

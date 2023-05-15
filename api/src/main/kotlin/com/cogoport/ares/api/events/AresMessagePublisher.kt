@@ -12,6 +12,7 @@ import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -67,4 +68,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.post.jv.to.sage")
     suspend fun emitPostJvToSage(req: PostJVToSageRequest)
+
+    @Binding("ares.post.payment.to.sage")
+    suspend fun emitPostPaymentToSage(req: PostPaymentToSage)
 }

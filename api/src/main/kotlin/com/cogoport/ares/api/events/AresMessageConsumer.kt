@@ -28,6 +28,7 @@ import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.brahma.hashids.Hashids
@@ -187,5 +188,10 @@ class AresMessageConsumer {
     @Queue("ares-send-payment-details", prefetch = 1)
     fun sendPaymentDetailsForOnAccount(req: Payment) = runBlocking {
         onAccountService.createPaymentEntryAndReturnUtr(req)
+    }
+
+    @Queue("ares-post-payment-to-sage", prefetch = 1)
+    fun directPaymentPostToSage(req: PostPaymentToSage) = runBlocking {
+        onAccountService.directFinalPostToSage(req)
     }
 }
