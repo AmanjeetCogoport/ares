@@ -617,7 +617,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 logger().error(ex.stackTraceToString())
             }
         } catch (aresException: AresException) {
-            logger().error("""${mapOf("paymentId" to deletePaymentRequest.paymentId, "error" to "${aresException.context} ${aresException.error.message}")}""")
+            logger().error("""${mapOf("paymentId" to deletePaymentRequest.paymentId, "error" to "${aresException.error.message} ${aresException.context}")}""")
             throw aresException
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -1463,6 +1463,21 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
             )
             throw exception
+        } catch (aresException: AresException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostPaymentToSage",
+                    "Payment",
+                    paymentId,
+                    "PAYMENT",
+                    "500",
+                    paymentId.toString(),
+                    "${aresException.error.message} ${aresException.context}",
+                    false
+                )
+            )
+            throw aresException
         } catch (e: Exception) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -1472,7 +1487,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     paymentId,
                     "PAYMENT",
                     "500",
-                    "",
+                    paymentId.toString(),
                     e.toString(),
                     false
                 )

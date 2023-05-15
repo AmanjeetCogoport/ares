@@ -224,8 +224,14 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private fun getSignFlag(type: String): Short {
         return when (type.uppercase()) {
-            "CREDIT" -> { -1 }
-            "DEBIT" -> { 1 }
+            "CREDIT" -> {
+                -1
+            }
+
+            "DEBIT" -> {
+                1
+            }
+
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
             }
@@ -306,7 +312,8 @@ open class ParentJVServiceImpl : ParentJVService {
     override suspend fun deleteJournalVoucherById(id: String, performedBy: UUID): String {
         val parentJvId = Hashids.decode(id)[0]
         try {
-            val parentJvDetails = parentJVRepository.findById(parentJvId) ?: throw AresException(AresError.ERR_1002, "JV")
+            val parentJvDetails = parentJVRepository.findById(parentJvId)
+                ?: throw AresException(AresError.ERR_1002, "JV")
             if (parentJvDetails.isUtilized == true) {
                 throw AresException(AresError.ERR_1540, "JV is already utilized.")
             }
@@ -320,17 +327,17 @@ open class ParentJVServiceImpl : ParentJVService {
             journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
 
             auditService.createAudit(
-                    AuditRequest(
-                            objectType = AresConstants.JOURNAL_VOUCHERS,
-                            objectId = parentJvId,
-                            actionName = AresConstants.DELETE,
-                            data = mapOf("id" to id, "status" to "DELETED"),
-                            performedBy = performedBy.toString(),
-                            performedByUserType = null
-                    )
+                AuditRequest(
+                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectId = parentJvId,
+                    actionName = AresConstants.DELETE,
+                    data = mapOf("id" to id, "status" to "DELETED"),
+                    performedBy = performedBy.toString(),
+                    performedByUserType = null
+                )
             )
         } catch (aresException: AresException) {
-            logger().error("""${mapOf("data" to id, "error" to "${aresException.context} ${aresException.error.message}")}""")
+            logger().error("""${mapOf("data" to id, "error" to "${aresException.error.message} ${aresException.context} ")}""")
             throw aresException
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -586,6 +593,21 @@ open class ParentJVServiceImpl : ParentJVService {
                 )
             )
             throw exception
+        } catch (aresException: AresException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher",
+                    parentJVId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    parentJVId.toString(),
+                    "${aresException.error.message} ${aresException.context}",
+                    false
+                )
+            )
+            throw aresException
         } catch (e: Exception) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -595,7 +617,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVId,
                     "JOURNAL_VOUCHER",
                     "500",
-                    "",
+                    parentJVId.toString(),
                     e.toString(),
                     false
                 )
