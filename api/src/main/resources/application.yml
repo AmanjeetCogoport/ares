@@ -54,9 +54,9 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
-  host: 'search.stage.cogoport.io'
-  user: 'awsadmin'
-  pass: Password@123
+  host: ${OPENSEARCH_HOST:'search.stage.cogoport.io'}
+  user: ${OPENSEARCH_USER:'awsadmin'}
+  pass: ${OPENSEARCH_PASS:Password@123}
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
