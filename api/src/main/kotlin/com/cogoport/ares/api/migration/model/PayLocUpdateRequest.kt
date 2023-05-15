@@ -12,5 +12,6 @@ data class PayLocUpdateRequest(
     val payCurr: BigDecimal?,
     val payLoc: BigDecimal?,
     val accMode: String?,
-    val recordType: MigrationRecordType
+    val recordType: MigrationRecordType,
+    val entityCode: Int?
 )

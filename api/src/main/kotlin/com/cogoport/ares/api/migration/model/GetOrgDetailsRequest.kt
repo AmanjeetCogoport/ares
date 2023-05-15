@@ -7,5 +7,6 @@ import io.micronaut.core.annotation.Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 class GetOrgDetailsRequest(
     val sageOrganizationId: String? = null,
-    val organizationType: String? = null
+    val organizationType: String? = null,
+    val cogoEntityId: String? = null
 )
