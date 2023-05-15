@@ -122,6 +122,7 @@ import java.nio.file.StandardCopyOption
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -559,7 +560,12 @@ open class OnAccountServiceImpl : OnAccountService {
             if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
 
             payment.deletedAt = Timestamp.from(Instant.now())
+            payment.updatedAt = payment.deletedAt
             payment.paymentDocumentStatus = PaymentDocumentStatus.DELETED
+            payment.updatedBy = when (deletePaymentRequest.performedById == null) {
+                true -> payment.createdBy
+                false -> UUID.fromString(deletePaymentRequest.performedById)
+            }
             /*MARK THE PAYMENT AS DELETED IN DATABASE*/
             val paymentResponse = paymentRepository.update(payment)
             auditService.createAudit(
@@ -580,6 +586,8 @@ open class OnAccountServiceImpl : OnAccountService {
             ) ?: throw AresException(AresError.ERR_1005, "")
             accountUtilization.documentStatus = DocumentStatus.DELETED
             accountUtilization.settlementEnabled = false
+            accountUtilization.deletedAt = Timestamp.valueOf(LocalDateTime.now())
+            accountUtilization.updatedAt = accountUtilization.deletedAt
 
             /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
             val accUtilRes = accountUtilizationRepository.update(accountUtilization)
