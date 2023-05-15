@@ -132,7 +132,7 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var paymentRepository: PaymentRepository
 
     @Inject
-    lateinit var settlemnetRepository: SettlementRepository
+    lateinit var settlementRepository: SettlementRepository
 
     @Inject
     lateinit var paymentConverter: PaymentToPaymentMapper
@@ -562,7 +562,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId)
             if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
 
-            val settlement = settlemnetRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
+            val settlement = settlementRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
             logger().info("settlementDetails: $settlement")
             if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already utilized.")
 
