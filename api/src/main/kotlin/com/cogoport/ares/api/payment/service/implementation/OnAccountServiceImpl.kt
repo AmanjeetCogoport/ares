@@ -1592,12 +1592,10 @@ open class OnAccountServiceImpl : OnAccountService {
             } catch (sageException: SageException) {
                 createThirdPartyAudit(id, "CancelPaymentFromSage", sageException.data, sageException.context, false)
                 failedIds.add(id)
-            }
-            catch (aresException: AresException) {
+            } catch (aresException: AresException) {
                 createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), "${aresException.error.message} ${aresException.context}", false)
                 failedIds.add(id)
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), e.toString(), false)
                 failedIds.add(id)
             }
