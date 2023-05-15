@@ -932,7 +932,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 throw AresException(AresError.ERR_1008, "Organization serial_id information not found")
             }
             val organizationSerialId = cogoOrganization.organizationSerialId!!
-            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong())
+            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[record.cogoEntity!!.toInt()])
             val serialIdRequest = SerialIdDetailsRequest(
                 organizationTradePartyMappings = arrayListOf(serialIdInputs)
             )
