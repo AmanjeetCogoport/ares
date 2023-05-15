@@ -81,6 +81,7 @@ import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
@@ -433,6 +434,8 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
+        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
+
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
 
@@ -477,6 +480,16 @@ open class OnAccountServiceImpl : OnAccountService {
 
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
+
+        if ((paymentDetails.entityCode != 501) && (paymentDetails.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+            aresMessagePublisher.emitPostPaymentToSage(
+                PostPaymentToSage(
+                    paymentId = paymentEntity.id!!,
+                    performedBy = UUID.fromString(receivableRequest.updatedBy)
+
+                )
+            )
+        }
 
         auditService.createAudit(
             AuditRequest(
@@ -528,6 +541,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber ?: paymentEntity.cogoAccountNo
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
         paymentEntity.bankId = receivableRequest.bankId ?: paymentEntity.bankId
+        paymentEntity.updatedBy = UUID.fromString(receivableRequest.updatedBy) ?: paymentEntity.updatedBy
     }
 
     private fun updateAccountUtilizationEntity(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization) {
@@ -1586,6 +1600,14 @@ open class OnAccountServiceImpl : OnAccountService {
                 transactionRefNo = request.utr!!
             )
             kuberMessagePublisher.updateAdvanceDocumentStatus(onAccountWithUtrResponse)
+        }
+    }
+
+    override suspend fun directFinalPostToSage(req: PostPaymentToSage) {
+        val postingStatusData = postPaymentToSage(req.paymentId, req.performedBy)
+
+        if (postingStatusData) {
+            postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
         }
     }
 }
