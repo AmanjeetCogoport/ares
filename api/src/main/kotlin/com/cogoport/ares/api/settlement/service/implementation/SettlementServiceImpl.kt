@@ -91,6 +91,7 @@ import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
@@ -541,7 +542,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun getSettlementFromDB(request: SettlementRequest): Map<Long?, List<SettledInvoice>> {
         @Suppress("UNCHECKED_CAST")
-        var settlements =
+        val settlements =
             settlementRepository.findSettlement(
                 request.documentNo.toLong(),
                 request.settlementType,
@@ -2579,10 +2580,18 @@ open class SettlementServiceImpl : SettlementService {
                         failedSettlementIds?.add(settlementId)
                         recordAudits(settlementId, result.requestString, result.response, false)
                     }
+                } catch (sageException: SageException) {
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, sageException.data, sageException.context, false)
+                } catch (aresException: AresException) {
+                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                    failedSettlementIds?.add(settlementId)
+                    recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
                 } catch (e: Exception) {
                     settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
                     failedSettlementIds?.add(settlementId)
-                    recordAudits(settlementId, "", e.toString(), false)
+                    recordAudits(settlementId, settlementId.toString(), e.toString(), false)
                 }
             }
         }
@@ -2600,7 +2609,7 @@ open class SettlementServiceImpl : SettlementService {
                 "Settlement",
                 id,
                 "SETTLEMENT",
-                "200",
+                if (isSuccess) "200" else "500",
                 request,
                 response,
                 isSuccess
@@ -2620,7 +2629,7 @@ open class SettlementServiceImpl : SettlementService {
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             sageOrganizationFromSageId = if (accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
         } else {
-            throw AresException(AresError.ERR_1528, "organizationId is not present")
+            throw AresException(AresError.ERR_1532, "organizationId is not present")
         }
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
@@ -2636,12 +2645,12 @@ open class SettlementServiceImpl : SettlementService {
 
         if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
             recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
-            throw AresException(AresError.ERR_1528, "sage organizationId is not present in table")
+            throw AresException(AresError.ERR_1532, "sage organizationId is not present in table")
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
             recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
-            throw AresException(AresError.ERR_1528, "sage serial organization id different in sage db and cogoport db")
+            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
         }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)

@@ -35,13 +35,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-        """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id,  tds_amount, tds_amount_loc
-            from account_utilizations 
-            where document_no in (:documentNo) and acc_type::varchar in (:accType) 
-            and (:accMode is null or acc_mode=:accMode::account_mode)
-             and account_utilizations.deleted_at is null order by updated_at desc"""
+        """ 
+            select
+                *
+            from
+                account_utilizations 
+            where 
+                document_no in (:documentNo) and acc_type::varchar in (:accType)
+            and document_status != 'DELETED'::document_status
+            and (:accMode is null or acc_mode = :accMode::account_mode)
+            and deleted_at is null 
+            order by updated_at desc
+        """
     )
     suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): MutableList<AccountUtilization>
 
@@ -613,6 +618,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
+                AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
             ORDER BY transaction_date DESC, id
@@ -676,6 +682,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
+            AND au.document_status != 'DELETED'::document_status
             AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false
