@@ -130,7 +130,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = paymentRecord.sageOrganizationId,
-                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense"
+                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense",
+                    cogoEntityId = AresConstants.ENTITY_ID[paymentRecord.entityCode]
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
@@ -186,7 +187,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = journalVoucherRecord.sageOrganizationId,
-                    organizationType = if (journalVoucherRecord.accMode.equals("AR")) "income" else "expense"
+                    organizationType = if (journalVoucherRecord.accMode.equals("AR")) "income" else "expense",
+                    cogoEntityId = AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
@@ -363,7 +365,7 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -456,7 +458,7 @@ class PaymentMigrationImpl : PaymentMigration {
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
         // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -525,7 +527,7 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong()) } }
+        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong(), AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]) } }
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs!!)
         )
@@ -698,7 +700,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = payLocUpdateRequest.sageOrganizationId,
-                    organizationType = organizationType
+                    organizationType = organizationType,
+                    cogoEntityId = AresConstants.ENTITY_ID[payLocUpdateRequest.entityCode]
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
@@ -929,7 +932,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 throw AresException(AresError.ERR_1008, "Organization serial_id information not found")
             }
             val organizationSerialId = cogoOrganization.organizationSerialId!!
-            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong())
+            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[record.cogoEntity!!.toInt()])
             val serialIdRequest = SerialIdDetailsRequest(
                 organizationTradePartyMappings = arrayListOf(serialIdInputs)
             )
