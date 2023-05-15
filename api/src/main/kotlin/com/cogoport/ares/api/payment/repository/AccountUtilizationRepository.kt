@@ -1143,6 +1143,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND entity_code = :entityCode 
             AND transaction_date <= :transactionDate::DATE
             AND acc_type != 'NEWPR'
+            AND deleted_at IS NULL
         GROUP BY
             trade_party_detail_id, led_currency
     """
