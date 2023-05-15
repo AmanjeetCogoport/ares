@@ -1,6 +1,7 @@
 package com.cogoport.ares.model.payment.response
 
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.fasterxml.jackson.annotation.JsonFormat
@@ -93,5 +94,11 @@ data class PaymentResponse(
     var deletedAt: Timestamp? = Timestamp.from(Instant.now()),
 
     @JsonProperty("narration")
-    var narration: String? = null
+    var narration: String? = null,
+
+    @JsonProperty("bankId")
+    var bankId: UUID? = null,
+
+    @JsonProperty("payMode")
+    var payMode: PayMode?,
 )

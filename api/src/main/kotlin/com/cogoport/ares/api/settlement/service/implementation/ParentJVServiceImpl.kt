@@ -163,6 +163,16 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
 
+        if (parentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(parentJvData.id!!),
+                    performedBy = parentJvData.createdBy!!
+
+                )
+            )
+        }
+
         return parentJvData.jvNum
     }
 
@@ -383,13 +393,15 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, updatedParentJvData, transactionDate)
 
-        aresMessagePublisher.emitPostJvToSage(
-            PostJVToSageRequest(
-                parentJvId = Hashids.encode(updatedParentJvData.id!!),
-                performedBy = updatedParentJvData.createdBy!!
+        if (updatedParentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(updatedParentJvData.id!!),
+                    performedBy = updatedParentJvData.createdBy!!
 
+                )
             )
-        )
+        }
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -452,6 +464,10 @@ open class ParentJVServiceImpl : ParentJVService {
         try {
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
+
+            if (parentJVDetails.entityCode == 501) {
+                throw AresException(AresError.ERR_1526, "Not allowed to post jv of entity 501.")
+            }
 
             if (parentJVDetails.status == JVStatus.POSTED) {
                 throw AresException(AresError.ERR_1518, "")
