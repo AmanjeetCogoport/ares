@@ -5,5 +5,7 @@ data class SerialIdsInput(
     @JsonProperty("organization_serial_id")
     val organizationSerialId: Long,
     @JsonProperty("trade_party_detail_serial_id")
-    val tradePartyDetailSerialId: Long
+    val tradePartyDetailSerialId: Long,
+    @JsonProperty("cogo_entity_id")
+    val cogoEntityId: String?
 )
