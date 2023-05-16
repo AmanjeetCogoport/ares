@@ -71,6 +71,7 @@ import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
+import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -2621,9 +2622,11 @@ open class SettlementServiceImpl : SettlementService {
         val sageOrganizationFromSageId: String?
 
         val registrationNumber: String?
+        val serialId: Long?
         if (accountUtilization.organizationId != null) {
             val organization = railsClient.getListOrganizationTradePartyDetails(accountUtilization.organizationId!!)
             registrationNumber = organization.list[0]["registration_number"].toString()
+            serialId = organization.list[0]["serial_id"]!!.toString().toLong()
             val sageOrganizationQuery = if (accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='$registrationNumber'"
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
@@ -2634,7 +2637,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
             SageOrganizationRequest(
-                accountUtilization.orgSerialId.toString(),
+                    serialId.toString(),
                 if (accMode == AccMode.AR) {
                     "importer_exporter"
                 } else {
