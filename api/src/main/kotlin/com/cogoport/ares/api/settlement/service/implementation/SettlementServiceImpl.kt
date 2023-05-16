@@ -2625,6 +2625,9 @@ open class SettlementServiceImpl : SettlementService {
         val serialId: Long?
         if (accountUtilization.organizationId != null) {
             val organization = railsClient.getListOrganizationTradePartyDetails(accountUtilization.organizationId!!)
+            if (organization.list.isEmpty()) {
+                throw AresException(AresError.ERR_1530, "")
+            }
             registrationNumber = organization.list[0]["registration_number"].toString()
             serialId = organization.list[0]["serial_id"]!!.toString().toLong()
             val sageOrganizationQuery = if (accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='$registrationNumber'"
