@@ -26,7 +26,6 @@ data class ParentJournalVoucherMigration(
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var currency: String?,
     var led_currency: String?,
-    var amount: BigDecimal?,
     var exchangeRate: BigDecimal,
     var description: String?,
     var migrated: Boolean? = false,

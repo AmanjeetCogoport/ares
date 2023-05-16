@@ -41,7 +41,6 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
-import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -53,6 +52,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.Operator
 import com.cogoport.ares.model.payment.PayMode
@@ -72,6 +72,7 @@ import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -194,9 +195,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var kuberMessagePublisher: KuberMessagePublisher
-
-    @Inject
-    lateinit var journalVoucherRepository: JournalVoucherRepository
 
     @Inject
     lateinit var sageService: SageService
@@ -2544,6 +2542,9 @@ open class SettlementServiceImpl : SettlementService {
                 try {
                     // Fetch source and destination details
                     val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+                    if (settlement.settlementStatus == SettlementStatus.POSTED) {
+                        return@forEach
+                    }
                     val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
@@ -2675,9 +2676,6 @@ open class SettlementServiceImpl : SettlementService {
             else -> ServiceType.valueOf(invoiceAndBillData?.serviceType!!)
         }
 
-        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
-        val transactionDate = Timestamp(dateFormat.parse(invoiceAndBillData?.transactionDate.toString()).time)
-
         val paymentsRequest = Payment(
             id = null,
             entityType = invoiceAndBillData?.entityCode,
@@ -2708,8 +2706,8 @@ open class SettlementServiceImpl : SettlementService {
             updatedBy = createdBy.toString(),
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
-            docType = "TDS",
-            transactionDate = transactionDate
+            docType = DocType.TDS,
+            transactionDate = invoiceAndBillData?.transactionDate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
@@ -2717,7 +2715,6 @@ open class SettlementServiceImpl : SettlementService {
         payment.migrated = false
         payment.createdAt = Timestamp.from(Instant.now())
         payment.updatedAt = Timestamp.from(Instant.now())
-        payment.isDeleted = false
 
         val savedPayment = paymentRepository.save(payment)
 
@@ -2745,6 +2742,7 @@ open class SettlementServiceImpl : SettlementService {
         accUtilizationModel.currency = currency!!
         accUtilizationModel.docStatus = DocumentStatus.FINAL
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = true
 
         val accUtilEntity = accUtilizationToPaymentConverter.convertModelToEntity(accUtilizationModel)
 
@@ -2767,12 +2765,24 @@ open class SettlementServiceImpl : SettlementService {
                 performedByUserType = createdByUserType
             )
         )
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), savedPayment, true)
+
+        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+            aresMessagePublisher.emitPostPaymentToSage(
+                PostPaymentToSage(
+                    paymentId = savedPayment.id!!,
+                    performedBy = savedPayment.createdBy!!
+
+                )
+            )
+        }
 
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())

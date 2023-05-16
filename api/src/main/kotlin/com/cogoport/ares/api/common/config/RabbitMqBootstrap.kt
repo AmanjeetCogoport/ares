@@ -87,5 +87,11 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("migrate-jv-pay-loc", true, false, false, null)
         channel?.queueBind("migrate-jv-pay-loc", "ares", "migrate.jv.pay.loc", null)
+
+        channel?.queueDeclare("ares-send-payment-details", true, false, false, null)
+        channel?.queueBind("ares-send-payment-details", "ares", "ares.send.payment.details", null)
+
+        channel?.queueDeclare("ares-post-payment-to-sage", true, false, false, null)
+        channel?.queueBind("ares-post-payment-to-sage", "ares", "ares.post.payment.to.sage", null)
     }
 }

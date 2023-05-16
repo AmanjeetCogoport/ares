@@ -161,6 +161,16 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
 
+        if (parentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(parentJvData.id!!),
+                    performedBy = parentJvData.createdBy!!
+
+                )
+            )
+        }
+
         return parentJvData.jvNum
     }
 
@@ -287,7 +297,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 val signFlag = getSignFlag(it.type!!)
 
                 if (it.tradePartyId != null) {
-                    journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+                    journalVoucherService.createJvAccUtil(it, accMode, signFlag, true)
                 }
             }
         }
@@ -307,16 +317,13 @@ open class ParentJVServiceImpl : ParentJVService {
         if (parentJv?.status == JVStatus.POSTED) {
             val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJv.jvNum!!)
             if (!isDeletedFromSage) {
-                throw AresException(AresError.ERR_1538, parentJv.jvNum!!)
+                throw AresException(AresError.ERR_1540, parentJv.jvNum!!)
             }
         }
-
         parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
         val jvLineItemData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
         jvLineItemData.forEach { lineItem ->
-            if (lineItem.status == JVStatus.APPROVED) {
                 accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(lineItem.jvNum, AccountType.valueOf(lineItem.category))
-            }
         }
         journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
 
@@ -370,13 +377,15 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, updatedParentJvData, transactionDate)
 
-        aresMessagePublisher.emitPostJvToSage(
-            PostJVToSageRequest(
-                parentJvId = Hashids.encode(updatedParentJvData.id!!),
-                performedBy = updatedParentJvData.createdBy!!
+        if (updatedParentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(updatedParentJvData.id!!),
+                    performedBy = updatedParentJvData.createdBy!!
 
+                )
             )
-        )
+        }
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -401,8 +410,8 @@ open class ParentJVServiceImpl : ParentJVService {
                 updatedBy = request.createdBy,
                 currency = request.currency,
                 ledCurrency = request.ledCurrency,
-                amount = lineItem.amount.multiply(request.exchangeRate),
-                ledAmount = lineItem.amount,
+                amount = lineItem.amount,
+                ledAmount = lineItem.amount.multiply(request.exchangeRate),
                 description = request.description,
                 entityCode = lineItem.entityCode ?: request.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[lineItem.entityCode]),
@@ -424,7 +433,7 @@ open class ParentJVServiceImpl : ParentJVService {
             if (jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
                 val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
                 val signFlag = getSignFlag(lineItem.type)
-                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)
+                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag, true)
             }
         }
     }
@@ -439,6 +448,10 @@ open class ParentJVServiceImpl : ParentJVService {
         try {
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
+
+            if (parentJVDetails.entityCode == 501) {
+                throw AresException(AresError.ERR_1526, "Not allowed to post jv of entity 501.")
+            }
 
             if (parentJVDetails.status == JVStatus.POSTED) {
                 throw AresException(AresError.ERR_1518, "")
@@ -612,7 +625,7 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     private fun getAccModeValue(accMode: AccMode): String {
-        val accMode = when (accMode) {
+        val accModeName = when (accMode) {
             AccMode.AP -> JVSageControls.AP.value
             AccMode.AR -> JVSageControls.AR.value
             AccMode.PDA -> JVSageControls.PDA.value
@@ -630,7 +643,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
         }
-        return accMode
+        return accModeName
     }
 
     private fun getStatus(processedResponse: JSONObject?): Int? {

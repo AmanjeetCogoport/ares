@@ -277,6 +277,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
         accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
+        accountUtilization.settlementEnabled = updateInvoiceRequest.settlementEnabled ?: accountUtilization.settlementEnabled
 
         val data = accUtilRepository.update(accountUtilization)
 
@@ -339,6 +340,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
         accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+        accountUtilization.settlementEnabled = updateInvoiceStatusRequest.settlementEnabled
 
         if (updateInvoiceStatusRequest.transactionDate != null) {
             accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate

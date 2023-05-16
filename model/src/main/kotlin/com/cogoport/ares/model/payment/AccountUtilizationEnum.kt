@@ -122,3 +122,12 @@ enum class DocumentSearchType {
     NUMBER,
     VALUE
 }
+
+/**
+ * Using for distinguishing on account and tds entry
+ */
+enum class DocType {
+    PAYMENT,
+    RECEIPT,
+    TDS
+}

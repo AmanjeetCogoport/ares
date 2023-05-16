@@ -67,6 +67,7 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.kuber.client.KuberClient
 import jakarta.inject.Inject
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -108,6 +109,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     @Inject lateinit var journalVoucherRepoMigration: JournalVoucherRepoMigration
+
+    @Inject lateinit var kuberClient: KuberClient
 
     override suspend fun migratePayment(paymentRecord: PaymentRecord): Int {
         var paymentRequest: PaymentMigrationModel? = null
@@ -244,8 +247,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
-            isPosted = true,
-            isDeleted = false,
             createdAt = paymentRecord.createdAt!!,
             updatedAt = paymentRecord.updatedAt!!,
             cogoAccountNo = getCogoAccountNo(paymentRecord.bankShortCode!!),
@@ -343,8 +344,6 @@ class PaymentMigrationImpl : PaymentMigration {
 
         val accUtilEntity = setAccountUtilizations(receivableRequest, payment)
         val accUtilRes = accountUtilizationRepositoryMigration.save(accUtilEntity)
-        Client.addDocument(AresConstants.ON_ACCOUNT_PAYMENT_INDEX, savedPayment.id.toString(), receivableRequest)
-
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             emitDashboardAndOutstandingEvent(accUtilRes.dueDate!!, accUtilRes.transactionDate!!, accUtilRes.zoneCode, accUtilRes.accMode, accUtilRes.organizationId!!, accUtilRes.organizationName!!)
@@ -393,8 +392,6 @@ class PaymentMigrationImpl : PaymentMigration {
             transRefNumber = receivableRequest.transRefNumber,
             refPaymentId = null,
             transactionDate = receivableRequest.transactionDate,
-            isPosted = receivableRequest.isPosted,
-            isDeleted = receivableRequest.isDeleted,
             createdAt = receivableRequest.createdAt,
             updatedAt = receivableRequest.updatedAt,
             paymentCode = receivableRequest.paymentCode,
@@ -444,7 +441,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = paymentEntity.tradePartyMappingId,
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
             taxableAmount = BigDecimal.ZERO,
-            migrated = true
+            migrated = true,
+            settlementEnabled = true
         )
     }
 
@@ -496,7 +494,8 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            taggedBillId = null
+            taggedBillId = null,
+            settlementEnabled = true
         )
     }
 
@@ -711,6 +710,12 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
                 if (null != documentValue) payLocUpdateRequest.documentValue = documentValue
             }
+
+            if (payLocUpdateRequest.recordType == MigrationRecordType.BILL) {
+                val billDetails = kuberClient.getBillNumberFromSageNumber(payLocUpdateRequest.documentValue!!)
+                payLocUpdateRequest.documentValue = billDetails.billNumber
+            }
+
             val platformUtilizedPayment = accountUtilizationRepositoryMigration.getRecordFromAccountUtilization(
                 payLocUpdateRequest.documentValue!!, payLocUpdateRequest.accMode!!, tradePartyDetailId
             ) ?: return
@@ -788,10 +793,10 @@ class PaymentMigrationImpl : PaymentMigration {
     override suspend fun migrateJV(jvParentDetail: JVParentDetails) {
         var jvParentRecord: ParentJournalVoucherMigration? = null
         var jvRecords: List<JournalVoucherRecord>? = null
-        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum)
-        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum)
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
         try {
-            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'")
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
             var sum = BigDecimal.ZERO
             jvRecords.forEach {
                 sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
@@ -821,7 +826,6 @@ class PaymentMigrationImpl : PaymentMigration {
                         migrated = true,
                         currency = jvParentDetail.currency,
                         led_currency = jvParentDetail.ledgerCurrency,
-                        amount = jvParentDetail.amount,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum
