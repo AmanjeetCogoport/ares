@@ -308,7 +308,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
+        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB', 'SREIMBCN') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
         and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
