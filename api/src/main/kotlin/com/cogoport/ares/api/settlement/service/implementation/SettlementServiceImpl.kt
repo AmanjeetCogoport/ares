@@ -71,7 +71,6 @@ import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
 import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
-import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
@@ -2640,7 +2639,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
             SageOrganizationRequest(
-                    serialId.toString(),
+                serialId.toString(),
                 if (accMode == AccMode.AR) {
                     "importer_exporter"
                 } else {
