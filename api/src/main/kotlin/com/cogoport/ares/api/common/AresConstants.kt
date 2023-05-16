@@ -51,6 +51,7 @@ object AresConstants {
     const val DECIMAL_NUMBER_UPTO = 12
     const val ROUND_DECIMAL_TO = 4
     const val NO_DEDUCTION_RATE = 0
+    const val ROUND_OFF_DECIMAL_TO_2 = 2
 
     const val PAYING_PARTY = "self,paying_party"
 
