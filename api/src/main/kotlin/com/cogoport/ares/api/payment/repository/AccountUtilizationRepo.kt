@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.payment.AccMode
@@ -35,13 +34,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-        """select account_utilizations.id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,account_utilizations.acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc, settlement_enabled
-            from account_utilizations 
-            where document_no in (:documentNo) and acc_type::varchar in (:accType) 
-            and (:accMode is null or acc_mode=:accMode::account_mode)
-            and account_utilizations.deleted_at is null order by updated_at desc"""
+        """ 
+            select
+                *
+            from
+                account_utilizations 
+            where 
+                document_no in (:documentNo) and acc_type::varchar in (:accType)
+            and document_status != 'DELETED'::document_status
+            and (:accMode is null or acc_mode = :accMode::account_mode)
+            and deleted_at is null 
+            order by updated_at desc
+        """
     )
     suspend fun findRecords(documentNo: List<Long>, accType: List<String?>, accMode: String? = null): MutableList<AccountUtilization>
 
@@ -139,50 +143,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
               pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE document_no =:documentNo AND acc_type = :accType::account_type AND deleted_at is null"""
     )
     suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-                count(c.organization_id)
-            FROM (
-                SELECT
-                    organization_id
-                FROM
-                    account_utilizations
-                WHERE
-                    organization_name ILIKE :queryName || '%'
-                    AND acc_mode = 'AR'
-                    AND due_date IS NOT NULL
-                    AND document_status in('FINAL')
-                    AND organization_id IS NOT NULL
-                    AND acc_type = 'SINV'
-                    AND deleted_at IS NULL AND is_void IS false
-                GROUP BY
-                    organization_id) AS c
-        """
-    )
-    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
-
-    @NewSpan
-    @Query(
-        """
-            select organization_id::varchar, currency,
-            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
-            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
-            from account_utilizations
-            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
-            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
-            group by organization_id, currency
-        """
-    )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
 
     @NewSpan
     @Query(
@@ -613,6 +573,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
                 AND (:accMode is null OR acc_mode::varchar = :accMode)
+                AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
             ORDER BY transaction_date DESC, id
@@ -676,6 +637,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
+            AND au.document_status != 'DELETED'::document_status
             AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false

@@ -38,8 +38,9 @@ class Utilities {
         }
 
         fun isInvoiceAccountType(accType: AccountType): Boolean {
-            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN || accType == AccountType.PCN ||
-                accType == AccountType.PINV || accType == AccountType.PDN || accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP
+            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN ||
+                accType == AccountType.PCN || accType == AccountType.PINV || accType == AccountType.PDN ||
+                accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP || accType == AccountType.SREIMBCN
             ) {
                 return true
             }

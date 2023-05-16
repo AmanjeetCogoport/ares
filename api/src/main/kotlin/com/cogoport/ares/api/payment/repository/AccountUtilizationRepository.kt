@@ -2,13 +2,10 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
-import com.cogoport.ares.api.payment.entity.DailyOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgStatsResponse
 import com.cogoport.ares.api.payment.entity.OrgSummary
-import com.cogoport.ares.api.payment.entity.Outstanding
 import com.cogoport.ares.api.payment.entity.OutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OverallStats
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.entity.SupplierOutstandingAgeing
 import com.cogoport.ares.api.payment.model.PaymentUtilizationResponse
@@ -18,9 +15,7 @@ import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.CollectionTrend
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
@@ -50,21 +45,35 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id, tagged_organization_id, trade_party_mapping_id, organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated, is_void,tagged_bill_id, tds_amount, tds_amount_loc, settlement_enabled
-            from account_utilizations where document_no = :documentNo and (:accType is null or acc_type= :accType::account_type) 
-            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null and is_void = false"""
+        """ 
+            select 
+                *
+            from 
+                account_utilizations 
+            where 
+                document_no = :documentNo
+            and document_status != 'DELETED'::document_status
+            and (:accType is null or acc_type = :accType::account_type) 
+            and (:accMode is null or acc_mode = :accMode::account_mode) 
+            and deleted_at is null 
+            and is_void = false
+        """
     )
     suspend fun findRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 
     @NewSpan
     @Query(
-        """select id,document_no,document_value , zone_code,service_type,document_status,entity_code , category,org_serial_id,sage_organization_id
-           ,organization_id, tagged_organization_id, trade_party_mapping_id,organization_name,acc_code,acc_type,acc_mode,sign_flag,currency,led_currency,amount_curr, amount_loc,pay_curr
-           ,pay_loc,due_date,transaction_date,created_at,updated_at, taxable_amount, migrated,tagged_bill_id, is_void, tds_amount, tds_amount_loc, settlement_enabled
-            from account_utilizations where document_value = :documentValue and (:accType is null or acc_type= :accType::account_type)
-            and (:accMode is null or acc_mode=:accMode::account_mode) and deleted_at is null """
+        """
+                select
+                    *
+                from
+                    account_utilizations
+                where
+                    document_value = :documentValue
+                and (:accType is null or acc_type= :accType::account_type)
+                and (:accMode is null or acc_mode=:accMode::account_mode)
+                and deleted_at is null and document_status != 'DELETED'::document_status
+            """
     )
     suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): AccountUtilization?
 
@@ -78,139 +87,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
               pay_curr = pay_curr + :currencyPay , pay_loc =pay_loc + :ledgerPay , updated_at =now() where id=:id and deleted_at is null"""
     )
     suspend fun updateInvoicePayment(id: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal): Int
-    @NewSpan
-    @Query(
-        """
-        select
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as open_invoices_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') and (amount_curr - pay_curr <> 0) then 1 else 0 end),0) as open_invoices_count,
-        coalesce(abs(sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as open_on_account_payment_amount,
-        coalesce(sum(case when acc_type in ('SINV','SDN','SCN') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end),0) as total_outstanding_amount,
-        currency as dashboard_currency, 
-        null as id
-        from account_utilizations
-        where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-        AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-        group by dashboard_currency
-    """
-    )
-    suspend fun generateOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<OverallStats>
-
-    @NewSpan
-    @Query(
-        """
-        SELECT count(distinct organization_id) 
-        FROM account_utilizations 
-        WHERE acc_type IN ('SINV','SDN','SCN') AND amount_curr - pay_curr <> 0 AND (:zone IS NULL OR zone_code = :zone) AND document_status in ('FINAL', 'PROFORMA') AND acc_mode = 'AR' 
-        AND (:serviceType IS NULL OR service_type::varchar = :serviceType) AND  (:invoiceCurrency IS NULL OR currency = :invoiceCurrency) AND deleted_at IS NULL AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-        """
-    )
-    suspend fun getOrganizationCountForOverallStats(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): Int
-
-    @NewSpan
-    @Query(
-        """
-        (
-            select 'Total' as duration,
-            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0 end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
-            currency as dashboard_currency
-            from account_utilizations
-            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
-            group by dashboard_currency
-        )
-        union all
-        (
-            select trim(to_char(date_trunc('month',transaction_date),'Month')) as duration,
-            coalesce(sum(case when acc_type in ('SINV','SCN','SDN') then sign_flag*(amount_curr - pay_curr) else 0::double precision end),0) as receivable_amount,
-            coalesce(abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)),0) as collectable_amount,
-            currency as dashboard_currency
-            from account_utilizations
-            where extract(quarter from transaction_date) = :quarter and extract(year from transaction_date) = :year and (:zone is null or zone_code = :zone) and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-            group by date_trunc('month',transaction_date), dashboard_currency
-            order by date_trunc('month',transaction_date)
-        )
-        """
-    )
-    suspend fun generateCollectionTrend(zone: String?, quarter: Int, year: Int, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<CollectionTrend>
-
-    @NewSpan
-    @Query(
-        """
-        with x as (
-	        select to_char(generate_series(CURRENT_DATE - '4 month'::interval, CURRENT_DATE, '1 month'), 'Mon') as month
-        ),
-        y as (
-            select to_char(date_trunc('month',transaction_date),'Mon') as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as amount,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and acc_mode = 'AR' and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month', CURRENT_DATE - '5 month'::interval) and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-            group by date_trunc('month',transaction_date), dashboard_currency
-        )
-        select x.month duration, coalesce(y.amount, 0::double precision) as amount, 
-        y.dashboard_currency
-        from x left join y on y.month = x.month
-        """
-    )
-    suspend fun generateMonthlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
-
-    @NewSpan
-    @Query(
-        """
-            with x as (
-                select extract(quarter from generate_series(CURRENT_DATE - '9 month'::interval, CURRENT_DATE, '3 month')) as quarter
-            ),
-            y as (
-                select to_char(date_trunc('quarter',transaction_date),'Q')::int as quarter,
-                sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as total_outstanding_amount,
-                currency as dashboard_currency
-                from account_utilizations
-                where acc_mode = 'AR' and (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and date_trunc('month', transaction_date) >= date_trunc('month',CURRENT_DATE - '9 month'::interval) and deleted_at is null
-                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-                group by date_trunc('quarter',transaction_date), dashboard_currency
-            )
-            select case when x.quarter = 1 then 'Jan - Mar'
-            when x.quarter = 2 then 'Apr - Jun'
-            when x.quarter = 3 then 'Jul - Sep'
-            when x.quarter = 4 then 'Oct - Dec' end as duration,
-            coalesce(y.total_outstanding_amount, 0) as amount,
-            y.dashboard_currency as dashboard_currency
-            from x
-            left join y on x.quarter = y.quarter
-        """
-    )
-    suspend fun generateQuarterlyOutstanding(zone: String?, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<Outstanding>?
-
-    @NewSpan
-    @Query(
-        """
-        with X as (
-            select 
-            extract(month from date_trunc('month',(:date)::date)) as month,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) as open_invoice_amount,
-            abs(sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end)) as on_account_payment,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') then sign_flag*(amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstandings,
-            sum(case when acc_type in ('SINV','SDN','SCN','SREIMB') and transaction_date >= date_trunc('month',(:date)::date) then sign_flag*amount_curr end) as total_sales,
-            case when date_trunc('month', :date::date) < date_trunc('month', now()) then date_part('days',date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval) 
-            else date_part('days', now()::date) end as days,
-            currency as dashboard_currency
-            from account_utilizations
-            where (:zone is null or zone_code = :zone) and (:serviceType is null or service_type::varchar = :serviceType) and (:invoiceCurrency is null or currency = :invoiceCurrency) and document_status in ('FINAL', 'PROFORMA') and acc_mode = 'AR' and transaction_date <= date_trunc('month',(:date::date + '1 month'::interval)) - '1 day'::interval and deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))  and is_void = false
-            group by dashboard_currency
-            )
-            select X.month, coalesce(X.open_invoice_amount,0) as open_invoice_amount, coalesce(X.on_account_payment, 0) as on_account_payment,
-            coalesce(X.outstandings, 0) as outstandings, coalesce(X.total_sales,0) as total_sales, X.days,
-            coalesce((case when X.total_sales != 0 then X.outstandings / X.total_sales else 0 END) * X.days,0) as value,
-            X.dashboard_currency as dashboard_currency
-            from X
-        """
-    )
-    suspend fun generateDailySalesOutstanding(zone: String?, date: String, serviceType: ServiceType?, invoiceCurrency: String?, defaultersOrgIds: List<UUID>?): MutableList<DailyOutstanding>
 
     @NewSpan
     @Query(
@@ -432,7 +308,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
+        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB', 'SREIMBCN') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
         and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
@@ -502,6 +378,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 AND (:entityCode is null OR :entityCode = au.entity_code) 
                 AND s.deleted_at is null
                 AND au.deleted_at is null
+                And au.document_status != 'DELETED'::document_status
             GROUP BY au.id  
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
@@ -897,47 +774,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-                SELECT
-                id,
-                document_no,
-                document_value,
-                zone_code,
-                service_type,
-                document_status,
-                entity_code,
-                category,
-                org_serial_id,
-                sage_organization_id,
-                organization_id,
-                organization_name,
-                acc_code,
-                acc_type,
-                acc_mode,
-                sign_flag,
-                currency,
-                led_currency,
-                amount_curr,
-                amount_loc,
-                pay_curr,
-                pay_loc,
-                due_date,
-                transaction_date,
-                created_at,
-                updated_at,
-                taxable_amount,
-                trade_party_mapping_id,
-                tagged_organization_id,
-                is_void,
-                tagged_bill_id,
-                migrated,
-                tds_amount,
-                tds_amount_loc,
-                settlement_enabled
-                FROM account_utilizations
-                WHERE document_value = :documentValue
-                AND acc_type = :accType::account_type
-                AND deleted_at is null and is_void = false
-            """
+            SELECT
+                *
+            FROM
+                account_utilizations
+            WHERE
+                document_value = :documentValue
+            AND acc_type = :accType::account_type
+            AND deleted_at is null and is_void = false
+            AND document_status != 'DELETED'::document_status
+        """
     )
     suspend fun getAccountUtilizationsByDocValue(documentValue: String, accType: AccountType?): AccountUtilization
 
@@ -945,45 +791,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
                 SELECT
-                id,
-                document_no,
-                document_value,
-                zone_code,
-                service_type,
-                document_status,
-                entity_code,
-                category,
-                org_serial_id,
-                sage_organization_id,
-                organization_id,
-                organization_name,
-                acc_code,
-                acc_type,
-                acc_mode,
-                sign_flag,
-                currency,
-                led_currency,
-                amount_curr,
-                amount_loc,
-                pay_curr,
-                pay_loc,
-                due_date,
-                transaction_date,
-                created_at,
-                updated_at,
-                taxable_amount,
-                trade_party_mapping_id,
-                tagged_organization_id,
-                is_void,
-                tagged_bill_id,
-                tds_amount,
-                tds_amount_loc,
-                migrated,
-                settlement_enabled
-                FROM account_utilizations
-                WHERE document_no = :documentNo
-                AND   acc_type = :accType::account_type
+                    *
+                FROM
+                    account_utilizations
+                WHERE 
+                    document_no = :documentNo
+                AND acc_type = :accType::account_type
                 AND deleted_at is null and is_void = false
+                AND document_status != 'DELETED'::document_status
             """
     )
     suspend fun getAccountUtilizationsByDocNo(documentNo: String, accType: AccountType): AccountUtilization
@@ -1139,26 +954,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getDataByPaymentNum(paymentNum: Long?): PaymentUtilizationResponse
-
-    @NewSpan
-    @Query(
-        """
-           SELECT DISTINCT (au.document_no),au.id,au.document_value, au.zone_code,au.service_type,
-           au.document_status,au.entity_code, au.category,au.org_serial_id,au.sage_organization_id,
-           au.organization_id,au.tagged_organization_id,au.trade_party_mapping_id, au.organization_name,
-           au.acc_code,au.acc_type,au.acc_mode,au.sign_flag,au.currency,au.led_currency,au.amount_curr,
-           au.amount_loc,au.pay_curr,au.pay_loc,au.due_date,au.transaction_date,au.updated_at, au.taxable_amount,
-           au.migrated,au.created_at, au.is_void, au.tagged_bill_id, au.tds_amount, au.tds_amount_loc, au.settlement_enabled
-           FROM 
-           payments p
-           JOIN payment_invoice_mapping pim ON 
-           pim.payment_id = p.id AND pim.document_no = :documentNo
-           JOIN account_utilizations au ON 
-           au.document_no = p.payment_num AND au.deleted_at is null AND au.acc_mode = 'AP' and is_void = false
-           ORDER by au.created_at desc
-        """
-    )
-    suspend fun findPaymentsByDocumentNo(documentNo: Long): List<AccountUtilization?>
 
     @NewSpan
     @Query(
@@ -1348,6 +1143,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND entity_code = :entityCode 
             AND transaction_date <= :transactionDate::DATE
             AND acc_type != 'NEWPR'
+            AND deleted_at IS NULL
         GROUP BY
             trade_party_detail_id, led_currency
     """
@@ -1368,6 +1164,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 acc_type = :accType::ACCOUNT_TYPE
             AND
                 deleted_at IS NULL
+            AND
+                document_status != 'DELETED'::document_status
         """
     )
     suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
