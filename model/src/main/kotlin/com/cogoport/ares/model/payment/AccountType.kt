@@ -22,6 +22,7 @@ enum class AccountType(val dbValue: String) {
     OUTST("OUTST"),
     PAY("PAY"),
     SREIMB("SREIMB"),
+    SREIMBCN("SREIMBCN"),
     PREIMB("PREIMB"),
     ICJV("ICJV"),
     GENSM("GENSM"),
