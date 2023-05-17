@@ -1,7 +1,10 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -44,6 +47,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var parentJvRepo: ParentJVRepository
 
+    @Inject
+    lateinit var railsClient: RailsClient
+
     @Transactional
     override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?, documentValue: String?) {
         parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
@@ -60,11 +66,17 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short, settlementEnabled: Boolean): AccountUtilization {
+        val organization = railsClient.getListOrganizationTradePartyDetails(request.tradePartyId!!)
+
+        if (organization.list.isEmpty()) {
+            throw AresException(AresError.ERR_1530, "")
+        }
+        val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
             entityCode = request.entityCode!!,
-            orgSerialId = 1,
+            orgSerialId = orgSerialId,
             sageOrganizationId = null,
             organizationId = request.tradePartyId,
             taggedOrganizationId = null,
