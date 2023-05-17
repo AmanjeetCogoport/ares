@@ -48,4 +48,6 @@ interface OutStandingService {
 
     suspend fun uploadPayblesStats()
     suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders
+
+    suspend fun getPayableOfOrganization(organizationId: String): BigDecimal
 }

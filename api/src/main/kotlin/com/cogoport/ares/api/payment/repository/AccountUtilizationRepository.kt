@@ -1111,6 +1111,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
+        SELECT SUM(sign_flag*(amount_loc-pay_loc)) FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        tagged_organization_id = :organizationId AND deleted_at IS NULL
+    """
+    )
+    suspend fun getApPerOrganization(organizationId: String?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
         SELECT SUM(CASE WHEN acc_type IN ('PINV','PREIMB') THEN (amount_loc-pay_loc) ELSE 0 END) AS open_invoice_amount,
         SUM(CASE WHEN acc_type in ('PINV','PREIMB') THEN 1 ELSE 0 END) AS open_invoice_count,
         SUM(CASE WHEN acc_type IN ('PAY') THEN (amount_loc-pay_loc) ELSE 0 END) AS on_account_amount,

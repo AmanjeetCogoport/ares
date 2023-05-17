@@ -149,4 +149,9 @@ class OutstandingController {
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
     }
+
+    @Get("{orgId}/account-payables")
+    suspend fun getApOfOrganization(@PathVariable("orgId") orgId: String): BigDecimal {
+        return Response<BigDecimal>().ok(outStandingService.getPayableOfOrganization(orgId))
+    }
 }

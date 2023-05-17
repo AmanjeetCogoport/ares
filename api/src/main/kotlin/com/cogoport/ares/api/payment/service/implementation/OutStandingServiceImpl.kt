@@ -942,4 +942,10 @@ class OutStandingServiceImpl : OutStandingService {
         val res = listSupplierDetails(request)
         return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
     }
+
+    override suspend fun getPayableOfOrganization(organizationId: String): BigDecimal {
+        val accountPayables = accountUtilizationRepository.getApPerOrganization(organizationId)
+        if (accountPayables == null) { throw AresException(AresError.ERR_1009, ", organization not found!!") }
+        return accountPayables * (-1).toBigDecimal()
+    }
 }
