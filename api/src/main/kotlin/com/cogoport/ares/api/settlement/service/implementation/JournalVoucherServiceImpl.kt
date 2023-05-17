@@ -24,6 +24,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import javax.transaction.Transactional
 
 @Singleton
 open class JournalVoucherServiceImpl : JournalVoucherService {
@@ -43,14 +44,15 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var parentJvRepo: ParentJVRepository
 
+    @Transactional
     override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?, documentValue: String?) {
-        val jvDetails = parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
+        parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
-                objectId = jvDetails.id,
+                objectId = id,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to jvDetails.id, "status" to "UTILIZED"),
+                data = mapOf("id" to id, "status" to "UTILIZED"),
                 performedBy = performedBy.toString(),
                 performedByUserType = performedByUserType
             )

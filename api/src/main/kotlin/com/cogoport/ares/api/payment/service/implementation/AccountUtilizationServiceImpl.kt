@@ -145,14 +145,15 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 )
             )
             if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.SREIMB)) {
+                val paymentStatus = Utilities.getPaymentStatus(accUtilRes)
                 plutusMessagePublisher.emitInvoiceBalance(
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(
                             invoiceId = accUtilRes.documentNo,
-                            balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
+                            balanceAmount = paymentStatus.second,
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
-                            paymentStatus = Utilities.getPaymentStatus(accUtilRes),
+                            paymentStatus = paymentStatus.first
                         ),
                         knockOffDocuments = null,
                     )
@@ -384,13 +385,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             invoiceRequest.documentNo,
             invoiceRequest.accType.name
         ) ?: return null
-
+        val paymentStatus = Utilities.getPaymentStatus(accountUtilization)
         return InvoicePaymentResponse(
             documentNo = invoiceRequest.documentNo,
             accType = invoiceRequest.accType,
-            balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+            balanceAmount = paymentStatus.second,
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
-            paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+            paymentStatus = paymentStatus.first
         )
     }
 
