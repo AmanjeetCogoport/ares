@@ -2621,9 +2621,14 @@ open class SettlementServiceImpl : SettlementService {
         val sageOrganizationFromSageId: String?
 
         val registrationNumber: String?
+        val serialId: Long?
         if (accountUtilization.organizationId != null) {
             val organization = railsClient.getListOrganizationTradePartyDetails(accountUtilization.organizationId!!)
+            if (organization.list.isEmpty()) {
+                throw AresException(AresError.ERR_1530, "")
+            }
             registrationNumber = organization.list[0]["registration_number"].toString()
+            serialId = organization.list[0]["serial_id"]!!.toString().toLong()
             val sageOrganizationQuery = if (accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='$registrationNumber'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='$registrationNumber'"
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
@@ -2634,7 +2639,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
             SageOrganizationRequest(
-                accountUtilization.orgSerialId.toString(),
+                serialId.toString(),
                 if (accMode == AccMode.AR) {
                     "importer_exporter"
                 } else {
