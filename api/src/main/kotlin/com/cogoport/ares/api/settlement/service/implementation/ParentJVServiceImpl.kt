@@ -415,6 +415,13 @@ open class ParentJVServiceImpl : ParentJVService {
                 }
             }
 
+            if (lineItem.glCode.isNullOrEmpty()) {
+                throw AresException(AresError.ERR_1003, "GL code")
+            }
+            if (lineItem.type.isNullOrEmpty()) {
+                throw AresException(AresError.ERR_1003, "Type")
+            }
+
             val jvLineItemData = JournalVoucher(
                 id = null,
                 jvNum = parentJvData?.jvNum!!,
