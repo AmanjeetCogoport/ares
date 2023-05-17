@@ -321,23 +321,20 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun deleteJournalVoucherById(id: String, performedBy: UUID): String {
         val parentJvId = Hashids.decode(id)[0]
-        try{
-        val parentJvDetails = parentJVRepository.findById(parentJvId)  ?: throw AresException(AresError.ERR_1002, "JV")
+        try {
+            val parentJvDetails = parentJVRepository.findById(parentJvId) ?: throw AresException(AresError.ERR_1002, "JV")
             if (parentJvDetails.isUtilized == true) {
                 throw AresException(AresError.ERR_1540, "JV is already utilized.")
             }
-        if (parentJvDetails?.status == JVStatus.POSTED) {
-            val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJvDetails.jvNum!!)
-            if (!isDeletedFromSage) {
-                throw AresException(AresError.ERR_1540, parentJvDetails.jvNum!!)
+            if (parentJvDetails.status == JVStatus.POSTED) {
+                val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJvDetails.jvNum!!)
+                if (!isDeletedFromSage) {
+                    throw AresException(AresError.ERR_1540, "${parentJvDetails.jvNum!!} could not get deleted from sage")
+                }
             }
-        }
-        parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
-        val jvLineItemData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
-        jvLineItemData.forEach { lineItem ->
-                accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(lineItem.jvNum, AccountType.valueOf(lineItem.category))
-        }
-        journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
+            parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
+            accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvDetails.jvNum, AccountType.valueOf(parentJvDetails.category))
+            journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
 
             auditService.createAudit(
                 AuditRequest(

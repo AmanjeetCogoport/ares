@@ -1169,12 +1169,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
-
-    @NewSpan
-    @Query(
-        """
-            SELECT * FROM account_utilizations where document_value = :jvNumber and deleted_at IS NULL
-        """
-    )
-    suspend fun getDataByJvNum(jvNumber: String): List<AccountUtilization>?
 }
