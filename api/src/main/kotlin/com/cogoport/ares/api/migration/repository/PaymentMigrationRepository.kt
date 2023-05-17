@@ -17,7 +17,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
             SELECT EXISTS
             (SELECT p.id FROM payments p  inner join account_utilizations au on (au.document_value = p.payment_num_value and p.sage_organization_id = au.sage_organization_id
             and p.acc_mode=au.acc_mode)
-            WHERE p.migrated=true and p.payment_num_value=:paymentNumValue
+            WHERE p.migrated=true and p.sage_ref_number = :paymentNumValue
             and p.acc_mode  = :accMode::account_mode  and p."payment_code"=:paymentCode::payment_code
             and au.acc_type=:accType::account_type
             )
@@ -115,4 +115,22 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         sageUniqueId: String,
         jvNum: String
     ): Long?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT id FROM payments WHERE sage_ref_number = :SageRefNum AND migrated = TRUE 
+        """
+    )
+    suspend fun getPaymentFromSageRefNum(
+        SageRefNum: String
+    ): Long
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id AND migrated = TRUE;
+        """
+    )
+    suspend fun updateSageRefNum(id: Long, sageRefNumber: String): Long
 }
