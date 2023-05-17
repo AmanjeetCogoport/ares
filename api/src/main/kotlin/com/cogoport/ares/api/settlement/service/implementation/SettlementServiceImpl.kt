@@ -28,6 +28,7 @@ import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -180,6 +181,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var journalVoucherService: JournalVoucherService
+
+    @Inject
+    lateinit var onAccountService: OnAccountService
 
     @Inject
     private lateinit var paymentRepo: PaymentRepository
@@ -2781,13 +2785,22 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
-            aresMessagePublisher.emitPostPaymentToSage(
-                PostPaymentToSage(
-                    paymentId = savedPayment.id!!,
-                    performedBy = savedPayment.createdBy!!
-
+//            aresMessagePublisher.emitPostPaymentToSage(
+//                PostPaymentToSage(
+//                    paymentId = savedPayment.id!!,
+//                    performedBy = savedPayment.createdBy!!
+//                )
+//            )
+            try {
+                onAccountService.directFinalPostToSage(
+                    PostPaymentToSage(
+                        paymentId = savedPayment.id!!,
+                        performedBy = savedPayment.updatedBy!!
+                    )
                 )
-            )
+            } catch (ex: Exception) {
+                logger().info(ex.stackTraceToString())
+            }
         }
 
         try {
