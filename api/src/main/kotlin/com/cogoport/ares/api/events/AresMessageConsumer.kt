@@ -196,7 +196,7 @@ class AresMessageConsumer {
         onAccountService.directFinalPostToSage(req)
     }
 
-    @Queue("sage-payment-num-migration")
+    @Queue("sage-payment-num-migration", prefetch = 1)
     fun sagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse) = runBlocking {
         paymentMigration.migrateSagePaymentNum(paymentRecord)
     }

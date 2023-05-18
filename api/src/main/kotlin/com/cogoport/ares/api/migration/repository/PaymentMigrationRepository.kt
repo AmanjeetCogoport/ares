@@ -129,7 +129,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @NewSpan
     @Query(
         """
-            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id AND migrated = TRUE;
+            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id AND migrated = TRUE
         """
     )
     suspend fun updateSageRefNum(id: Long, sageRefNumber: String): Long
