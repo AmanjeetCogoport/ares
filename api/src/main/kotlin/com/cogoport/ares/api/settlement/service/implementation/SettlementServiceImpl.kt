@@ -89,7 +89,6 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
-import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
@@ -2786,7 +2785,6 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-        Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
         if (accUtilRes.accMode == AccMode.AP) {
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
         }
