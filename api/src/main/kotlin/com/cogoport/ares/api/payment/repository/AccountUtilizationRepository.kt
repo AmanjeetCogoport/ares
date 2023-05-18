@@ -1114,7 +1114,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
         SELECT entity_code, led_currency, SUM(sign_flag*(amount_loc-pay_loc)) as account_payables FROM account_utilizations 
         WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
-        tagged_organization_id = :organizationId AND deleted_at IS NULL AND CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END GROUP BY entity_code, led_currency
+        tagged_organization_id = :organizationId AND CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END GROUP BY entity_code, led_currency
     """
     )
     suspend fun getApPerOrganization(organizationId: String?, entity: Int?): List<AccPayablesOfOrgRes>
