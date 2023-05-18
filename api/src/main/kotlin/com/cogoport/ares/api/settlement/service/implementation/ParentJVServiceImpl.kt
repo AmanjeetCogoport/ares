@@ -329,17 +329,12 @@ open class ParentJVServiceImpl : ParentJVService {
                 throw AresException(AresError.ERR_1540, "JV is already utilized.")
             }
             parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
-            val jvLineItemData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
-            jvLineItemData.forEach { lineItem ->
-                if (lineItem.status == JVStatus.APPROVED) {
-                    accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(lineItem.jvNum, AccountType.valueOf(lineItem.category))
-                }
-            }
+            accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvDetails.jvNum, AccountType.valueOf(parentJvDetails.category))
             journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
 
             auditService.createAudit(
                 AuditRequest(
-                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                     objectId = parentJvId,
                     actionName = AresConstants.DELETE,
                     data = mapOf("id" to id, "status" to "DELETED"),
