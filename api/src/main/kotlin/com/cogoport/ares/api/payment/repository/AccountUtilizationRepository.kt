@@ -1158,7 +1158,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             SET 
                 deleted_at = NOW(), 
                 updated_at = NOW(),
-                document_status != 'DELETED'::document_status,
+                document_status = 'DELETED'::document_status,
                 settlement_enabled = FALSE
             WHERE 
                 document_value = :docValue 
