@@ -19,7 +19,7 @@ class UtilizationUpdateScheduler {
 
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
 
-    @Scheduled(cron = "0 30 5 ? * *")
+//    @Scheduled(cron = "0 30 5 ? * *")
     fun updateUtilizationValues() = runBlocking {
         try {
             logger().info("Running scheduler for updating payment utilization amount")
@@ -30,7 +30,7 @@ class UtilizationUpdateScheduler {
         }
     }
 
-    @Scheduled(cron = "0 30 6 ? * *")
+//    @Scheduled(cron = "0 30 6 ? * *")
     fun updateUtilizationValuesForInvoices() = runBlocking {
         try {
             logger().info("Running scheduler for updating invoice utlization amount")
@@ -41,7 +41,7 @@ class UtilizationUpdateScheduler {
         }
     }
 
-    @Scheduled(cron = "0 30 7 ? * *")
+//    @Scheduled(cron = "0 30 7 ? * *")
     fun updateUtilizationValuesForBills() = runBlocking {
         try {
             logger().info("Running scheduler for updating bill utilization amount")
@@ -66,7 +66,7 @@ class UtilizationUpdateScheduler {
         }
     }
 
-    @Scheduled(cron = "0 30 8 ? * *")
+//    @Scheduled(cron = "0 30 8 ? * *")
     fun migrateJVUtilizationScheduler() = runBlocking {
         val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
         val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
