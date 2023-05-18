@@ -28,10 +28,12 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
+import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
@@ -941,5 +943,11 @@ class OutStandingServiceImpl : OutStandingService {
         }
         val res = listSupplierDetails(request)
         return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
+    }
+
+    override suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
+        val accountPayablesRes = accountUtilizationRepository.getApPerOrganization(request.orgId, request.entityCode)
+        accountPayablesRes.map { it.accountPayables * (-1).toBigDecimal() }
+        return accountPayablesRes
     }
 }
