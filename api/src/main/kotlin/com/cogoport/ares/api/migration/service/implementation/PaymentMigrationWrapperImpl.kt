@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -14,12 +15,15 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
-import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.settlement.GlCodeMaster
+import com.cogoport.ares.model.settlement.event.InvoiceBalance
+import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import javax.transaction.Transactional
@@ -28,7 +32,7 @@ import javax.transaction.Transactional
 open class PaymentMigrationWrapperImpl(
     private var paymentRepository: PaymentRepository,
     private var sequenceGeneratorImpl: SequenceGeneratorImpl,
-    private var settlementRepository: SettlementRepository
+    private var plutusMessagePublisher: PlutusMessagePublisher
 ) : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
@@ -369,5 +373,29 @@ open class PaymentMigrationWrapperImpl(
         payment.paymentNum = newPayNumAndValue.second
         payment.paymentNumValue = newPayNumAndValue.first
         paymentRepository.update(payment)
+    }
+
+    override suspend fun paymentStatusSyncMigration(paymentStatusSyncMigrationReq: PaymentStatusSyncMigrationReq): Int {
+        val accountUtilizations = accountUtilizationRepo.findRecords(
+            paymentStatusSyncMigrationReq.documentNumbers!!,
+            paymentStatusSyncMigrationReq.accTypes?.map { it.name }!!,
+            paymentStatusSyncMigrationReq.accMode?.name
+        )
+        accountUtilizations.forEach {
+            val paymentStatus = Utilities.getPaymentStatus(it)
+            plutusMessagePublisher.emitInvoiceBalance(
+                invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
+                    invoiceBalance = InvoiceBalance(
+                        invoiceId = it.documentNo,
+                        balanceAmount = paymentStatus.second,
+                        performedBy = paymentStatusSyncMigrationReq.performedBy,
+                        performedByUserType = paymentStatusSyncMigrationReq.performedByUserType,
+                        paymentStatus = paymentStatus.first
+                    ),
+                    null
+                )
+            )
+        }
+        return accountUtilizations.size
     }
 }
