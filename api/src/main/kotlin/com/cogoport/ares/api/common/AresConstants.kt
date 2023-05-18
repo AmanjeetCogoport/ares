@@ -82,7 +82,7 @@ object AresConstants {
     const val LIMIT = 10000
 
     var WHITE_LISTED_PATHS = mutableListOf(
-        "get_payments_health_check",
+        "get_payments_health",
         "get_payments_service_discovery_reachability",
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
