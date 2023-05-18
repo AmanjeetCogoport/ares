@@ -27,13 +27,17 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
+import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.OnAccountAndOutstandingResp
+import com.cogoport.ares.api.payment.model.response.SupplierStatistics
+import com.cogoport.ares.api.payment.model.response.SupplierReceivablesAndAgeingBucket
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
@@ -48,6 +52,7 @@ import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DocumentType
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
@@ -103,6 +108,15 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Inject
+    lateinit var accUtilRepo: AccountUtilizationRepo
+
+    @Inject
+    lateinit var openSearchServiceImpl: OpenSearchServiceImpl
+
+    @Inject
+    lateinit var outStandingServiceImpl: OutStandingServiceImpl
 
     private suspend fun getDefaultersOrgIds(): List<UUID>? {
         return businessPartnersServiceImpl.listTradePartyDetailIds()
@@ -1222,4 +1236,44 @@ class DashboardServiceImpl : DashboardService {
             else -> null
         }
     }
+
+    override suspend fun getReceivableStatsForSupplier(orgId: String): SupplierReceivablesAndAgeingBucket {
+        val receivableStats = accUtilRepo.getServiceProviderStats(orgId)
+        if (receivableStats.isEmpty()) throw AresException(AresError.ERR_1005, "")
+        val ageingBucket = accUtilRepo.getSupplierAgeingBucket(orgId)
+        val totalReceivableDues = receivableStats.groupBy { it?.currency }.map { DueAmount(it.key, it.value.sumOf { it?.totalReceivableAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it?.receivablesInvoicesCount!! }) }.toMutableList()
+        val unpaidReceivableDues = receivableStats.groupBy { it?.currency }.map { DueAmount(it.key, it.value.sumOf { it?.unpaidReceivableAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it?.unpaidInvoicesCount!! }) }.toMutableList()
+        val partialPaidReceivableDues = receivableStats.groupBy { it?.currency }.map { DueAmount(it.key, it.value.sumOf { it?.partialPaidReceivableAmount?.abs().toString().toBigDecimal() }, it.value.sumOf { it?.partialPaidInvoicesCount!! }) }.toMutableList()
+        val totalReceivableInvoicesCount = receivableStats.sumOf { it?.receivablesInvoicesCount!! }
+        val unpaidInvoicesCount = receivableStats.sumOf { it?.unpaidInvoicesCount!! }
+        val partialPaidInvoicesCount = receivableStats.sumOf { it?.partialPaidInvoicesCount!! }
+        val totalReceivablesLedgerAmount = receivableStats.sumOf { it?.totalReceivableLedAmount?.abs()!! }
+        val unpaidLedgerAmount = receivableStats.sumOf { it?.unpaidReceivableLedAmount?.abs()!! }
+        val partialPaidLedgerAmount = receivableStats.sumOf { it?.partialPaidReceivableLedAmount?.abs()!! }
+        openSearchServiceImpl.validateDueAmount(totalReceivableDues)
+        openSearchServiceImpl.validateDueAmount(unpaidReceivableDues)
+        openSearchServiceImpl.validateDueAmount(partialPaidReceivableDues)
+        val zero = outStandingServiceImpl.assignAgeingBucket("Not Due", ageingBucket.notDueAmount.abs(), ageingBucket.notDueCount, "not_due")
+        val thirty = outStandingServiceImpl.assignAgeingBucket("1-30", ageingBucket.thirtyAmount.abs(), ageingBucket.thirtyCount, "1_30")
+        val fortyFive = outStandingServiceImpl.assignAgeingBucket("31-45", ageingBucket.fortyfiveAmount.abs(), ageingBucket.fortyfiveCount, "31_45")
+        val sixty = outStandingServiceImpl.assignAgeingBucket("46-60", ageingBucket.sixtyAmount.abs(), ageingBucket.sixtyCount, "46_60")
+        val ninety = outStandingServiceImpl.assignAgeingBucket("61-90", ageingBucket.ninetyAmount.abs(), ageingBucket.ninetyCount, "61_90")
+        val oneEighty = outStandingServiceImpl.assignAgeingBucket("91-180", ageingBucket.oneeightyAmount.abs(), ageingBucket.oneeightyCount, "91_180")
+        val threeSixtyFive = outStandingServiceImpl.assignAgeingBucket("181-365", ageingBucket.threesixtyfiveAmount.abs(), ageingBucket.threesixtyfiveCount, "181_365")
+        val threeSixtyFivePlus = outStandingServiceImpl.assignAgeingBucket("365+", ageingBucket.threesixtyfiveplusAmount.abs(), ageingBucket.threesixtyfiveplusCount, "365")
+
+        return SupplierReceivablesAndAgeingBucket(ageingBucket = listOf(zero, thirty, fortyFive, sixty, ninety, oneEighty, threeSixtyFive, threeSixtyFivePlus),
+            totalReceivables = InvoiceStats(totalReceivableInvoicesCount,totalReceivablesLedgerAmount,totalReceivableDues),
+            unpaidReceivables = InvoiceStats(unpaidInvoicesCount,unpaidLedgerAmount,unpaidReceivableDues),
+            partialPaidReceivables = InvoiceStats(partialPaidInvoicesCount,partialPaidLedgerAmount,partialPaidReceivableDues)
+        )
+    }
+
+    override suspend fun getPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
+        val invoiceDueStats = accUtilRepo.getSupplierDueStats(request.orgId, request.startDate,request.endDate,request.time) ?: throw AresException(AresError.ERR_1005, "")
+        val onAccountPayment = accUtilRepo.getSupplierOnAccountPayment(request.orgId, request.startDate,request.endDate,request.time)
+        return SupplierStatistics(invoiceDueStats,onAccountPayment!!)
+    }
+
+
 }

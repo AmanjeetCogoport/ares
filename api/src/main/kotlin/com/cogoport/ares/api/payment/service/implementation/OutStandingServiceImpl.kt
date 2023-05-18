@@ -162,7 +162,7 @@ class OutStandingServiceImpl : OutStandingService {
         )
     }
 
-    private fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
+    fun assignAgeingBucket(ageDuration: String, amount: BigDecimal?, count: Int, key: String): AgeingBucket {
         return AgeingBucket(
             ageingDuration = ageDuration,
             amount = amount,

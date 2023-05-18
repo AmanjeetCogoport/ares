@@ -4,6 +4,9 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.response.SupplierOutstandingAgeingBucket
+import com.cogoport.ares.api.payment.model.response.SupplierReceivableStats
+import com.cogoport.ares.api.payment.model.response.Statistics
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -791,4 +794,410 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         newDocValue: String,
         newDocNo: Long
     )
+
+    @NewSpan
+    @Query(
+            """
+                select organization_id::varchar, currency,
+                sum(case when amount_curr - pay_curr > 0 then 1 else 0 end) as receivables_invoices_count,
+                sum(case when amount_curr - pay_curr > 0 then sign_flag * (amount_curr - pay_curr) else 0 end) as total_receivable_amount,
+                sum(case when amount_loc - pay_loc > 0 then sign_flag * (amount_loc - pay_loc) else 0 end) as total_receivable_led_amount,
+                sum(case when pay_curr = 0 then sign_flag * (amount_curr) else 0 end) as unpaid_receivable_amount,
+                sum(case when pay_loc = 0 then sign_flag * (amount_loc) else 0 end) as unpaid_receivable_led_amount,
+                sum(case when pay_curr = 0 then 1 else 0 end) as unpaid_invoices_count,
+                sum(case when amount_curr - pay_curr > 0 and pay_curr <> 0 then sign_flag * (amount_curr - pay_curr) else 0 end) as partial_paid_receivable_amount,
+                sum(case when amount_loc - pay_loc > 0 and pay_loc <> 0 then sign_flag * (amount_loc - pay_loc) else 0 end) as partial_paid_receivable_led_amount,
+                sum(case when amount_curr - pay_curr > 0 and pay_curr <> 0 then 1 else 0 end) as partial_paid_invoices_count
+                from account_utilizations
+                where acc_type = 'PINV' 
+                AND acc_mode = 'AP' 
+                AND document_status in ('FINAL', 'PROFORMA') 
+                AND organization_id IS NOT NULL
+                and organization_id = :orgId::uuid and deleted_at is null and is_void = false
+                group by organization_id, currency
+            """
+    )
+    suspend fun getServiceProviderStats(orgId: String): List<SupplierReceivableStats?>
+
+    @NewSpan
+    @Query(
+            """
+        SELECT
+            organization_id,
+            sum(
+                CASE WHEN (due_date >= now()::date) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS not_due_amount,       
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS thirty_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS fortyfive_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS sixty_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS ninety_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS oneeighty_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixtyfive_amount,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_amount,
+            sum(
+                CASE WHEN due_date >= now()::date THEN
+                    1
+                ELSE
+                    0
+                END) AS not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    1
+                ELSE
+                    0
+                END) AS thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 THEN
+                    1
+                ELSE
+                    0
+                END) AS fortyfive_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 THEN
+                    1
+                ELSE
+                    0
+                END) AS sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    1
+                ELSE
+                    0
+                END) AS ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    1
+                ELSE
+                    0
+                END) AS oneeighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixtyfive_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 THEN
+                    1
+                ELSE
+                    0
+                END) AS threesixtyfiveplus_count
+        FROM
+            account_utilizations
+        WHERE
+            acc_mode = 'AP'
+            AND due_date IS NOT NULL
+            AND document_status in ('FINAL', 'PROFORMA')
+            AND organization_id IS NOT NULL
+            AND organization_id = :orgId::uuid
+            AND acc_type = 'PINV'
+            AND deleted_at IS NULL 
+            AND is_void = false
+        GROUP BY
+            organization_id      
+        """
+    )
+    suspend fun getSupplierAgeingBucket(orgId: String): SupplierOutstandingAgeingBucket
+
+
+    @NewSpan
+    @Query(
+            """
+            SELECT
+            organization_id,
+    sum(
+        CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS today_amount, 
+        sum(
+                CASE WHEN (due_date <= now()::date) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS due_till_today_amount,
+            sum(
+                CASE WHEN (due_date < now()::date) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS due_before_today_amount,
+                sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 7 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS seven_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 15 THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS fifteen_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 90 THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS three_month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 180 THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS six_month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+            1
+        ELSE
+            0
+        END) AS today_count,
+    sum(
+                CASE WHEN (due_date <= now()::date) THEN
+                    1
+                ELSE
+                    0
+                END) AS due_till_today_count,
+            sum(
+                CASE WHEN (due_date < now()::date) THEN
+                    1
+                ELSE
+                    0
+                END) AS due_before_today_count,
+                sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 7 THEN
+                    1
+                ELSE
+                    0
+                END) AS seven_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 15 THEN
+                    1
+                ELSE
+                    0
+                END) AS fifteen_count,
+
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+            1
+        ELSE
+            0
+        END) AS month_count,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 90 THEN
+            1
+        ELSE
+            0
+        END) AS three_month_count,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 180 THEN
+            1
+        ELSE
+            0
+        END) AS six_month_count,
+    sum(
+        CASE WHEN :time = 'custom' AND (:startDate IS NULL OR :endDate IS NULL OR due_date BETWEEN :startDate::DATE AND :endDate::DATE) THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS custom_amount,
+    sum(
+        CASE WHEN :time = 'custom' AND (:startDate IS NULL OR :endDate IS NULL OR due_date BETWEEN :startDate::DATE AND :endDate::DATE) THEN
+            1
+        ELSE
+            0
+        END) AS custom_count
+    FROM
+        account_utilizations
+    WHERE
+        acc_mode = 'AP'
+        AND due_date IS NOT NULL
+        AND document_status IN ('FINAL', 'PROFORMA')
+        AND organization_id IS NOT NULL
+        AND organization_id = :orgId::uuid
+        AND acc_type = 'PINV'
+        AND deleted_at IS NULL
+        AND is_void = false
+    GROUP BY
+        organization_id
+            """
+    )
+    suspend fun getSupplierDueStats(orgId: String, startDate: String?, endDate: String?, time: String?): Statistics?
+
+    @NewSpan
+    @Query(
+            """
+            SELECT
+            organization_id,
+    sum(
+        CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+            amount_loc - pay_loc
+        ELSE
+            0
+        END) AS today_amount, 
+        sum(
+                CASE WHEN (due_date <= now()::date) THEN
+                    amount_loc - pay_loc
+                ELSE
+                    0
+                END) AS due_till_today_amount,
+            sum(
+                CASE WHEN (due_date < now()::date) THEN
+                    amount_loc - pay_loc
+                ELSE
+                    0
+                END) AS due_before_today_amount,
+                sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 7 THEN
+                    amount_loc - pay_loc
+                ELSE
+                    0
+                END) AS seven_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 15 THEN
+            amount_loc - pay_loc
+        ELSE
+            0
+        END) AS fifteen_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+            amount_loc - pay_loc
+        ELSE
+            0
+        END) AS month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 90 THEN
+            amount_loc - pay_loc
+        ELSE
+            0
+        END) AS three_month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 180 THEN
+            amount_loc - pay_loc
+        ELSE
+            0
+        END) AS six_month_amount,
+    sum(
+        CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+            1
+        ELSE
+            0
+        END) AS today_count,
+    sum(
+                CASE WHEN (due_date <= now()::date) THEN
+                    1
+                ELSE
+                    0
+                END) AS due_till_today_count,
+            sum(
+                CASE WHEN (due_date < now()::date) THEN
+                    1
+                ELSE
+                    0
+                END) AS due_before_today_count,
+                sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 7 THEN
+                    1
+                ELSE
+                    0
+                END) AS seven_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 15 THEN
+                    1
+                ELSE
+                    0
+                END) AS fifteen_count,
+
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+            1
+        ELSE
+            0
+        END) AS month_count,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 90 THEN
+            1
+        ELSE
+            0
+        END) AS three_month_count,
+    sum(
+        CASE WHEN (now()::date - due_date) BETWEEN 1 AND 180 THEN
+            1
+        ELSE
+            0
+        END) AS six_month_count,
+    sum(
+        CASE WHEN :time = 'custom' AND (:startDate IS NULL OR :endDate IS NULL OR due_date BETWEEN :startDate::DATE AND :endDate::DATE) THEN
+            sign_flag * (amount_loc - pay_loc)
+        ELSE
+            0
+        END) AS custom_amount,
+    sum(
+        CASE WHEN :time = 'custom' AND (:startDate IS NULL OR :endDate IS NULL OR due_date BETWEEN :startDate::DATE AND :endDate::DATE) THEN
+            1
+        ELSE
+            0
+        END) AS custom_count
+    FROM
+        account_utilizations
+    WHERE
+        acc_mode = 'AP'
+        AND due_date IS NOT NULL
+        AND document_status = 'FINAL'
+        AND organization_id IS NOT NULL
+        AND organization_id = :orgId::uuid
+        AND acc_type in ('PAY', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+        AND deleted_at IS NULL
+        AND is_void = false
+    GROUP BY
+        organization_id
+            """
+    )
+    suspend fun getSupplierOnAccountPayment(orgId: String, startDate: String?, endDate: String?, time: String?): Statistics?
+
 }
