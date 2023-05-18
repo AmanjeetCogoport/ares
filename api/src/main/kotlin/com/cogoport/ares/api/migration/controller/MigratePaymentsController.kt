@@ -3,6 +3,7 @@ package com.cogoport.ares.api.migration.controller
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -11,8 +12,11 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
+import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import javax.validation.Valid
 
+@Validated
 @Controller
 class MigratePaymentsController {
 
@@ -191,5 +195,10 @@ class MigratePaymentsController {
     @Post("/remove-duplicates")
     suspend fun removeDuplicatePayNums(@Body paymentNumValues: List<String>): Response<Int> {
         return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
+    }
+
+    @Post("/status-sync")
+    suspend fun plutusPaymentStatusSync(@Valid @Body paymentStatusSyncMigrationReq: PaymentStatusSyncMigrationReq): Response<Int> {
+        return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.paymentStatusSyncMigration(paymentStatusSyncMigrationReq))
     }
 }
