@@ -15,7 +15,6 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
@@ -90,7 +89,6 @@ import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
-import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.SageSettlementRequest
 import com.cogoport.hades.client.HadesClient
@@ -108,7 +106,6 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
-import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.XML
@@ -1039,7 +1036,7 @@ open class SettlementServiceImpl : SettlementService {
         return checkResponse
     }
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    @Transactional
     override suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
         return runSettlement(request, true, isAutoKnockOff)
     }
@@ -1370,7 +1367,8 @@ open class SettlementServiceImpl : SettlementService {
         return Hashids.encode(documentNo)
     }
 
-    private suspend fun reduceAccountUtilization(
+    @Transactional
+    open suspend fun reduceAccountUtilization(
         docId: Long,
         accType: AccountType,
         amount: BigDecimal,
@@ -1403,28 +1401,24 @@ open class SettlementServiceImpl : SettlementService {
 
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtil.organizationId))
 
-        try {
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                    objectId = accUtilObj.id,
-                    actionName = AresConstants.UPDATE,
-                    data = accUtilObj,
-                    performedBy = updatedBy.toString(),
-                    performedByUserType = updatedByUserType
-                )
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilObj.id,
+                actionName = AresConstants.UPDATE,
+                data = accUtilObj,
+                performedBy = updatedBy.toString(),
+                performedByUserType = updatedByUserType
             )
-            val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
-            updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType, false, true)
-            sendInvoiceDataToDebitConsumption(accUtil)
-            OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilObj.id.toString(), accUtilObj)
-            emitDashboardAndOutstandingEvent(accUtilObj)
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-        }
+        )
+        val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
+        updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType, false, true)
+        sendInvoiceDataToDebitConsumption(accUtil)
+        emitDashboardAndOutstandingEvent(accUtilObj)
     }
 
-    private suspend fun runSettlement(
+    @Transactional
+    open suspend fun runSettlement(
         request: CheckRequest,
         performDbOperation: Boolean,
         isAutoKnockOff: Boolean
@@ -1491,7 +1485,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         businessValidation(source, dest)
         if (source.any { it.hasPayrun } || dest.any { it.hasPayrun }) {
-            AresException(AresError.ERR_1512, "")
+            throw AresException(AresError.ERR_1512, "")
         }
         val settledList = settleDocuments(request, source, dest, performDbOperation, isAutoKnockOff)
         settledList.forEach {
@@ -1505,7 +1499,8 @@ open class SettlementServiceImpl : SettlementService {
     /**
      * Settle documents: source to destination.
      */
-    private suspend fun settleDocuments(
+    @Transactional
+    open suspend fun settleDocuments(
         request: CheckRequest,
         source: MutableList<CheckDocument>,
         dest: MutableList<CheckDocument>,
@@ -1560,7 +1555,8 @@ open class SettlementServiceImpl : SettlementService {
         return response
     }
 
-    private suspend fun doSettlement(
+    @Transactional
+    open suspend fun doSettlement(
         request: CheckRequest,
         invoice: CheckDocument,
         availableAmount: BigDecimal,
@@ -1622,7 +1618,8 @@ open class SettlementServiceImpl : SettlementService {
         return amount
     }
 
-    private suspend fun updateDocuments(
+    @Transactional
+    open suspend fun updateDocuments(
         request: CheckRequest,
         invoice: CheckDocument,
         payment: CheckDocument,
@@ -1658,7 +1655,8 @@ open class SettlementServiceImpl : SettlementService {
         return getExchangeValue(amount, exchangeRate, true)
     }
 
-    private suspend fun performDbOperation(
+    @Transactional
+    open suspend fun performDbOperation(
         request: CheckRequest,
         toSettleAmount: BigDecimal,
         exchangeRate: BigDecimal,
@@ -1803,7 +1801,8 @@ open class SettlementServiceImpl : SettlementService {
         updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
     }
 
-    private suspend fun createTdsRecord(
+    @Transactional
+    open suspend fun createTdsRecord(
         sourceId: Long?,
         destId: Long,
         destType: SettlementType,
@@ -1854,7 +1853,8 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun updateAccountUtilization(
+    @Transactional
+    open suspend fun updateAccountUtilization(
         document: CheckDocument,
         utilizedAmount: BigDecimal,
         paidTds: BigDecimal,
@@ -1885,30 +1885,27 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
-        try {
-            auditService.createAudit(
-                AuditRequest(
-                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                    objectId = accountUtilization.id,
-                    actionName = AresConstants.UPDATE,
-                    data = accountUtilization,
-                    performedBy = updatedBy.toString(),
-                    performedByUserType = updatedByUserType
-                )
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accountUtilization.id,
+                actionName = AresConstants.UPDATE,
+                data = accountUtilization,
+                performedBy = updatedBy.toString(),
+                performedByUserType = updatedByUserType
             )
-            updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType, isAutoKnockOff)
-            OpenSearchClient().updateDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, paymentUtilization.id.toString(), paymentUtilization)
-            emitDashboardAndOutstandingEvent(paymentUtilization)
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-        }
+        )
+        updateExternalSystemInvoice(accountUtilization, paidTds, updatedBy, updatedByUserType, isAutoKnockOff)
+        emitDashboardAndOutstandingEvent(paymentUtilization)
     }
 
     /**
      * Invokes Kafka for Plutus(Sales) or Kuber(Purchase) based on accountType in accountUtilization.
      * @param: accountUtilization
      */
-    private suspend fun updateExternalSystemInvoice(
+    @Transactional
+    open suspend fun updateExternalSystemInvoice(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID,
@@ -1936,7 +1933,8 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update balanceAmount in Plutus(Sales MS).
      * @param: accountUtilization
      */
-    private suspend fun updateBalanceAmount(
+    @Transactional
+    open suspend fun updateBalanceAmount(
         accountUtilization: AccountUtilization,
         performedBy: UUID,
         performedByUserType: String?
@@ -1946,14 +1944,16 @@ open class SettlementServiceImpl : SettlementService {
         if (accountUtilization.accType == AccountType.SINV)
             knockOffDocuments = knockOffListData(accountUtilization)
 
+        val paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+
         plutusMessagePublisher.emitInvoiceBalance(
             invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
                 invoiceBalance = InvoiceBalance(
                     invoiceId = accountUtilization.documentNo,
-                    balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+                    balanceAmount = paymentStatus.second,
                     performedBy = performedBy,
                     performedByUserType = performedByUserType,
-                    paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+                    paymentStatus = paymentStatus.first
                 ),
                 knockOffDocuments = knockOffDocuments
 
@@ -1977,7 +1977,8 @@ open class SettlementServiceImpl : SettlementService {
      * Invokes Kafka event to update status in Kuber(Purchase MS).
      * @param: accountUtilization
      */
-    suspend fun emitPayableBillStatus(
+    @Transactional
+    open suspend fun emitPayableBillStatus(
         accountUtilization: AccountUtilization,
         paidTds: BigDecimal,
         performedBy: UUID?,
@@ -2026,11 +2027,7 @@ open class SettlementServiceImpl : SettlementService {
                 deleteSettlement = isDelete
             )
         )
-        try {
-            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
-        } catch (e: Exception) {
-            Sentry.captureException(e)
-        }
+        aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accountUtilization.organizationId))
     }
 
     private suspend fun emitDashboardAndOutstandingEvent(
@@ -2055,7 +2052,8 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    private suspend fun createSettlement(
+    @Transactional
+    open suspend fun createSettlement(
         sourceId: Long?,
         sourceType: SettlementType,
         destId: Long,
@@ -2094,11 +2092,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-        try {
-            aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
-        } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
-        }
+        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
 
         auditService.createAudit(
             AuditRequest(
@@ -2661,7 +2655,8 @@ open class SettlementServiceImpl : SettlementService {
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
     }
 
-    private suspend fun createTdsAsPaymentEntry(
+    @Transactional
+    open suspend fun createTdsAsPaymentEntry(
         destId: Long,
         destType: SettlementType,
         currency: String?,
@@ -2790,18 +2785,13 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
 
-        try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            if (accUtilRes.accMode == AccMode.AP) {
-                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
-            }
-            if (accUtilRes.accMode == AccMode.AR) {
-                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
-            }
-        } catch (ex: Exception) {
-            logger().error(ex.stackTraceToString())
-            Sentry.captureException(ex)
+        if (accUtilRes.accMode == AccMode.AP) {
+            aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
         }
+        if (accUtilRes.accMode == AccMode.AR) {
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+        }
+
         return savedPayment.paymentNum!!
     }
 }
