@@ -5,16 +5,11 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 
-@Controller("/health-check")
+@Controller("/health")
 class HealthCheckController {
 
     @Get
     fun healthCheck(): HttpResponse<Map<String, String>> {
-        try {
-            return HttpResponse
-                .ok(mapOf("status" to "ok"))
-        } catch (err: Exception) {
-            throw AresException(AresError.ERR_1507, "")
-        }
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 }
