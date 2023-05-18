@@ -31,6 +31,7 @@ import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitListener
@@ -193,5 +194,10 @@ class AresMessageConsumer {
     @Queue("ares-post-payment-to-sage", prefetch = 1)
     fun directPaymentPostToSage(req: PostPaymentToSage) = runBlocking {
         onAccountService.directFinalPostToSage(req)
+    }
+
+    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
+    fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
+        settlementService.matchingSettlementOnSage(req.settlementIds, req.performedBy)
     }
 }

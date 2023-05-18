@@ -14,6 +14,7 @@ import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.RabbitClient
@@ -71,4 +72,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.post.payment.to.sage")
     suspend fun emitPostPaymentToSage(req: PostPaymentToSage)
+
+    @Binding("ares.bulk.post.settlement.to.sage")
+    suspend fun emitBulkMatchingSettlementOnSage(req: PostSettlementRequest)
 }

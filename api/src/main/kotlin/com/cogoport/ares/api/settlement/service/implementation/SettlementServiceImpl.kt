@@ -86,6 +86,7 @@ import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.hashids.Hashids
@@ -2526,10 +2527,16 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
+    override suspend fun bulkMatchingSettlementOnSage(request: PostSettlementRequest) {
+        aresMessagePublisher.emitBulkMatchingSettlementOnSage(request)
+    }
+
+    @Transactional
     override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
+        val totalIDs = settlementIds.size
 
         if (settlementIds.isNotEmpty()) {
             settlementIds.forEach {
@@ -2590,6 +2597,10 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
 
+        val failedIdCount = failedSettlementIds?.size
+
+        logger().info("Total Count: $totalIDs and failedCount: $failedIdCount")
+
         return FailedSettlementIds(
             failedSettlementIds
         )
@@ -2643,13 +2654,11 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
-            throw AresException(AresError.ERR_1532, "sage organizationId is not present in table")
+            throw AresException(AresError.ERR_1532, "${sageOrganizationResponse.sageOrganizationId}sage organizationId is not present in table")
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
-            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
+            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db $sageOrganizationFromSageId and cogoport db ${sageOrganizationResponse.sageOrganizationId}")
         }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)

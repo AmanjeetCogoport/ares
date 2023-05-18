@@ -199,4 +199,9 @@ class SettlementController {
     suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): FailedSettlementIds {
         return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementIds, postSettlementRequest.performedBy)
     }
+
+    @Post("/bulk-matching-on-sage")
+    suspend fun bulkMatchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest) {
+        return settlementService.bulkMatchingSettlementOnSage(postSettlementRequest)
+    }
 }

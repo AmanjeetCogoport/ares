@@ -21,6 +21,7 @@ import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
+import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import java.util.UUID
@@ -61,4 +62,6 @@ interface SettlementService {
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
     suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds
+
+    suspend fun bulkMatchingSettlementOnSage(request: PostSettlementRequest)
 }
