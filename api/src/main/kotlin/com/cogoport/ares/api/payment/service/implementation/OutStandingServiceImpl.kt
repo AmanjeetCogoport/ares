@@ -947,7 +947,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
         val accountPayablesRes = accountUtilizationRepository.getApPerOrganization(request.orgId, request.entityCode)
-        accountPayablesRes.map { it.accountPayables * (-1).toBigDecimal() }
+        accountPayablesRes.map { it.accountPayables *= (-1).toBigDecimal() }
         return accountPayablesRes
     }
 }
