@@ -125,7 +125,7 @@ open class ParentJVServiceImpl : ParentJVService {
      * @return: Parent JV Id
      */
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    @Transactional
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String? {
         validateCreateRequest(request)
 
@@ -414,6 +414,13 @@ open class ParentJVServiceImpl : ParentJVService {
                 if (data.list.isNotEmpty()) {
                     lineItem.tradePartyName = data.list[0]["legal_business_name"].toString()
                 }
+            }
+
+            if (lineItem.glCode.isNullOrEmpty() or lineItem.glCode.isNullOrBlank()) {
+                throw AresException(AresError.ERR_1003, "GL code")
+            }
+            if (lineItem.type.isNullOrEmpty() or lineItem.type.isNullOrBlank()) {
+                throw AresException(AresError.ERR_1003, "Type")
             }
 
             val jvLineItemData = JournalVoucher(
