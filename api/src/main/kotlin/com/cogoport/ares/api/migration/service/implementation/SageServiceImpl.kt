@@ -684,7 +684,7 @@ class SageServiceImpl : SageService {
 
     override suspend fun getSagePaymentNum(sageRefNumber: List<String>): ArrayList<SagePaymentNumMigrationResponse> {
         val sqlQuery = """
-            select NUM_0 as sage_ref_num, REF_0 as sage_payment_num from $sageDatabase.GACCENTRY where NUM_0 in in ('$sageRefNumber')
+            select NUM_0 as sage_ref_num, REF_0 as sage_payment_num from $sageDatabase.GACCENTRY where NUM_0 in ('${sageRefNumber.joinToString("','")}')
         """.trimIndent()
         val result = Client.sqlQuery(sqlQuery)
         val paymentRecords = ObjectMapper().readValue(result, PaymentNumInfo::class.java)

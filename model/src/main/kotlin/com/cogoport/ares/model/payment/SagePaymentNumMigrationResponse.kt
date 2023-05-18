@@ -12,8 +12,8 @@ import io.micronaut.data.annotation.MappedEntity
 @JsonIgnoreProperties
 @MappedEntity
 data class SagePaymentNumMigrationResponse(
-    var sageRefNum: String? = null,
-    var sagePaymentNum: String? = null
+    @JsonProperty("sage_ref_num") var sageRefNum: String? = null,
+    @JsonProperty("sage_payment_num") var sagePaymentNum: String? = null
 )
 
 @Introspected
