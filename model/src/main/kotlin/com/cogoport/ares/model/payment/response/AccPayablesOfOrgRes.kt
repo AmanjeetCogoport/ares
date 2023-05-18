@@ -7,5 +7,5 @@ import java.math.BigDecimal
 data class AccPayablesOfOrgRes(
     val entityCode: Int,
     val ledCurrency: String,
-    val accountPayables: BigDecimal
+    var accountPayables: BigDecimal
 )
