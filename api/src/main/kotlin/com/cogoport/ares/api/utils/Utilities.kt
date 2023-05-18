@@ -116,7 +116,7 @@ class Utilities {
             val balanceAmount = (
                 accountUtilization.amountCurr.setScale(4, RoundingMode.HALF_UP).minus(accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP))
                 ).setScale(4, RoundingMode.HALF_UP)
-            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0 || balanceAmount.abs().compareTo(BigDecimal("0.01")) <= 0) {
+            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0 || balanceAmount.abs().compareTo(BigDecimal("0.1")) <= 0) {
                 return Pair(PaymentStatus.PAID, balanceAmount)
             } else if (balanceAmount.compareTo(BigDecimal.ZERO) > 0 && accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(0.toBigDecimal()) != 0) {
                 return Pair(PaymentStatus.PARTIAL_PAID, balanceAmount)
