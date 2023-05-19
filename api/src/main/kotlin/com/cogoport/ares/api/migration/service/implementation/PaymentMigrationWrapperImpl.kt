@@ -19,6 +19,7 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -369,5 +370,19 @@ open class PaymentMigrationWrapperImpl(
         payment.paymentNum = newPayNumAndValue.second
         payment.paymentNumValue = newPayNumAndValue.first
         paymentRepository.update(payment)
+    }
+
+    override suspend fun migrateSagePaymentNum(sageRefNumber: List<String>): Int {
+        val sagePaymentNum = sageService.getSagePaymentNum(sageRefNumber)
+
+        logger().info("Total number of payment record to process : ${sagePaymentNum.size}")
+        for (paymentRecord in sagePaymentNum) {
+            val sagePayment = SagePaymentNumMigrationResponse(
+                sageRefNum = paymentRecord.sageRefNum,
+                sagePaymentNum = paymentRecord.sagePaymentNum
+            )
+            aresMessagePublisher.emitSagePaymentNumMigration(sagePayment)
+        }
+        return sagePaymentNum.size
     }
 }
