@@ -192,4 +192,13 @@ class MigratePaymentsController {
     suspend fun removeDuplicatePayNums(@Body paymentNumValues: List<String>): Response<Int> {
         return Response<Int>().ok(msg = HttpStatus.OK.name, data = paymentMigration.removeDuplicatePayNums(paymentNumValues))
     }
+
+    @Post("/migrate-payment-sage-payment-num")
+    suspend fun migrateSagePayNums(@Body sageRefNumber: List<String>): Response<String> {
+        val size = paymentMigration.migrateSagePaymentNum(sageRefNumber)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for payment sage_ref_number migration received, total number of sage_ref_no to migrate is $size"
+        )
+    }
 }
