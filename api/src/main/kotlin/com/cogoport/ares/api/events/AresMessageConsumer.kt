@@ -198,6 +198,6 @@ class AresMessageConsumer {
 
     @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
-        settlementService.matchingSettlementOnSage(req.settlementIds, req.performedBy)
+        settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
     }
 }

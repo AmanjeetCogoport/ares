@@ -1302,7 +1302,7 @@ open class OnAccountServiceImpl : OnAccountService {
                         "PAYMENT",
                         "500",
                         sageOrganization.toString(),
-                        "sage serial organization id different in sage db and cogoport db",
+                        "sage serial organization id different on Sage $sageOrganizationFromSageId and Cogoport Platform ${sageOrganization.sageOrganizationId}",
                         false
                     )
                 )

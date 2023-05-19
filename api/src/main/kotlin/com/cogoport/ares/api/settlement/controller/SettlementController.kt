@@ -15,7 +15,6 @@ import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
-import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
@@ -30,6 +29,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.ares.model.settlement.request.BulkPostSettlementRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
@@ -196,12 +196,12 @@ class SettlementController {
     }
 
     @Post("/matching-on-sage")
-    suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): FailedSettlementIds {
-        return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementIds, postSettlementRequest.performedBy)
+    suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): Boolean {
+        return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementId, postSettlementRequest.performedBy)
     }
 
     @Post("/bulk-matching-on-sage")
-    suspend fun bulkMatchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest) {
-        return settlementService.bulkMatchingSettlementOnSage(postSettlementRequest)
+    suspend fun bulkMatchingSettlementOnSage(@Valid @Body bulkPostSettlementRequest: BulkPostSettlementRequest) {
+        return settlementService.bulkMatchingSettlementOnSage(bulkPostSettlementRequest)
     }
 }

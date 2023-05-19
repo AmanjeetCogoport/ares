@@ -4,7 +4,7 @@ import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
 @Introspected
-data class PostSettlementRequest(
-    var settlementId: Long,
+data class BulkPostSettlementRequest(
+    var settlementIds: List<Long>,
     var performedBy: UUID
 )

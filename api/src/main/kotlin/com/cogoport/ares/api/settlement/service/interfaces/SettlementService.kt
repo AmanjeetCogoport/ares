@@ -9,7 +9,6 @@ import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
-import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
@@ -19,9 +18,9 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.ares.model.settlement.request.BulkPostSettlementRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
-import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import java.util.UUID
@@ -61,7 +60,7 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
-    suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds
+    suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean
 
-    suspend fun bulkMatchingSettlementOnSage(request: PostSettlementRequest)
+    suspend fun bulkMatchingSettlementOnSage(request: BulkPostSettlementRequest)
 }

@@ -68,7 +68,6 @@ import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
 import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.EditTdsRequest
-import com.cogoport.ares.model.settlement.FailedSettlementIds
 import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
@@ -84,6 +83,7 @@ import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
+import com.cogoport.ares.model.settlement.request.BulkPostSettlementRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
@@ -2527,83 +2527,80 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun bulkMatchingSettlementOnSage(request: PostSettlementRequest) {
-        aresMessagePublisher.emitBulkMatchingSettlementOnSage(request)
+    override suspend fun bulkMatchingSettlementOnSage(request: BulkPostSettlementRequest) {
+        request.settlementIds.forEach {
+            aresMessagePublisher.emitBulkMatchingSettlementOnSage(
+                PostSettlementRequest(
+                    settlementId = it,
+                    performedBy = request.performedBy
+                )
+            )
+        }
     }
 
     @Transactional
-    override suspend fun matchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID): FailedSettlementIds {
+    override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
         val failedSettlementIds: MutableList<Long>? = mutableListOf()
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
-        val totalIDs = settlementIds.size
-
-        if (settlementIds.isNotEmpty()) {
-            settlementIds.forEach {
-                val settlementId = it
-                try {
-                    // Fetch source and destination details
-                    val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
-                    if (settlement.settlementStatus == SettlementStatus.POSTED) {
-                        return@forEach
-                    }
-                    val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
-                    val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
-
-                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
-                    val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
-                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
-
-                    if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                        throw AresException(AresError.ERR_1531, "")
-                    }
-
-                    val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
-                    var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
-                    matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
-                    )
-
-                    flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
-                    matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
-                    )
-
-                    val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
-                    logger().info("settlementResponse: $result")
-                    val processedResponse = XML.toJSONObject(result.response)
-                    val status = getZstatus(processedResponse)
-                    if (status == "DONE") {
-                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTED, performedBy)
-                        recordAudits(settlementId, result.requestString, result.response, true)
-                    } else {
-                        settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-                        failedSettlementIds?.add(settlementId)
-                        recordAudits(settlementId, result.requestString, result.response, false)
-                    }
-                } catch (sageException: SageException) {
-                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-                    failedSettlementIds?.add(settlementId)
-                    recordAudits(settlementId, sageException.data, sageException.context, false)
-                } catch (aresException: AresException) {
-                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-                    failedSettlementIds?.add(settlementId)
-                    recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
-                } catch (e: Exception) {
-                    settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-                    failedSettlementIds?.add(settlementId)
-                    recordAudits(settlementId, settlementId.toString(), e.toString(), false)
-                }
+        try {
+            // Fetch source and destination details
+            val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
+            if (settlement.settlementStatus == SettlementStatus.POSTED) {
+                return true
             }
+            val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
+            val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
+
+            val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
+            val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+            val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
+
+            if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
+                throw AresException(AresError.ERR_1531, "")
+            }
+
+            val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
+            var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
+            matchingSettlementOnSageRequest?.add(
+                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+            )
+
+            flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
+            matchingSettlementOnSageRequest?.add(
+                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+            )
+
+            val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
+            logger().info("settlementResponse: $result")
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getZstatus(processedResponse)
+            return if (status == "DONE") {
+                settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTED, performedBy)
+                recordAudits(settlementId, result.requestString, result.response, true)
+                true
+            } else {
+                settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+                failedSettlementIds?.add(settlementId)
+                recordAudits(settlementId, result.requestString, result.response, false)
+                false
+            }
+        } catch (sageException: SageException) {
+            settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+            failedSettlementIds?.add(settlementId)
+            recordAudits(settlementId, sageException.data, sageException.context, false)
+            return false
+        } catch (aresException: AresException) {
+            settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+            failedSettlementIds?.add(settlementId)
+            recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
+            return false
+        } catch (e: Exception) {
+            settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
+            failedSettlementIds?.add(settlementId)
+            recordAudits(settlementId, settlementId.toString(), e.toString(), false)
+            return false
         }
-
-        val failedIdCount = failedSettlementIds?.size
-
-        logger().info("Total Count: $totalIDs and failedCount: $failedIdCount")
-
-        return FailedSettlementIds(
-            failedSettlementIds
-        )
     }
 
     private suspend fun recordAudits(id: Long, request: String, response: String, isSuccess: Boolean) {
@@ -2654,11 +2651,11 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-            throw AresException(AresError.ERR_1532, "${sageOrganizationResponse.sageOrganizationId}sage organizationId is not present in table")
+            throw AresException(AresError.ERR_1532, "${sageOrganizationResponse.sageOrganizationId} sage organizationId is not present in table")
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db $sageOrganizationFromSageId and cogoport db ${sageOrganizationResponse.sageOrganizationId}")
+            throw AresException(AresError.ERR_1532, "sage serial organization id different on Sage $sageOrganizationFromSageId and Cogoport Platform ${sageOrganizationResponse.sageOrganizationId}")
         }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
