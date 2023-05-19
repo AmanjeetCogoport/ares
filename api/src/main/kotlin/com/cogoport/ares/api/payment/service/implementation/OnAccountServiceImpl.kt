@@ -482,13 +482,23 @@ open class OnAccountServiceImpl : OnAccountService {
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
 
         if ((paymentDetails.entityCode != 501) && (paymentDetails.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
-            aresMessagePublisher.emitPostPaymentToSage(
-                PostPaymentToSage(
-                    paymentId = paymentEntity.id!!,
-                    performedBy = paymentEntity.updatedBy!!
+//            aresMessagePublisher.emitPostPaymentToSage(
+//                PostPaymentToSage(
+//                    paymentId = paymentEntity.id!!,
+//                    performedBy = paymentEntity.updatedBy!!
+//                )
+//            )
+            try {
+                directFinalPostToSage(
+                    PostPaymentToSage(
+                        paymentId = paymentEntity.id!!,
+                        performedBy = paymentEntity.updatedBy!!
 
+                    )
                 )
-            )
+            } catch (ex: Exception) {
+                logger().info(ex.stackTraceToString())
+            }
         }
 
         auditService.createAudit(
