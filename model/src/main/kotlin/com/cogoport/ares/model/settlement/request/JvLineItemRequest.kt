@@ -17,6 +17,7 @@ data class JvLineItemRequest(
     var glCode: String?,
     var tradePartyId: UUID?,
     var tradePartyName: String?,
+    @field:NotNull(message = "Type is mandatory")
     var type: String,
     var amount: BigDecimal,
     var validityDate: Date?
