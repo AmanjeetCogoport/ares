@@ -119,11 +119,11 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
     @NewSpan
     @Query(
         """
-            SELECT id FROM payments WHERE sage_ref_number = :SageRefNum AND migrated = TRUE 
+            SELECT id FROM payments WHERE sage_ref_number = :sageRefNum AND migrated = TRUE 
         """
     )
     suspend fun getPaymentFromSageRefNum(
-        SageRefNum: String
+        sageRefNum: String
     ): Long
 
     @NewSpan

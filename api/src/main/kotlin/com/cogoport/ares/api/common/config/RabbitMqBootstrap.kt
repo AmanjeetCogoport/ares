@@ -94,7 +94,7 @@ class RabbitMqBootstrap : ChannelInitializer() {
         channel?.queueDeclare("ares-post-payment-to-sage", true, false, false, null)
         channel?.queueBind("ares-post-payment-to-sage", "ares", "ares.post.payment.to.sage", null)
 
-        channel?.queueDeclare("sage-payment-num-migration", true, false, false, null)
-        channel?.queueBind("sage-payment-num-migration", "ares", "sage.payment.num.migration", null)
+        channel?.queueDeclare("ares-sage-payment-num-migration", true, false, false, null)
+        channel?.queueBind("ares-sage-payment-num-migration", "ares", "ares.sage.payment.num.migration", null)
     }
 }

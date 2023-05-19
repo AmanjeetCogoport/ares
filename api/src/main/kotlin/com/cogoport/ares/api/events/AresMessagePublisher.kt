@@ -73,6 +73,6 @@ interface AresMessagePublisher {
     @Binding("ares.post.payment.to.sage")
     suspend fun emitPostPaymentToSage(req: PostPaymentToSage)
 
-    @Binding("sage.payment.num.migration")
+    @Binding("ares.sage.payment.num.migration")
     suspend fun emitSagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse)
 }
