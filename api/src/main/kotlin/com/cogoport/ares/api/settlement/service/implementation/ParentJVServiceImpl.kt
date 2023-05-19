@@ -4,6 +4,10 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.ThirdPartyApiNames
+import com.cogoport.ares.api.common.enums.ThirdPartyApiType
+import com.cogoport.ares.api.common.enums.ThirdPartyObjectName
+import com.cogoport.ares.api.common.enums.ThirdPartyResponseCode
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -764,13 +768,13 @@ open class ParentJVServiceImpl : ParentJVService {
             val processedResponse = XML.toJSONObject(result.response)
             val status = getZstatus(processedResponse)
             if (status == "DONE") {
-                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "200", result.requestString, result.response, true))
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.SUCCESS.value, result.requestString, result.response, true))
                 return true
             } else {
-                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "500", result.requestString, result.response, false))
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, result.requestString, result.response, false))
             }
         } catch (err: Exception) {
-            thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, "DeleteJvFromSage", "Journal Voucher", jvId, "JOURNAL_VOUCHER", "500", jvNum, err.toString(), false))
+            thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, jvNum, err.toString(), false))
         }
         return false
     }
