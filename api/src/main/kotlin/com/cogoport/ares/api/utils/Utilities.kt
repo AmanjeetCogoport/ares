@@ -120,8 +120,9 @@ class Utilities {
                 return Pair(PaymentStatus.PAID, balanceAmount)
             } else if (balanceAmount.compareTo(BigDecimal.ZERO) > 0 && accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(0.toBigDecimal()) != 0) {
                 return Pair(PaymentStatus.PARTIAL_PAID, balanceAmount)
-            }
-            return Pair(PaymentStatus.UNPAID, balanceAmount)
+            } else if (accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(BigDecimal.ZERO) == 0)
+                return Pair(PaymentStatus.UNPAID, balanceAmount)
+            return Pair(PaymentStatus.PAID, balanceAmount)
         }
 
         fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {
