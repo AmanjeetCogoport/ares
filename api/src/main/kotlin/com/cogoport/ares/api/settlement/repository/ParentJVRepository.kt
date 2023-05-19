@@ -138,5 +138,5 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
                 deleted_at IS NULL
         """
     )
-    suspend fun updateIsUtilizedColumn(id: Long, isUtilized: Boolean, performedBy: UUID, documentValue: String?): ParentJournalVoucher
+    suspend fun updateIsUtilizedColumn(id: Long, isUtilized: Boolean, performedBy: UUID, documentValue: String?)
 }

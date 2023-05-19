@@ -24,6 +24,7 @@ class SettlementServiceHelper {
         return when (accType) {
             AccountType.SINV -> InvoiceType.SINV.value
             AccountType.SCN -> InvoiceType.SCN.value
+            AccountType.SREIMBCN -> InvoiceType.SREIMBCN.value
             AccountType.SDN -> InvoiceType.SDN.value
             AccountType.REC -> InvoiceType.REC.value
             AccountType.PINV -> InvoiceType.PINV.value

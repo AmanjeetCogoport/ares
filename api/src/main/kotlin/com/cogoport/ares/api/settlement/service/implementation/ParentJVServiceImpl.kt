@@ -57,6 +57,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.JSONObject
 import org.json.XML
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -558,7 +559,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.jvCodeNum!!,
                     parentJVDetails.currency!!,
                     parentJVDetails.jvNum!!,
-                    parentJVDetails.createdAt!!,
+                    parentJVDetails.transactionDate!!,
                     parentJVDetails.description!!,
                     jvLineItemsDetails
                 )
@@ -657,7 +658,7 @@ open class ParentJVServiceImpl : ParentJVService {
             sageBPRNumber = if (sageOrganizationId.isNullOrEmpty()) "" else sageOrganizationId,
             description = if (journalVoucher.description.isNullOrEmpty()) "" else journalVoucher.description!!,
             signFlag = getSignFlag(journalVoucher.type.toString().uppercase()).toInt(),
-            amount = journalVoucher.amount!!,
+            amount = journalVoucher.amount!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
             currency = journalVoucher.currency!!
         )
     }

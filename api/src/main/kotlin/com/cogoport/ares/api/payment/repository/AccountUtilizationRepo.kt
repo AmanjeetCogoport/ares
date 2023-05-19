@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.OrgOutstanding
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.payment.AccMode
@@ -144,50 +143,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
               pay_curr = :currencyPay , pay_loc = :ledgerPay , updated_at = NOW() WHERE document_no =:documentNo AND acc_type = :accType::account_type AND deleted_at is null"""
     )
     suspend fun updateAccountUtilizationByDocumentNo(documentNo: Long, currencyPay: BigDecimal, ledgerPay: BigDecimal, accType: AccountType?)
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-                count(c.organization_id)
-            FROM (
-                SELECT
-                    organization_id
-                FROM
-                    account_utilizations
-                WHERE
-                    organization_name ILIKE :queryName || '%'
-                    AND acc_mode = 'AR'
-                    AND due_date IS NOT NULL
-                    AND document_status in('FINAL')
-                    AND organization_id IS NOT NULL
-                    AND acc_type = 'SINV'
-                    AND deleted_at IS NULL AND is_void IS false
-                GROUP BY
-                    organization_id) AS c
-        """
-    )
-    suspend fun getInvoicesOutstandingAgeingBucketCount(queryName: String?, orgId: String?): Int
-
-    @NewSpan
-    @Query(
-        """
-            select organization_id::varchar, currency,
-            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_curr - pay_curr else 0 end) as payments_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then  amount_loc - pay_loc else 0 end) as payments_led_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
-            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
-            from account_utilizations
-            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
-            and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
-            group by organization_id, currency
-        """
-    )
-    suspend fun generateCustomerOutstanding(orgId: String, entityCode: Int): List<OrgOutstanding>
 
     @NewSpan
     @Query(

@@ -38,8 +38,9 @@ class Utilities {
         }
 
         fun isInvoiceAccountType(accType: AccountType): Boolean {
-            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN || accType == AccountType.PCN ||
-                accType == AccountType.PINV || accType == AccountType.PDN || accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP
+            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN ||
+                accType == AccountType.PCN || accType == AccountType.PINV || accType == AccountType.PDN ||
+                accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP || accType == AccountType.SREIMBCN
             ) {
                 return true
             }
@@ -110,13 +111,16 @@ class Utilities {
             }
         }
 
-        fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
-            if (accountUtilization.amountCurr.compareTo(accountUtilization.payCurr) == 0) {
-                return PaymentStatus.PAID
-            } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
-                return PaymentStatus.PARTIAL_PAID
+        fun getPaymentStatus(accountUtilization: AccountUtilization): Pair<PaymentStatus, BigDecimal> {
+            val balanceAmount = (
+                accountUtilization.amountCurr.setScale(4, RoundingMode.HALF_UP).minus(accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP))
+                ).setScale(4, RoundingMode.HALF_UP)
+            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0) {
+                return Pair(PaymentStatus.PAID, balanceAmount)
+            } else if (balanceAmount.compareTo(BigDecimal.ZERO) > 0 && accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(0.toBigDecimal()) != 0) {
+                return Pair(PaymentStatus.PARTIAL_PAID, balanceAmount)
             }
-            return PaymentStatus.UNPAID
+            return Pair(PaymentStatus.UNPAID, balanceAmount)
         }
 
         fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {

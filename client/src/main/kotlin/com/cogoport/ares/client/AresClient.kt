@@ -149,7 +149,7 @@ interface AresClient {
     @Get("/payments/invoice/missing-invoices")
     suspend fun getInvoicesNotPresentInAres(): List<Long>?
 
-    @Post("/payments/accounts/settle-tagged-invoice-payment")
+    @Post("/payments/settlement/settle-tagged-invoice-payment")
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
 
     @Put("/payments/tds-amount")

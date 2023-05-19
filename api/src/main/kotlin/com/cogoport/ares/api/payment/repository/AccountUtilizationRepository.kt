@@ -16,6 +16,7 @@ import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
@@ -308,7 +309,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_curr - pay_curr) else 0 end) as outstanding_amount,
         sum(case when acc_type not in ('REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag*(amount_loc - pay_loc) else 0 end) as outstanding_led_amount
         from account_utilizations
-        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
+        where acc_type in ('SINV','SCN','SDN','REC', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV', 'SREIMB', 'SREIMBCN') and acc_mode = 'AR' and document_status in ('FINAL', 'PROFORMA') 
         and organization_id = :orgId::uuid and (:zone is null OR zone_code = :zone) and (:entityCode is null OR entity_code = :entityCode) and deleted_at is null
         group by organization_id, currency
         """
@@ -1107,6 +1108,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getAccountPayables(entity: Int?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
+        SELECT entity_code, led_currency, SUM(sign_flag*(amount_loc-pay_loc)) as account_payables FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        tagged_organization_id = :organizationId AND CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END GROUP BY entity_code, led_currency
+    """
+    )
+    suspend fun getApPerOrganization(organizationId: String?, entity: Int?): List<AccPayablesOfOrgRes>
 
     @NewSpan
     @Query(
