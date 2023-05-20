@@ -623,9 +623,14 @@ class SageServiceImpl : SageService {
             organizationName = platformPaymentDetails.organizationName
         )
 
+        var accountMode = accMode.name
+        if (accountMode == AccMode.AP.name) {
+            accountMode = "SC"
+        }
+
         val sagePaymentDetails = when (platformPaymentDetails.migrated) {
-            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accMode)
-            else -> getPaymentSageInfo(paymentNumValue, entityCode, accMode)
+            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accountMode)
+            else -> getPaymentSageInfo(paymentNumValue, entityCode, accountMode)
         }
 
         return PaymentDetailsInfo(
@@ -633,7 +638,7 @@ class SageServiceImpl : SageService {
             platformPaymentInfo = paymentDetails
         )
     }
-    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
+    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
             case WHEN STA_0 = 9 THEN 'FINAL_POSTED'
@@ -655,7 +660,7 @@ class SageServiceImpl : SageService {
         return paymentRecords.recordSets!![0].first()
     }
 
-    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
+    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
         val sqlQuery = """
             SELECT P.NUM_0 AS sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
             CASE WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
