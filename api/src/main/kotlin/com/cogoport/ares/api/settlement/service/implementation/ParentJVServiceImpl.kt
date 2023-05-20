@@ -343,7 +343,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
             auditService.createAudit(
                 AuditRequest(
-                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                     objectId = parentJvId,
                     actionName = AresConstants.DELETE,
                     data = mapOf("id" to id, "status" to "DELETED"),
