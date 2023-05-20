@@ -16,6 +16,7 @@ import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
@@ -1107,6 +1108,16 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     """
     )
     suspend fun getAccountPayables(entity: Int?): BigDecimal
+
+    @NewSpan
+    @Query(
+        """
+        SELECT entity_code, led_currency, SUM(sign_flag*(amount_loc-pay_loc)) as account_payables FROM account_utilizations 
+        WHERE acc_mode = 'AP' AND acc_type IN ('PCN','PREIMB','PINV') AND deleted_at IS NULL AND migrated = false AND 
+        tagged_organization_id = :organizationId AND CASE WHEN :entity IS NOT NULL THEN entity_code = :entity ELSE TRUE END GROUP BY entity_code, led_currency
+    """
+    )
+    suspend fun getApPerOrganization(organizationId: String?, entity: Int?): List<AccPayablesOfOrgRes>
 
     @NewSpan
     @Query(

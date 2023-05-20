@@ -4,6 +4,10 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.ThirdPartyApiNames
+import com.cogoport.ares.api.common.enums.ThirdPartyApiType
+import com.cogoport.ares.api.common.enums.ThirdPartyObjectName
+import com.cogoport.ares.api.common.enums.ThirdPartyResponseCode
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -323,10 +327,15 @@ open class ParentJVServiceImpl : ParentJVService {
     override suspend fun deleteJournalVoucherById(id: String, performedBy: UUID): String {
         val parentJvId = Hashids.decode(id)[0]
         try {
-            val parentJvDetails = parentJVRepository.findById(parentJvId)
-                ?: throw AresException(AresError.ERR_1002, "JV")
+            val parentJvDetails = parentJVRepository.findById(parentJvId) ?: throw AresException(AresError.ERR_1002, "JV")
             if (parentJvDetails.isUtilized == true) {
                 throw AresException(AresError.ERR_1540, "JV is already utilized.")
+            }
+            if (parentJvDetails.status == JVStatus.POSTED) {
+                val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJvDetails.jvNum!!)
+                if (!isDeletedFromSage) {
+                    throw AresException(AresError.ERR_1540, "${parentJvDetails.jvNum!!} could not get deleted from sage")
+                }
             }
             parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
             accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvDetails.jvNum, AccountType.valueOf(parentJvDetails.category))
@@ -690,6 +699,24 @@ open class ParentJVServiceImpl : ParentJVService {
         return status as Int?
     }
 
+    private fun getZstatus(processedResponse: JSONObject?): String {
+        val content = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("resultXml")
+            ?.get("content")
+
+        val response = XML.toJSONObject(content.toString())
+        val status = response?.getJSONObject("RESULT")
+            ?.getJSONObject("GRP")
+            ?.getJSONArray("FLD")
+            ?.getJSONObject(1)
+            ?.get("content")
+
+        return status.toString()
+    }
+
     override suspend fun getJvCategory(q: String?, pageLimit: Int?): List<JvCategory> {
         val query = util.toQueryString(q)
         val updatedPageLimit = pageLimit ?: 10
@@ -733,5 +760,22 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         return uniqueAccountModeList
+    }
+
+    private suspend fun deleteJvFromSage(jvId: Long, jvNum: String): Boolean {
+        try {
+            val result = Client.deleteJvFromSage(jvNum)
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getZstatus(processedResponse)
+            if (status == "DONE") {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.SUCCESS.value, result.requestString, result.response, true))
+                return true
+            } else {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, result.requestString, result.response, false))
+            }
+        } catch (err: Exception) {
+            thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, jvNum, err.toString(), false))
+        }
+        return false
     }
 }

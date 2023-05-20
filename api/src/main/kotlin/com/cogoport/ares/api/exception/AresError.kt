@@ -64,7 +64,6 @@ enum class AresError(
     ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST),
     ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST),
     ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
-
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"
