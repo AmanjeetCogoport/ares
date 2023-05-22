@@ -1239,14 +1239,40 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
-            val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
+            val paymentDetails = paymentRepository.findByPaymentId(paymentId)
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
-                logger().info("""${AresException(AresError.ERR_1523, "")}""")
+                thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                                null,
+                                "PostPaymentToSage",
+                                "Payment",
+                                paymentId,
+                                "PAYMENT",
+                                "500",
+                                paymentDetails.paymentNumValue!!,
+                                "Payment already posted",
+                                false
+                        )
+                )
+                return false
             }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
-                logger().info("""${AresException(AresError.ERR_1524, "")}""")
+                thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                                null,
+                                "PostPaymentToSage",
+                                "Payment",
+                                paymentId,
+                                "PAYMENT",
+                                "500",
+                                paymentDetails.paymentNumValue!!,
+                                "Payment is not approved",
+                                false
+                        )
+                )
+                return false
             }
 
             val isPaymentPresentOnSage = isPaymentPresentOnSage(paymentDetails.paymentNumValue!!)
@@ -1278,7 +1304,20 @@ open class OnAccountServiceImpl : OnAccountService {
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
-                logger().info("""${AresException(AresError.ERR_1002, "BPR")}""")
+                thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                                null,
+                                "PostPaymentToSage",
+                                "Payment",
+                                paymentId,
+                                "PAYMENT",
+                                "500",
+                                "Registration Number: ${organization.list[0]["registration_number"]}",
+                                "Not Found BPR",
+                                false
+                        )
+                )
+                return false
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
@@ -1567,14 +1606,14 @@ open class OnAccountServiceImpl : OnAccountService {
                 val payment = paymentRepository.findByPaymentId(id)
 
                 if (payment.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    logger().info("""Document ${payment.paymentNumValue} must be posted""")
+                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document ${payment.paymentNumValue} must be Posted", false)
                     failedIds.add(id)
                     return SageFailedResponse(
                         failedIdsList = failedIds
                     )
                 }
                 if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
-                    logger().info("""Document ${payment.paymentNumValue} is not present on sage for final posting""")
+                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document ${payment.paymentNumValue} is not present on sage for final posting", false)
                     failedIds.add(id)
                     return SageFailedResponse(
                         failedIdsList = failedIds
@@ -1583,7 +1622,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
                 val sageRefNumber = getNum0FromSage(payment.paymentNumValue!!)
                 if (sageRefNumber.isNullOrBlank()) {
-                    logger().info("""Document ${payment.paymentNumValue} is not present on sage for final posting""")
+                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document ${payment.paymentNumValue} is not present on sage for final posting", false)
                     failedIds.add(id)
                     return SageFailedResponse(
                         failedIdsList = failedIds
@@ -1602,9 +1641,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 }
             } catch (sageException: SageException) {
                 createThirdPartyAudit(id, "PostPaymentFromSage", sageException.data, sageException.context, false)
-                failedIds.add(id)
-            } catch (aresException: AresException) {
-                createThirdPartyAudit(id, "PostPaymentFromSage", id.toString(), "${aresException.error.message} ${aresException.context}", false)
                 failedIds.add(id)
             } catch (e: Exception) {
                 createThirdPartyAudit(id, "PostPaymentFromSage", id.toString(), e.toString(), false)

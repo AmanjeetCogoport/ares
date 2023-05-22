@@ -409,9 +409,9 @@ ORDER BY
             WHERE 
                 s.destination_id = :destinationId
             AND
-                s.destination_type = :destinationType::settlement_type
+                s.destination_type::varchar = :destinationType
             AND
-                s.source_type::varchar = :sourceType::settlement_type
+                s.source_type::varchar = :sourceType
             AND
                 p.entity_code != '501'
             AND 
