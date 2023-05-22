@@ -1277,11 +1277,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val isPaymentPresentOnSage = isPaymentPresentOnSage(paymentDetails.paymentNumValue!!)
             if (isPaymentPresentOnSage) {
-//                val sageStatus = getSta0FromSage(paymentDetails.paymentNumValue!!)
-//                when (sageStatus == 9) {
-//                    true -> paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.FINAL_POSTED, performedBy)
-//                    false -> paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
-//                }
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1615,15 +1610,6 @@ open class OnAccountServiceImpl : OnAccountService {
         for (id in paymentIds) {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
-
-                if (payment.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    logger().info("Document ${payment.paymentNumValue} must be Posted")
-                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document must be Posted", false)
-                    failedIds.add(id)
-                    return SageFailedResponse(
-                        failedIdsList = failedIds
-                    )
-                }
                 if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
                     logger().info("Document ${payment.paymentNumValue} is not present on sage for final posting")
                     createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document is not present on sage for final posting", false)
@@ -1633,17 +1619,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     )
                 }
 
-                val sageRefNumber = getNum0FromSage(payment.paymentNumValue!!)
-                if (sageRefNumber.isNullOrBlank()) {
-                    logger().info("Document ${payment.paymentNumValue} is not present on sage for final posting")
-                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document is not present on sage for final posting", false)
-                    failedIds.add(id)
-                    return SageFailedResponse(
-                        failedIdsList = failedIds
-                    )
-                }
-
-                val result = SageClient.postPaymentFromSage(sageRefNumber)
+                val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
@@ -1698,28 +1674,6 @@ open class OnAccountServiceImpl : OnAccountService {
         return SageFailedResponse(
             failedIdsList = failedIds
         )
-    }
-
-    private fun getNum0FromSage(paymentNumValue: String): String? {
-        val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentNumValue!!}'"
-        val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
-        val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
-        val records = mappedResponse["recordset"] as? ArrayList<*>
-        if (records?.size == 0) {
-            return null
-        } else {
-            val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
-            return queryResult.toString()
-        }
-    }
-
-    private fun getSta0FromSage(paymentNumValue: String): Int? {
-        val paymentNumOnSage = "Select STA_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentNumValue!!}'"
-        val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
-        val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
-        val records = mappedResponse["recordset"] as? ArrayList<*>
-        val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("STA_0")
-        return queryResult.toString().toInt()
     }
 
     private suspend fun createThirdPartyAudit(id: Long, apiName: String, request: String, response: String, isSuccess: Boolean) {
