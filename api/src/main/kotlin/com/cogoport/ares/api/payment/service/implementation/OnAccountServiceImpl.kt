@@ -289,6 +289,11 @@ open class OnAccountServiceImpl : OnAccountService {
         if (isUtrExit == true) {
             throw AresException(AresError.ERR_1537, "")
         }
+
+        if (receivableRequest.docType != DocType.TDS && receivableRequest.bankAccountNumber.isNullOrBlank()) {
+            throw AresException(AresError.ERR_1003, "Bank Account")
+        }
+
         receivableRequest.signFlag = when (receivableRequest.docType == DocType.TDS) {
             true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
@@ -1237,15 +1242,20 @@ open class OnAccountServiceImpl : OnAccountService {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
-                throw AresException(AresError.ERR_1523, "")
+                logger().info("""${AresException(AresError.ERR_1523, "")}""")
             }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
-                throw AresException(AresError.ERR_1524, "")
+                logger().info("""${AresException(AresError.ERR_1524, "")}""")
             }
 
             val isPaymentPresentOnSage = isPaymentPresentOnSage(paymentDetails.paymentNumValue!!)
             if (isPaymentPresentOnSage) {
+                val sageStatus = getSta0FromSage(paymentDetails.paymentNumValue!!)
+                when (sageStatus == 9) {
+                    true -> paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                    false -> paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
+                }
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1268,7 +1278,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
-                throw AresException(AresError.ERR_1002, "BPR")
+                logger().info("""${AresException(AresError.ERR_1002, "BPR")}""")
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
@@ -1424,7 +1434,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
                 val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
                 val records = mappedResponse["recordset"] as? ArrayList<*>
-
                 if (records?.size != 0) {
                     val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
                     paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
@@ -1558,13 +1567,15 @@ open class OnAccountServiceImpl : OnAccountService {
                 val payment = paymentRepository.findByPaymentId(id)
 
                 if (payment.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    throw AresException(AresError.ERR_1535, "")
+                    logger().info("""${AresException(AresError.ERR_1535, "")}""")
                 }
                 if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
-                    throw AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")
+                    logger().info("""${AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")}""")
                 }
 
-                val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
+                val sageRefNumber = getNum0FromSage(payment.paymentNumValue!!)
+
+                val result = SageClient.postPaymentFromSage(sageRefNumber!!)
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
@@ -1622,6 +1633,24 @@ open class OnAccountServiceImpl : OnAccountService {
         return SageFailedResponse(
             failedIdsList = failedIds
         )
+    }
+
+    private fun getNum0FromSage(paymentNumValue: String): String? {
+        val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentNumValue!!}'"
+        val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+        val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+        val records = mappedResponse["recordset"] as? ArrayList<*>
+        val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
+        return queryResult.toString()
+    }
+
+    private fun getSta0FromSage(paymentNumValue: String): Int? {
+        val paymentNumOnSage = "Select STA_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentNumValue!!}'"
+        val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+        val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+        val records = mappedResponse["recordset"] as? ArrayList<*>
+        val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("STA_0")
+        return queryResult.toString().toInt()
     }
 
     private suspend fun createThirdPartyAudit(id: Long, apiName: String, request: String, response: String, isSuccess: Boolean) {
