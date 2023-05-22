@@ -1531,7 +1531,6 @@ open class OnAccountServiceImpl : OnAccountService {
                     false
                 )
             )
-            throw exception
         } catch (aresException: AresException) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -1546,7 +1545,6 @@ open class OnAccountServiceImpl : OnAccountService {
                     false
                 )
             )
-            throw aresException
         } catch (e: Exception) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -1561,7 +1559,6 @@ open class OnAccountServiceImpl : OnAccountService {
                     false
                 )
             )
-            throw e
         }
         return false
     }
