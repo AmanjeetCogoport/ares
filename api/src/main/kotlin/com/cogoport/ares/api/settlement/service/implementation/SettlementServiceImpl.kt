@@ -2801,12 +2801,12 @@ open class SettlementServiceImpl : SettlementService {
         )
 
 //        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
-////            aresMessagePublisher.emitPostPaymentToSage(
-////                PostPaymentToSage(
-////                    paymentId = savedPayment.id!!,
-////                    performedBy = savedPayment.createdBy!!
-////                )
-////            )
+// //            aresMessagePublisher.emitPostPaymentToSage(
+// //                PostPaymentToSage(
+// //                    paymentId = savedPayment.id!!,
+// //                    performedBy = savedPayment.createdBy!!
+// //                )
+// //            )
 //            try {
 //                onAccountService.directFinalPostToSage(
 //                    PostPaymentToSage(

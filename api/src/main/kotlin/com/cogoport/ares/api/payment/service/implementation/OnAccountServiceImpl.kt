@@ -1243,34 +1243,34 @@ open class OnAccountServiceImpl : OnAccountService {
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                                null,
-                                "PostPaymentToSage",
-                                "Payment",
-                                paymentId,
-                                "PAYMENT",
-                                "500",
-                                paymentDetails.paymentNumValue!!,
-                                "Payment already posted",
-                                false
-                        )
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment already posted",
+                        false
+                    )
                 )
                 return false
             }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
                 thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                                null,
-                                "PostPaymentToSage",
-                                "Payment",
-                                paymentId,
-                                "PAYMENT",
-                                "500",
-                                paymentDetails.paymentNumValue!!,
-                                "Payment is not approved",
-                                false
-                        )
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment is not approved",
+                        false
+                    )
                 )
                 return false
             }
@@ -1305,17 +1305,17 @@ open class OnAccountServiceImpl : OnAccountService {
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
                 thirdPartyApiAuditService.createAudit(
-                        ThirdPartyApiAudit(
-                                null,
-                                "PostPaymentToSage",
-                                "Payment",
-                                paymentId,
-                                "PAYMENT",
-                                "500",
-                                "Registration Number: ${organization.list[0]["registration_number"]}",
-                                "Not Found BPR",
-                                false
-                        )
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        "Registration Number: ${organization.list[0]["registration_number"]}",
+                        "Not Found BPR",
+                        false
+                    )
                 )
                 return false
             }
