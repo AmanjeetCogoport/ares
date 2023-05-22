@@ -200,4 +200,9 @@ class AresMessageConsumer {
     fun sagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse) = runBlocking {
         paymentMigration.migrateSagePaymentNum(paymentRecord)
     }
+
+    @Queue("ares-bulk-post-payment-to-sage", prefetch = 1)
+    fun bulkMatchingSettlementOnSage(req: PostPaymentToSage) = runBlocking {
+        onAccountService.directFinalPostToSage(req)
+    }
 }
