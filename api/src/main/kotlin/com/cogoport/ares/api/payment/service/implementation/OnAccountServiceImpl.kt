@@ -1567,15 +1567,30 @@ open class OnAccountServiceImpl : OnAccountService {
                 val payment = paymentRepository.findByPaymentId(id)
 
                 if (payment.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    logger().info("""${AresException(AresError.ERR_1535, "")}""")
+                    logger().info("""Document ${payment.paymentNumValue} must be posted""")
+                    failedIds.add(id)
+                    return SageFailedResponse(
+                        failedIdsList = failedIds
+                    )
                 }
                 if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
-                    logger().info("""${AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")}""")
+                    logger().info("""Document ${payment.paymentNumValue} is not present on sage for final posting""")
+                    failedIds.add(id)
+                    return SageFailedResponse(
+                        failedIdsList = failedIds
+                    )
                 }
 
                 val sageRefNumber = getNum0FromSage(payment.paymentNumValue!!)
+                if (sageRefNumber.isNullOrBlank()) {
+                    logger().info("""Document ${payment.paymentNumValue} is not present on sage for final posting""")
+                    failedIds.add(id)
+                    return SageFailedResponse(
+                        failedIdsList = failedIds
+                    )
+                }
 
-                val result = SageClient.postPaymentFromSage(sageRefNumber!!)
+                val result = SageClient.postPaymentFromSage(sageRefNumber)
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
@@ -1640,8 +1655,12 @@ open class OnAccountServiceImpl : OnAccountService {
         val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
         val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
         val records = mappedResponse["recordset"] as? ArrayList<*>
-        val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
-        return queryResult.toString()
+        if (records?.size == 0) {
+            return null
+        } else {
+            val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
+            return queryResult.toString()
+        }
     }
 
     private fun getSta0FromSage(paymentNumValue: String): Int? {

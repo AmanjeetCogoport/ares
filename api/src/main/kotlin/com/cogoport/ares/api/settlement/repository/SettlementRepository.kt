@@ -397,4 +397,30 @@ ORDER BY
             """
     )
     suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                p.id
+            FROM
+                settlements s 
+            INNER JOIN payments p ON p.payment_num = s.source_id
+            WHERE 
+                s.destination_id = :destinationId
+            AND
+                s.destination_type = :destinationType::settlement_type
+            AND
+                s.source_type::varchar = :sourceType::settlement_type
+            AND
+                p.entity_code != '501'
+            AND 
+                p.payment_document_status::varchar NOT IN ('POSTED', 'FINAL_POSTED')
+            AND 
+                p.deleted_at IS NULL
+            AND
+                s.deleted_at IS NULL
+            """
+    )
+    suspend fun getPaymentIdByDestinationIdAndType(destinationId: Long, destinationType: SettlementType?, sourceType: SettlementType?): List<Long>?
 }
