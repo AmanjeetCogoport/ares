@@ -247,7 +247,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     suspend fun getPaymentByPaymentNumValue(paymentNumValues: String, entityCode: Long?, accMode: AccMode): PlatformPayment
 
     @Query(
-            """
+        """
             SELECT sage_ref_number FROM payments WHERE payment_num_value = :paymentNumValue AND deleted_at IS NULL and payment_document_status != 'DELETED'::payment_document_status LIMIT 1
         """
     )
