@@ -24,8 +24,10 @@ import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentDetailsInfo
+import com.cogoport.ares.model.payment.PaymentNumInfo
 import com.cogoport.ares.model.payment.PlatformPostPaymentDetails
 import com.cogoport.ares.model.payment.PostPaymentInfo
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.SagePostPaymentDetails
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.brahma.sage.Client
@@ -46,7 +48,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -156,7 +158,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -214,7 +216,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
              SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -463,7 +465,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -623,9 +625,14 @@ class SageServiceImpl : SageService {
             organizationName = platformPaymentDetails.organizationName
         )
 
+        var accountMode = accMode.name
+        if (accountMode == AccMode.AP.name) {
+            accountMode = "SC"
+        }
+
         val sagePaymentDetails = when (platformPaymentDetails.migrated) {
-            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accMode)
-            else -> getPaymentSageInfo(paymentNumValue, entityCode, accMode)
+            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accountMode)
+            else -> getPaymentSageInfo(paymentNumValue, entityCode, accountMode)
         }
 
         return PaymentDetailsInfo(
@@ -633,7 +640,7 @@ class SageServiceImpl : SageService {
             platformPaymentInfo = paymentDetails
         )
     }
-    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
+    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
             case WHEN STA_0 = 9 THEN 'FINAL_POSTED'
@@ -655,7 +662,7 @@ class SageServiceImpl : SageService {
         return paymentRecords.recordSets!![0].first()
     }
 
-    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): SagePostPaymentDetails? {
+    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
         val sqlQuery = """
             SELECT P.NUM_0 AS sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
             CASE WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
@@ -678,5 +685,15 @@ class SageServiceImpl : SageService {
         }
 
         return paymentRecords.recordSets!![0].first()
+    }
+
+    override suspend fun getSagePaymentNum(sageRefNumber: List<String>): ArrayList<SagePaymentNumMigrationResponse> {
+        val sqlQuery = """
+            select NUM_0 as sage_ref_num, REF_0 as sage_payment_num from $sageDatabase.GACCENTRY where NUM_0 in ('${sageRefNumber.joinToString("','")}')
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val paymentRecords = ObjectMapper().readValue(result, PaymentNumInfo::class.java)
+
+        return paymentRecords.recordSets!![0]
     }
 }

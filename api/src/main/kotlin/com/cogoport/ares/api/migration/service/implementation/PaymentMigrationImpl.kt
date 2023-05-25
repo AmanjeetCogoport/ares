@@ -60,6 +60,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -405,7 +406,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = receivableRequest.organizationId,
             bankPayAmount = receivableRequest.bankPayAmount,
             migrated = true,
-            paymentDocumentStatus = PaymentDocumentStatus.POSTED,
+            paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED,
             updatedBy = MigrationConstants.createdUpdatedBy,
             createdBy = MigrationConstants.createdUpdatedBy,
             sageRefNumber = receivableRequest.sageRefNumber
@@ -1038,5 +1039,12 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error(e.stackTraceToString())
         }
         return "NA"
+    }
+
+    override suspend fun migrateSagePaymentNum(request: SagePaymentNumMigrationResponse) {
+        val paymentDetails = paymentMigrationRepository.getPaymentFromSageRefNum(request.sageRefNum!!)
+        if (!paymentDetails.toString().isNullOrEmpty()) {
+            paymentMigrationRepository.updateSageRefNum(paymentDetails, request.sagePaymentNum!!)
+        }
     }
 }

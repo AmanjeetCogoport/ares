@@ -8,6 +8,7 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.GlCodeMaster
@@ -72,6 +73,12 @@ interface AresMessagePublisher {
 
     @Binding("ares.post.payment.to.sage")
     suspend fun emitPostPaymentToSage(req: PostPaymentToSage)
+
+    @Binding("ares.sage.payment.num.migration")
+    suspend fun emitSagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse)
+
+    @Binding("ares.bulk.post.payment.to.sage")
+    suspend fun emitBulkPostPaymentToSage(req: PostPaymentToSage)
 
     @Binding("ares.bulk.post.settlement.to.sage")
     suspend fun emitBulkMatchingSettlementOnSage(req: PostSettlementRequest)

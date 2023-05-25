@@ -27,6 +27,7 @@ import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
@@ -83,7 +84,6 @@ import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
-import com.cogoport.ares.model.settlement.request.BulkPostSettlementRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
@@ -178,6 +178,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     private lateinit var journalVoucherService: JournalVoucherService
+
+    @Inject
+    lateinit var onAccountService: OnAccountService
 
     @Inject
     private lateinit var paymentRepo: PaymentRepository
@@ -1035,6 +1038,27 @@ open class SettlementServiceImpl : SettlementService {
         val checkResponse = check(request)
         adjustBalanceAmount(type = "subtract", documents = request.stackDetails!!)
         return checkResponse
+    }
+
+    override suspend fun settleWrapper(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
+        val settledDocuments = settle(request, isAutoKnockOff)
+
+        val salesInvoiceDocuments = settledDocuments.filter { it.accountType.name == AccountType.SINV.name && it.tds!!.toInt() > 0 }
+
+        when (salesInvoiceDocuments.isNotEmpty()) {
+            true -> salesInvoiceDocuments.map { saleInvoice ->
+                val paymentId = settlementRepository.getPaymentIdByDestinationIdAndType(Hashids.decode(saleInvoice.documentNo)[0], saleInvoice.accountType, SettlementType.CTDS)
+                paymentId?.forEach {
+                    onAccountService.directFinalPostToSage(
+                        PostPaymentToSage(
+                            it,
+                            request.createdBy!!
+                        )
+                    )
+                }
+            }
+        }
+        return settledDocuments
     }
 
     @Transactional
@@ -2527,12 +2551,12 @@ open class SettlementServiceImpl : SettlementService {
         )
     }
 
-    override suspend fun bulkMatchingSettlementOnSage(request: BulkPostSettlementRequest) {
-        request.settlementIds.forEach {
+    override suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID) {
+        settlementIds.forEach {
             aresMessagePublisher.emitBulkMatchingSettlementOnSage(
                 PostSettlementRequest(
                     settlementId = it,
-                    performedBy = request.performedBy
+                    performedBy = performedBy
                 )
             )
         }
@@ -2552,19 +2576,21 @@ open class SettlementServiceImpl : SettlementService {
             val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
-            val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
-            val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
-            val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
+                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
+                    val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
+                        paymentRepo.findBySinglePaymentNumValue(sourceDocument.documentValue!!)
+                    } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
+                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
-            if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                throw AresException(AresError.ERR_1531, "")
-            }
+                    if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
+                        throw AresException(AresError.ERR_1531, "")
+                    }
 
-            val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
-            var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
-            matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
-            )
+                    val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
+                    var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
+                    matchingSettlementOnSageRequest?.add(
+                        SageSettlementRequest(sourcePresentOnSage!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                    )
 
             flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
@@ -2651,11 +2677,13 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         if (sageOrganizationResponse.sageOrganizationId.isNullOrEmpty()) {
-            throw AresException(AresError.ERR_1532, "${sageOrganizationResponse.sageOrganizationId} sage organizationId is not present in table")
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "Sage organization not present", false)
+            throw AresException(AresError.ERR_1532, "sage organizationId is not present in table")
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            throw AresException(AresError.ERR_1532, "sage serial organization id different on Sage $sageOrganizationFromSageId and Cogoport Platform ${sageOrganizationResponse.sageOrganizationId}")
+            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
         }
 
         return mutableListOf(sageOrganizationResponse.sageOrganizationId, registrationNumber)
@@ -2781,15 +2809,24 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
 
-        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
-            aresMessagePublisher.emitPostPaymentToSage(
-                PostPaymentToSage(
-                    paymentId = savedPayment.id!!,
-                    performedBy = savedPayment.createdBy!!
-
-                )
-            )
-        }
+//        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+// //            aresMessagePublisher.emitPostPaymentToSage(
+// //                PostPaymentToSage(
+// //                    paymentId = savedPayment.id!!,
+// //                    performedBy = savedPayment.createdBy!!
+// //                )
+// //            )
+//            try {
+//                onAccountService.directFinalPostToSage(
+//                    PostPaymentToSage(
+//                        paymentId = savedPayment.id!!,
+//                        performedBy = savedPayment.updatedBy!!
+//                    )
+//                )
+//            } catch (ex: Exception) {
+//                logger().info(ex.stackTraceToString())
+//            }
+//        }
 
         if (accUtilRes.accMode == AccMode.AP) {
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))

@@ -20,6 +20,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementServi
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.event.DeleteInvoiceEvent
 import com.cogoport.ares.model.payment.event.KnockOffUtilizationEvent
 import com.cogoport.ares.model.payment.event.UpdateInvoiceEvent
@@ -193,6 +194,16 @@ class AresMessageConsumer {
 
     @Queue("ares-post-payment-to-sage", prefetch = 1)
     fun directPaymentPostToSage(req: PostPaymentToSage) = runBlocking {
+        onAccountService.directFinalPostToSage(req)
+    }
+
+    @Queue("ares-sage-payment-num-migration", prefetch = 1)
+    fun sagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse) = runBlocking {
+        paymentMigration.migrateSagePaymentNum(paymentRecord)
+    }
+
+    @Queue("ares-bulk-post-payment-to-sage", prefetch = 1)
+    fun bulkMatchingSettlementOnSage(req: PostPaymentToSage) = runBlocking {
         onAccountService.directFinalPostToSage(req)
     }
 

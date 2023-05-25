@@ -17,6 +17,7 @@ import java.time.LocalDateTime
 import java.time.Month
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -115,12 +116,13 @@ class Utilities {
             val balanceAmount = (
                 accountUtilization.amountCurr.setScale(4, RoundingMode.HALF_UP).minus(accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP))
                 ).setScale(4, RoundingMode.HALF_UP)
-            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0) {
+            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0 || balanceAmount.abs().compareTo(BigDecimal("0.1")) <= 0) {
                 return Pair(PaymentStatus.PAID, balanceAmount)
             } else if (balanceAmount.compareTo(BigDecimal.ZERO) > 0 && accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(0.toBigDecimal()) != 0) {
                 return Pair(PaymentStatus.PARTIAL_PAID, balanceAmount)
-            }
-            return Pair(PaymentStatus.UNPAID, balanceAmount)
+            } else if (accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(BigDecimal.ZERO) == 0)
+                return Pair(PaymentStatus.UNPAID, balanceAmount)
+            return Pair(PaymentStatus.PAID, balanceAmount)
         }
 
         fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {

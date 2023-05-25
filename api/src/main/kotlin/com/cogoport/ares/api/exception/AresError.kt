@@ -11,12 +11,12 @@ enum class AresError(
     ERR_1008("ERR_1008", "Resource not found", HttpStatus.NOT_FOUND),
     ERR_1001("ERR_1001", "Something went wrong. Please contact admin", HttpStatus.SERVICE_UNAVAILABLE),
     ERR_1002("ERR_1002", "Not found", HttpStatus.NOT_FOUND),
-    ERR_1003("ERR_1003", "Mandatory field missing : ", HttpStatus.BAD_REQUEST),
+    ERR_1003("ERR_1003", "Mandatory field missing:", HttpStatus.BAD_REQUEST),
     ERR_1004("ERR_1004", "Invalid Quarter : ", HttpStatus.BAD_REQUEST),
     ERR_1005("ERR_1005", "Data not found", HttpStatus.NO_CONTENT),
     ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST),
     ERR_1007("ERR_1007", "Record already deleted", HttpStatus.BAD_REQUEST),
-    ERR_1010("ERR_1008", "Payment is already posted", HttpStatus.CONFLICT),
+    ERR_1010("ERR_1008", "Payment is already approved", HttpStatus.CONFLICT),
     ERR_1009("ERR_1009", "Invalid ", HttpStatus.BAD_REQUEST),
     ERR_1201("ERR_12101", "Document number already exists", HttpStatus.BAD_REQUEST),
     ERR_1203("ERR_1203", "Invalid date format", HttpStatus.BAD_REQUEST),
@@ -64,7 +64,6 @@ enum class AresError(
     ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST),
     ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST),
     ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
-
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"

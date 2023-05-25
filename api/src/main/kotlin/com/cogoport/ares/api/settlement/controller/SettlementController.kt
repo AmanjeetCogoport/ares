@@ -126,7 +126,7 @@ class SettlementController {
 
     @Post("/settle")
     suspend fun settle(@Body request: CheckRequest): List<CheckDocument> {
-        return Response<List<CheckDocument>>().ok(settlementService.settle(request))
+        return Response<List<CheckDocument>>().ok(settlementService.settleWrapper(request))
     }
 
     @Post("/edit")

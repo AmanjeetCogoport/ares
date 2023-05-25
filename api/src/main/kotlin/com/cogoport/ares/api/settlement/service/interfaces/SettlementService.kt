@@ -41,6 +41,8 @@ interface SettlementService {
 
     suspend fun editCheck(request: CheckRequest): CheckResponse
 
+    suspend fun settleWrapper(request: CheckRequest, isAutoKnockOff: Boolean = false): List<CheckDocument>
+
     suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean = false): List<CheckDocument>
 
     suspend fun edit(request: CheckRequest): List<CheckDocument>
@@ -62,5 +64,5 @@ interface SettlementService {
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
     suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean
 
-    suspend fun bulkMatchingSettlementOnSage(request: BulkPostSettlementRequest)
+    suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID)
 }
