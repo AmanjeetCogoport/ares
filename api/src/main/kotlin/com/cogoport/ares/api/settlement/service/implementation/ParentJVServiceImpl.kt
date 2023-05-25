@@ -565,7 +565,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.jvNum!!,
                     parentJVDetails.transactionDate!!,
                     parentJVDetails.description!!,
-                    parentJVDetails.exchangeRate!!,
+                    parentJVDetails.exchangeRate!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     jvLineItemsDetails
                 )
             )
