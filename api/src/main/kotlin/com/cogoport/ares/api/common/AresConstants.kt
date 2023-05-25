@@ -7,6 +7,8 @@ import java.time.LocalDate
 import java.time.temporal.IsoFields
 
 object AresConstants {
+    val ARES_USER_ID = "d815466f-f39f-414e-a799-5cd178da57ce"
+
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = LocalDate.now().year
     val CURR_DATE: Timestamp = Timestamp.from(Instant.now())
