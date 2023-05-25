@@ -16,7 +16,9 @@ import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import java.sql.Timestamp
-import java.util.*
+import java.util.Calendar
+import java.util.TimeZone
+import java.util.UUID
 
 @Singleton
 class Scheduler(

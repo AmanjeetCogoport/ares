@@ -427,7 +427,7 @@ ORDER BY
 
     @NewSpan
     @Query(
-            """
+        """
                 SELECT id  FROM settlements
                 WHERE settlement_status::varchar = 'CREATED'
                 AND deleted_at IS NULL
