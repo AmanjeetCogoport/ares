@@ -10,5 +10,7 @@ data class SupplierPaymentStatsRequest(
         var startDate: String? = null,
         @JsonFormat(pattern = "yyyy-MM-dd")
         var endDate: String? = null,
-        var time: String? = null
+        var timePeriod: String? = null,
+        var entityCode: Int? = null,
+        var currency: String? = null
 )

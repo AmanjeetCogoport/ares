@@ -13,10 +13,11 @@ import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.requests.SupplierReceivableRequest
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.SupplierStatistics
-import com.cogoport.ares.api.payment.model.response.SupplierReceivablesAndAgeingBucket
+import com.cogoport.ares.api.payment.model.response.SupplierReceivables
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
@@ -89,7 +90,7 @@ interface DashboardService {
 
     suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp
 
-    suspend fun getReceivableStatsForSupplier(orgId: String): SupplierReceivablesAndAgeingBucket
+    suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables
 
     suspend fun getPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics
 }

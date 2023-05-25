@@ -14,10 +14,11 @@ import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.requests.SupplierReceivableRequest
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.SupplierStatistics
-import com.cogoport.ares.api.payment.model.response.SupplierReceivablesAndAgeingBucket
+import com.cogoport.ares.api.payment.model.response.SupplierReceivables
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
@@ -283,17 +284,12 @@ class DashboardController {
     }
 
     @Get("/lsp-receivable-stats/{orgId}")
-    suspend fun getReceivableStatsForSupplier(orgId: String): SupplierReceivablesAndAgeingBucket {
-        return dashboardService.getReceivableStatsForSupplier(orgId)
+    suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
+        return dashboardService.getReceivableStatsForSupplier(request)
 
     }
 
     @Get("/lsp-payment-stats{?request*}")
-    suspend fun getOnAccountPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
-        return dashboardService.getPaymentStatsForSupplier(request)
-    }
-
-    @Get("/lsp-ledger{?request*}")
     suspend fun getOnAccountPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
         return dashboardService.getPaymentStatsForSupplier(request)
     }
