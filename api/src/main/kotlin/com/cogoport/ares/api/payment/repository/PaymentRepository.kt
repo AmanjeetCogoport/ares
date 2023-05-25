@@ -270,8 +270,6 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 AND 
                     organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
                 AND
-                    organization_name != 'BLUETIDE ESERVICES PRIVATE LIMITED'
-                AND
                     transaction_date::varchar >= '2023-05-23'
             """
     )
