@@ -272,7 +272,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 AND
                     organization_name != 'BLUETIDE ESERVICES PRIVATE LIMITED'
                 AND
-                    transaction_date::varchar >= '2023-05-23';
+                    transaction_date::varchar >= '2023-05-23'
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
