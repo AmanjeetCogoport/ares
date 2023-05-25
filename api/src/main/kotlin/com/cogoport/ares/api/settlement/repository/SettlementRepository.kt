@@ -13,6 +13,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -423,4 +424,17 @@ ORDER BY
             """
     )
     suspend fun getPaymentIdByDestinationIdAndType(destinationId: Long, destinationType: SettlementType?, sourceType: SettlementType?): List<Long>?
+
+    @NewSpan
+    @Query(
+            """
+                SELECT id  FROM settlements
+                WHERE settlement_status::varchar = 'CREATED'
+                AND deleted_at IS NULL
+                AND led_currency != 'VND'
+                AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
+                AND created_at >= :date
+            """
+    )
+    suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
 }

@@ -1,10 +1,13 @@
 package com.cogoport.ares.api.common.service.implementation
 
 import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -12,13 +15,15 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
-import java.util.Calendar
-import java.util.TimeZone
+import java.sql.Timestamp
+import java.util.*
 
 @Singleton
 class Scheduler(
     private var emitter: AresMessagePublisher,
     private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var settlementRepository: SettlementRepository,
+    private var settlementService: SettlementService,
     private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo,
     private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl
@@ -89,6 +94,15 @@ class Scheduler(
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 301)
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
+    }
+
+    @Scheduled(cron = "30 22 * * *", zoneId = "Asia/Kolkata")
+    fun bulkMatchingSettlement() = runBlocking {
+        val date = Timestamp.valueOf("2023-05-16 00:00:00")
+        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
+        if (!settlementsIds.isNullOrEmpty()) {
+            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
+        }
     }
 
     /**

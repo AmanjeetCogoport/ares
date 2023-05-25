@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.CpSettlementService
@@ -29,10 +30,8 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
-import com.cogoport.ares.model.settlement.request.BulkPostSettlementRequest
 import com.cogoport.ares.model.settlement.request.CheckRequest
 import com.cogoport.ares.model.settlement.request.OrgSummaryRequest
-import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.ares.model.settlement.request.RejectSettleApproval
 import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.authentication.Auth
@@ -58,6 +57,9 @@ class SettlementController {
 
     @Inject
     lateinit var settlementService: SettlementService
+
+    @Inject
+    lateinit var scheduler: Scheduler
 
     @Inject
     lateinit var cpSettlementService: CpSettlementService
@@ -195,13 +197,13 @@ class SettlementController {
         return taggedSettlementService.settleOnAccountInvoicePayment(req)
     }
 
-    @Post("/matching-on-sage")
-    suspend fun matchingSettlementOnSage(@Valid @Body postSettlementRequest: PostSettlementRequest): Boolean {
-        return settlementService.matchingSettlementOnSage(postSettlementRequest.settlementId, postSettlementRequest.performedBy)
+    @Post("/bulk-matching-on-sage")
+    suspend fun bulkMatchingSettlementOnSage(@Valid @Body ids: List<Long>, performedBy: UUID) {
+        return settlementService.bulkMatchingSettlementOnSage(ids, performedBy)
     }
 
-    @Post("/bulk-matching-on-sage")
-    suspend fun bulkMatchingSettlementOnSage(@Valid @Body bulkPostSettlementRequest: BulkPostSettlementRequest) {
-        return settlementService.bulkMatchingSettlementOnSage(bulkPostSettlementRequest)
+    @Post("/cron-bulk-matching-on-sage")
+    suspend fun cronBulkMatchingSettlementOnSage() {
+        return scheduler.bulkMatchingSettlement()
     }
 }

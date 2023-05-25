@@ -2565,7 +2565,6 @@ open class SettlementServiceImpl : SettlementService {
     @Transactional
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
-        val failedSettlementIds: MutableList<Long>? = mutableListOf()
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
         try {
             // Fetch source and destination details
@@ -2573,24 +2572,28 @@ open class SettlementServiceImpl : SettlementService {
             if (settlement.settlementStatus == SettlementStatus.POSTED) {
                 return true
             }
+
+            // Fetch source details
             val sourceDocument = accountUtilizationRepository.findByDocumentNo(settlement.sourceId!!, AccountType.valueOf(settlement.sourceType.toString()))
+
+            // Fetch destination details
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
-                    val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
-                    val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
-                        paymentRepo.findBySinglePaymentNumValue(sourceDocument.documentValue!!)
-                    } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
-                    val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
+            val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
+            val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
+                paymentRepo.findBySinglePaymentNumValue(sourceDocument.documentValue!!)
+            } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
+            val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
-                    if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                        throw AresException(AresError.ERR_1531, "")
-                    }
+            if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
+                throw AresException(AresError.ERR_1531, "")
+            }
 
-                    val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
-                    var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
-                    matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(sourcePresentOnSage!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
-                    )
+            val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
+            var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
+            matchingSettlementOnSageRequest?.add(
+                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+            )
 
             flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
@@ -2598,35 +2601,27 @@ open class SettlementServiceImpl : SettlementService {
             )
 
             val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
-            logger().info("settlementResponse: $result")
             val processedResponse = XML.toJSONObject(result.response)
             val status = getZstatus(processedResponse)
-            return if (status == "DONE") {
+            if (status == "DONE") {
                 settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTED, performedBy)
                 recordAudits(settlementId, result.requestString, result.response, true)
-                true
+                return true
             } else {
                 settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-                failedSettlementIds?.add(settlementId)
                 recordAudits(settlementId, result.requestString, result.response, false)
-                false
             }
         } catch (sageException: SageException) {
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-            failedSettlementIds?.add(settlementId)
             recordAudits(settlementId, sageException.data, sageException.context, false)
-            return false
         } catch (aresException: AresException) {
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-            failedSettlementIds?.add(settlementId)
             recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
-            return false
         } catch (e: Exception) {
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
-            failedSettlementIds?.add(settlementId)
             recordAudits(settlementId, settlementId.toString(), e.toString(), false)
-            return false
         }
+        return false
     }
 
     private suspend fun recordAudits(id: Long, request: String, response: String, isSuccess: Boolean) {
