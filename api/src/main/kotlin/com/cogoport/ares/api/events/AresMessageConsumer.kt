@@ -193,7 +193,7 @@ class AresMessageConsumer {
 
     @Queue("ares-post-payment-to-sage", prefetch = 1)
     fun directPaymentPostToSage(req: PostPaymentToSage) = runBlocking {
-        onAccountService.directFinalPostToSage(req)
+        onAccountService.postPaymentToSage(req.paymentId, req.performedBy)
     }
 
     @Queue("ares-sage-payment-num-migration", prefetch = 1)
