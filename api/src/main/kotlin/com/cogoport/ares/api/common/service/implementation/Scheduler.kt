@@ -98,7 +98,7 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
     }
 
-    @Scheduled(cron = "30 22 * * *", zoneId = "Asia/Kolkata")
+    @Scheduled(cron = "0 17 * * *")
     fun bulkMatchingSettlement() = runBlocking {
         val date = Timestamp.valueOf("2023-05-16 00:00:00")
         val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
