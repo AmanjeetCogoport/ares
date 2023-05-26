@@ -198,8 +198,8 @@ class SettlementController {
     }
 
     @Post("/bulk-matching-on-sage")
-    suspend fun bulkMatchingSettlementOnSage(@Valid @Body ids: List<Long>, performedBy: UUID) {
-        return settlementService.bulkMatchingSettlementOnSage(ids, performedBy)
+    suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID) {
+        return settlementService.bulkMatchingSettlementOnSage(settlementIds, performedBy)
     }
 
     @Post("/cron-bulk-matching-on-sage")
