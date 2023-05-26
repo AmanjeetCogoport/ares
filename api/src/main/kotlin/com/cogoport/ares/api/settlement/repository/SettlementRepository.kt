@@ -433,6 +433,7 @@ ORDER BY
                 AND deleted_at IS NULL
                 AND led_currency != 'VND'
                 AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
+                AND destination_type not in ('PINV', 'PREIMB')
                 AND created_at >= :date
             """
     )
