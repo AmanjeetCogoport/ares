@@ -1040,6 +1040,27 @@ open class SettlementServiceImpl : SettlementService {
         return checkResponse
     }
 
+    override suspend fun settleWrapper(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
+        val settledDocuments = settle(request, isAutoKnockOff)
+
+        val salesInvoiceDocuments = settledDocuments.filter { it.accountType.name == AccountType.SINV.name && it.tds!!.toInt() > 0 }
+
+        when (salesInvoiceDocuments.isNotEmpty()) {
+            true -> salesInvoiceDocuments.map { saleInvoice ->
+                val paymentId = settlementRepository.getPaymentIdByDestinationIdAndType(Hashids.decode(saleInvoice.documentNo)[0], saleInvoice.accountType, SettlementType.CTDS)
+                paymentId?.forEach {
+                    onAccountService.directFinalPostToSage(
+                        PostPaymentToSage(
+                            it,
+                            request.createdBy!!
+                        )
+                    )
+                }
+            }
+        }
+        return settledDocuments
+    }
+
     @Transactional
     override suspend fun settle(request: CheckRequest, isAutoKnockOff: Boolean): List<CheckDocument> {
         return runSettlement(request, true, isAutoKnockOff)
@@ -2548,7 +2569,9 @@ open class SettlementServiceImpl : SettlementService {
                     val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
                     val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
-                    val sourcePresentOnSage = if (sourceDocument.migrated == true) sourceDocument.documentValue!! else sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+                    val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
+                        paymentRepo.findBySinglePaymentNumValue(sourceDocument.documentValue!!)
+                    } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
                     val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
                     if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
@@ -2558,7 +2581,7 @@ open class SettlementServiceImpl : SettlementService {
                     val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
                     var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
                     matchingSettlementOnSageRequest?.add(
-                        SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                        SageSettlementRequest(sourcePresentOnSage!!, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
                     )
 
                     flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
@@ -2779,24 +2802,24 @@ open class SettlementServiceImpl : SettlementService {
             )
         )
 
-        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
-//            aresMessagePublisher.emitPostPaymentToSage(
-//                PostPaymentToSage(
-//                    paymentId = savedPayment.id!!,
-//                    performedBy = savedPayment.createdBy!!
+//        if (savedPayment.entityCode != 501 && (savedPayment.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+// //            aresMessagePublisher.emitPostPaymentToSage(
+// //                PostPaymentToSage(
+// //                    paymentId = savedPayment.id!!,
+// //                    performedBy = savedPayment.createdBy!!
+// //                )
+// //            )
+//            try {
+//                onAccountService.directFinalPostToSage(
+//                    PostPaymentToSage(
+//                        paymentId = savedPayment.id!!,
+//                        performedBy = savedPayment.updatedBy!!
+//                    )
 //                )
-//            )
-            try {
-                onAccountService.directFinalPostToSage(
-                    PostPaymentToSage(
-                        paymentId = savedPayment.id!!,
-                        performedBy = savedPayment.updatedBy!!
-                    )
-                )
-            } catch (ex: Exception) {
-                logger().info(ex.stackTraceToString())
-            }
-        }
+//            } catch (ex: Exception) {
+//                logger().info(ex.stackTraceToString())
+//            }
+//        }
 
         if (accUtilRes.accMode == AccMode.AP) {
             aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))

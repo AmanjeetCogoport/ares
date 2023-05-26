@@ -106,6 +106,11 @@ class OnAccountController {
         )
     }
 
+    @Post("/bulk-post-to-sage")
+    suspend fun bulkPostPaymentToSage(ids: List<Long>, performedBy: UUID) {
+        return (onAccountService.bulkPostPaymentToSage(ids, performedBy))
+    }
+
     @Post("/post-from-sage")
     suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         return onAccountService.postPaymentFromSage(paymentIds, performedBy)

@@ -75,4 +75,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.sage.payment.num.migration")
     suspend fun emitSagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse)
+
+    @Binding("ares.bulk.post.payment.to.sage")
+    suspend fun emitBulkPostPaymentToSage(req: PostPaymentToSage)
 }
