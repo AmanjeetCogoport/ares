@@ -4,17 +4,22 @@ import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServic
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
+import java.time.LocalDate.now
+import java.time.temporal.ChronoUnit
 import java.sql.Timestamp
 import java.util.Calendar
 import java.util.TimeZone
@@ -26,9 +31,12 @@ class Scheduler(
     private var accountUtilizationRepository: AccountUtilizationRepository,
     private var settlementRepository: SettlementRepository,
     private var settlementService: SettlementService,
+    private var paymentRepository: PaymentRepository,
+    private var onAccountService: OnAccountService,
     private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo,
-    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl
+    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl,
+    private var aresMessagePublisher: AresMessagePublisher
 ) {
 
     @Scheduled(cron = "0 0 * * *")
@@ -98,15 +106,6 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
     }
 
-    @Scheduled(cron = "0 17 * * *")
-    fun bulkMatchingSettlement() = runBlocking {
-        val date = Timestamp.valueOf("2023-05-16 00:00:00")
-        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
-        if (!settlementsIds.isNullOrEmpty()) {
-            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
-        }
-    }
-
     /**
      * Asia/Singapore is UTC+08:00
      **/
@@ -114,5 +113,31 @@ class Scheduler(
     fun createLedgerBalancesForSingapore() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
+    }
+
+    @Scheduled(cron = "0 18 * * *")
+    fun bulkPaymentPostToSage() = runBlocking {
+        val yesterday = now().minus(1, ChronoUnit.DAYS)
+        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
+        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
+        if (!paymentIds.isNullOrEmpty()) {
+            paymentIds.forEach {
+                aresMessagePublisher.emitPostPaymentToSage(
+                    PostPaymentToSage(
+                        it,
+                        UUID.fromString(AresConstants.ARES_USER_ID)
+                    )
+                )
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 17 * * *")
+    fun bulkMatchingSettlement() = runBlocking {
+        val date = Timestamp.valueOf("2023-05-16 00:00:00")
+        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
+        if (!settlementsIds.isNullOrEmpty()) {
+            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
+        }
     }
 }
