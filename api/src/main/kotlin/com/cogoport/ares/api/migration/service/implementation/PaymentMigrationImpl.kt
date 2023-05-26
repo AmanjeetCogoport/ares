@@ -406,7 +406,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = receivableRequest.organizationId,
             bankPayAmount = receivableRequest.bankPayAmount,
             migrated = true,
-            paymentDocumentStatus = PaymentDocumentStatus.POSTED,
+            paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED,
             updatedBy = MigrationConstants.createdUpdatedBy,
             createdBy = MigrationConstants.createdUpdatedBy,
             sageRefNumber = receivableRequest.sageRefNumber

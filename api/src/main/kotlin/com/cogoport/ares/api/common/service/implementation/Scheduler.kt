@@ -1,27 +1,35 @@
 package com.cogoport.ares.api.common.service.implementation
 
 import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 import java.util.TimeZone
+import java.util.UUID
 
 @Singleton
 class Scheduler(
     private var emitter: AresMessagePublisher,
     private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var paymentRepository: PaymentRepository,
+    private var onAccountService: OnAccountService,
     private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo,
-    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl
+    private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl,
+    private var aresMessagePublisher: AresMessagePublisher
 ) {
 
     @Scheduled(cron = "0 0 * * *")
@@ -98,5 +106,20 @@ class Scheduler(
     fun createLedgerBalancesForSingapore() = runBlocking {
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
+    }
+
+    @Scheduled(cron = "30 18 * * *")
+    fun bulkPaymentPostToSage() = runBlocking {
+        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
+        if (!paymentIds.isNullOrEmpty()) {
+            paymentIds.forEach {
+                aresMessagePublisher.emitPostPaymentToSage(
+                    PostPaymentToSage(
+                        it,
+                        UUID.fromString(AresConstants.ARES_USER_ID)
+                    )
+                )
+            }
+        }
     }
 }

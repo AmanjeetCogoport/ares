@@ -245,4 +245,33 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun getPaymentByPaymentNumValue(paymentNumValues: String, entityCode: Long?, accMode: AccMode): PlatformPayment
+
+    @NewSpan
+    @Query(
+        """
+            SELECT sage_ref_number FROM payments WHERE payment_num_value = :paymentNumValue AND deleted_at IS NULL and payment_document_status != 'DELETED'::payment_document_status LIMIT 1
+        """
+    )
+    suspend fun findBySinglePaymentNumValue(paymentNumValue: String): String?
+
+    @NewSpan
+    @Query(
+        """
+                SELECT
+                    id
+                FROM
+                    payments
+                WHERE
+                    acc_mode = 'AP'
+                AND 
+                    deleted_at IS NULL 
+                AND 
+                    payment_document_status = 'APPROVED'::payment_document_status
+                AND 
+                    organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
+                AND
+                    transaction_date::varchar >= '2023-05-23'
+            """
+    )
+    suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
 }
