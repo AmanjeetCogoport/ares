@@ -1455,6 +1455,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     if (paymentDetails.accMode == AccMode.AP) 1 else 2,
                     paymentDetails.amount.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentDetails.transRefNumber,
+                    paymentDetails.ledAmount!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentLineItemDetails
                 )
             )

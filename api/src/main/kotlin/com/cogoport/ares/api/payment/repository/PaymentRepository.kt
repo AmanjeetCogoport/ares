@@ -264,13 +264,13 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 WHERE
                     acc_mode = 'AP'
                 AND 
-                    deleted_at IS NULL 
+                    deleted_at IS NULL
                 AND 
                     payment_document_status = 'APPROVED'::payment_document_status
                 AND 
                     organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
-                AND
-                    transaction_date::varchar >= '2023-05-23'
+                AND 
+                    date_trunc('day', transaction_date) = date_trunc('day', current_date - interval '1 days')
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
