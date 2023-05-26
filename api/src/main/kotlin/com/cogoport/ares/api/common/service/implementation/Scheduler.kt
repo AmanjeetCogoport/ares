@@ -16,6 +16,8 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
+import java.time.LocalDate.now
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
 import java.util.UUID
@@ -108,8 +110,10 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 
-    @Scheduled(cron = "30 18 * * *")
+    @Scheduled(cron = "0 18 * * *")
     fun bulkPaymentPostToSage() = runBlocking {
+        val yesterday = now().minus(1, ChronoUnit.DAYS)
+        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
         val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
         if (!paymentIds.isNullOrEmpty()) {
             paymentIds.forEach {
