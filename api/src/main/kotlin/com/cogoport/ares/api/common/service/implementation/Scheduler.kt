@@ -8,6 +8,8 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -16,6 +18,7 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
+import java.sql.Timestamp
 import java.time.LocalDate.now
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
@@ -26,6 +29,8 @@ import java.util.UUID
 class Scheduler(
     private var emitter: AresMessagePublisher,
     private var accountUtilizationRepository: AccountUtilizationRepository,
+    private var settlementRepository: SettlementRepository,
+    private var settlementService: SettlementService,
     private var paymentRepository: PaymentRepository,
     private var onAccountService: OnAccountService,
     private var outStandingService: OutStandingService,
@@ -124,6 +129,17 @@ class Scheduler(
                     )
                 )
             }
+        }
+    }
+
+    @Scheduled(cron = "0 17 * * *")
+    fun bulkMatchingSettlement() = runBlocking {
+        val today = now()
+        logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today")
+        val date = Timestamp.valueOf("2023-05-16 00:00:00")
+        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
+        if (!settlementsIds.isNullOrEmpty()) {
+            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
         }
     }
 }

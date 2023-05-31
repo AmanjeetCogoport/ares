@@ -968,7 +968,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val input = SerialIdsInput(
                 organizationSerialId = it["organization_serial_id"].toString().toLong(),
                 tradePartyDetailSerialId = it["trade_party_serial_id"].toString().toLong(),
-                cogoEntityId = AresConstants.ENTITY_ID[it["entity_type"].toString().toInt()]
+                cogoEntityId = AresConstants.ENTITY_ID[it["entity_code"].toString().toInt()]
             )
             if (input !in orgTradeSerialIdMap) orgTradeSerialIdMap.add(input)
         }
@@ -999,7 +999,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val ledgerCurrency = cogoEntities.bankList.find { det -> det.entityCode.toString() == it["entity_code"].toString() }?.ledgerCurrency
             val utr = it["utr"].toString()
             val serialIdDetails = serialClientResponse?.find { detail ->
-                detail?.organization?.orgSerialId == organizationSerialNo.toLong() && detail?.tradePartySerial.toString() == tradePartySerialNo
+                detail?.organization?.orgSerialId == organizationSerialNo.toLong() && detail.tradePartySerial.toString() == tradePartySerialNo
             }
 
             var payModeValue: PayMode? = null
