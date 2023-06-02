@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
+import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -438,4 +439,53 @@ ORDER BY
             """
     )
     suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            with z as (
+                select
+                  aaus.document_value as source_doc_value,
+                  aaud.document_value as destination_doc_value,
+                  s.currency,
+                  s.amount,
+                  s.led_currency,
+                  s.led_amount,
+                  tpa.response,
+                  tpa.created_at,
+                  case when s.source_type in ('REC', 'CTDS') THEN p.sage_ref_number else aaus.document_value END AS source_sage_ref_number,
+                  aaud.document_value as destination_sage_ref_number,
+                  row_number() over (partition by tpa.object_id order by tpa.created_at desc) as rn
+                from
+                  settlements s
+                  left join third_party_api_audits tpa on s.id = tpa.object_id
+                  left join account_utilizations aaus on s.source_id = aaus.document_no and s.source_type::varchar = aaus.acc_type::varchar
+                  left join account_utilizations aaud on s.destination_id = aaud.document_no and s.destination_type::varchar = aaud.acc_type::varchar
+                  left join payments p on aaus.document_value = p.payment_num_value and case when coalesce(s.source_type in ('REC','CTDS')) THEN TRUE ELSE FALSE end
+                where
+                  s.settlement_status = 'POSTING_FAILED'
+                  and s.created_at > '15 May 2023, 00:00:00'
+                  and s.source_type not in ('SECH', 'PAY', 'PCN')
+                  and s.destination_type not in ('PINV', 'PCN')
+                  and s.led_currency != 'VND'
+                  and s.amount > 0
+              )
+              select
+                source_doc_value,
+                destination_doc_value,
+                source_sage_ref_number,
+                destination_sage_ref_number,
+                currency,
+                amount,
+                led_currency,
+                led_amount,
+                response
+              from
+                z
+              where
+                rn = 1
+                order by z.created_at desc
+        """
+    )
+    suspend fun getSettlementsMatchingFailedOnSage(): List<SettlementMatchingFailedOnSageExcelResponse>?
 }
