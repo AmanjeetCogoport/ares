@@ -1565,7 +1565,8 @@ open class SettlementServiceImpl : SettlementService {
                         signFlag = 1,
                         createdBy = request.createdBy,
                         createdByUserType = request.createdByUserType,
-                        supportingDocUrl = request.supportingDocUrl
+                        supportingDocUrl = request.supportingDocUrl,
+                        exchangeRate = payment.exchangeRate
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1747,7 +1748,8 @@ open class SettlementServiceImpl : SettlementService {
                 signFlag = -1,
                 createdBy = request.createdBy,
                 createdByUserType = request.createdByUserType,
-                supportingDocUrl = request.supportingDocUrl
+                supportingDocUrl = request.supportingDocUrl,
+                exchangeRate = invoice.exchangeRate
             )
             invoice.settledTds += invoiceTds
         }
@@ -1841,7 +1843,8 @@ open class SettlementServiceImpl : SettlementService {
         settlementDate: Timestamp,
         createdBy: UUID?,
         createdByUserType: String?,
-        supportingDocUrl: String?
+        supportingDocUrl: String?,
+        exchangeRate: BigDecimal?
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
         val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
@@ -1860,7 +1863,8 @@ open class SettlementServiceImpl : SettlementService {
             createdBy,
             createdByUserType,
             tdsType,
-            invoiceAndBillData
+            invoiceAndBillData,
+            exchangeRate
         )
 
         createSettlement(
@@ -2698,7 +2702,8 @@ open class SettlementServiceImpl : SettlementService {
         createdBy: UUID?,
         createdByUserType: String?,
         tdsType: SettlementType?,
-        invoiceAndBillData: AccountUtilization?
+        invoiceAndBillData: AccountUtilization?,
+        exchangeRate: BigDecimal?
     ): Long? {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
@@ -2749,7 +2754,7 @@ open class SettlementServiceImpl : SettlementService {
             payMode = PayMode.BANK,
             docType = DocType.TDS,
             transactionDate = invoiceAndBillData?.transactionDate,
-            exchangeRate = tdsLedAmount.div(tdsAmount).setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN)
+            exchangeRate = exchangeRate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
