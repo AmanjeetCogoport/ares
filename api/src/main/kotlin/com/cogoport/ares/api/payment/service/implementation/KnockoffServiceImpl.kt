@@ -428,8 +428,8 @@ open class KnockoffServiceImpl : KnockoffService {
         kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,
-                paidAmount = amountPaid,
-                paidTds = tdsPaid,
+                paidAmount = accountUtilizationPaymentData.payCurr,
+                paidTds = BigDecimal.ZERO,
                 paymentStatus = paymentStatus,
                 paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
                 updatedBy = reverseUtrRequest.updatedBy,
