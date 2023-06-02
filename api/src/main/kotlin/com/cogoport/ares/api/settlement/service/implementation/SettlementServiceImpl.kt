@@ -1698,7 +1698,7 @@ open class SettlementServiceImpl : SettlementService {
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
         var invoiceTds = invoice.tds!! - invoice.settledTds
-
+        /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
@@ -2588,7 +2588,8 @@ open class SettlementServiceImpl : SettlementService {
             val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                throw AresException(AresError.ERR_1531, "")
+                recordAudits(settlementId, """${mapOf("Source Doc" to sourceDocument.documentValue!!, "Destination Doc" to destinationDocument.documentValue!!)}""", "Documents must be posted on Sage", false)
+                return false
             }
 
             val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
