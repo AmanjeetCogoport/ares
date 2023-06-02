@@ -1699,9 +1699,9 @@ open class SettlementServiceImpl : SettlementService {
         /** Tds Amount in Invoice currency */
         var invoiceTds = invoice.tds!! - invoice.settledTds
 
-        var invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
+        val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
-        val paymentTds = getExchangeValue(invoiceTds, invoice.exchangeRate, true)
+        val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         /** Payment Tds ledger Amount */
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
         /** Nostro Amount in Invoice currency */
@@ -1734,7 +1734,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         // Create TDS Entry
-        if (paymentTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
+        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
