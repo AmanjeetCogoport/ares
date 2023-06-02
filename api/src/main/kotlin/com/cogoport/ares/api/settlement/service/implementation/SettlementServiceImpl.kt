@@ -1735,7 +1735,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         // Create TDS Entry
-        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
+        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB) && (invoice.ledCurrency != AresConstants.VND)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
@@ -2591,8 +2591,18 @@ open class SettlementServiceImpl : SettlementService {
             } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
             val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
+            val nullDoc: MutableList<String>? = null
+
+            if (destinationPresentOnSage == null) {
+                nullDoc?.add(destinationDocument.documentValue!!)
+            }
+
+            if (sourcePresentOnSage == null) {
+                nullDoc?.add(sourceDocument.documentValue!!)
+            }
+
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                recordAudits(settlementId, """${mapOf("Source Doc" to sourceDocument.documentValue!!, "Destination Doc" to destinationDocument.documentValue!!)}""", "Documents must be posted on Sage", false)
+                recordAudits(settlementId, """$nullDoc""", "Documents must be posted on Sage", false)
                 return false
             }
 
