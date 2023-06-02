@@ -1698,8 +1698,10 @@ open class SettlementServiceImpl : SettlementService {
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
         var invoiceTds = invoice.tds!! - invoice.settledTds
+
+        var invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
-        val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
+        val paymentTds = getExchangeValue(invoiceTds, invoice.exchangeRate, true)
         /** Payment Tds ledger Amount */
         val paymentTdsLed = getExchangeValue(paymentTds, ledgerRate)
         /** Nostro Amount in Invoice currency */
@@ -1737,10 +1739,10 @@ open class SettlementServiceImpl : SettlementService {
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
                 destType = invoice.accountType,
-                currency = payment.currency,
-                ledCurrency = payment.ledCurrency,
-                tdsAmount = paymentTds,
-                tdsLedAmount = paymentTdsLed,
+                currency = invoice.currency,
+                ledCurrency = invoice.ledCurrency,
+                tdsAmount = invoiceTds,
+                tdsLedAmount = invoiceTdsLed,
                 settlementDate = request.settlementDate,
                 signFlag = -1,
                 createdBy = request.createdBy,
@@ -2745,7 +2747,8 @@ open class SettlementServiceImpl : SettlementService {
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
             docType = DocType.TDS,
-            transactionDate = invoiceAndBillData?.transactionDate
+            transactionDate = invoiceAndBillData?.transactionDate,
+            exchangeRate = tdsLedAmount.div(tdsAmount).setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN)
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
