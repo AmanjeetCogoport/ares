@@ -78,6 +78,7 @@ object AresConstants {
     const val JV = "JV"
     const val TDS = "TDS"
     const val IND = "IND"
+    const val VND = "VND"
 
     const val UNIFIED = "dms"
 

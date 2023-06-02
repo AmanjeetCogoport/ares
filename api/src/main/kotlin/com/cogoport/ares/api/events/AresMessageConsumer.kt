@@ -193,7 +193,7 @@ class AresMessageConsumer {
     }
 
     @Queue("ares-post-payment-to-sage", prefetch = 1)
-    fun directPaymentPostToSage(req: PostPaymentToSage) = runBlocking {
+    fun postPaymentToSage(req: PostPaymentToSage) = runBlocking {
         onAccountService.postPaymentToSage(req.paymentId, req.performedBy)
     }
 
@@ -203,7 +203,7 @@ class AresMessageConsumer {
     }
 
     @Queue("ares-bulk-post-payment-to-sage", prefetch = 1)
-    fun bulkMatchingSettlementOnSage(req: PostPaymentToSage) = runBlocking {
+    fun bulkDirectFinalPostToSage(req: PostPaymentToSage) = runBlocking {
         onAccountService.directFinalPostToSage(req)
     }
 
