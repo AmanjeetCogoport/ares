@@ -2591,14 +2591,14 @@ open class SettlementServiceImpl : SettlementService {
             } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
             val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
-            val nullDoc: MutableList<String>? = null
+            val nullDoc: MutableList<String> = mutableListOf<String>()
 
             if (destinationPresentOnSage == null) {
-                nullDoc?.add(destinationDocument.documentValue!!)
+                nullDoc.add(destinationDocument.documentValue!!)
             }
 
             if (sourcePresentOnSage == null) {
-                nullDoc?.add(sourceDocument.documentValue!!)
+                nullDoc.add(sourceDocument.documentValue!!)
             }
 
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
