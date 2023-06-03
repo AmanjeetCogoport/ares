@@ -6,12 +6,11 @@ import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
 @MappedEntity
-@Introspected
 data class SettlementMatchingFailedOnSageExcelResponse(
     @ExcelColumn(name = "Source Document Number")
-    val sourceDocumentNumber: String?,
+    val sourceDocValue: String?,
     @ExcelColumn(name = "Destination Document Number")
-    val destinationDocumentNumber: String?,
+    val destinationDocValue: String?,
     @ExcelColumn(name = "Source Sage Ref Number")
     val sourceSageRefNumber: String?,
     @ExcelColumn(name = "Destination Sage Ref Number")
@@ -24,6 +23,8 @@ data class SettlementMatchingFailedOnSageExcelResponse(
     val ledCurrency: String?,
     @ExcelColumn(name = "Ledger Amount")
     val ledAmount: BigDecimal?,
+    @ExcelColumn(name = "Request Param")
+    val request: String?,
     @ExcelColumn(name = "Reasons")
-    val allReasons: List<String>?
+    val response: String
 )

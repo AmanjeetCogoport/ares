@@ -151,8 +151,10 @@ class Scheduler(
 
     @Scheduled(cron = "30 19 * * *")
     fun settlementMatchingFailedOnSageEmail() {
+        val today = now()
+        logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
         val settlementsNotPosted = runBlocking {
-            settlementRepository.getSettlementsMatchingFailedOnSage()
+            settlementRepository.getAllSettlementsMatchingFailedOnSage()
         }
         if (settlementsNotPosted.isNullOrEmpty()) return
         val excelName = "Failed_Settlements_Matching_On_Sage" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
