@@ -206,4 +206,9 @@ class SettlementController {
     suspend fun cronBulkMatchingSettlementOnSage() {
         return scheduler.bulkMatchingSettlement()
     }
+
+    @Post("/email-notification-settlement-matching-failed")
+    suspend fun cronSettlementMatchingFailedOnSageEmail() {
+        return scheduler.settlementMatchingFailedOnSageEmail()
+    }
 }
