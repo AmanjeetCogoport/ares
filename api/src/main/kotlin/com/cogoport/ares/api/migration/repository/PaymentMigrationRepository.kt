@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.repository
 
 import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
+import com.cogoport.ares.api.migration.model.PaymentDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -133,4 +134,17 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         """
     )
     suspend fun updateSageRefNum(id: Long, sageRefNumber: String): Long
+
+    @NewSpan
+    @Query(
+        """
+            select au.id ,payment_num, trans_ref_number, pvm.document_no, p.amount, (au.amount_curr - au.pay_curr) as unutilised_amount
+            from payments p
+            LEFT JOIN account_utilizations au on au.document_no = p.payment_num and au.acc_mode = 'AP'
+            Left JOIN payment_invoice_mapping pvm on pvm.payment_id = p.id
+            where p.payment_num in (:paymentNum) and pvm.mapping_type = 'BILL' and pvm.account_mode = 'AP'
+            order by p.created_at desc
+        """
+    )
+    suspend fun paymentDetailsByPaymentNum(paymentNum: List<String>): List<PaymentDetails>
 }

@@ -438,4 +438,29 @@ ORDER BY
             """
     )
     suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+               s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
+                s.settlement_date::TIMESTAMP, s.is_void, au.tagged_bill_id
+            FROM
+                settlements s
+                LEFT JOIN payments p ON p.payment_num = s.source_id
+                LEFT JOIN account_utilizations au on au.document_no = s.destination_id
+            WHERE
+                (:sourceId is null or s.source_id = :sourceId) and
+                (:destinationId is null or s.destination_id = :destinationId)
+                and au.acc_mode = 'AP'
+                And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
+                AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
+                and s.deleted_at is null
+                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
+            ORDER BY
+                s.created_at DESC
+
+        """
+    )
+    suspend fun getPaymentsCorrespondingDocumentNos(destinationId: Long?, sourceId: Long?): MutableList<TaggedInvoiceSettlementInfo?>
 }

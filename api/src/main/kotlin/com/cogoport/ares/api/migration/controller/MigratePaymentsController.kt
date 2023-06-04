@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.migration.controller
 
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
@@ -22,6 +23,7 @@ class MigratePaymentsController {
 
     @Inject lateinit var paymentMigration: PaymentMigrationWrapper
 
+    @Inject lateinit var aresMessagePublisher: AresMessagePublisher
     @Get("/migrate")
     suspend fun migratePayments(
         @QueryValue startDate: String,
@@ -209,5 +211,13 @@ class MigratePaymentsController {
             HttpStatus.OK.name,
             "Request for payment sage_ref_number migration received, total number of sage_ref_no to migrate is $size"
         )
+    }
+
+    @Post("/migrate-partial-paid-amount")
+    suspend fun migrateAmountForPartialPayment(@Body documentIds: List<Long>): Response<String> {
+        documentIds.forEach {
+            aresMessagePublisher.emitPartialPaymentMismatchDocument(it)
+        }
+        return Response<String>().ok(HttpStatus.OK.name, "Documents Added in RabbitMq")
     }
 }
