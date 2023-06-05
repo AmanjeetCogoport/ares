@@ -46,6 +46,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -69,7 +70,9 @@ import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.kuber.client.KuberClient
+import io.sentry.Sentry
 import jakarta.inject.Inject
+import java.lang.Math.min
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -88,6 +91,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var cogoClient: AuthClient
 
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
+
+    @Inject lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject lateinit var journalVoucherRepository: JournalVoucherRepository
 
@@ -1045,6 +1050,37 @@ class PaymentMigrationImpl : PaymentMigration {
         val paymentDetails = paymentMigrationRepository.getPaymentFromSageRefNum(request.sageRefNum!!)
         if (!paymentDetails.toString().isNullOrEmpty()) {
             paymentMigrationRepository.updateSageRefNum(paymentDetails, request.sagePaymentNum!!)
+        }
+    }
+    override suspend fun partialPaymentMismatchDocument(documentNo: Long) {
+        try {
+            val accountUtilization = accountUtilizationRepositoryMigration.findNonMigratedRecord(documentNo, accMode = AccMode.AP.name, accType = null)
+            if (accountUtilization?.accType !in listOf(AccountType.PINV, AccountType.PREIMB)) {
+                return
+            }
+            val ledgerExchangeRate = accountUtilization?.amountLoc!! / accountUtilization.amountCurr
+            val settlementDetails = settlementRepository.getPaymentsCorrespondingDocumentNos(destinationId = documentNo, sourceId = null)
+            val paidTdsAmount = settlementDetails.filter { it?.sourceType == SettlementType.VTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
+            val payableAmount = accountUtilization.amountCurr - (accountUtilization.tdsAmount ?: BigDecimal.ZERO)
+            val paidAmountWithoutTds = accountUtilization.payCurr - paidTdsAmount
+            var leftAmount = payableAmount - paidAmountWithoutTds
+            if (settlementDetails.isEmpty() || paidTdsAmount.compareTo(BigDecimal.ZERO) == 0 || leftAmount.compareTo(BigDecimal.ZERO) == 0) return
+            val paymentDetails = paymentMigrationRepository.paymentDetailsByPaymentNum(settlementDetails.map { it?.sourceId!! }).filter { it.documentNo != null }
+            var totalUnutilizedAmount = paymentDetails.sumOf { it.unutilisedAmount }
+            paymentDetails.forEach { payment ->
+                var amount = BigDecimal.ZERO
+                if (payment.unutilisedAmount > BigDecimal.ZERO && leftAmount <= totalUnutilizedAmount && (accountUtilization.amountCurr > accountUtilization.payCurr) && leftAmount > BigDecimal.ZERO) {
+                    amount = payment.unutilisedAmount.min(leftAmount)
+                    accountUtilizationRepositoryMigration.updateSettlementAmount(documentNo, payment.paymentNum, amount, (amount * ledgerExchangeRate))
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(payment.id, amount, amount * ledgerExchangeRate)
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(accountUtilization.id!!, amount, amount * ledgerExchangeRate)
+                }
+                leftAmount -= amount
+                totalUnutilizedAmount -= amount
+            }
+        } catch (e: Exception) {
+            Sentry.captureException(e)
+            throw e
         }
     }
 }
