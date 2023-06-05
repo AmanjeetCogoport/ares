@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.settlement
 
 import com.cogoport.brahma.excel.annotations.ExcelColumn
-import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 

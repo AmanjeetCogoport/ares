@@ -1,7 +1,6 @@
 package com.cogoport.ares.model.common
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import java.util.UUID
 import kotlin.collections.HashMap

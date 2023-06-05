@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.common.client
 
-import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.GetPartnerRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse

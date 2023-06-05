@@ -443,36 +443,39 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            with z as (
-                select
+            WITH z AS (
+                SELECT
                     s.id,
-                    aaus.document_value as source_doc_value,
-                    aaud.document_value as destination_doc_value,
+                    aaus.document_value AS source_doc_value,
+                    aaud.document_value AS destination_doc_value,
                     s.currency,
                     s.amount,
                     s.led_currency,
                     s.led_amount,
-                    tpa.request_params as request,
-                    tpa.response,
+                    tpa.request_params AS request,
+                    CASE
+                        WHEN tpa.response ILIKE '%<?xml version="1.0" encoding="utf-8"?>%' THEN 'unknown error, probably this doc was already settled on Sage'
+                        ELSE tpa.response
+                    END AS response,
                     tpa.created_at,
-                    case when s.source_type in ('REC', 'CTDS') THEN p.sage_ref_number else aaus.document_value END AS source_sage_ref_number,
-                    aaud.document_value as destination_sage_ref_number,
-                    row_number() over (partition by tpa.object_id order by tpa.created_at desc) as rn
-                from
+                    CASE WHEN s.source_type IN ('REC', 'CTDS') THEN p.sage_ref_number ELSE aaus.document_value END AS source_sage_ref_number,
+                    aaud.document_value AS destination_sage_ref_number,
+                    ROW_NUMBER() OVER (PARTITION BY tpa.object_id ORDER BY tpa.created_at DESC) AS rn
+                FROM
                     settlements s
-                    join third_party_api_audits tpa on s.id = tpa.object_id
-                    join account_utilizations aaus on s.source_id = aaus.document_no and s.source_type::varchar = aaus.acc_type::varchar
-                    join account_utilizations aaud on s.destination_id = aaud.document_no and s.destination_type::varchar = aaud.acc_type::varchar
-                    left join payments p on aaus.document_value = p.payment_num_value and case when coalesce(s.source_type in ('REC','CTDS')) THEN TRUE ELSE FALSE end
-                where
+                    JOIN third_party_api_audits tpa ON s.id = tpa.object_id
+                    JOIN account_utilizations aaus ON s.source_id = aaus.document_no AND s.source_type::VARCHAR = aaus.acc_type::VARCHAR
+                    JOIN account_utilizations aaud ON s.destination_id = aaud.document_no AND s.destination_type::VARCHAR = aaud.acc_type::VARCHAR
+                    LEFT JOIN payments p ON aaus.document_value = p.payment_num_value AND CASE WHEN COALESCE(s.source_type IN ('REC','CTDS')) THEN TRUE ELSE FALSE END
+                WHERE
                     s.settlement_status = 'POSTING_FAILED'
-                    and s.created_at > '15 May 2023'
-                    and s.source_type not in ('SECH', 'PAY', 'PCN')
-                    and s.destination_type not in ('PINV', 'PCN')
-                    and s.led_currency != 'VND'
-                    and s.amount > 0
+                    AND s.created_at > '2023-05-15'
+                    AND s.source_type NOT IN ('SECH', 'PAY', 'PCN')
+                    AND s.destination_type NOT IN ('PINV', 'PCN')
+                    AND s.led_currency != 'VND'
+                    AND s.amount > 0
             )
-            select
+            SELECT
                 source_doc_value,
                 destination_doc_value,
                 source_sage_ref_number,
@@ -483,11 +486,11 @@ ORDER BY
                 led_amount,
                 request,
                 response
-            from
+            FROM
                 z
-            where
+            WHERE
                 rn = 1
-            order by z.created_at desc
+            ORDER BY z.created_at DESC
         """
     )
     suspend fun getAllSettlementsMatchingFailedOnSage(): List<SettlementMatchingFailedOnSageExcelResponse>?
