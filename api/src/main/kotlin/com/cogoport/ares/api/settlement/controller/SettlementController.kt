@@ -38,7 +38,6 @@ import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
