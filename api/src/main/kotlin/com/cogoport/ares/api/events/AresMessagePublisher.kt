@@ -83,5 +83,5 @@ interface AresMessagePublisher {
     @Binding("ares.bulk.post.settlement.to.sage")
     suspend fun emitBulkMatchingSettlementOnSage(req: PostSettlementRequest)
     @Binding("ares.partial.payment.mismatch")
-    suspend fun emitPartialPaymentMismatchDocument(id: Long)
+    suspend fun emitPartialPaymentMismatchDocument(id: String)
 }

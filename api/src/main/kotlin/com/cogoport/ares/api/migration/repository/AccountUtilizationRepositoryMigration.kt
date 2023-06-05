@@ -120,9 +120,9 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     @NewSpan
     @Query(
         """
-            update settlements 
-            set amount = amount + :amount, led_amount = led_amount + :ledAmount 
-            where source_id = :sourceId and destination_id = :destinationId and deleted_at is null and source_type in ('PAY', 'PCN')
+            UPDATE settlements 
+            SET amount = amount + :amount, led_amount = led_amount + :ledAmount 
+            WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null AND source_type in ('PAY', 'PCN')
         """
     )
     fun updateSettlementAmount(
@@ -135,8 +135,8 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     @NewSpan
     @Query(
         """
-            update account_utilizations set  pay_curr = pay_curr + :payCurr, pay_loc = pay_loc + :payLoc
-            where id = :id
+            UPDATE account_utilizations SET  pay_curr = pay_curr + :payCurr, pay_loc = pay_loc + :payLoc
+            WHERE id = :id
         """
     )
     fun updateAccountUtilizationsAmount(
@@ -147,17 +147,17 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     @NewSpan
     @Query(
         """ 
-            select 
+            SELECT 
                 *
-            from 
+            FROM 
                 account_utilizations 
-            where 
+            WHERE 
                 document_no = :documentNo
-            and document_status != 'DELETED'::document_status
-            and (:accType is null or acc_type = :accType::account_type) 
-            and (:accMode is null or acc_mode = :accMode::account_mode) 
-            and deleted_at is null and migrated = false
-            and is_void = false
+            AND document_status != 'DELETED'::document_status
+            AND (:accType is null OR acc_type = :accType::account_type) 
+            AND (:accMode is null OR acc_mode = :accMode::account_mode) 
+            AND deleted_at is null AND migrated = false
+            AND is_void = false
         """
     )
     suspend fun findNonMigratedRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?

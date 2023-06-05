@@ -213,7 +213,7 @@ class AresMessageConsumer {
     }
 
     @Queue("ares-partial-payment-mismatch", prefetch = 1)
-    fun partialPaymentMismatchDocument(documentNo: Long) = runBlocking {
-        paymentMigration.partialPaymentMismatchDocument(documentNo)
+    fun partialPaymentMismatchDocument(documentNo: String) = runBlocking {
+        paymentMigration.partialPaymentMismatchDocument(documentNo.toLong())
     }
 }

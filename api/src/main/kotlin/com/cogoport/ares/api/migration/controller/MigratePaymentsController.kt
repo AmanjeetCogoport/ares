@@ -216,7 +216,7 @@ class MigratePaymentsController {
     @Post("/migrate-partial-paid-amount")
     suspend fun migrateAmountForPartialPayment(@Body documentIds: List<Long>): Response<String> {
         documentIds.forEach {
-            aresMessagePublisher.emitPartialPaymentMismatchDocument(it)
+            aresMessagePublisher.emitPartialPaymentMismatchDocument(it.toString())
         }
         return Response<String>().ok(HttpStatus.OK.name, "Documents Added in RabbitMq")
     }
