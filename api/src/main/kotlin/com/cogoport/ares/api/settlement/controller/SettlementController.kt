@@ -37,6 +37,8 @@ import com.cogoport.ares.model.settlement.request.SettlementDocumentRequest
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpResponse
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -208,7 +210,8 @@ class SettlementController {
     }
 
     @Post("/email-notification-settlement-matching-failed")
-    suspend fun cronSettlementMatchingFailedOnSageEmail() {
-        return scheduler.settlementMatchingFailedOnSageEmail()
+    suspend fun cronSettlementMatchingFailedOnSageEmail(): HttpResponse<Map<String, String>> {
+        scheduler.settlementMatchingFailedOnSageEmail()
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 }

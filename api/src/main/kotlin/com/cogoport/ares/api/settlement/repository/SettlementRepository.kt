@@ -454,7 +454,7 @@ ORDER BY
                     s.led_amount,
                     tpa.request_params AS request,
                     CASE
-                        WHEN tpa.response ILIKE '%<?xml version="1.0" encoding="utf-8"?>%' THEN 'unknown error, probably this doc was already settled on Sage'
+                        WHEN tpa.response ILIKE '%<?xml version="1.0" encoding="utf-8"?>%' THEN 'Unknown error. Possible reason: This document might have already been settled on Sage'
                         ELSE tpa.response
                     END AS response,
                     tpa.created_at,
