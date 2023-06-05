@@ -35,7 +35,4 @@ interface RailsClient {
     suspend fun sendInvoicePaymentKnockOff(@Body request: com.cogoport.plutus.model.invoice.CreditPaymentRequest): String
     @Get("/get_partner{?request*}")
     suspend fun getPartnerDetails(@QueryValue request: GetPartnerRequest): Any?
-
-    @Post("/send_communication_for_finance")
-    suspend fun sendCommunication(@Body request: CreateCommunicationRequest): Boolean
 }

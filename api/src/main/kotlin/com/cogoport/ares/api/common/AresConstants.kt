@@ -146,10 +146,7 @@ object AresConstants {
         "keshav.singh@cogoport.com"
     )
 
-    const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "failed_settlements_matching_on_sage_email"
+    const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "Failed Settlements Matching on Sage"
     const val NO_REPLY = "no-reply@cogoport.com"
-
-    const val RECIPIENT_NAME_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "Sachin Yadav"
-
     const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
 }

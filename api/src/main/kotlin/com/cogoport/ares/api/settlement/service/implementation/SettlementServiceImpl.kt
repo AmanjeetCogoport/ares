@@ -191,6 +191,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject lateinit var railsClient: RailsClient
 
+    @Inject
+    lateinit var authClient: AuthClient
+
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     @Inject
@@ -2839,18 +2842,15 @@ open class SettlementServiceImpl : SettlementService {
         emailVariables["sheet_url"] = url
 
         val request = CreateCommunicationRequest(
-            emailTemplateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
-            notificationTemplateName = null,
+            templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
             performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
             performedByUserName = "Ares",
-            performedByUserType = "micro-service",
             recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
             senderEmail = AresConstants.NO_REPLY,
             ccEmails = AresConstants.CC_MAIL_FOR_SETTLEMENTS_MATCHING_FAILED_ON_SAGE,
-            emailVariables = emailVariables,
-            notificationVariables = null
+            emailVariables = emailVariables
         )
 
-        railsClient.sendCommunication(request)
+        authClient.sendCommunication(request)
     }
 }
