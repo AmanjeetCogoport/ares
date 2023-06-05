@@ -1356,7 +1356,7 @@ open class OnAccountServiceImpl : OnAccountService {
                         "PAYMENT",
                         "500",
                         """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganization.sageOrganizationId}""",
-                        "sage serial organization id different on Sage and Cogoport Platform)",
+                        "sage serial organization id different on Sage and Cogoport Platform",
                         false
                     )
                 )
