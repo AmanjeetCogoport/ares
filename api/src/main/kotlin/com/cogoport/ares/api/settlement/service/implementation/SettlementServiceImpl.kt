@@ -48,6 +48,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditSer
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -189,6 +190,9 @@ open class SettlementServiceImpl : SettlementService {
     private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
 
     @Inject lateinit var railsClient: RailsClient
+
+    @Inject
+    lateinit var authClient: AuthClient
 
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
@@ -2850,5 +2854,22 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return savedPayment.paymentNum!!
+    }
+
+    override suspend fun sendEmailSettlementsMatchingFailed(url: String) {
+        val emailVariables = HashMap<String?, String?>()
+        emailVariables["sheet_url"] = url
+
+        val request = CreateCommunicationRequest(
+            templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
+            performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+            performedByUserName = "Ares",
+            recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
+            senderEmail = AresConstants.NO_REPLY,
+            ccEmails = AresConstants.CC_MAIL_FOR_SETTLEMENTS_MATCHING_FAILED_ON_SAGE,
+            emailVariables = emailVariables
+        )
+
+        authClient.sendCommunication(request)
     }
 }
