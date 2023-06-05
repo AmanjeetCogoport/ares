@@ -6,20 +6,24 @@ import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
-import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
+import com.cogoport.brahma.s3.client.S3Client
+import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import java.sql.Timestamp
 import java.time.LocalDate.now
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
@@ -32,12 +36,14 @@ class Scheduler(
     private var settlementRepository: SettlementRepository,
     private var settlementService: SettlementService,
     private var paymentRepository: PaymentRepository,
-    private var onAccountService: OnAccountService,
     private var outStandingService: OutStandingService,
     private var unifiedDBRepo: UnifiedDBRepo,
     private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl,
-    private var aresMessagePublisher: AresMessagePublisher
+    private var aresMessagePublisher: AresMessagePublisher,
+    private var s3Client: S3Client
 ) {
+    @Value("\${aws.s3.bucket}")
+    private lateinit var s3Bucket: String
 
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
@@ -140,6 +146,24 @@ class Scheduler(
         val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
         if (!settlementsIds.isNullOrEmpty()) {
             settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
+        }
+    }
+
+    @Scheduled(cron = "30 19 * * *")
+    fun settlementMatchingFailedOnSageEmail() {
+        val today = now()
+        logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
+        val settlementsNotPosted = runBlocking {
+            settlementRepository.getAllSettlementsMatchingFailedOnSage()
+        }
+        if (settlementsNotPosted.isNullOrEmpty()) return
+        val excelName = "Failed_Settlements_Matching_On_Sage" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+        val file = runBlocking {
+            ExcelUtils.writeIntoExcel(settlementsNotPosted as List<Any>, excelName, "Failed Settlements Matching On Sage")
+        }
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file)
+        runBlocking {
+            settlementService.sendEmailSettlementsMatchingFailed(url.toString())
         }
     }
 }

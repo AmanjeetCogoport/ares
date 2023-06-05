@@ -64,4 +64,6 @@ interface SettlementService {
     suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean
 
     suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID)
+
+    suspend fun sendEmailSettlementsMatchingFailed(url: String)
 }
