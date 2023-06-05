@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
+import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -438,6 +439,61 @@ ORDER BY
             """
     )
     suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            WITH z AS (
+                SELECT
+                    s.id,
+                    aaus.document_value AS source_doc_value,
+                    aaud.document_value AS destination_doc_value,
+                    s.currency,
+                    s.amount,
+                    s.led_currency,
+                    s.led_amount,
+                    tpa.request_params AS request,
+                    CASE
+                        WHEN tpa.response ILIKE '%<?xml version="1.0" encoding="utf-8"?>%' THEN 'Unknown error. Possible reason: This document might have already been settled on Sage'
+                        ELSE tpa.response
+                    END AS response,
+                    tpa.created_at,
+                    CASE WHEN s.source_type IN ('REC', 'CTDS') THEN p.sage_ref_number ELSE aaus.document_value END AS source_sage_ref_number,
+                    aaud.document_value AS destination_sage_ref_number,
+                    ROW_NUMBER() OVER (PARTITION BY tpa.object_id ORDER BY tpa.created_at DESC) AS rn
+                FROM
+                    settlements s
+                    JOIN third_party_api_audits tpa ON s.id = tpa.object_id
+                    JOIN account_utilizations aaus ON s.source_id = aaus.document_no AND s.source_type::VARCHAR = aaus.acc_type::VARCHAR
+                    JOIN account_utilizations aaud ON s.destination_id = aaud.document_no AND s.destination_type::VARCHAR = aaud.acc_type::VARCHAR
+                    LEFT JOIN payments p ON aaus.document_value = p.payment_num_value AND CASE WHEN COALESCE(s.source_type IN ('REC','CTDS')) THEN TRUE ELSE FALSE END
+                WHERE
+                    s.settlement_status = 'POSTING_FAILED'
+                    AND s.created_at > '2023-05-15'
+                    AND s.source_type NOT IN ('SECH', 'PAY', 'PCN')
+                    AND s.destination_type NOT IN ('PINV', 'PCN')
+                    AND s.led_currency != 'VND'
+                    AND s.amount > 0
+            )
+            SELECT
+                source_doc_value,
+                destination_doc_value,
+                source_sage_ref_number,
+                destination_sage_ref_number,
+                currency,
+                amount,
+                led_currency,
+                led_amount,
+                request,
+                response
+            FROM
+                z
+            WHERE
+                rn = 1
+            ORDER BY z.created_at DESC
+        """
+    )
+    suspend fun getAllSettlementsMatchingFailedOnSage(): List<SettlementMatchingFailedOnSageExcelResponse>?
 
     @NewSpan
     @Query(
