@@ -211,4 +211,9 @@ class AresMessageConsumer {
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
         settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
     }
+
+    @Queue("ares-partial-payment-mismatch", prefetch = 1)
+    fun partialPaymentMismatchDocument(documentNo: String) = runBlocking {
+        paymentMigration.partialPaymentMismatchDocument(documentNo.toLong())
+    }
 }

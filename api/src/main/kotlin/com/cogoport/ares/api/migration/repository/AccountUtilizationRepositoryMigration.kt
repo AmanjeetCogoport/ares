@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.repository
 
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
 import com.cogoport.ares.api.migration.model.PayLocUpdateResponse
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -99,6 +100,7 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     )
     fun checkIfNewRecordIsPresent(documentValue: String, sageOrganizationId: String): Boolean
 
+    @NewSpan
     @Query(
         """
             update account_utilizations 
@@ -114,4 +116,49 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         payCurr: BigDecimal,
         payLoc: BigDecimal
     )
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE settlements 
+            SET amount = amount + :amount, led_amount = led_amount + :ledAmount 
+            WHERE source_id = :sourceId AND destination_id = :destinationId AND deleted_at is null AND source_type in ('PAY', 'PCN')
+        """
+    )
+    fun updateSettlementAmount(
+        destinationId: Long,
+        sourceId: Long,
+        amount: BigDecimal,
+        ledAmount: BigDecimal
+    )
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE account_utilizations SET  pay_curr = pay_curr + :payCurr, pay_loc = pay_loc + :payLoc
+            WHERE id = :id
+        """
+    )
+    fun updateAccountUtilizationsAmount(
+        id: Long,
+        payCurr: BigDecimal,
+        payLoc: BigDecimal
+    )
+    @NewSpan
+    @Query(
+        """ 
+            SELECT 
+                *
+            FROM 
+                account_utilizations 
+            WHERE 
+                document_no = :documentNo
+            AND document_status != 'DELETED'::document_status
+            AND (:accType is null OR acc_type = :accType::account_type) 
+            AND (:accMode is null OR acc_mode = :accMode::account_mode) 
+            AND deleted_at is null AND migrated = false
+            AND is_void = false
+        """
+    )
+    suspend fun findNonMigratedRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 }
