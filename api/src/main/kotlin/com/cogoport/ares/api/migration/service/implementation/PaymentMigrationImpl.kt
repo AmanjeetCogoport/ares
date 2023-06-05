@@ -1054,7 +1054,7 @@ class PaymentMigrationImpl : PaymentMigration {
     }
     override suspend fun partialPaymentMismatchDocument(documentNo: Long) {
         try {
-            val accountUtilization = accountUtilizationRepository.findRecord(documentNo, accMode = AccMode.AP.name, accType = null)
+            val accountUtilization = accountUtilizationRepositoryMigration.findNonMigratedRecord(documentNo, accMode = AccMode.AP.name, accType = null)
             if (accountUtilization?.accType !in listOf(AccountType.PINV, AccountType.PREIMB)) {
                 return
             }
@@ -1068,14 +1068,15 @@ class PaymentMigrationImpl : PaymentMigration {
             val paymentDetails = paymentMigrationRepository.paymentDetailsByPaymentNum(settlementDetails.map { it?.sourceId!! }).filter { it.documentNo != null }
             var totalUnutilizedAmount = paymentDetails.sumOf { it.unutilisedAmount }
             paymentDetails.forEach { payment ->
-                if (payment.unutilisedAmount > BigDecimal.ZERO && leftAmount <= totalUnutilizedAmount) {
-                    val amount = payment.unutilisedAmount.min(leftAmount)
-                    accountUtilizationRepositoryMigration.updateSettlementAmount(documentNo, payment.paymentNum, amount, (amount * ledgerExchangeRate)) // TODO update amount
-                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(payment.id, amount, amount * ledgerExchangeRate) // TODO update payment amount pay_Curr and payLedger
-                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(accountUtilization.id!!, amount, amount * ledgerExchangeRate) // TODO update amount document pay_curr and payLedger
+                var amount = BigDecimal.ZERO
+                if (payment.unutilisedAmount > BigDecimal.ZERO && leftAmount <= totalUnutilizedAmount && (accountUtilization.amountCurr > accountUtilization.payCurr) && leftAmount > BigDecimal.ZERO) {
+                    amount = payment.unutilisedAmount.min(leftAmount)
+                    accountUtilizationRepositoryMigration.updateSettlementAmount(documentNo, payment.paymentNum, amount, (amount * ledgerExchangeRate))
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(payment.id, amount, amount * ledgerExchangeRate)
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(accountUtilization.id!!, amount, amount * ledgerExchangeRate)
                 }
-                leftAmount -= payment.unutilisedAmount
-                totalUnutilizedAmount -= payment.unutilisedAmount
+                leftAmount -= amount
+                totalUnutilizedAmount -= amount
             }
         } catch (e: Exception) {
             Sentry.captureException(e)

@@ -142,7 +142,8 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
             from payments p
             LEFT JOIN account_utilizations au on au.document_no = p.payment_num and au.acc_mode = 'AP'
             Left JOIN payment_invoice_mapping pvm on pvm.payment_id = p.id
-            where p.payment_num in (:paymentNum) and pvm.mapping_type = 'BILL' and pvm.account_mode = 'AP'
+            where p.payment_num in (:paymentNum) and pvm.mapping_type = 'BILL' and pvm.account_mode = 'AP' and p.deleted_at is null
+            and pvm.deleted_at is null
             order by p.created_at desc
         """
     )

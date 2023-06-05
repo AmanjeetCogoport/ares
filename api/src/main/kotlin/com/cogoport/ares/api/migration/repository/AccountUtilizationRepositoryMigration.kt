@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.repository
 
 import com.cogoport.ares.api.migration.entity.AccountUtilizationMigration
 import com.cogoport.ares.api.migration.model.PayLocUpdateResponse
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -120,8 +121,8 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
     @Query(
         """
             update settlements 
-            set amount = amount + :amount, led_amount = led_amount + :ledAmount
-            where source_id = :sourceId and destination_id = :destinationId and deleted_at is null
+            set amount = amount + :amount, led_amount = led_amount + :ledAmount 
+            where source_id = :sourceId and destination_id = :destinationId and deleted_at is null and source_type in ('PAY', 'PCN')
         """
     )
     fun updateSettlementAmount(
@@ -143,4 +144,21 @@ interface AccountUtilizationRepositoryMigration : CoroutineCrudRepository<Accoun
         payCurr: BigDecimal,
         payLoc: BigDecimal
     )
+    @NewSpan
+    @Query(
+        """ 
+            select 
+                *
+            from 
+                account_utilizations 
+            where 
+                document_no = :documentNo
+            and document_status != 'DELETED'::document_status
+            and (:accType is null or acc_type = :accType::account_type) 
+            and (:accMode is null or acc_mode = :accMode::account_mode) 
+            and deleted_at is null and migrated = false
+            and is_void = false
+        """
+    )
+    suspend fun findNonMigratedRecord(documentNo: Long, accType: String? = null, accMode: String? = null): AccountUtilization?
 }
