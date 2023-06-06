@@ -3,7 +3,9 @@ package com.cogoport.ares.api.common.service.implementation
 import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -14,6 +16,7 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
@@ -40,10 +43,14 @@ class Scheduler(
     private var unifiedDBRepo: UnifiedDBRepo,
     private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl,
     private var aresMessagePublisher: AresMessagePublisher,
+    private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
+
+    @Value("\${micronaut.server.base-url}")
+    private lateinit var baseUrl: String
 
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
@@ -149,8 +156,8 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "30 19 * * *")
-    fun settlementMatchingFailedOnSageEmail() {
+    @Scheduled(cron = "30 18 * * *")
+    suspend fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
         val settlementsNotPosted = runBlocking {
@@ -162,8 +169,16 @@ class Scheduler(
             ExcelUtils.writeIntoExcel(settlementsNotPosted as List<Any>, excelName, "Failed Settlements Matching On Sage")
         }
         val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file)
+        val aresDocument = AresDocument(
+            documentUrl = url.toString(),
+            documentName = "failed_settlement_matching",
+            documentType = "xlsx",
+            uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID)
+        )
+        val saveUrl = aresDocumentRepository.save(aresDocument)
+        val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
         runBlocking {
-            settlementService.sendEmailSettlementsMatchingFailed(url.toString())
+            settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
         }
     }
 }
