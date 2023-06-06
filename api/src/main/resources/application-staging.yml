@@ -1,6 +1,7 @@
 application:
   name: ares
 server:
+  base-url: https://api.stage.cogoport.io
   port: 8086
   context-path: /payments
 router:
