@@ -3,6 +3,7 @@ micronaut:
   application:
     name: ares
   server:
+    base-url: http://127.0.0.1:8086
     port: 8086
     context-path: /payments
     cors:
