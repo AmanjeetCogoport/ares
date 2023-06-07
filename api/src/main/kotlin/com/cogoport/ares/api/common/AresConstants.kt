@@ -89,7 +89,8 @@ object AresConstants {
         "get_payments_service_discovery_reachability",
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
-        "get_payments_service_discovery_kuber_reachability"
+        "get_payments_service_discovery_kuber_reachability",
+        "get_payments_download"
     )
 
     val ENTITY_ID = mapOf(
