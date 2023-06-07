@@ -123,6 +123,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.UUID
+import java.util.Date
 import javax.transaction.Transactional
 import kotlin.math.ceil
 import com.cogoport.brahma.sage.Client as SageClient
@@ -271,6 +272,10 @@ open class OnAccountServiceImpl : OnAccountService {
         val dateFormat = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT)
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
+
+        if (receivableRequest.transactionDate!! > Date()) {
+            throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
+        }
 
         setPaymentAmounts(receivableRequest)
         val paymentId = createNonSuspensePaymentEntry(receivableRequest)
@@ -438,6 +443,10 @@ open class OnAccountServiceImpl : OnAccountService {
      */
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
+
+        if (receivableRequest.transactionDate!! > Date()) {
+            throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
+        }
 
 //        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
 
