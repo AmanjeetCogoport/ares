@@ -89,7 +89,8 @@ object AresConstants {
         "get_payments_service_discovery_reachability",
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
-        "get_payments_service_discovery_kuber_reachability"
+        "get_payments_service_discovery_kuber_reachability",
+        "get_payments_download"
     )
 
     val ENTITY_ID = mapOf(
@@ -142,13 +143,11 @@ object AresConstants {
     )
 
     val CC_MAIL_FOR_SETTLEMENTS_MATCHING_FAILED_ON_SAGE = listOf(
-        "preeti.pandey@cogoport.com",
-        "rajnish.bahl@cogoport.com",
-        "pankaj.pal@cogoport.com",
+        "bhanugoban@cogoport.com",
         "abhishek.kumar@cogoport.com"
     )
 
     const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "Failed Settlements Matching on Sage"
     const val NO_REPLY = "no-reply@cogoport.com"
-    const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "keshav.singh@cogoport.com"
 }
