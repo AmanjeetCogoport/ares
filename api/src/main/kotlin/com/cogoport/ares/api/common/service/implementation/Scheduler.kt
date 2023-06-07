@@ -49,7 +49,7 @@ class Scheduler(
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
-    @Value("\${micronaut.server.base-url}")
+    @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     @Scheduled(cron = "0 0 * * *")
@@ -156,7 +156,7 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "30 18 * * *")
+    @Scheduled(cron = "30 19 * * *")
     suspend fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
