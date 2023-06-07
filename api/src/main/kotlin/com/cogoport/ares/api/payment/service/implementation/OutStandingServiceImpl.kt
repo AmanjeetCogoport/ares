@@ -460,8 +460,8 @@ class OutStandingServiceImpl : OutStandingService {
             if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
                 updateCustomerDetails(request.organizationId!!, flag = true, searchResponse?.hits()?.hits()?.map { it.source() }?.get(0))
             } else {
-                val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV, AccountType.SREIMB), request.organizationId)
-                val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN, AccountType.SREIMBCN), request.organizationId)
+                val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV.name, AccountType.SREIMB.name), request.organizationId)
+                val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN.name, AccountType.SREIMBCN.name), request.organizationId)
                 val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, request.organizationId)
                 if (queryResponse.isNullOrEmpty()) {
                     return@forEach
@@ -700,8 +700,8 @@ class OutStandingServiceImpl : OutStandingService {
                     }
 
                     if (customerOutstanding != null) {
-                        val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV, AccountType.SREIMB), id)
-                        val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN, AccountType.SREIMBCN), id)
+                        val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV.name, AccountType.SREIMB.name), id)
+                        val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN.name, AccountType.SREIMBCN.name), id)
                         val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, id)
                         if (queryResponse.isNullOrEmpty()) {
                             return@forEach
