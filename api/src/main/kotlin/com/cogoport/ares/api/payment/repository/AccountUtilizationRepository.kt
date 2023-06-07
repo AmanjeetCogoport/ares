@@ -1080,19 +1080,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             select organization_id::varchar, currency,
-            sum(case when acc_type = 'SINV' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
-            sum(case when acc_type = 'SCN' and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as credit_note_amount,
-            sum(case when acc_type = 'SCN' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as credit_note_led_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_curr - pay_curr else 0 end) as payments_amount,
-            sum(case when acc_type = 'REC' and document_status = 'FINAL' then amount_loc - pay_loc else 0 end) as payments_led_amount,
-            sum(case when acc_type = 'SINV' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end)as outstanding_amount,
-            sum(case when acc_type =  'SINV' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'REC' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type = 'SCN' and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            sum(case when acc_type in ('SINV', 'SREIMB') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type in ('SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
+            sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as credit_note_amount,
+            sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as credit_note_led_amount,
+            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
+            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as payments_amount,
+            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as payments_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as outstanding_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
             from account_utilizations
-            where acc_type in ('SINV','SCN','REC') and acc_mode = 'AR' and document_status = 'FINAL' 
+            where acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and acc_mode = 'AR' and document_status = 'FINAL'  
             and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
             group by organization_id, currency
         """
