@@ -53,6 +53,7 @@ updated_at 			TIMESTAMP 				DEFAULT CURRENT_TIMESTAMP
 CREATE TABLE dunning_master_exceptions (
 id  					BIGSERIAL 			NOT NULL PRIMARY KEY,
 trade_party_detail_id 	UUID 				NOT NULL UNIQUE,
+trade_party_name        VARCHAR(100)        NOT NULL,
 organization_id 		UUID,
 registration_number 	VARCHAR(20) 		NOT NULL UNIQUE,
 org_segment 			ORG_SEGMENTATIONS,
