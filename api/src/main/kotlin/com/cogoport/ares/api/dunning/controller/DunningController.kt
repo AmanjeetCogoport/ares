@@ -1,12 +1,11 @@
 package com.cogoport.ares.api.dunning.controller
 
+import com.cogoport.ares.api.dunning.model.request.ListMasterExceptionReq
+import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
-import com.cogoport.ares.model.payment.request.AccUtilizationRequest
-import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
-import io.micronaut.http.annotation.Body
+import com.cogoport.ares.model.common.ResponseList
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
-import jakarta.inject.Inject
 import javax.validation.Valid
 
 @Controller("/dunning")
@@ -14,8 +13,8 @@ class DunningController (
     private val dunningService: DunningService
         ){
 
-    @Get("/master-list{?request*}")
-    suspend fun listMasterException(@Valid  request: ): List<CreateInvoiceResponse> {
+    @Get("/master-exceptions{?request*}")
+    suspend fun listMasterException(@Valid  request: ListMasterExceptionReq): ResponseList<MasterExceptionResp> {
         return dunningService.listMasterException(request)
     }
 }
