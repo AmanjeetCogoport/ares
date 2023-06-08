@@ -6,7 +6,9 @@ import java.math.BigDecimal
 
 @MappedEntity
 data class MasterExceptionResp(
+    val id: String,
     val name: String,
+    val isActive: Boolean,
     val registrationNumber: String,
     val segmentation: OrgSegmentation?,
     val creditDays: Long?,
