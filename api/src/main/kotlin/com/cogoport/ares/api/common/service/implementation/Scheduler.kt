@@ -156,8 +156,8 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "30 19 * * *")
-    suspend fun settlementMatchingFailedOnSageEmail() {
+    @Scheduled(cron = "30 07 * * *")
+    fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
         val settlementsNotPosted = runBlocking {
@@ -175,7 +175,9 @@ class Scheduler(
             documentType = "xlsx",
             uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID)
         )
-        val saveUrl = aresDocumentRepository.save(aresDocument)
+        val saveUrl = runBlocking {
+            aresDocumentRepository.save(aresDocument)
+        }
         val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
         runBlocking {
             settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
