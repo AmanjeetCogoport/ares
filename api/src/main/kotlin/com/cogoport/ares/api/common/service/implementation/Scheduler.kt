@@ -156,7 +156,7 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "30 07 * * *")
+    @Scheduled(cron = "30 19 * * *")
     fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
