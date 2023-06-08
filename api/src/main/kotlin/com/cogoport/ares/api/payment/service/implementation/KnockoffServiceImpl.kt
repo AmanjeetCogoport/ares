@@ -103,7 +103,19 @@ open class KnockoffServiceImpl : KnockoffService {
         val savedPaymentRecord = savePayment(
             paymentEntity, isTDSEntry = false, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
         )
-
+        val previousSettlements = if (accountUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB)) {
+            settlementRepository.getPaymentsCorrespondingDocumentNos(destinationId = knockOffRecord.documentNo, sourceId = null)
+        } else {
+            mutableListOf()
+        }
+        val tdsAmountPaid = previousSettlements.filter { it?.sourceType == SettlementType.VTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
+        if (tdsAmountPaid != BigDecimal.ZERO) {
+            val ledgerTotal = (accountUtilization.amountLoc.setScale(6, RoundingMode.UP))
+            val grandTotal = (accountUtilization.amountCurr.setScale(6, RoundingMode.UP))
+            val ledgerExchangeRate = (ledgerTotal.divide(grandTotal, 6))
+            accountUtilization.payCurr -= tdsAmountPaid
+            accountUtilization.payLoc -= (tdsAmountPaid * ledgerExchangeRate)
+        }
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
         val currTotalAmtPaid = knockOffRecord.currencyAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount
@@ -165,7 +177,6 @@ open class KnockoffServiceImpl : KnockoffService {
     }
 
     private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
-
         if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid)
             return true
         return false
@@ -428,8 +439,8 @@ open class KnockoffServiceImpl : KnockoffService {
         kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
                 documentNo = reverseUtrRequest.documentNo,
-                paidAmount = amountPaid,
-                paidTds = tdsPaid,
+                paidAmount = accountUtilizationPaymentData.payCurr,
+                paidTds = BigDecimal.ZERO,
                 paymentStatus = paymentStatus,
                 paymentUploadAuditId = reverseUtrRequest.paymentUploadAuditId,
                 updatedBy = reverseUtrRequest.updatedBy,

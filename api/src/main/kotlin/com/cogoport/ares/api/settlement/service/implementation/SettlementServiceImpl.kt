@@ -48,6 +48,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditSer
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -189,6 +190,9 @@ open class SettlementServiceImpl : SettlementService {
     private lateinit var invoicePaymentMappingRepo: InvoicePayMappingRepository
 
     @Inject lateinit var railsClient: RailsClient
+
+    @Inject
+    lateinit var authClient: AuthClient
 
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
@@ -1565,7 +1569,8 @@ open class SettlementServiceImpl : SettlementService {
                         signFlag = 1,
                         createdBy = request.createdBy,
                         createdByUserType = request.createdByUserType,
-                        supportingDocUrl = request.supportingDocUrl
+                        supportingDocUrl = request.supportingDocUrl,
+                        exchangeRate = payment.exchangeRate
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1698,6 +1703,8 @@ open class SettlementServiceImpl : SettlementService {
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
         var invoiceTds = invoice.tds!! - invoice.settledTds
+        /** Tds Amount in Invoice ledger currency */
+        val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
         val paymentTds = getExchangeValue(invoiceTds, exchangeRate, true)
         /** Payment Tds ledger Amount */
@@ -1732,20 +1739,21 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         // Create TDS Entry
-        if (paymentTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
+        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB) && (invoice.ledCurrency != AresConstants.VND)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
                 destType = invoice.accountType,
-                currency = payment.currency,
-                ledCurrency = payment.ledCurrency,
-                tdsAmount = paymentTds,
-                tdsLedAmount = paymentTdsLed,
+                currency = invoice.currency,
+                ledCurrency = invoice.ledCurrency,
+                tdsAmount = invoiceTds,
+                tdsLedAmount = invoiceTdsLed,
                 settlementDate = request.settlementDate,
                 signFlag = -1,
                 createdBy = request.createdBy,
                 createdByUserType = request.createdByUserType,
-                supportingDocUrl = request.supportingDocUrl
+                supportingDocUrl = request.supportingDocUrl,
+                exchangeRate = invoice.exchangeRate
             )
             invoice.settledTds += invoiceTds
         }
@@ -1839,7 +1847,8 @@ open class SettlementServiceImpl : SettlementService {
         settlementDate: Timestamp,
         createdBy: UUID?,
         createdByUserType: String?,
-        supportingDocUrl: String?
+        supportingDocUrl: String?,
+        exchangeRate: BigDecimal?
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
         val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
@@ -1858,7 +1867,8 @@ open class SettlementServiceImpl : SettlementService {
             createdBy,
             createdByUserType,
             tdsType,
-            invoiceAndBillData
+            invoiceAndBillData,
+            exchangeRate
         )
 
         createSettlement(
@@ -2585,8 +2595,19 @@ open class SettlementServiceImpl : SettlementService {
             } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
             val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
+            val nullDoc: MutableList<String> = mutableListOf<String>()
+
+            if (destinationPresentOnSage == null) {
+                nullDoc.add(destinationDocument.documentValue!!)
+            }
+
+            if (sourcePresentOnSage == null) {
+                nullDoc.add(sourceDocument.documentValue!!)
+            }
+
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
-                throw AresException(AresError.ERR_1531, "")
+                recordAudits(settlementId, """$nullDoc""", "Documents must be posted on Sage", false)
+                return false
             }
 
             val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
@@ -2695,7 +2716,8 @@ open class SettlementServiceImpl : SettlementService {
         createdBy: UUID?,
         createdByUserType: String?,
         tdsType: SettlementType?,
-        invoiceAndBillData: AccountUtilization?
+        invoiceAndBillData: AccountUtilization?,
+        exchangeRate: BigDecimal?
     ): Long? {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
@@ -2745,7 +2767,8 @@ open class SettlementServiceImpl : SettlementService {
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
             docType = DocType.TDS,
-            transactionDate = invoiceAndBillData?.transactionDate
+            transactionDate = invoiceAndBillData?.transactionDate,
+            exchangeRate = exchangeRate
         )
 
         val payment = paymentConverter.convertToEntity(paymentsRequest)
@@ -2831,5 +2854,22 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return savedPayment.paymentNum!!
+    }
+
+    override suspend fun sendEmailSettlementsMatchingFailed(url: String) {
+        val emailVariables = HashMap<String?, String?>()
+        emailVariables["sheet_url"] = url
+
+        val request = CreateCommunicationRequest(
+            templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
+            performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+            performedByUserName = "Ares",
+            recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
+            senderEmail = AresConstants.NO_REPLY,
+            ccEmails = AresConstants.CC_MAIL_FOR_SETTLEMENTS_MATCHING_FAILED_ON_SAGE,
+            emailVariables = emailVariables
+        )
+
+        authClient.sendCommunication(request)
     }
 }

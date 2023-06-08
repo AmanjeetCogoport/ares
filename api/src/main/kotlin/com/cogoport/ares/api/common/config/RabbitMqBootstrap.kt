@@ -102,5 +102,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("ares-bulk-post-settlement-to-sage", true, false, false, null)
         channel?.queueBind("ares-bulk-post-settlement-to-sage", "ares", "ares.bulk.post.settlement.to.sage", null)
+
+        channel?.queueDeclare("ares-partial-payment-mismatch", true, false, false, null)
+        channel?.queueBind("ares-partial-payment-mismatch", "ares", "ares.partial.payment.mismatch", null)
     }
 }
