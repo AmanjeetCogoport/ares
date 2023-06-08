@@ -483,8 +483,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             SELECT
                 COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
                 SUM(COALESCE(open_invoice_amount,0)) open_invoice_amount,
-                (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount
+                (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount,
                 -- ,array_agg(distinct so.registration_number) registration_numbers
+                so.cogo_entity as entity_code
                 from snapshot_organization_outstandings so
                 LEFT JOIN (
                   with a as(
@@ -513,12 +514,13 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                 so.registration_number IS NOT NULL
                 AND TRIM(so.registration_number) != ''
                 AND is_precovid = 'NO'
-                GROUP BY kam_owners
+                AND ( so.cogo_entity = :entityCode::varchar)
+                GROUP BY kam_owners, so.cogo_entity
                 order by total_outstanding_amount desc
                 limit 10
         """
     )
-    fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
+    fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>?
 
     @NewSpan
     @Query(

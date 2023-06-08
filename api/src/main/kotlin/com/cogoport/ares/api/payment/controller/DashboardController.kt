@@ -198,9 +198,11 @@ class DashboardController {
         return dashboardService.getOutstanding(updatedEntityCode)
     }
 
+    @Auth
     @Get("/kam-wise-outstanding")
-    suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
-        return dashboardService.getKamWiseOutstanding()
+    suspend fun getKamWiseOutstanding(user: AuthResponse?): List<KamWiseOutstanding>? {
+        val entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: 301
+        return dashboardService.getKamWiseOutstanding(entityCode)
     }
 
     @Auth

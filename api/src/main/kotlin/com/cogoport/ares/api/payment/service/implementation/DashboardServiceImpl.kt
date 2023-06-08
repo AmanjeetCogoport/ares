@@ -819,8 +819,8 @@ class DashboardServiceImpl : DashboardService {
         return hashMap
     }
 
-    override suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>? {
-        return unifiedDBRepo.getKamWiseOutstanding()
+    override suspend fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>? {
+        return unifiedDBRepo.getKamWiseOutstanding(entityCode)
     }
 
     private fun generateMonthKeyIndex(month: Int): String {
