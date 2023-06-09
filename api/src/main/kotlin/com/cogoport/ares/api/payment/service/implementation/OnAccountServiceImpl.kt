@@ -444,10 +444,8 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
-        if (receivableRequest.transactionDate != null) {
-            if (receivableRequest.transactionDate!! > Date()) {
-                throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
-            }
+        if (receivableRequest.transactionDate != null && receivableRequest.transactionDate!! > Date()) {
+            throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
         }
 
 //        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
