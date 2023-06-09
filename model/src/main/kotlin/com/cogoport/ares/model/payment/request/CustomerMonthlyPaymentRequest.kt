@@ -5,7 +5,7 @@ import io.micronaut.data.annotation.MappedEntity
 
 @Introspected
 @MappedEntity
-data class CustomerMonthlyOutstandingRequest(
-        var orgId: String,
-        var year: String
+data class CustomerMonthlyPaymentRequest(
+    var orgId: String,
+    var year: String
 )

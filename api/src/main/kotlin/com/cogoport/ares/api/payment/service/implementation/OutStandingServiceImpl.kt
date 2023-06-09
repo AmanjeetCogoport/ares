@@ -7,7 +7,6 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
-import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -30,7 +29,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
-import com.cogoport.ares.model.payment.request.CustomerMonthlyOutstandingRequest
+import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
@@ -38,6 +37,7 @@ import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
@@ -954,42 +954,31 @@ class OutStandingServiceImpl : OutStandingService {
         return accountPayablesRes
     }
 
-    override suspend fun getCustomerMonthlyAverageOutstanding(request: CustomerMonthlyOutstandingRequest): LogisticsMonthlyData {
-        var response = LogisticsMonthlyData(
-                january = BigDecimal.ZERO, february = BigDecimal.ZERO, march = BigDecimal.ZERO, april = BigDecimal.ZERO, may = BigDecimal.ZERO,
-                june = BigDecimal.ZERO, july = BigDecimal.ZERO, august = BigDecimal.ZERO, september = BigDecimal.ZERO, october = BigDecimal.ZERO,
-                november = BigDecimal.ZERO, december = BigDecimal.ZERO
+    override suspend fun getCustomerMonthlyPayment(request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
+        var response = CustomerMonthlyPayment(
+            january = BigDecimal.ZERO, february = BigDecimal.ZERO, march = BigDecimal.ZERO, april = BigDecimal.ZERO, may = BigDecimal.ZERO,
+            june = BigDecimal.ZERO, july = BigDecimal.ZERO, august = BigDecimal.ZERO, september = BigDecimal.ZERO, october = BigDecimal.ZERO,
+            november = BigDecimal.ZERO, december = BigDecimal.ZERO
         )
         val isLeapYear = Year.isLeap(request.year.toLong())
-        val monthlyOutstandingData = accountUtilizationRepo.getCustomerMonthlyOutstanding(request.orgId, request.year, isLeapYear)
-        if (monthlyOutstandingData != null){
-            val totalOutstanding = monthlyOutstandingData.run {
-                var sum = BigDecimal.ZERO
-                listOfNotNull(
-                        january, february, march, april, may, june,
-                        july, august, september, october, november, december
-                ).forEach { sum += it }
-                sum
-            }
-            if (totalOutstanding != BigDecimal.ZERO) {
-                response = LogisticsMonthlyData(
-                        january = monthlyOutstandingData.january!!/totalOutstanding,
-                        february = monthlyOutstandingData.february!!/totalOutstanding,
-                        march = monthlyOutstandingData.march!!/totalOutstanding,
-                        april = monthlyOutstandingData.april!!/totalOutstanding,
-                        may = monthlyOutstandingData.may!!/totalOutstanding,
-                        june = monthlyOutstandingData.june!!/totalOutstanding,
-                        july = monthlyOutstandingData.july!!/totalOutstanding,
-                        august = monthlyOutstandingData.august!!/totalOutstanding,
-                        september = monthlyOutstandingData.september!!/totalOutstanding,
-                        october = monthlyOutstandingData.october!!/totalOutstanding,
-                        november = monthlyOutstandingData.november!!/totalOutstanding,
-                        december = monthlyOutstandingData.december!!/totalOutstanding
-                )
-            }
-
+        val monthlyPaymentData = accountUtilizationRepo.getCustomerMonthlyPayment(request.orgId, request.year, isLeapYear)
+        if (monthlyPaymentData != null) {
+            response = CustomerMonthlyPayment(
+                ledgerCurrency = monthlyPaymentData.ledgerCurrency,
+                january = monthlyPaymentData.january,
+                february = monthlyPaymentData.february,
+                march = monthlyPaymentData.march,
+                april = monthlyPaymentData.april,
+                may = monthlyPaymentData.may,
+                june = monthlyPaymentData.june,
+                july = monthlyPaymentData.july,
+                august = monthlyPaymentData.august,
+                september = monthlyPaymentData.september,
+                october = monthlyPaymentData.october,
+                november = monthlyPaymentData.november,
+                december = monthlyPaymentData.december
+            )
         }
         return response
     }
-
 }
