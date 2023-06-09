@@ -38,6 +38,7 @@ open class DunningServiceImpl : DunningService {
         return response.id!!
     }
 
+    @Transactional
     override suspend fun updateCreditController(updateCreditController: UpdateCreditControllerRequest): Long {
         val creditController = creditControllerRepo.findById(Hashids.decode(updateCreditController.id)[0])
             ?: throw AresException(AresError.ERR_1541, "")

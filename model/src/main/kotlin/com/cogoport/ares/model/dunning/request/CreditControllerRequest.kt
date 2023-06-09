@@ -10,6 +10,6 @@ data class CreditControllerRequest(
     var creditControllerId: UUID,
     var organizationId: UUID,
     var organizationSegment: OrganizationSegment,
-    var createdBy: UUID?,
+    var createdBy: UUID,
     var updatedBy: UUID?
 )
