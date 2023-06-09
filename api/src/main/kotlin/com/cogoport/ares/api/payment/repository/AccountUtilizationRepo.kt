@@ -765,46 +765,46 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             led_currency as ledger_currency,
             sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-01-01')::DATE
-			    AND CONCAT(:year, '-01-31')::DATE THEN led_amount ELSE 0 END) AS january,
+			    AND CONCAT(:year, '-01-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS january,
 	        sum(
                 CASE WHEN transaction_date BETWEEN CONCAT(:year, '-02-01')::DATE
-			    AND CONCAT(:year, CASE WHEN :isLeapYear = TRUE THEN '-02-29' ELSE '-02-28' END)::DATE THEN led_amount ELSE 0 END) AS february,
+			    AND CONCAT(:year, CASE WHEN :isLeapYear = TRUE THEN '-02-29' ELSE '-02-28' END)::DATE THEN sign_flag * amount_loc ELSE 0 END) AS february,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-03-01')::DATE
-			    AND CONCAT(:year, '-03-31')::DATE THEN led_amount ELSE 0 END) AS march,
+			    AND CONCAT(:year, '-03-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS march,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-04-01')::DATE
-			    AND CONCAT(:year, '-04-30')::DATE THEN led_amount ELSE 0 END) AS april,
+			    AND CONCAT(:year, '-04-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS april,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-05-01')::DATE
-			    AND CONCAT(:year, '-05-31')::DATE THEN led_amount ELSE 0 END) AS may,
+			    AND CONCAT(:year, '-05-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS may,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-06-01')::DATE
-			    AND CONCAT(:year, '-06-30')::DATE THEN led_amount ELSE 0 END) AS june,
+			    AND CONCAT(:year, '-06-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS june,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-07-01')::DATE
-			    AND CONCAT(:year, '-07-31')::DATE THEN led_amount ELSE 0 END) AS july,
+			    AND CONCAT(:year, '-07-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS july,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-08-01')::DATE
-			    AND CONCAT(:year, '-08-31')::DATE THEN led_amount ELSE 0 END) AS august,
+			    AND CONCAT(:year, '-08-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS august,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-09-01')::DATE
-			    AND CONCAT(:year, '-09-30')::DATE THEN led_amount ELSE 0 END) AS september,
+			    AND CONCAT(:year, '-09-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS september,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-10-01')::DATE
-			    AND CONCAT(:year, '-10-31')::DATE THEN led_amount ELSE 0 END) AS october,
+			    AND CONCAT(:year, '-10-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS october,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-11-01')::DATE
-			    AND CONCAT(:year, '-11-30')::DATE THEN led_amount ELSE 0 END) AS november,
+			    AND CONCAT(:year, '-11-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS november,
 	        sum(
 		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-12-01')::DATE
-			    AND CONCAT(:year, '-12-31')::DATE THEN led_amount ELSE 0 END) AS december
+			    AND CONCAT(:year, '-12-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS december
             FROM
-	            payments
+	            account_utilizations
             WHERE
                 acc_mode = 'AR'
                 AND organization_id = :orgId::UUID
-                AND payment_code IN ('REC', 'CTDS')
+                AND acc_type = 'REC'
                 AND deleted_at IS NULL
             group by organization_id, led_currency
         """
