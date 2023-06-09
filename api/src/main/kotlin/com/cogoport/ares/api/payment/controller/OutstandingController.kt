@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -15,6 +16,7 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.CustomerMonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
@@ -155,5 +157,10 @@ class OutstandingController {
     @Get("/account-payables-for-org{?request*}")
     suspend fun getApOfOrganization(@Valid request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
         return Response<List<AccPayablesOfOrgRes>>().ok(outStandingService.getPayableOfOrganization(request))
+    }
+
+    @Get("/customer-monthly-average-outstanding{?request*}")
+    suspend fun getCustomerMonthlyAverageOutstanding(@Valid request: CustomerMonthlyOutstandingRequest): LogisticsMonthlyData {
+        return Response<LogisticsMonthlyData>().ok(outStandingService.getCustomerMonthlyAverageOutstanding(request))
     }
 }

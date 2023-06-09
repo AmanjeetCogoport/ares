@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
@@ -9,6 +10,7 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.CustomerMonthlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
@@ -52,4 +54,6 @@ interface OutStandingService {
     suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders
 
     suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes>
+
+    suspend fun getCustomerMonthlyAverageOutstanding(request: CustomerMonthlyOutstandingRequest): LogisticsMonthlyData
 }

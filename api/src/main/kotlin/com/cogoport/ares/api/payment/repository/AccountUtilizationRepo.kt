@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.LogisticsMonthlyData
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.payment.AccMode
@@ -756,4 +757,57 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         newDocValue: String,
         newDocNo: Long
     ): Int
+
+
+    @NewSpan
+    @Query(
+            """
+            SELECT
+            sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-01-01')::DATE
+			    AND CONCAT(:year, '-01-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS january,
+	        sum(
+                CASE WHEN transaction_date BETWEEN CONCAT(:year, '-02-01')::DATE
+			    AND CONCAT(:year, CASE WHEN :isLeapYear = TRUE THEN '-02-29' ELSE '-02-28' END)::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS february,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-03-01')::DATE
+			    AND CONCAT(:year, '-03-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS march,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-04-01')::DATE
+			    AND CONCAT(:year, '-04-30')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS april,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-05-01')::DATE
+			    AND CONCAT(:year, '-05-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS may,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-06-01')::DATE
+			    AND CONCAT(:year, '-06-30')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS june,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-07-01')::DATE
+			    AND CONCAT(:year, '-07-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS july,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-08-01')::DATE
+			    AND CONCAT(:year, '-08-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS august,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-09-01')::DATE
+			    AND CONCAT(:year, '-09-30')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS september,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-10-01')::DATE
+			    AND CONCAT(:year, '-10-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS october,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-11-01')::DATE
+			    AND CONCAT(:year, '-11-30')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS november,
+	        sum(
+		        CASE WHEN invoice_date BETWEEN CONCAT(:year, '-12-01')::DATE
+			    AND CONCAT(:year, '-12-31')::DATE THEN sign_flag(amount_loc - pay_loc) ELSE 0 END) AS december
+            FROM
+	            account_utilizations
+            WHERE
+                acc_mode = 'AR'
+                AND acc_type IN ('SINV','SCN')
+                AND document_status IN ('FINAL','PROFORMA')
+                AND deleted_at IS NULL
+            GROUP BY organization_id
+        """
+    )
+    suspend fun getCustomerMonthlyOutstanding(orgId: String, year: String, isLeapYear: Boolean): LogisticsMonthlyData?
 }
