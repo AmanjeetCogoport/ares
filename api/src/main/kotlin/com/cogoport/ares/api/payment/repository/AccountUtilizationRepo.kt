@@ -805,6 +805,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 acc_mode = 'AR'
                 AND organization_id = :orgId::UUID
                 AND acc_type = 'REC'
+                AND document_status = 'FINAL'
                 AND deleted_at IS NULL
             group by organization_id, led_currency
         """
