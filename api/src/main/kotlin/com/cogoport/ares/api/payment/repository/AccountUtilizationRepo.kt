@@ -4,9 +4,11 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -756,4 +758,84 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         newDocValue: String,
         newDocNo: Long
     ): Int
+
+    @NewSpan
+    @Query(
+        """
+               SELECT
+                organization_id as tradePartyDetailId,
+                entity_code,
+                led_currency,
+                max(organization_name) as tradePartyDetailName,
+                trade_party_mapping_id,
+                tagged_organization_id,
+                (
+                    CASE WHEN ageingStartDay != ageingLastDay THEN
+                        SUM( 
+                            CASE WHEN acc_type::varchar IN (:outstandingAccountType)
+                                and(now()::date - due_date) BETWEEN :ageingStartDay AND :ageingLastDay THEN
+                                sign_flag * (amount_loc - pay_loc)
+                            ELSE
+                                0
+                            END
+                        )
+                    ELSE
+                        SUM(
+                            CASE WHEN acc_type::varchar IN (:outstandingAccountType)
+                                and(now()::date - due_date) > :ageingStartDay THEN
+                                sign_flag * (amount_loc - pay_loc)
+                            ELSE
+                                0
+                            END
+                            )
+                    END
+                ) AS outstandingAmount,
+                (
+                    CASE WHEN ageingStartDay != ageingLastDay THEN
+                        sum(
+                            CASE WHEN acc_type::varchar IN (:onAccountAccountType)
+                                and(now()::date - transaction_date) BETWEEN :ageingStartDay AND :ageingLastDay THEN
+                                sign_flag * (amount_loc - pay_loc)
+                            ELSE
+                                0
+                            END
+                            )
+                    ELSE
+                        sum(
+                            CASE WHEN acc_type in (:onAccountAccountType)
+                                and(now()::date - transaction_date) > :ageingStartDay THEN
+                                sign_flag * (amount_loc - pay_loc)
+                            ELSE
+                                0
+                            END
+                            )
+                    END
+                ) AS onAccountAmount
+                from account_utilizations
+                WHERE
+                    acc_mode = 'AR'
+                    AND transaction_date IS NOT NULL
+                    AND document_status = 'FINAL'
+                    AND organization_id IS NOT NULL
+                    AND amount_loc - pay_loc > 0
+                    AND entity_code = :entityCode
+                    AND ( :tradePartyDetailsId IS NULL OR organization_id in (:tradePartyDetailsIds) )
+                    AND acc_type in (:onAccountAccountType, :outstandingAccountType)
+                    AND deleted_at IS NULL
+                    AND service_type in (:serviceTypes)
+                GROUP BY
+                    organization_id, entity_code, led_currency, trade_party_mapping_id, tagged_organization_id
+            """
+    )
+    suspend fun listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
+        tradePartyDetailsIds: List<UUID>,
+        tradePartyDetailsId: UUID?,
+        entityCode: Int,
+        serviceTypes: List<ServiceType>?,
+        taggedOrganizationIds: List<UUID>?,
+        ageingStartDay: Int,
+        ageingLastDay: Int,
+        onAccountAccountType: List<AccountType>,
+        outstandingAccountType: List<AccountType>
+    ): List<CustomerOutstandingAndOnAccountResponse>
 }

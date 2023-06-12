@@ -13,9 +13,9 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class DunningCycleFilters(
     val cogoEntityId: UUID?,
-    var serviceType: List<ServiceType>?,
+    var serviceTypes: List<ServiceType>?,
     val creditController: List<UUID>?,
-    val ageingBucket: AgeingBucketEnum?,
+    val ageingBucket: AgeingBucketEnum,
     val totalDueOutstanding: BigDecimal?,
     val dueOutstandingCurrency: String?
 )
