@@ -804,11 +804,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             WHERE
                 acc_mode = 'AR'
                 AND organization_id = :orgId::UUID
-                AND acc_type = 'REC'
+                AND acc_type IN ('REC','BANK','MISC')
+                AND acc_code = 223000
                 AND document_status = 'FINAL'
                 AND deleted_at IS NULL
+                AND entity_code = :entityCode
             group by organization_id, led_currency
         """
     )
-    suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean): CustomerMonthlyPayment?
+    suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean, entityCode: Int): CustomerMonthlyPayment?
 }

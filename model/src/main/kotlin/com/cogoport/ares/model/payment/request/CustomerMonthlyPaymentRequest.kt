@@ -7,5 +7,6 @@ import io.micronaut.data.annotation.MappedEntity
 @MappedEntity
 data class CustomerMonthlyPaymentRequest(
     var orgId: String,
-    var year: String
+    var year: String,
+    var entityCode: Int
 )

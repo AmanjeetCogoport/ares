@@ -961,7 +961,7 @@ class OutStandingServiceImpl : OutStandingService {
             november = BigDecimal.ZERO, december = BigDecimal.ZERO
         )
         val isLeapYear = Year.isLeap(request.year.toLong())
-        val monthlyPaymentData = accountUtilizationRepo.getCustomerMonthlyPayment(request.orgId, request.year, isLeapYear)
+        val monthlyPaymentData = accountUtilizationRepo.getCustomerMonthlyPayment(request.orgId, request.year, isLeapYear, request.entityCode)
         if (monthlyPaymentData != null) {
             response = CustomerMonthlyPayment(
                 ledgerCurrency = monthlyPaymentData.ledgerCurrency,
