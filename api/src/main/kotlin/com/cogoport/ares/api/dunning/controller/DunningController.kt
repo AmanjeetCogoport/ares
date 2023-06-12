@@ -29,7 +29,7 @@ class DunningController(
         return dunningService.createDunningException(request)
     }
 
-    @Get("/cycle-exception/{?request*}")
+    @Get("/cycle-exception{?request*}")
     suspend fun getCycleWiseExceptions(@Valid request: ListExceptionReq): ResponseList<CycleWiseExceptionResp> {
         return dunningService.getCycleWiseExceptions(request)
     }

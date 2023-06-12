@@ -44,7 +44,7 @@ GROUP BY
                 CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditDays' THEN me.credit_days END DESC,
                 CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditAmount' THEN me.credit_amount END ASC,
                 CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditAmount' THEN me.credit_amount END DESC 
-            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
+            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize  
         
     """
     )
@@ -61,8 +61,8 @@ GROUP BY
 
     @Query(
         """
-              SELECT
-	count(DISTINCT me.id)
+    SELECT
+	COALESCE(count(DISTINCT me.id),0)
 FROM
 	account_utilizations au
 	JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id
@@ -72,14 +72,8 @@ WHERE
 	AND au.acc_mode = 'AR'
 	AND acc_type != 'NEWPR'
 	AND au.deleted_at IS NULL
-	AND :query IS NULL
-	OR me.trade_party_name ILIKE :query
-	OR me.registration_number ILIKE :query
-	AND :segment IS NULL
-	OR me.org_segment::VARCHAR = :segment
-GROUP BY
-	me.id
-            
+	AND (:query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query)
+	AND :segment IS NULL OR me.org_segment::VARCHAR = :segment          
         """
     )
 

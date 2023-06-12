@@ -31,7 +31,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-           SELECT au.organization_name , ce.registration_number , ce.trade_party_detail_id ,
+       SELECT (array_agg(au.organization_name))[1] as trade_party_name , ce.registration_number , ce.trade_party_detail_id ,
             SUM(CASE WHEN au.acc_type IN ('SINV','SCN') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_outstanding,
             SUM(CASE WHEN au.acc_type IN ('REC','CTDS') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_on_account
             FROM dunning_cycle_exceptions ce INNER JOIN account_utilizations au ON ce.trade_party_detail_id = au.organization_id
@@ -41,16 +41,19 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
             AND au.deleted_at IS NULL
             AND au.acc_mode = 'AR'
 	        AND au.acc_type != 'NEWPR' 
-            AND :query IS NULL OR au.organization_name ILIKE :query
-        group by au.organization_name,ce.registration_number,ce.trade_party_detail_id   
+            AND (:query IS NULL OR au.organization_name ILIKE :query)
+        GROUP BY
+        ce.registration_number,
+        ce.trade_party_detail_id
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
+        LIMIT :pageSize
         """
     )
     suspend fun listExceptionByCycleId(
         query: String?,
         cycleId: Long,
-        pageIndex: Int,
-        pageSize: Int
+        pageSize: Int,
+        pageIndex: Int
     ): List<CycleWiseExceptionResp>
 
     @Query(

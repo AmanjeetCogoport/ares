@@ -38,8 +38,12 @@ class DunningServiceImpl(
             creditDaysFrom = CREDIT_DAYS_MAPPING[request.creditDays]?.first
             creditDaysTo = CREDIT_DAYS_MAPPING[request.creditDays]?.second
         }
+        var q: String? = null
+        if (request.query != null) {
+            q = util.toQueryString(request.query)
+        }
         val responseList = masterExceptionRepo.listMasterException(
-            query,
+            q,
             request.segmentation,
             request.pageIndex,
             request.pageSize,
@@ -49,7 +53,7 @@ class DunningServiceImpl(
             request.sortType ?: "dueAmount"
         )
         val totalCount = masterExceptionRepo.listMasterExceptionTotalCount(
-            query,
+            q,
             request.segmentation,
         )
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
@@ -64,14 +68,18 @@ class DunningServiceImpl(
     override suspend fun getCycleWiseExceptions(request: ListExceptionReq): ResponseList<CycleWiseExceptionResp> {
         if (request.cycleId == null) throw AresException(AresError.ERR_1003, "cycle Id")
         var cycleId = Hashids.decode(request.cycleId!!)[0]
+        var q: String? = null
+        if (request.query != null) {
+            q = util.toQueryString(request.query)
+        }
         val listResponse = cycleExceptionRepo.listExceptionByCycleId(
-            request.query,
+            q,
             cycleId,
             request.pageSize,
             request.pageIndex
         )
         val totalCount = cycleExceptionRepo.getListExceptionByCycleIdTotalCount(
-            request.query,
+            q,
             cycleId,
         )
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
