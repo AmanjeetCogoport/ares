@@ -13,11 +13,10 @@ data class CycleExceptions(
     @field:Id @GeneratedValue var id: Long?,
     val cycleId: Long,
     val tradePartyDetailId: UUID,
-    val organizationId: UUID? = null,
     val registrationNumber: String,
     val deletedAt: Timestamp? = null,
     @DateCreated val createdAt: Timestamp? = Timestamp.from(Instant.now()),
     @DateCreated val updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     val createdBy: UUID,
     val updatedBy: UUID
-    )
+)

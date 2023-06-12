@@ -10,8 +10,8 @@ data class MasterExceptionResp(
     val name: String,
     val isActive: Boolean,
     val registrationNumber: String,
-    val segmentation: OrgSegmentation?,
+    val orgSegment: OrgSegmentation?,
     val creditDays: Long?,
     val creditAmount: BigDecimal?,
-    val totalDueAmount: BigDecimal?
+    val totalDueAmount: BigDecimal?,
 )

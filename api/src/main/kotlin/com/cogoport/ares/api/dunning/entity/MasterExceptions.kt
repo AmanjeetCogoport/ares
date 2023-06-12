@@ -10,9 +10,10 @@ import java.time.Instant
 import java.util.UUID
 
 @MappedEntity(value = "dunning_master_exceptions")
-data class MasterExceptions (
+data class MasterExceptions(
     @field:Id @GeneratedValue var id: Long?,
     val tradePartyDetailId: UUID,
+    val tradePartyName: String,
     val organizationId: UUID? = null,
     val registrationNumber: String,
     val orgSegment: OrgSegmentation? = null,
