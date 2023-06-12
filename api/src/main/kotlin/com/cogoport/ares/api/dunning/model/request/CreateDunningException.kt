@@ -12,4 +12,5 @@ data class CreateDunningException(
     @NotNull var exceptionType: DunningExceptionType,
     @NotNull var createdBy: UUID,
     var cycleId: String? = null,
+    var actionType: String?
 )

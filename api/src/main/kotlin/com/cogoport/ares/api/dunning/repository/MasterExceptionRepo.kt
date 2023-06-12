@@ -6,6 +6,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> {
@@ -88,4 +89,22 @@ WHERE
         """
     )
     suspend fun getActiveMasterExceptions(): List<MasterExceptions>?
+
+    @Query(
+        """
+             UPDATE dunning_master_exceptions
+                SET deleted_at = CASE
+                   WHEN :actionType = 'DELETE' THEN NOW()
+                   ELSE deleted_at
+               END,
+            is_active = CASE
+                   WHEN :actionType != 'DELETE' THEN NOT is_active
+                   ELSE is_active
+               END,
+            updated_at = NOW(),
+            updated_by = :updatedBy::UUID
+            WHERE id = :id
+        """
+    )
+    suspend fun deleteOrUpdateException(id: Long, updatedBy: UUID, actionType: String)
 }

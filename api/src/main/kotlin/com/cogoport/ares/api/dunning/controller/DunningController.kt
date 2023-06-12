@@ -10,7 +10,9 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
+import java.util.UUID
 import javax.validation.Valid
 
 @Validated
@@ -32,5 +34,19 @@ class DunningController(
     @Get("/cycle-exception{?request*}")
     suspend fun getCycleWiseExceptions(@Valid request: ListExceptionReq): ResponseList<CycleWiseExceptionResp> {
         return dunningService.getCycleWiseExceptions(request)
+    }
+
+//    @Get("list-dunning{?request*}")
+//    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
+//        return dunningService.listDunningCycles(request)
+//    }
+
+    @Post("delete-master-exception")
+    suspend fun deleteOrUpdateMasterException(
+        @QueryValue("id") id: String,
+        @QueryValue("updatedBy") updatedBy: UUID,
+        @QueryValue("actionType") actionType: String
+    ): Boolean {
+        return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
     }
 }

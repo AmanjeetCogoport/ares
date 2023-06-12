@@ -91,13 +91,30 @@ class DunningServiceImpl(
         )
     }
 
+//    override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
+//
+//    }
+
+    override suspend fun deleteOrUpdateMasterException(id: String, updatedBy: UUID, actionType: String): Boolean {
+        val exceptionId = Hashids.decode(id)[0]
+        masterExceptionRepo.deleteOrUpdateException(exceptionId, updatedBy, actionType)
+        return true
+    }
+
     override suspend fun createDunningException(request: CreateDunningException): MutableList<String> {
         if (request.exceptionType == DunningExceptionType.CYCLE_WISE && request.cycleId.isNullOrEmpty()) {
-            throw AresException(AresError.ERR_1541, "")
+            throw AresException(AresError.ERR_1003, "cycle id")
         }
-        var finalExcludedPans: MutableList<String> = mutableListOf()
-        if (!request.exceptionFile.isNullOrEmpty()) {
-            finalExcludedPans = handleExceptionFile(request)
+        if (request.exceptionType == DunningExceptionType.CYCLE_WISE && request.actionType.isNullOrEmpty()) {
+            throw AresException(AresError.ERR_1003, "action type")
+        }
+        if (request.exceptionFile.isNullOrEmpty() && request.excludedRegistrationNos.isNullOrEmpty()) {
+            throw AresException(AresError.ERR_1003, "file and exclusion list both can not be empty")
+        }
+        val finalExcludedPans: MutableList<String> = if (!request.exceptionFile.isNullOrEmpty()) {
+            handleExceptionFile(request)
+        } else {
+            request.excludedRegistrationNos!!
         }
         if (request.exceptionType == DunningExceptionType.CYCLE_WISE) {
             return saveCycleWiseExceptions(request, finalExcludedPans)
@@ -126,7 +143,10 @@ class DunningServiceImpl(
                 )
             }
         }
-        cycleExceptionRepo.deleteExceptionByCycleId(cycleId, finalDetailIds)
+        if (request.actionType == "DELETE") {
+            val result = cycleExceptionRepo.deleteExceptionByCycleId(cycleId, finalDetailIds)
+            return mutableListOf(Hashids.encode(result))
+        }
         val savedResponse = cycleExceptionRepo.saveAll(exceptionEntity)
         val returnResponse = mutableListOf<String>()
         savedResponse.forEach { returnResponse.add(Hashids.encode(it.id!!)) }
