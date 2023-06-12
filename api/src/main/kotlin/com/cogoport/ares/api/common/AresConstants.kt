@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
@@ -152,4 +153,16 @@ object AresConstants {
     const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "Failed Settlements Matching on Sage"
     const val NO_REPLY = "no-reply@cogoport.com"
     const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
+
+    val ON_ACCOUNT_ACCOUNT_TYPE = listOf<AccountType>(
+        AccountType.REC,
+        AccountType.CTDS
+    )
+
+    val OUTSTANDING_ACCOUNT_TYPE = listOf<AccountType>(
+        AccountType.SINV,
+        AccountType.SCN,
+        AccountType.SREIMB,
+        AccountType.SREIMBCN
+    )
 }
