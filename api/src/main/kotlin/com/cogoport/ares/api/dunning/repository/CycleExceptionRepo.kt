@@ -41,7 +41,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
             AND au.deleted_at IS NULL
             AND au.acc_mode = 'AR'
 	        AND au.acc_type != 'NEWPR' 
-            AND (:query IS NULL OR au.organization_name ILIKE :query)
+            AND (:query IS NULL OR au.organization_name ILIKE :query OR ce.registration_number ILIKE :query)
         GROUP BY
         ce.registration_number,
         ce.trade_party_detail_id
