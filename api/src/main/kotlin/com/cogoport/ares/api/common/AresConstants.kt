@@ -154,6 +154,12 @@ object AresConstants {
     const val NO_REPLY = "no-reply@cogoport.com"
     const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
 
+
+    val CREDIT_DAYS_MAPPING = mapOf(
+        30L to Pair(0L, 30L),
+        60L to Pair(30L, 60L),
+        90L to Pair(60L, 90L)
+)
     val ON_ACCOUNT_ACCOUNT_TYPE = listOf<AccountType>(
         AccountType.REC,
         AccountType.CTDS

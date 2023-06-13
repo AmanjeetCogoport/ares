@@ -70,7 +70,6 @@ CREATE TABLE dunning_cycle_exceptions (
 id   					BIGSERIAL 	NOT NULL PRIMARY KEY,
 cycle_id 				BIGINT 		NOT NULL REFERENCES dunning_cycles (id) ON DELETE CASCADE,
 trade_party_detail_id 	UUID  		NOT NULL,
-organization_id 		UUID,
 registration_number		VARCHAR(50) NOT NULL,
 deleted_at 				TIMESTAMP 	DEFAULT NULL,
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
