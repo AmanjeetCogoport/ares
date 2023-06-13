@@ -70,7 +70,7 @@ class DunningController(
     suspend fun listDunningCycleExecution(
         request: ListDunningCycleExecutionReq
     ): List<DunningCycleExecution> {
-        Response<List<DunningCycleExecution>>().ok(dunningService.listDunningCycleExecution(request))
+        return Response<List<DunningCycleExecution>>().ok(dunningService.listDunningCycleExecution(request))
     }
 
     @Get("/master-exceptions{?request*}")
@@ -88,10 +88,10 @@ class DunningController(
         return dunningService.getCycleWiseExceptions(request)
     }
 
-    @Get("list-dunning{?request*}")
-    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
-        return dunningService.listDunningCycles(request)
-    }
+//    @Get("list-dunning{?request*}")
+//    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
+//        return dunningService.listDunningCycles(request)
+//    }
 
     @Post("delete-master-exception")
     suspend fun deleteOrUpdateMasterException(
