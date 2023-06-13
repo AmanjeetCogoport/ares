@@ -2613,12 +2613,12 @@ open class SettlementServiceImpl : SettlementService {
             val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
             var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
