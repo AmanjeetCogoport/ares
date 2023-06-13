@@ -8,6 +8,8 @@ import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.model.common.CreateCommunicationRequest
+import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
+import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailResponse
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -77,6 +79,9 @@ interface AuthClient {
 
     @Get("/validate_trade_party{?request*}")
     suspend fun validateTradeParty(request: ValidateTradePartyRequest): Boolean?
+
+    @Get("/get_organization_trade_party_detail_business_finance{?request*}")
+    suspend fun getOrganizationTradePartyDetail(request: GetOrganizationTradePartyDetailRequest): List<GetOrganizationTradePartyDetailResponse>
 
     @Post("/get_users")
     suspend fun getUsers(@Body request: GetUserRequest): List<GetUserResponse>?

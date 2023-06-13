@@ -2,6 +2,7 @@ package com.cogoport.ares.api.dunning.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.dunning.entity.CreditController
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
@@ -15,7 +16,7 @@ import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.repository.CreditControllerRepo
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
-import com.cogoport.ares.api.dunning.repository.DunningCycleExceptionRepo
+import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
@@ -29,6 +30,7 @@ import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AuditActionName
 import com.cogoport.ares.model.common.AuditObjectType
+import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
@@ -55,13 +57,13 @@ open class DunningServiceImpl(
     private var creditControllerRepo: CreditControllerRepo,
     private var accountUtilizationRepo: AccountUtilizationRepo,
     private var dunningCycleRepo: DunningCycleRepo,
-    private var dunningExecutionRepo: DunningCycleExceptionRepo,
-    private var dunningExceptionRepo: DunningCycleExceptionRepo,
+    private var dunningExecutionRepo: DunningCycleExecutionRepo,
     private var auditRepository: AuditRepository,
     private val masterExceptionRepo: MasterExceptionRepo,
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val cycleExceptionRepo: CycleExceptionRepo,
-    private val util: Util
+    private val util: Util,
+    private val authClient: AuthClient
 ) : DunningService {
 
     @Transactional
@@ -158,6 +160,33 @@ open class DunningServiceImpl(
             )
         )
 
+        val organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
+            GetOrganizationTradePartyDetailRequest(
+                organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds
+            )
+        )
+
+        val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
+        organizationTradePartyDetailResponse.forEach { organizationTradePartyDetail ->
+            dunningCycleExceptionList.add(
+                CycleExceptions(
+                    id = null,
+                    cycleId = dunningCycleResponse.id!!,
+                    tradePartyDetailId = organizationTradePartyDetail.organizationTradePartyDetailId,
+                    registrationNumber = organizationTradePartyDetail.registrationNumber,
+                    deletedAt = null,
+                    createdBy = dunningCycleResponse.createdBy,
+                    updatedBy = dunningCycleResponse.updatedBy,
+                    createdAt = null,
+                    updatedAt = null
+                )
+            )
+        }
+
+        cycleExceptionRepo.saveAll(dunningCycleExceptionList)
+
+        TODO("Write trigger for rabbitMQ.")
+
         // TODO("WRITE ALGO TO CALCULATE NEXT DUNNING CYCLE.")
         val dunningCycleScheduledAt: Timestamp = Timestamp(System.currentTimeMillis())
 
@@ -179,9 +208,6 @@ open class DunningServiceImpl(
                 updatedAt = null
             )
         )
-
-        TODO("Create entry for cycle exception")
-        TODO("Write trigger for rabbitMQ.")
 
         auditRepository.save(
             Audit(
@@ -214,7 +240,7 @@ open class DunningServiceImpl(
         var serviceTypes = listOf<ServiceType>()
 
         request.serviceTypes?.forEach { serviceType ->
-            serviceTypes = serviceTypes + serviceType
+            serviceTypes = serviceTypes + getServiceType(serviceType)
         }
 
         var taggedOrganizationIds: List<UUID>? = null
