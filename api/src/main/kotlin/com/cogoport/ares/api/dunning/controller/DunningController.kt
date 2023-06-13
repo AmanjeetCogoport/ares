@@ -1,8 +1,11 @@
 package com.cogoport.ares.api.dunning.controller
 
+import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
+import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
+import com.cogoport.ares.api.dunning.model.response.ListDunningCycleResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
@@ -10,6 +13,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.brahma.hashids.Hashids
@@ -53,13 +57,20 @@ class DunningController(
         return Response<String>().ok(Hashids.encode(dunningService.updateCreditController(updateCreditControllerRequest)))
     }
 
-    @Get("/customer-outstanding-and-on-account{?request*}}")
+    @Get("/customer-outstanding-and-on-account{?request*}")
     suspend fun getCustomersOutstandingAndOnAccount(
         request: DunningCycleFilters
     ): List<CustomerOutstandingAndOnAccountResponse> {
         return Response<List<CustomerOutstandingAndOnAccountResponse>>().ok(
             dunningService.getCustomersOutstandingAndOnAccount(request)
         )
+    }
+
+    @Get("/cycle-execution{?request*}")
+    suspend fun listDunningCycleExecution(
+        request: ListDunningCycleExecutionReq
+    ): List<DunningCycleExecution> {
+        Response<List<DunningCycleExecution>>().ok(dunningService.listDunningCycleExecution(request))
     }
 
     @Get("/master-exceptions{?request*}")
@@ -77,10 +88,10 @@ class DunningController(
         return dunningService.getCycleWiseExceptions(request)
     }
 
-//    @Get("list-dunning{?request*}")
-//    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
-//        return dunningService.listDunningCycles(request)
-//    }
+    @Get("list-dunning{?request*}")
+    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
+        return dunningService.listDunningCycles(request)
+    }
 
     @Post("delete-master-exception")
     suspend fun deleteOrUpdateMasterException(

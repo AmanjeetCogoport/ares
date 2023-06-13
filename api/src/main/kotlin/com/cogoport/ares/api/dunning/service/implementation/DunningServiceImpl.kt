@@ -42,6 +42,7 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.ServiceType
@@ -412,6 +413,10 @@ open class DunningServiceImpl(
         val exceptionId = Hashids.decode(id)[0]
         masterExceptionRepo.deleteOrUpdateException(exceptionId, updatedBy, actionType)
         return true
+    }
+
+    override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): List<DunningCycleExecution> {
+        val response = dunningExecutionRepo.listDunningCycleExecution()
     }
 
     override suspend fun createDunningException(request: CreateDunningException): MutableList<String> {
