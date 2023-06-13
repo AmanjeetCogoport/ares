@@ -202,9 +202,19 @@ class AresMessageConsumer {
         paymentMigration.migrateSagePaymentNum(paymentRecord)
     }
 
+    @Queue("ares-bulk-update-payment-and-post-on-sage", prefetch = 1)
+    fun bulkApproveAndFinalPostToSage(req: PostPaymentToSage) = runBlocking {
+        onAccountService.bulkUpdatePaymentAndPostOnSage(req)
+    }
+
     @Queue("ares-bulk-post-payment-to-sage", prefetch = 1)
     fun bulkDirectFinalPostToSage(req: PostPaymentToSage) = runBlocking {
         onAccountService.directFinalPostToSage(req)
+    }
+
+    @Queue("ares-bulk-post-payment-from-sage", prefetch = 1)
+    fun bulkPostPaymentFromSage(req: PostPaymentToSage) = runBlocking {
+        onAccountService.postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
     }
 
     @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
