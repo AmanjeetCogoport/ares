@@ -7,7 +7,7 @@ import java.util.UUID
 import javax.persistence.GeneratedValue
 
 @MappedEntity(value = "dunning_email_audits")
-data class dunningEmailAudit(
+data class DunningEmailAudit(
     @field:Id @GeneratedValue
     var id: Long?,
     var executionId: Long,

@@ -819,7 +819,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND organization_id IS NOT NULL
                     AND amount_loc - pay_loc > 0
                     AND entity_code = :entityCode
-                    AND ( :tradePartyDetailsId IS NULL OR organization_id in (:tradePartyDetailsIds) )
+                    AND ( :taggedOrganizationIds IS NULL OR tagged_organization_id in (:taggedOrganizationIds) )
                     AND acc_type in (:onAccountAccountType, :outstandingAccountType)
                     AND deleted_at IS NULL
                     AND service_type in (:serviceTypes)
@@ -828,8 +828,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             """
     )
     suspend fun listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
-        tradePartyDetailsIds: List<UUID>,
-        tradePartyDetailsId: UUID?,
         entityCode: Int,
         serviceTypes: List<ServiceType>?,
         taggedOrganizationIds: List<UUID>?,

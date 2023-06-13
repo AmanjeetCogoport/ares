@@ -6,10 +6,10 @@ import java.util.UUID
 
 data class DunningCycleFilterRequest(
     val entityCode: Int,
+    val ageingStartDay: Int,
+    val ageingLastDay: Int,
     var serviceTypes: List<ServiceType>?,
     var taggedOrganizationIds: List<UUID>?,
     val totalDueOutstanding: BigDecimal?,
-    val ageingStartDay: Int,
-    val ageingLastDay: Int,
-    val tradePartyDetailsIds: List<UUID>
+    val exceptionTradePartyDetailId: List<UUID>?
 )

@@ -15,5 +15,5 @@ data class DunningScheduleRule(
     var scheduleTimeZone: String,
     var dunningExecutionFrequency: DunningExecutionFrequency?,
     var week: List<DayOfWeek>?,
-    var month: Int?,
+    var dayOfMonth: Int?,
 )

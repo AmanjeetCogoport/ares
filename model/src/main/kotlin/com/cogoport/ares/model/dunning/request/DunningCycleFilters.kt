@@ -14,7 +14,7 @@ import java.util.UUID
 data class DunningCycleFilters(
     val cogoEntityId: UUID?,
     var serviceTypes: List<ServiceType>?,
-    val creditController: List<UUID>?,
+    val creditControllerIds: List<UUID>?,
     val ageingBucket: AgeingBucketEnum,
     val totalDueOutstanding: BigDecimal?,
     val dueOutstandingCurrency: String?
