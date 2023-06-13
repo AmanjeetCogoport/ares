@@ -1575,7 +1575,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun bulkPostPaymentToSage(paymentIds: List<Long>, performedBy: UUID) {
         val statusGrouping = paymentRepository.getPaymentDocumentStatusWiseIds(paymentIds)
-        logger().info(statusGrouping.toString())
         statusGrouping?.map {
             when (it.paymentDocumentStatus) {
                 PaymentDocumentStatus.CREATED -> {
