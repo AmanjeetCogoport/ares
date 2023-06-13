@@ -1,42 +1,35 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
+import com.cogoport.ares.api.dunning.entity.CreditController
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
+import com.cogoport.ares.api.dunning.entity.DunningCycle
+import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.MasterExceptions
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
-import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
-import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
-import com.cogoport.ares.api.dunning.service.interfaces.DunningService
-import com.cogoport.ares.api.exception.AresError
-import com.cogoport.ares.api.exception.AresException
-import com.cogoport.ares.api.utils.ExcelUtils
-import com.cogoport.ares.api.utils.Util
-import com.cogoport.ares.api.utils.Utilities
-import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.brahma.excel.utils.ExcelSheetReader
-import com.cogoport.brahma.hashids.Hashids
-import jakarta.inject.Singleton
-import java.util.UUID
-import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.dunning.entity.CreditController
-import com.cogoport.ares.api.dunning.entity.DunningCycle
-import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.repository.CreditControllerRepo
+import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
+import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AuditRepository
+import com.cogoport.ares.api.utils.ExcelUtils
+import com.cogoport.ares.api.utils.Util
+import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AuditActionName
 import com.cogoport.ares.model.common.AuditObjectType
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCatagory
@@ -50,12 +43,12 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.util.UUID
 import javax.transaction.Transactional
-
 
 @Singleton
 open class DunningServiceImpl(
@@ -65,7 +58,7 @@ open class DunningServiceImpl(
     private var dunningExecutionRepo: DunningCycleExceptionRepo,
     private var dunningExceptionRepo: DunningCycleExceptionRepo,
     private var auditRepository: AuditRepository,
-  private val masterExceptionRepo: MasterExceptionRepo,
+    private val masterExceptionRepo: MasterExceptionRepo,
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val cycleExceptionRepo: CycleExceptionRepo,
     private val util: Util
@@ -73,7 +66,10 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun createCreditController(creditControllerRequest: CreditControllerRequest): Long {
-        if (creditControllerRequest.createdBy == null) throw AresException(AresError.ERR_1003, " : created by can't be null")
+        if (creditControllerRequest.createdBy == null) throw AresException(
+            AresError.ERR_1003,
+            " : created by can't be null"
+        )
         val response = creditControllerRepo.save(
             CreditController(
                 id = null,
@@ -316,11 +312,12 @@ open class DunningServiceImpl(
             ServiceType.HAULAGE_FREIGHT -> listOf<ServiceType>(
                 ServiceType.HAULAGE_FREIGHT
             )
+
             else -> throw AresException(AresError.ERR_1543, "")
         }
     }
-    
-     override suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp> {
+
+    override suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp> {
         val query = util.toQueryString(request.query)
         var creditDaysFrom: Long? = null
         var creditDaysTo: Long? = null
@@ -411,8 +408,15 @@ open class DunningServiceImpl(
         }
         return saveMasterExceptions(request, finalExcludedPans)
     }
-    private suspend fun saveCycleWiseExceptions(request: CreateDunningException, regNos: MutableList<String>): MutableList<String> {
-        val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_party_details")
+
+    private suspend fun saveCycleWiseExceptions(
+        request: CreateDunningException,
+        regNos: MutableList<String>
+    ): MutableList<String> {
+        val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(
+            regNos,
+            "list_organization_trade_party_details"
+        )
         val cycleId = Hashids.decode(request.cycleId!!)[0]
         val finalDetailIds = mutableListOf<UUID>()
         val exceptionEntity = mutableListOf<CycleExceptions>()
@@ -442,8 +446,13 @@ open class DunningServiceImpl(
         savedResponse.forEach { returnResponse.add(Hashids.encode(it.id!!)) }
         return returnResponse
     }
-    private suspend fun saveMasterExceptions(request: CreateDunningException, regNos: MutableList<String>): MutableList<String> {
-        val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
+
+    private suspend fun saveMasterExceptions(
+        request: CreateDunningException,
+        regNos: MutableList<String>
+    ): MutableList<String> {
+        val response =
+            cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
         val filteredList = response?.list?.distinctBy { it["organization_trade_party_detail_id"] }
         val masterExceptionList = masterExceptionRepo.getActiveMasterExceptions()
         val exceptionEntity = mutableListOf<MasterExceptions>()
@@ -493,4 +502,5 @@ open class DunningServiceImpl(
             returnExclusionList.add(it["registration number"].toString())
         }
         return returnExclusionList.toSet().toMutableList()
+    }
 }

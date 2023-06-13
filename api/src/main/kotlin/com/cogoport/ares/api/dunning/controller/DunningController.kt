@@ -1,14 +1,12 @@
 package com.cogoport.ares.api.dunning.controller
 
-
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
-import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
@@ -19,14 +17,10 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import java.util.UUID
-
-import io.micronaut.http.annotation.Put
-import io.micronaut.validation.Validated
-import jakarta.inject.Inject
-
 import javax.validation.Valid
 
 @Validated
@@ -34,8 +28,8 @@ import javax.validation.Valid
 class DunningController(
     private val dunningService: DunningService
 ) {
-  
-   @Post("/cycle")
+
+    @Post("/cycle")
     suspend fun createDunningCycle(
         @Valid @Body
         createDunningCycleRequest: CreateDunningCycleRequest
@@ -66,7 +60,6 @@ class DunningController(
         return Response<List<CustomerOutstandingAndOnAccountResponse>>().ok(
             dunningService.getCustomersOutstandingAndOnAccount(request)
         )
-
     }
 
     @Get("/master-exceptions{?request*}")
@@ -96,5 +89,5 @@ class DunningController(
         @QueryValue("actionType") actionType: String
     ): Boolean {
         return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
-   
+    }
 }
