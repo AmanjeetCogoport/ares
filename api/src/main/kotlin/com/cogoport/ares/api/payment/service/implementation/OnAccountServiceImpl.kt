@@ -1579,7 +1579,7 @@ open class OnAccountServiceImpl : OnAccountService {
         statusGrouping?.map {
             when (it.paymentDocumentStatus) {
                 PaymentDocumentStatus.CREATED -> {
-                    it.paymentIds.map {paymentId ->
+                    it.paymentIds.map { paymentId ->
                         aresMessagePublisher.emitBulkUpdatePaymentAndPostOnSage(PostPaymentToSage(paymentId, performedBy))
                     }
                 }
@@ -1751,10 +1751,10 @@ open class OnAccountServiceImpl : OnAccountService {
         val updatedPayment = updatePaymentEntry(paymentModel)
         if (updatedPayment.isSuccess) {
             directFinalPostToSage(
-                    PostPaymentToSage(
-                            req.paymentId,
-                            req.performedBy
-                    )
+                PostPaymentToSage(
+                    req.paymentId,
+                    req.performedBy
+                )
             )
         }
     }
