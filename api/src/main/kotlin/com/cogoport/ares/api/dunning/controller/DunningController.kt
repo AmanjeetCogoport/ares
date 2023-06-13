@@ -1,11 +1,8 @@
 package com.cogoport.ares.api.dunning.controller
 
-import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
-import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
-import com.cogoport.ares.api.dunning.model.response.ListDunningCycleResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
@@ -16,6 +13,7 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -66,11 +64,11 @@ class DunningController(
         )
     }
 
-    @Get("/cycle-execution{?request*}")
+    @Get("/dunning-cycle-execution{?request*}")
     suspend fun listDunningCycleExecution(
         request: ListDunningCycleExecutionReq
-    ): List<DunningCycleExecution> {
-        return Response<List<DunningCycleExecution>>().ok(dunningService.listDunningCycleExecution(request))
+    ): ResponseList<DunningCycleExecutionResponse> {
+        return Response<ResponseList<DunningCycleExecutionResponse>>().ok(dunningService.listDunningCycleExecution(request))
     }
 
     @Get("/master-exceptions{?request*}")

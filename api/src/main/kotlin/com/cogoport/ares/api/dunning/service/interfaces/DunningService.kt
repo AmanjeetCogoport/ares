@@ -1,6 +1,5 @@
 package com.cogoport.ares.api.dunning.service.interfaces
 
-import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
@@ -12,6 +11,7 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import java.util.UUID
 
 interface DunningService {
@@ -29,5 +29,5 @@ interface DunningService {
 
     suspend fun deleteOrUpdateMasterException(id: String, updatedBy: UUID, actionType: String): Boolean
 
-    suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): List<DunningCycleExecution>
+    suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): ResponseList<DunningCycleExecutionResponse>
 }
