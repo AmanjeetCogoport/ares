@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.dunning.entity
 
-import com.cogoport.ares.api.dunning.model.OrgSegmentation
+import com.cogoport.ares.model.dunning.enum.OrganizationSegment
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
@@ -16,7 +16,7 @@ data class MasterExceptions(
     val tradePartyName: String,
     val organizationId: UUID? = null,
     val registrationNumber: String,
-    val orgSegment: OrgSegmentation? = null,
+    val orgSegment: OrganizationSegment? = null,
     val creditDays: Long? = null,
     val creditAmount: Long? = null,
     val isActive: Boolean?,

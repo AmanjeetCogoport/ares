@@ -7,4 +7,4 @@ import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface DunningCycleExceptionRepo : CoroutineCrudRepository<DunningCycleExecution, Long>
+interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecution, Long>
