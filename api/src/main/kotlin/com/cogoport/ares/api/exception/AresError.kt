@@ -66,7 +66,8 @@ enum class AresError(
     ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE),
     ERR_1541("ERR_1541", "Credit Controller Data not present.", HttpStatus.BAD_REQUEST),
     ERR_1542("ERR_1542", "Wrong Ageing Bucket Selected.", HttpStatus.BAD_REQUEST),
-    ERR_1543("ERR_1543", "Wrong Service Type Selected.", HttpStatus.BAD_REQUEST);
+    ERR_1543("ERR_1543", "Wrong Service Type Selected.", HttpStatus.BAD_REQUEST),
+    ERR_1544("ERR_1544", "Name of Dunning Cycle Can't  Be Less then 5 character.", HttpStatus.BAD_REQUEST);
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"

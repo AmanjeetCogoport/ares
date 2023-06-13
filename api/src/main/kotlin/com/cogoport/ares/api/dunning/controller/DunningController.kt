@@ -51,7 +51,7 @@ class DunningController {
     suspend fun getCustomersOutstandingAndOnAccount(
         request: DunningCycleFilters
     ): List<CustomerOutstandingAndOnAccountResponse> {
-        return Response<CustomerOutstandingAndOnAccountResponse>().ok(
+        return Response<List<CustomerOutstandingAndOnAccountResponse>>().ok(
             dunningService.getCustomersOutstandingAndOnAccount(request)
         )
     }
