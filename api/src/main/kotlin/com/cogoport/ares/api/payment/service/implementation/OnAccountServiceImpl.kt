@@ -1574,13 +1574,26 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     override suspend fun bulkPostPaymentToSage(paymentIds: List<Long>, performedBy: UUID) {
-        paymentIds.forEach {
-            aresMessagePublisher.emitBulkPostPaymentToSage(
-                PostPaymentToSage(
-                    paymentId = it,
-                    performedBy = performedBy
-                )
-            )
+        val statusGrouping = paymentRepository.getPaymentDocumentStatusWiseIds(paymentIds)
+        statusGrouping?.map {
+            when (it.paymentDocumentStatus) {
+                PaymentDocumentStatus.CREATED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkUpdatePaymentAndPostOnSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTING_FAILED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkPostPaymentToSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                PaymentDocumentStatus.POSTED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkPostPaymentFromSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                else -> return
+            }
         }
     }
 
@@ -1726,6 +1739,22 @@ open class OnAccountServiceImpl : OnAccountService {
 
         if (postingStatusData) {
             postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
+        }
+    }
+
+    override suspend fun bulkUpdatePaymentAndPostOnSage(req: PostPaymentToSage) {
+        val payment = paymentRepository.findByPaymentId(req.paymentId)
+        val paymentModel = paymentConverter.convertToModel(payment)
+        paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+        paymentModel.updatedBy = req.performedBy.toString()
+        val updatedPayment = updatePaymentEntry(paymentModel)
+        if (updatedPayment.isSuccess) {
+            directFinalPostToSage(
+                PostPaymentToSage(
+                    req.paymentId,
+                    req.performedBy
+                )
+            )
         }
     }
 }
