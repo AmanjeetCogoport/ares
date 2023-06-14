@@ -5,7 +5,7 @@ import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
-import com.cogoport.ares.api.dunning.repository.DunningCycleExceptionRepo
+import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
@@ -70,7 +70,26 @@ class ScheduleServiceImpl(
         )
         if(outstandingData.list.isNullOrEmpty()){
 
+    private suspend fun fetchOrgsAndSendPaymentReminder(executionDetails: DunningCycleExecution){
+        val tradePartyDetails = dunningService.getCustomersOutstandingAndOnAccount(
+            executionDetails.filters
+        )
+        val masterExclusionList = masterExceptionRepo.getActiveTradePartyDetailIds()
+        val exclusionListForThisCycle = cycleExceptionRepo.getActiveTradePartyDetailIds(executionDetails.dunningCycleId)
+        val tradeParties = tradePartyDetails.map { it.tradePartyDetailId }
+        val finalTradePartyIds = tradeParties - masterExclusionList.toSet() - exclusionListForThisCycle.toSet()
+        finalTradePartyIds.forEach {
+            sendPaymentReminderToTradeParties(executionDetails.id!!, it)
         }
+    }
+
+
+    private suspend fun sendPaymentReminderToTradeParties(executionId: Long,tradePartyDetailId: UUID){
+        val cycleExecution  = dunningExecutionRepo.findById(executionId)
+        val templateName = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list[0]["name"].toString()
+
+
+
 
 
 
