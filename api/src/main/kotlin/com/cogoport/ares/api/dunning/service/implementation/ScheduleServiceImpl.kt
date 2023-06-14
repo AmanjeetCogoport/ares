@@ -1,15 +1,18 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
+import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
-import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
+import com.cogoport.ares.api.dunning.repository.DunningCycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
+import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.brahma.hashids.Hashids
 import io.sentry.Breadcrumb.transaction
 import jakarta.inject.Singleton
@@ -17,11 +20,12 @@ import java.util.UUID
 
 @Singleton
 class ScheduleServiceImpl(
-    private val dunningExecutionRepo: DunningCycleExecutionRepo,
+    private val dunningExecutionRepo: DunningCycleExceptionRepo,
     private val dunningService: DunningService,
     private val masterExceptionRepo: MasterExceptionRepo,
     private val cycleExceptionRepo: CycleExceptionRepo,
-    private val railsClient: RailsClient
+    private val railsClient: RailsClient,
+    private val outstandingService: OutStandingService
 ) : ScheduleService {
 
     override suspend fun processCycleExecution(request: CycleExecutionProcessReq) {
@@ -58,6 +62,18 @@ class ScheduleServiceImpl(
     private suspend fun sendPaymentReminderToTradeParties(executionId: Long,tradePartyDetailId: UUID){
         val cycleExecution  = dunningExecutionRepo.findById(executionId)
         val templateName = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list[0]["name"].toString()
+        val outstandingData = outstandingService.listCustomerDetails(
+            CustomerOutstandingRequest(
+                tradePartyDetailId = tradePartyDetailId,
+                entityCode = TAGGED_ENTITY_ID_MAPPINGS[cycleExecution.filters.cogoEntityId.toString()]
+            )
+        )
+        if(outstandingData.list.isNullOrEmpty()){
+
+        }
+
+
+
 
 
 

@@ -15,7 +15,7 @@ import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.repository.CreditControllerRepo
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
-import com.cogoport.ares.api.dunning.repository.DunningCycleExceptionRepo
+import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
@@ -55,8 +55,7 @@ open class DunningServiceImpl(
     private var creditControllerRepo: CreditControllerRepo,
     private var accountUtilizationRepo: AccountUtilizationRepo,
     private var dunningCycleRepo: DunningCycleRepo,
-    private var dunningExecutionRepo: DunningCycleExceptionRepo,
-    private var dunningExceptionRepo: DunningCycleExceptionRepo,
+    private var dunningExecutionRepo: DunningCycleExecutionRepo,
     private var auditRepository: AuditRepository,
     private val masterExceptionRepo: MasterExceptionRepo,
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,

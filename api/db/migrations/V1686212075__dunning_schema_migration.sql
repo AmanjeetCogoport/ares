@@ -84,6 +84,7 @@ id  					BIGSERIAL 	NOT NULL PRIMARY KEY,
 execution_id 			BIGINT 		NOT NULL REFERENCES dunning_cycle_executions (id) ON DELETE CASCADE,
 communication_id 		UUID,
 trade_party_detail_id 	UUID 		NOT NULL,
-registration_number 	VARCHAR(50) NOT NULL,
+is_success              BOOLEAN     NOT NULL,
+error_reason            VARCHAR(100),
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP
 );
