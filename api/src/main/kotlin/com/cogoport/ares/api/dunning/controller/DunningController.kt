@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.dunning.controller
 
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
+import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
@@ -12,8 +13,10 @@ import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
+import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
+import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -64,11 +67,16 @@ class DunningController(
         )
     }
 
-    @Get("/dunning-cycle-execution{?request*}")
+    @Get("/list-dunning-cycle-execution{?request*}")
     suspend fun listDunningCycleExecution(
         request: ListDunningCycleExecutionReq
     ): ResponseList<DunningCycleExecutionResponse> {
         return Response<ResponseList<DunningCycleExecutionResponse>>().ok(dunningService.listDunningCycleExecution(request))
+    }
+
+    @Get("list-dunning{?request*}")
+    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
+        return dunningService.listDunningCycles(request)
     }
 
     @Get("/master-exceptions{?request*}")
@@ -86,11 +94,6 @@ class DunningController(
         return dunningService.getCycleWiseExceptions(request)
     }
 
-//    @Get("list-dunning{?request*}")
-//    suspend fun listDunningCycles(@Valid request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
-//        return dunningService.listDunningCycles(request)
-//    }
-
     @Post("delete-master-exception")
     suspend fun deleteOrUpdateMasterException(
         @QueryValue("id") id: String,
@@ -98,5 +101,24 @@ class DunningController(
         @QueryValue("actionType") actionType: String
     ): Boolean {
         return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
+    }
+
+    @Post("update-status")
+    suspend fun updateCycle(
+        @QueryValue("id") id: String,
+        @QueryValue("updatedBy") updatedBy: UUID,
+        @QueryValue("actionType") actionType: String
+    ): Boolean {
+        return dunningService.updateCycle(id, updatedBy, actionType)
+    }
+
+    @Put
+    suspend fun updateCycleExecution(
+        @Valid @Body
+        request: UpdateCycleExecutionRequest
+    ): String {
+        return Response<String>().ok(
+            Hashids.encode(dunningService.updateCycleExecution(request))
+        )
     }
 }

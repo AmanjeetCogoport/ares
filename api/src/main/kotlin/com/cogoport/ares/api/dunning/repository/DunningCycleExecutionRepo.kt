@@ -9,6 +9,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.util.*
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecution, Long> {
@@ -72,4 +73,28 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         dunningCycleType: DunningCycleType?,
         serviceType: ServiceType?
     ): Long
+
+    @NewSpan
+    @Query(
+        """
+             UPDATE dunning_cycle_executions
+                SET deleted_at = CASE
+                   WHEN :actionType = 'DELETE' THEN NOW()
+                   ELSE deleted_at
+               END,
+            status = CASE
+                   WHEN :actionType != 'DELETE' THEN NOT is_active
+                   ELSE is_active
+               END,
+            status = 'CANCELLED',
+            updated_at = NOW(),
+            updated_by = :updatedBy::UUID
+            WHERE id = :id
+        """
+    )
+    suspend fun deleteOrUpdateStatusCycleExecution(
+        id: Long,
+        updatedBy: UUID,
+        actionType: String
+    )
 }

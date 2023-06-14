@@ -11,6 +11,7 @@ import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.MasterExceptions
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
+import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
@@ -45,11 +46,14 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
+import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
+import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.loki.model.common.enums.ActionType
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.util.UUID
@@ -407,13 +411,19 @@ open class DunningServiceImpl(
         )
     }
 
-//    override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<ListDunningCycleResp> {
-//
-//    }
-
     override suspend fun deleteOrUpdateMasterException(id: String, updatedBy: UUID, actionType: String): Boolean {
         val exceptionId = Hashids.decode(id)[0]
         masterExceptionRepo.deleteOrUpdateException(exceptionId, updatedBy, actionType)
+        return true
+    }
+
+    override suspend fun updateCycle(id: String, updatedBy: UUID, actionType: String): Boolean {
+        val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(id)[0])
+            ?: throw AresException(AresError.ERR_1545, "")
+
+        dunningCycleRepo.deleteOrUpdateStatusCycle(dunningCycleExecution.dunningCycleId!!, updatedBy, actionType)
+        dunningExecutionRepo.deleteOrUpdateStatusCycleExecution(dunningCycleExecution.id!!, updatedBy, actionType)
+
         return true
     }
 
@@ -428,7 +438,9 @@ open class DunningServiceImpl(
             dunningCycleType = request.dunningCycleType,
             serviceType = request.service,
             sortBy = request.sortBy,
-            sortType = request.sortType
+            sortType = request.sortType,
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize
         )
 
         val totalCount = dunningExecutionRepo.totalCountDunningCycleExecution(
@@ -444,6 +456,66 @@ open class DunningServiceImpl(
 
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize!!)
         val responseList = ResponseList<DunningCycleExecutionResponse>()
+        responseList.list = response
+        responseList.totalRecords = totalCount
+        responseList.totalPages = totalPages
+        responseList.pageNo = request.pageIndex
+
+        return responseList
+    }
+
+    override suspend fun updateCycleExecution(request: UpdateCycleExecutionRequest): Long {
+        val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(request.id)[0])
+            ?: throw AresException(AresError.ERR_1545, "")
+
+        if (dunningCycleExecution.triggerType == TriggerType.PERIODIC &&
+            dunningCycleExecution.scheduleType == ScheduleType.MONTHLY &&
+            request.scheduleRule.dayOfMonth == null &&
+            request.scheduleRule.dunningExecutionFrequency != DunningExecutionFrequency.MONTHLY
+        ) {
+            throw AresException(AresError.ERR_1003, "")
+        }
+
+        if (dunningCycleExecution.triggerType == TriggerType.PERIODIC &&
+            dunningCycleExecution.scheduleType == ScheduleType.WEEKLY &&
+            request.scheduleRule.week == null &&
+            request.scheduleRule.dunningExecutionFrequency != DunningExecutionFrequency.WEEKLY
+        ) {
+            throw AresException(AresError.ERR_1003, "")
+        }
+
+        dunningExecutionRepo.deleteOrUpdateStatusCycleExecution(
+            dunningCycleExecution.id!!,
+            request.updatedBy,
+            ActionType.UPDATE.toString()
+        )
+
+        return 1
+    }
+
+    override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
+        var query: String? = null
+        if (request.query != null)
+            query = "%${request.query}%"
+
+        val response = dunningCycleRepo.listDunningCycleExecution(
+            query = query,
+            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
+            sortBy = request.sortBy,
+            sortType = request.sortType
+        )
+
+        val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
+            query = query,
+            status = request.cycleStatus == DunningCycleStatus.ACTIVE
+        )
+
+        response.forEach {
+            it.id = Hashids.encode(it.id?.toLong()!!)
+        }
+
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize!!)
+        val responseList = ResponseList<DunningCycleResponse>()
         responseList.list = response
         responseList.totalRecords = totalCount
         responseList.totalPages = totalPages
