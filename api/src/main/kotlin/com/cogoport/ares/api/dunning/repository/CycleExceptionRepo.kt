@@ -31,6 +31,20 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
+            UPDATE dunning_cycle_executions SET status = :status WHERE id = :id
+        """
+    )
+    suspend fun updateStatus(id: Long,status: String)
+
+    @Query(
+        """
+            SELECT trade_party_detail_id FROM dunning_cycle_executions where cycle_id = :cycleId AND deleted_at IS NULL
+        """
+    )
+    suspend fun getActiveTradePartyDetailIds(cycleId:Long): List<UUID>
+
+    @Query(
+        """
        SELECT (array_agg(au.organization_name))[1] as trade_party_name , ce.registration_number , ce.trade_party_detail_id ,
             SUM(CASE WHEN au.acc_type IN ('SINV','SCN') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_outstanding,
             SUM(CASE WHEN au.acc_type IN ('REC','CTDS') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_on_account

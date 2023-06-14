@@ -4,5 +4,6 @@ enum class CycleExecutionStatus {
     SCHEDULED,
     CANCELLED,
     COMPLETED,
+    FAILED,
     IN_PROGRESS
 }
