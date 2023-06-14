@@ -530,7 +530,7 @@ open class DunningServiceImpl(
                         tradePartyName = t["legal_business_name"].toString(),
                         organizationId = UUID.fromString(t["organization_id"].toString()),
                         registrationNumber = t["registration_number"].toString(),
-                        orgSegment = null,
+                        organizationSegment = null,
                         creditDays = 0,
                         creditAmount = 0,
                         isActive = true,
