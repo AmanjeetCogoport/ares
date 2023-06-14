@@ -35,6 +35,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCatagory
+import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
 import com.cogoport.ares.model.dunning.enum.ScheduleType
 import com.cogoport.ares.model.dunning.enum.TriggerType
@@ -45,6 +46,7 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
@@ -144,7 +146,7 @@ open class DunningServiceImpl(
             DunningCycle(
                 id = null,
                 name = createDunningCycleRequest.name,
-                cycleType = createDunningCycleRequest.cycleType,
+                dunningCycleType = createDunningCycleRequest.dunningCycleType,
                 triggerType = createDunningCycleRequest.triggerType,
                 scheduleType = createDunningCycleRequest.scheduleType,
                 severityLevel = createDunningCycleRequest.severityLevel,
@@ -303,7 +305,7 @@ open class DunningServiceImpl(
     private fun getAgeingBucketDays(ageingBucketName: AgeingBucketEnum): IntArray {
         return when (ageingBucketName) {
             AgeingBucketEnum.ALL -> intArrayOf(0, 0)
-            AgeingBucketEnum.AB_0_30 -> intArrayOf(0, 30)
+            AgeingBucketEnum.AB_1_30 -> intArrayOf(1, 30)
             AgeingBucketEnum.AB_31_60 -> intArrayOf(31, 60)
             AgeingBucketEnum.AB_61_90 -> intArrayOf(61, 90)
             AgeingBucketEnum.AB_91_180 -> intArrayOf(91, 180)
@@ -415,8 +417,39 @@ open class DunningServiceImpl(
         return true
     }
 
-    override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): List<DunningCycleExecution> {
-        val response = dunningExecutionRepo.listDunningCycleExecution()
+    override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): ResponseList<DunningCycleExecutionResponse> {
+        var query: String? = null
+        if (request.query != null)
+            query = "%${request.query}%"
+
+        val response = dunningExecutionRepo.listDunningCycleExecution(
+            query = query,
+            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
+            dunningCycleType = request.dunningCycleType,
+            serviceType = request.service,
+            sortBy = request.sortBy,
+            sortType = request.sortType
+        )
+
+        val totalCount = dunningExecutionRepo.totalCountDunningCycleExecution(
+            query = query,
+            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
+            dunningCycleType = request.dunningCycleType,
+            serviceType = request.service,
+        )
+
+        response.forEach {
+            it.id = Hashids.encode(it.id?.toLong()!!)
+        }
+
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize!!)
+        val responseList = ResponseList<DunningCycleExecutionResponse>()
+        responseList.list = response
+        responseList.totalRecords = totalCount
+        responseList.totalPages = totalPages
+        responseList.pageNo = request.pageIndex
+
+        return responseList
     }
 
     override suspend fun createDunningException(request: CreateDunningException): MutableList<String> {

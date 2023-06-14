@@ -1,7 +1,7 @@
 package com.cogoport.ares.api.dunning.entity
 
-import com.cogoport.ares.model.dunning.enum.CycleType
 import com.cogoport.ares.model.dunning.enum.DunningCatagory
+import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.enum.ScheduleType
 import com.cogoport.ares.model.dunning.enum.TriggerType
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
@@ -17,7 +17,7 @@ data class DunningCycle(
     @field:Id @GeneratedValue
     var id: Long?,
     var name: String,
-    var cycleType: CycleType,
+    var dunningCycleType: DunningCycleType,
     var triggerType: TriggerType,
     var scheduleType: ScheduleType,
     var severityLevel: Int,
