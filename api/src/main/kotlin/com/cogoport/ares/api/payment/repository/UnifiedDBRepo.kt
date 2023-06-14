@@ -20,6 +20,8 @@ import com.cogoport.ares.api.payment.entity.TodayPurchaseStats
 import com.cogoport.ares.api.payment.entity.TodaySalesStat
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.PaymentDetailsAtPlatform
+import com.cogoport.ares.model.payment.PlatformPaymentDetails
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -30,6 +32,7 @@ import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Date
 import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
@@ -1564,4 +1567,52 @@ WHERE
     """
     )
     suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+             SELECT p.payment_num_value, 
+                  p.sage_ref_number, 
+                  p.payment_document_status,
+                  soim.sage_organization_id, 
+                  p.acc_code, 
+                  p.currency, 
+                  p.entity_code, 
+                  p.amount, 
+                  p.organization_name, 
+                  otpd.registration_number AS pan_number
+             FROM ares.payments p
+             LEFT JOIN sage_organization_id_mappings soim ON p.org_serial_id::varchar = soim.sage_organization_id::varchar
+             LEFT JOIN organization_trade_party_details otpd ON otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar and otpd.status = 'active'
+             WHERE soim.status = 'active' AND 
+                    ((p.acc_mode = 'AR' AND soim.account_type = 'importer_exporter') OR (p.acc_mode = 'AP' AND soim.account_type = 'service_provider')) AND
+                    p.payment_document_status IN ('POSTED', 'FINAL_POSTED') AND
+                    p.updated_at::DATE BETWEEN :fromDate AND :toDate
+        """
+    )
+    suspend fun getPaymentPostedByDate(fromDate: Date, toDate: Date): List<PlatformPaymentDetails>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            p.payment_num_value, 
+            p.sage_ref_number, p.payment_document_status, soim.sage_organization_id,
+            p.acc_code, p.currency, p.entity_code, p.amount, p.organization_name, 
+            otpd.registration_number AS pan_number,
+            p.acc_mode,
+            p.trans_ref_number as utr,
+            p.payment_code,
+            p.transaction_date
+            FROM ares.payments p
+            LEFT JOIN sage_organization_id_mappings soim ON p.org_serial_id::varchar = soim.sage_organization_id::varchar
+            LEFT JOIN organization_trade_party_details otpd ON otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar and otpd.status = 'active'
+            WHERE soim.status = 'active' AND
+            ((p.acc_mode = 'AR' AND soim.account_type = 'importer_exporter') OR (p.acc_mode = 'AP' AND soim.account_type = 'service_provider')) AND
+            p.payment_document_status IN ('POSTED', 'FINAL_POSTED')
+            AND (:startDate IS NULL OR p.updated_at::VARCHAR >= :startDate)
+            AND (:endDate IS NULL OR p.updated_at::VARCHAR <= :endDate)
+        """
+    )
+    suspend fun getPaymentsByTransactionDate(startDate: String?, endDate: String?): List<PaymentDetailsAtPlatform>
 }

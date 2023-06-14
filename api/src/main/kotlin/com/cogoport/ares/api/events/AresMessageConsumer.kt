@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
@@ -17,6 +18,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -71,6 +73,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var parentJVService: ParentJVService
+
+    @Inject
+    lateinit var authClient: AuthClient
 
     @Queue("update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -225,5 +230,9 @@ class AresMessageConsumer {
     @Queue("ares-partial-payment-mismatch", prefetch = 1)
     fun partialPaymentMismatchDocument(documentNo: String) = runBlocking {
         paymentMigration.partialPaymentMismatchDocument(documentNo.toLong())
+    }
+    @Queue("ares-send-email", prefetch = 1)
+    fun sendEmail(req: CreateCommunicationRequest) = runBlocking {
+        authClient.sendCommunication(req)
     }
 }

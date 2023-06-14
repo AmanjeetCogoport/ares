@@ -111,5 +111,8 @@ class RabbitMqBootstrap : ChannelInitializer() {
 
         channel?.queueDeclare("ares-partial-payment-mismatch", true, false, false, null)
         channel?.queueBind("ares-partial-payment-mismatch", "ares", "ares.partial.payment.mismatch", null)
+
+        channel?.queueDeclare("ares-send-email", true, false, false, null)
+        channel?.queueBind("ares-send-email", "ares", "ares.send.email", null)
     }
 }

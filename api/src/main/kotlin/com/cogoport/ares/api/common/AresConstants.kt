@@ -152,4 +152,18 @@ object AresConstants {
     const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "Failed Settlements Matching on Sage"
     const val NO_REPLY = "no-reply@cogoport.com"
     const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
+
+    const val performedByUserNameForMail = "Business Finance Tech Team"
+    const val SAGE_PLATFORM_REPORT = "sage_platform_report"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "bhanugoban@cogoport.com"
+
+    val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
+        "abhishek.kumar@cogoport.com",
+        "vivek.garg@cogoport.com",
+        "bhanugoban@cogoport.com",
+        "shikhar.tyagi@cogoport.com",
+        "suhas.latelwar@cogoport.com"
+    )
+
+    const val BUSINESS_FINANCE_TECH_TEAM = "649f3792-b28f-4862-9683-5d5af2c574b4"
 }

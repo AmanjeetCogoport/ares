@@ -8,6 +8,7 @@ import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -91,4 +92,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.partial.payment.mismatch")
     suspend fun emitPartialPaymentMismatchDocument(id: String)
+
+    @Binding("ares.send.email")
+    suspend fun sendEmail(req: CreateCommunicationRequest)
 }
