@@ -184,7 +184,9 @@ object AresConstants {
         "sage-payment-num-migration",
         "bulk-post-payment-to-sage",
         "bulk-post-settlement-to-sage",
-        "partial-payment-mismatch"
+        "partial-payment-mismatch",
+        "bulk-update-payment-and-post-on-sage",
+        "bulk-post-payment-from-sage"
     )
 
     val RETRY_QUEUES = listOf(
@@ -216,6 +218,8 @@ object AresConstants {
         "sage-payment-num-migration",
         "bulk-post-payment-to-sage",
         "bulk-post-settlement-to-sage",
-        "partial-payment-mismatch"
+        "partial-payment-mismatch",
+        "bulk-update-payment-and-post-on-sage",
+        "bulk-post-payment-from-sage"
     )
 }

@@ -77,11 +77,18 @@ interface AresMessagePublisher {
     @Binding("ares.sage.payment.num.migration")
     suspend fun emitSagePaymentNumMigration(paymentRecord: SagePaymentNumMigrationResponse)
 
+    @Binding("ares.bulk.update.payment.and.post.on.sage")
+    suspend fun emitBulkUpdatePaymentAndPostOnSage(req: PostPaymentToSage)
+
     @Binding("ares.bulk.post.payment.to.sage")
     suspend fun emitBulkPostPaymentToSage(req: PostPaymentToSage)
 
+    @Binding("ares.bulk.post.payment.from.sage")
+    suspend fun emitBulkPostPaymentFromSage(req: PostPaymentToSage)
+
     @Binding("ares.bulk.post.settlement.to.sage")
     suspend fun emitBulkMatchingSettlementOnSage(req: PostSettlementRequest)
+
     @Binding("ares.partial.payment.mismatch")
     suspend fun emitPartialPaymentMismatchDocument(id: String)
 }
