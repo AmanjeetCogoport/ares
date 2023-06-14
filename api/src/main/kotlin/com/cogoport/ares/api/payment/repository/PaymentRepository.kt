@@ -96,11 +96,14 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 array_agg(id) AS payment_ids
             FROM 
                 payments
-            GROUP BY 
-                payment_document_status
+            WHERE 
+                    id IN (:paymentIds) 
+            AND 
+                payment_document_status != 'DELETED'::payment_document_status 
+            GROUP BY payment_document_status
         """
     )
-    suspend fun getPaymentDocumentStatusWiseIds(): List<PaymentDocumentStatusForPayments>
+    suspend fun getPaymentDocumentStatusWiseIds(paymentIds: List<Long>): List<PaymentDocumentStatusForPayments>?
 
     @NewSpan
     @Query(
