@@ -20,7 +20,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
                 me.is_active,
                 me.trade_party_name AS name,
                 me.registration_number,
-                me.org_segment,
+                me.organization_segment::varchar,
                 me.credit_days,
                 me.credit_amount,
                 SUM((amount_loc - pay_loc) * sign_flag) AS total_due_amount
@@ -34,7 +34,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
                 AND acc_type != 'NEWPR'
                 AND au.deleted_at IS NULL
                 AND :query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query
-                AND :segment IS NULL OR me.org_segment::VARCHAR = :segment
+                AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment
                 AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR me.credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
             GROUP BY
                 me.id
@@ -63,18 +63,18 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     @Query(
         """
             SELECT
-            COALESCE(count(DISTINCT me.id),0)
-        FROM
-            account_utilizations au
-            JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id
-        WHERE
-            me.deleted_at IS NULL
-            AND au.document_status = 'FINAL'
-            AND au.acc_mode = 'AR'
-            AND acc_type != 'NEWPR'
-            AND au.deleted_at IS NULL
-            AND (:query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query)
-            AND :segment IS NULL OR me.org_segment::VARCHAR = :segment          
+                COALESCE(count(DISTINCT me.id),0)
+            FROM
+                account_utilizations au
+                JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id
+            WHERE
+                me.deleted_at IS NULL
+                AND au.document_status = 'FINAL'
+                AND au.acc_mode = 'AR'
+                AND acc_type != 'NEWPR'
+                AND au.deleted_at IS NULL
+                AND (:query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query)
+                AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment          
         """
     )
 
@@ -88,7 +88,14 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             SELECT * FROM dunning_master_exceptions where deleted_at IS NULL
         """
     )
-    suspend fun getActiveMasterExceptions(): List<MasterExceptions>?
+    suspend fun getAllMasterExceptions(): List<MasterExceptions>?
+
+    @Query(
+        """
+            SELECT trade_party_detail_id FROM dunning_master_exceptions where deleted_at IS NULL AND is_active = TRUE
+        """
+    )
+    suspend fun getActiveTradePartyDetailIds(): List<UUID>
 
     @Query(
         """

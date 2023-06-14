@@ -9,4 +9,3 @@ data class UpdateCycleExecutionRequest(
     val updatedBy: UUID,
     val scheduleRule: DunningScheduleRule
 )
-

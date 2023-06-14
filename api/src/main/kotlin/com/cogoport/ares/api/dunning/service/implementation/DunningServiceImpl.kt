@@ -590,7 +590,7 @@ open class DunningServiceImpl(
         val response =
             cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
         val filteredList = response?.list?.distinctBy { it["organization_trade_party_detail_id"] }
-        val masterExceptionList = masterExceptionRepo.getActiveMasterExceptions()
+        val masterExceptionList = masterExceptionRepo.getAllMasterExceptions()
         val exceptionEntity = mutableListOf<MasterExceptions>()
         filteredList?.forEach { t ->
             val tradePartyDetailId = UUID.fromString(t["organization_trade_party_detail_id"].toString())
@@ -602,7 +602,7 @@ open class DunningServiceImpl(
                         tradePartyName = t["legal_business_name"].toString(),
                         organizationId = UUID.fromString(t["organization_id"].toString()),
                         registrationNumber = t["registration_number"].toString(),
-                        orgSegment = null,
+                        organizationSegment = null,
                         creditDays = 0,
                         creditAmount = 0,
                         isActive = true,

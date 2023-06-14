@@ -9,7 +9,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
-import java.util.*
+import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecution, Long> {
@@ -97,4 +97,11 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         updatedBy: UUID,
         actionType: String
     )
+
+    @Query(
+        """
+            UPDATE dunning_cycle_executions SET status = :status WHERE id = :id
+        """
+    )
+    suspend fun updateStatus(id: Long, status: String)
 }
