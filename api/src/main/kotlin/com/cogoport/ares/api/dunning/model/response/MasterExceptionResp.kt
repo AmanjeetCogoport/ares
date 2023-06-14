@@ -1,16 +1,17 @@
 package com.cogoport.ares.api.dunning.model.response
 
-import com.cogoport.ares.model.dunning.enum.OrganizationSegment
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 
+@Introspected
 @MappedEntity
 data class MasterExceptionResp(
     val id: String,
     val name: String,
     val isActive: Boolean,
     val registrationNumber: String,
-    val orgSegment: OrganizationSegment?,
+    val organizationSegment: String?,
     val creditDays: Long?,
     val creditAmount: BigDecimal?,
     val totalDueAmount: BigDecimal?,

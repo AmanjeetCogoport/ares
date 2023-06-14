@@ -20,7 +20,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
 	me.is_active,
 	me.trade_party_name AS name,
 	me.registration_number,
-	me.org_segment,
+	me.organization_segment::varchar,
 	me.credit_days,
 	me.credit_amount,
 	SUM((amount_loc - pay_loc) * sign_flag) AS total_due_amount
@@ -34,7 +34,7 @@ WHERE
 	AND acc_type != 'NEWPR'
 	AND au.deleted_at IS NULL
     AND :query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query
-    AND :segment IS NULL OR me.org_segment::VARCHAR = :segment
+    AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment
     AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR me.credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
 GROUP BY
 	me.id
@@ -74,7 +74,7 @@ WHERE
 	AND acc_type != 'NEWPR'
 	AND au.deleted_at IS NULL
 	AND (:query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query)
-	AND :segment IS NULL OR me.org_segment::VARCHAR = :segment          
+	AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment          
         """
     )
 
