@@ -31,17 +31,10 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-            UPDATE dunning_cycle_executions SET status = :status WHERE id = :id
-        """
-    )
-    suspend fun updateStatus(id: Long,status: String)
-
-    @Query(
-        """
             SELECT trade_party_detail_id FROM dunning_cycle_executions where cycle_id = :cycleId AND deleted_at IS NULL
         """
     )
-    suspend fun getActiveTradePartyDetailIds(cycleId:Long): List<UUID>
+    suspend fun getActiveTradePartyDetailIds(cycleId: Long): List<UUID>
 
     @Query(
         """
