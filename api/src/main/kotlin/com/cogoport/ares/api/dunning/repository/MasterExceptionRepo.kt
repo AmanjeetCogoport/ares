@@ -88,7 +88,14 @@ WHERE
             SELECT * FROM dunning_master_exceptions where deleted_at IS NULL
         """
     )
-    suspend fun getActiveMasterExceptions(): List<MasterExceptions>?
+    suspend fun getAllMasterExceptions(): List<MasterExceptions>?
+
+    @Query(
+        """
+            SELECT trade_party_detail_id FROM dunning_master_exceptions where deleted_at IS NULL AND is_active = TRUE
+        """
+    )
+    suspend fun getActiveTradePartyDetailIds(): List<UUID>
 
     @Query(
         """

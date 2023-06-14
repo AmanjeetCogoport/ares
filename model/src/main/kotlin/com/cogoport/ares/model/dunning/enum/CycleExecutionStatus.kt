@@ -3,5 +3,7 @@ package com.cogoport.ares.model.dunning.enum
 enum class CycleExecutionStatus {
     SCHEDULED,
     CANCELLED,
-    COMPLETED
+    COMPLETED,
+    FAILED,
+    IN_PROGRESS
 }
