@@ -160,7 +160,6 @@ object AresConstants {
     val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
         "abhishek.kumar@cogoport.com",
         "vivek.garg@cogoport.com",
-        "bhanugoban@cogoport.com",
         "shikhar.tyagi@cogoport.com",
         "suhas.latelwar@cogoport.com"
     )

@@ -1821,7 +1821,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val file = ExcelUtils.writeIntoExcel(platformAndSagePaymentResponse, excelName, "Sheet1")
             val url = s3Client.upload(s3Bucket, excelName, file).toString()
-            var excelDocument = aresDocumentRepository.save(
+            val excelDocument = aresDocumentRepository.save(
                 AresDocument(
                     id = null,
                     documentUrl = url,
