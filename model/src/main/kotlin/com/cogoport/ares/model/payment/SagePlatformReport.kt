@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
 import kotlin.collections.ArrayList
@@ -56,23 +55,4 @@ class SagePaymentDetails(
     @JsonProperty("transaction_date") var transactionDate: Date,
     @JsonProperty("narration") var narration: String?,
     @JsonProperty("sage_organization_id") var sageOrganizationId: String?
-)
-
-@Introspected
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-@JsonIgnoreProperties
-@MappedEntity
-class PlatformPaymentDetails(
-    val sageRefNumber: String?,
-    var paymentNumValue: String?,
-    var sageOrganizationId: String?,
-    var accCode: Long?,
-    var currency: String?,
-    var entityCode: Long?,
-    var amount: BigDecimal? = BigDecimal.ZERO,
-    var paymentDocumentStatus: String?,
-    var migrated: Boolean? = false,
-    var organizationName: String?,
-    var panNumber: String?,
-    var accMode: String?
 )
