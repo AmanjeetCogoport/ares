@@ -16,16 +16,11 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     @Query(
         """
             SELECT
-                *
+                id,name,cycle_type::varchar,created_at::timestamp,updated_at::timestamp
             FROM
                 dunning_cycles
-            WHERE
-                (:query IS NULL OR name ILIKE :query) AND
-                (:status IS NULL OR is_active = :status)
-            ORDER BY
-                :sortBy :sortType
-            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
-            LIMIT :pageSize
+           OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
+           LIMIT :pageSize
         """
     )
     suspend fun listDunningCycleExecution(
