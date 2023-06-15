@@ -1,8 +1,10 @@
 package com.cogoport.ares.api.dunning.entity
 
+import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.sql.Timestamp
+import java.time.LocalDateTime
 import java.util.UUID
 import javax.persistence.GeneratedValue
 
@@ -15,5 +17,6 @@ data class DunningEmailAudit(
     var communicationId: UUID?,
     var isSuccess: Boolean,
     var errorReason: String?,
-    var createdAt: Timestamp? = Timestamp(System.currentTimeMillis())
+    @DateCreated
+    var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now())
 )

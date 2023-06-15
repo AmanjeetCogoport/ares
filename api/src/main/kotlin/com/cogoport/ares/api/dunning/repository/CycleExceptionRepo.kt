@@ -15,7 +15,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-            UPDATE dunning_cycle_exceptions SET deleted_at = NOW() WHERE cycle_id = :cycleId
+            UPDATE dunning_cycle_exceptions SET deleted_at = NOW() WHERE dunning_cycle_id = :cycleId
              AND trade_party_detail_id IN (:detailsIds) AND deleted_at IS NULL
         """
     )
@@ -23,7 +23,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-            SELECT * FROM dunning_cycle_exceptions where cycle_id = :cycleId and deleted_at IS NULL
+            SELECT * FROM dunning_cycle_exceptions where dunning_cycle_id = :cycleId and deleted_at IS NULL
         """
     )
 
@@ -31,7 +31,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-            SELECT trade_party_detail_id FROM dunning_cycle_executions where cycle_id = :cycleId AND deleted_at IS NULL
+            SELECT trade_party_detail_id FROM dunning_cycle_executions where dunning_cycle_id = :cycleId AND deleted_at IS NULL
         """
     )
     suspend fun getActiveTradePartyDetailIds(cycleId: Long): List<UUID>
@@ -42,7 +42,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
             SUM(CASE WHEN au.acc_type IN ('SINV','SCN') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_outstanding,
             SUM(CASE WHEN au.acc_type IN ('REC','CTDS') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_on_account
             FROM dunning_cycle_exceptions ce INNER JOIN account_utilizations au ON ce.trade_party_detail_id = au.organization_id
-            WHERE ce.cycle_id = :cycleId
+            WHERE ce.dunning_cycle_id = :cycleId
             AND ce.deleted_at IS NULL
             AND au.document_status = 'FINAL'
             AND au.deleted_at IS NULL
@@ -67,7 +67,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
         """
         SELECT COUNT(DISTINCT au.organization_name)
             FROM dunning_cycle_exceptions ce INNER JOIN account_utilizations au ON ce.trade_party_detail_id = au.organization_id
-            WHERE ce.cycle_id = :cycleId
+            WHERE ce.dunning_cycle_id = :cycleId
             AND ce.deleted_at IS NULL
             AND au.document_status = 'FINAL'
             AND au.deleted_at IS NULL

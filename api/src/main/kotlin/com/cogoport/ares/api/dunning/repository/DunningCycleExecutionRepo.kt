@@ -20,7 +20,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
             SELECT
                 dc.name as name,
                 dc.is_active as dunningCycleStatus,
-                dc.cycle_type as dunningCycleType,
+                dc.cycle_type as cycle_type,
                 dce.*
             FROM
                 dunning_cycle_executions dce
@@ -30,7 +30,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
             WHERE
                 (:query IS NULL OR dc.name ILIKE :query) AND
                 (:status IS NULL OR dc.is_active = :status) AND
-                (:dunningCycleType IS NULL OR dc.cycle_type = :dunningCycleType) AND
+                (:cycle_type IS NULL OR dc.cycle_type = :cycle_type) AND
                 (:serviceType IS NULL OR dce.filters->serviceTypes IS NULL OR :serviceType IN dce.filters->serviceTypes) 
             ORDER BY
                 :sortBy :sortType
@@ -63,7 +63,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
             WHERE
                 (:query IS NULL OR dc.name ILIKE :query) AND
                 (:status IS NULL OR dc.is_active = :status) AND
-                (:dunningCycleType IS NULL OR dc.cycle_type = :dunningCycleType) AND
+                (:cycle_type IS NULL OR dc.cycle_type = :cycle_type) AND
                 (:serviceType IS NULL OR dce.filters->serviceTypes IS NULL OR :serviceType IN dce.filters->serviceTypes) 
         """
     )

@@ -68,7 +68,7 @@ updated_by 				UUID 				NOT NULL
 
 CREATE TABLE dunning_cycle_exceptions (
 id   					BIGSERIAL 	NOT NULL PRIMARY KEY,
-cycle_id 				BIGINT 		NOT NULL REFERENCES dunning_cycles (id) ON DELETE CASCADE,
+dunning_cycle_id 				BIGINT 		NOT NULL REFERENCES dunning_cycles (id) ON DELETE CASCADE,
 trade_party_detail_id 	UUID  		NOT NULL,
 registration_number		VARCHAR(50) NOT NULL,
 deleted_at 				TIMESTAMP 	DEFAULT NULL,

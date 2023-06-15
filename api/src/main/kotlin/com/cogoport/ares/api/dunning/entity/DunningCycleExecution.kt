@@ -1,13 +1,15 @@
 package com.cogoport.ares.api.dunning.entity
 
-import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
-import com.cogoport.ares.model.dunning.enum.ScheduleType
-import com.cogoport.ares.model.dunning.enum.TriggerType
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
+import io.micronaut.data.annotation.DateCreated
+import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.MappedProperty
+import io.micronaut.data.model.DataType
 import java.sql.Timestamp
+import java.time.LocalDateTime
 import java.util.UUID
 import javax.persistence.GeneratedValue
 
@@ -17,15 +19,19 @@ data class DunningCycleExecution(
     var id: Long?,
     var dunningCycleId: Long,
     var templateId: UUID,
-    var status: CycleExecutionStatus,
+    var status: String,
+    @MappedProperty(type = DataType.JSON)
     var filters: DunningCycleFilters,
+    @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
-    var scheduleType: ScheduleType,
-    var scheduleAt: Timestamp,
-    var triggerType: TriggerType,
+    var scheduleType: String,
+    var scheduledAt: Timestamp,
+    var triggerType: String,
     var deletedAt: Timestamp?,
-    var createdAt: Timestamp? = Timestamp(System.currentTimeMillis()),
-    var updatedAt: Timestamp? = Timestamp(System.currentTimeMillis()),
+    @DateCreated
+    var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
+    @DateUpdated
+    var updatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
     var createdBy: UUID,
     var updatedBy: UUID
 )
