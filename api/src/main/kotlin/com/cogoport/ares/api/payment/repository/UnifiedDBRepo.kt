@@ -1588,5 +1588,5 @@ WHERE
             AND (:endDate IS NULL OR p.updated_at::VARCHAR <= :endDate)
         """
     )
-    suspend fun getPaymentsByTransactionDate(startDate: String?, endDate: String?): List<PaymentDetailsAtPlatform>
+    suspend fun getPaymentsByTransactionDate(startDate: String?, endDate: String?): List<PaymentDetailsAtPlatform>?
 }

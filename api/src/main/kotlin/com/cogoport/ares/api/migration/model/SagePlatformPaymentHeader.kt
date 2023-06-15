@@ -8,7 +8,7 @@ import java.math.BigDecimal
 
 @Introspected
 @MappedEntity
-@ExcelSheet(sheetName = "Sheet1")
+@ExcelSheet(sheetName = "Payment_Report")
 data class SagePlatformPaymentHeader(
     @ExcelColumn("Payment Number on platform") var paymentNumValueAtPlatform: String?,
     @ExcelColumn("Payment Number on Sage") var paymentNumValueAtSage: String?,

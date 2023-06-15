@@ -96,8 +96,8 @@ class SageServiceImpl : SageService {
     override suspend fun sagePaymentBySageRefNumbers(paymentNumValue: ArrayList<String?>): ArrayList<SagePaymentDetails> {
         val sqlQuery = """
             select P.NUM_0 as sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
-            case WHEN P.STA_0 = 9 THEN 'POSTED'
-                 WHEN P.STA_0 = 1 THEN 'NOT-POSTED' end as sage_status, 
+            case WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN P.STA_0 = 1 THEN 'POSTED' end as sage_status, 
                  P.FCY_0 as entity_code,
                  P.BPR_0 as bpr_number, 
                  P.ACC_0 as gl_code, 

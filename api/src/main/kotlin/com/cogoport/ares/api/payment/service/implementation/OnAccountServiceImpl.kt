@@ -1776,12 +1776,12 @@ open class OnAccountServiceImpl : OnAccountService {
             endDate
         )
         val paymentNumValues = platformPaymentData
-            .map { it.paymentNumValue }
-            .toCollection(ArrayList())
+            ?.map { it.paymentNumValue }
+            ?.toCollection(ArrayList())
 
         val platformAndSagePaymentResponse = mutableListOf<SagePlatformPaymentHeader>()
 
-        if (paymentNumValues.isNotEmpty()) {
+        if (!paymentNumValues.isNullOrEmpty()) {
             val sagePaymentData = sageServiceImpl.sagePaymentBySageRefNumbers(paymentNumValues)
             platformPaymentData.map { platformPayment ->
                 val sagePayment = sagePaymentData.firstOrNull { it.platformPaymentNum == platformPayment.paymentNumValue }
@@ -1819,7 +1819,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val excelName: String = "Payment_Report" + "_" + LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) + ".xlsx"
 
-            val file = ExcelUtils.writeIntoExcel(platformAndSagePaymentResponse, excelName, "Sheet1")
+            val file = ExcelUtils.writeIntoExcel(platformAndSagePaymentResponse, excelName, "Payment_Report")
             val url = s3Client.upload(s3Bucket, excelName, file).toString()
             val excelDocument = aresDocumentRepository.save(
                 AresDocument(
