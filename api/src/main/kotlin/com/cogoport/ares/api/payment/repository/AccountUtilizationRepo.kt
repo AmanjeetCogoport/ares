@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
+import com.cogoport.ares.api.dunning.model.response.DunningDocuments
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
@@ -836,4 +837,38 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         onAccountAccountType: List<AccountType>,
         outstandingAccountType: List<AccountType>
     ): List<CustomerOutstandingAndOnAccountResponse>
+
+    @Query(
+        """
+            SELECT document_no, document_value, led_currency, amount_loc, pay_loc, due_date,
+            CASE WHEN acc_type = 'SINV' THEN 'INVOICE'
+                WHEN acc_type = 'SCN' THEN 'CREDIT_NOTE'
+                ELSE NULL END AS invoice_type,
+                CASE 
+                WHEN (now()::date - due_date) between 0 AND 30 THEN '0-30 days'
+                WHEN (now()::date - due_date) between 31 AND 60 THEN '31-60 days'
+                WHEN (now()::date - due_date) between 61 AND 90 THEN '61-90 daya'
+                WHEN (now()::date - due_date) between 91 AND 180 THEN '91-180 days'
+                WHEN (now()::date - due_date) between 181 AND 365 THEN '181-365 days'
+                WHEN (NOW()::date - due_date) > 365 THEN '365+ days'
+                END as relative_duration,
+                transaction_date::DATE,
+                sign_flag
+            FROM account_utilizations WHERE organization_id::uuid = :tradePartyDetailId
+            AND acc_mode = 'AR' AND acc_type in (:accType) AND document_status = 'FINAL'
+            AND deleted_at IS NULL AND amount_loc - pay_loc NOT BETWEEN -1 AND 1
+            AND entity_code = :entityCode
+            AND :transactionDateStart IS NULL OR :transactionDateEnd IS NULL OR transaction_date::DATE BETWEEN :transactionDateStart::DATE AND :transactionDateEnd::DATE
+            AND :limit IS NULL OR LIMIT :limit
+            AND :transactionDateStart IS NULL OR :transactionDateEnd IS NULL OR SORT BY transaction_date DESC
+        """
+    )
+    suspend fun getDocumentsForDunning(
+        entityCode: Int,
+        tradePartyDetailId: UUID,
+        limit: Int? = null,
+        transactionDateStart: Date? = null,
+        transactionDateEnd: Date? = null,
+        accType: List<String>,
+    ): List<DunningDocuments>
 }

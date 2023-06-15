@@ -170,4 +170,9 @@ object AresConstants {
         AccountType.SREIMB,
         AccountType.SREIMBCN
     )
+    var DUNNING_NEW_INVOICE_GENERATION_TEMPLATE = "dunning_cycle_invoice_generated_mail"
+    var DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE = "balance_confirmation_email"
+    var DUNNING__SOA_MAIL_TEMPLATE = "dunning_cycle_soa_mail"
+
+    var EXCLUDED_CREDIT_CONTROLLERS = mutableListOf("d6838384-b53c-48a1-9c0f-3aca54b53fa9", "d80c5421-7bd8-4ec5-88fa-9a02afb936eb", "59559d86-853d-41b5-a613-a1fd7b3eb76e")
 }

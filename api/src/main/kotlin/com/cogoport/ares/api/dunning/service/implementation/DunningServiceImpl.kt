@@ -587,8 +587,7 @@ open class DunningServiceImpl(
         request: CreateDunningException,
         regNos: MutableList<String>
     ): MutableList<String> {
-        val response =
-            cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
+        val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
         val filteredList = response?.list?.distinctBy { it["organization_trade_party_detail_id"] }
         val masterExceptionList = masterExceptionRepo.getAllMasterExceptions()
         val exceptionEntity = mutableListOf<MasterExceptions>()

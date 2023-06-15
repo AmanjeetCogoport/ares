@@ -12,7 +12,8 @@ data class DunningEmailAudit(
     var id: Long?,
     var executionId: Long,
     var tradePartyDetailId: UUID,
-    var communicationId: UUID,
-    var registrationNumber: String,
+    var communicationId: UUID?,
+    var isSuccess: Boolean,
+    var errorReason: String?,
     var createdAt: Timestamp? = Timestamp(System.currentTimeMillis())
 )

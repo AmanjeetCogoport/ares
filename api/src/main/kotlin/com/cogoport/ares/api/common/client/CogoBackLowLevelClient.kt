@@ -38,7 +38,7 @@ class CogoBackLowLevelClient(private val httpClient: HttpClient) {
         return res
     }
     fun getTradePartyDetailsByRegistrationNumber(regNums: MutableList<String>, endpoint: String): ListOrganizationTradePartyDetailsResponse? {
-        val uri: URI = URI.create("$apiUrl/$endpoint?filters[registration_number][]=${regNums.joinToString("&filters[registration_number][]=")}")
+        val uri: URI = URI.create("$apiUrl/$endpoint?filters[registration_number][]=${regNums.joinToString("&filters[registration_number][]=")}&page_limit=100&page=1")
         val req: HttpRequest<*> = HttpRequest.GET<Any>(uri)
             .header(HttpHeaders.USER_AGENT, "Ares-Cogo-Client")
             .header(HttpHeaders.ACCEPT, "application/json")
