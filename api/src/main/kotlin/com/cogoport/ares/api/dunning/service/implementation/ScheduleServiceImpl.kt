@@ -22,7 +22,7 @@ import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Singleton
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.UUID
+import java.util.*
 
 @Singleton
 class ScheduleServiceImpl(
