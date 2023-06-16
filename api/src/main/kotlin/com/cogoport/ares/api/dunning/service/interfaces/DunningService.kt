@@ -6,6 +6,7 @@ import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
@@ -34,7 +35,9 @@ interface DunningService {
 
     suspend fun deleteOrUpdateMasterException(id: String, updatedBy: UUID, actionType: String): Boolean
 
-    suspend fun updateCycle(id: String, updatedBy: UUID, actionType: String): Boolean
+    suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean
+
+    suspend fun updateStatusDunningCycle(id: String, updatedBy: UUID, status: DunningCycleStatus): Boolean
 
     suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse>
 

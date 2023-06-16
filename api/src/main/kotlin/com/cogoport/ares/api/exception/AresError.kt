@@ -68,7 +68,8 @@ enum class AresError(
     ERR_1542("ERR_1542", "Wrong Ageing Bucket Selected.", HttpStatus.BAD_REQUEST),
     ERR_1543("ERR_1543", "Wrong Service Type Selected.", HttpStatus.BAD_REQUEST),
     ERR_1544("ERR_1544", "Name of Dunning Cycle Can't  Be Less then 5 character.", HttpStatus.BAD_REQUEST),
-    ERR_1545("ERR_1545", "Dunning Cycle Execution Not Found for your request.", HttpStatus.BAD_REQUEST);
+    ERR_1545("ERR_1545", "Dunning Cycle Execution Not Found for your request.", HttpStatus.BAD_REQUEST),
+    ERR_1546("ERR_1546", "Dunning Cycle is Already deleted or Cancelled.", HttpStatus.BAD_REQUEST);
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"

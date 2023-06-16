@@ -810,14 +810,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                             CASE
                                                 WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
                                                 and(now() :: date - due_date) BETWEEN :ageingStartDay
-                                                AND 30 THEN sign_flag * (amount_loc - pay_loc)
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
                                         )
                                         ELSE SUM(
                                             CASE
                                                 WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
-                                                and(now() :: date - due_date) > :ageingStartDay THEN sign_flag * (amount_loc - pay_loc)
+                                                and(now() :: date - due_date) >= :ageingStartDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
                                         )
@@ -829,14 +829,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                             CASE
                                                 WHEN acc_type :: varchar IN ('REC', 'CTDS')
                                                 and(now() :: date - transaction_date) BETWEEN :ageingStartDay
-                                                AND 30 THEN sign_flag * (amount_loc - pay_loc)
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
                                         )
                                         ELSE sum(
                                             CASE
                                                 WHEN acc_type in ('REC', 'CTDS')
-                                                    and(now() :: date - transaction_date) > :ageingStartDay
+                                                    and(now() :: date - transaction_date) >= :ageingStartDay
                                                 THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
@@ -922,7 +922,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                             CASE
                                                 WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
                                                 and(now() :: date - due_date) BETWEEN :ageingStartDay
-                                                AND 30 THEN sign_flag * (amount_loc - pay_loc)
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
                                         )
@@ -941,14 +941,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                             CASE
                                                 WHEN acc_type :: varchar IN ('REC', 'CTDS')
                                                 and(now() :: date - transaction_date) BETWEEN :ageingStartDay
-                                                AND 30 THEN sign_flag * (amount_loc - pay_loc)
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END
                                         )
                                         ELSE sum(
                                             CASE
                                                 WHEN acc_type in ('REC', 'CTDS')
-                                                    and(now() :: date - transaction_date) > :ageingStartDay
+                                                    and(now() :: date - transaction_date) >= :ageingStartDay
                                                 THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
                                             END

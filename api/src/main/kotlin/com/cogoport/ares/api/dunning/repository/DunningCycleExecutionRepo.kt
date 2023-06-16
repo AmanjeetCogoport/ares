@@ -77,25 +77,33 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-             UPDATE dunning_cycle_executions
-                SET deleted_at = CASE
-                   WHEN :actionType = 'DELETE' THEN NOW()
-                   ELSE deleted_at
-               END,
-            status = CASE
-                   WHEN :actionType != 'DELETE' THEN NOT is_active
-                   ELSE is_active
-               END,
-            status = 'CANCELLED',
-            updated_at = NOW(),
-            updated_by = :updatedBy::UUID
-            WHERE id = :id
+            UPDATE dunning_cycle_executions
+            SET 
+                deleted_at = NOW(),
+                status = 'CANCELLED',
+                updated_at = NOW(),
+                updated_by = :updatedBy
+             WHERE id = :id
         """
     )
-    suspend fun deleteOrUpdateStatusCycleExecution(
+    suspend fun deleteCycleExecution(
         id: Long,
-        updatedBy: UUID,
-        actionType: String
+        updatedBy: UUID
+    )
+
+    @Query(
+        """
+            UPDATE dunning_cycle_executions
+            SET 
+                status = 'CANCELLED',
+                updated_at = NOW(),
+                updated_by = :updatedBy
+             WHERE id = :id
+        """
+    )
+    suspend fun cancelCycleExecution(
+        id: Long,
+        updatedBy: UUID
     )
 
     @Query(

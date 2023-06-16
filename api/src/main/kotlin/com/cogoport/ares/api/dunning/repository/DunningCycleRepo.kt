@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.dunning.repository
 
 import com.cogoport.ares.api.dunning.entity.DunningCycle
+import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -11,6 +12,13 @@ import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
+
+    @Query(
+        """
+            UPDATE dunning_cycles SET status = :status WHERE id = :id
+        """
+    )
+    suspend fun updateStatus(id: Long, status: String)
 
     @NewSpan
     @Query(
@@ -53,22 +61,31 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     @Query(
         """
              UPDATE dunning_cycles
-                SET deleted_at = CASE
-                   WHEN :actionType = 'DELETE' THEN NOW()
-                   ELSE deleted_at
-               END,
-            is_active = CASE
-                   WHEN :actionType != 'DELETE' THEN NOT is_active
-                   ELSE is_active
-               END,
-            updated_at = NOW(),
-            updated_by = :updatedBy::UUID
-            WHERE id = :id
+             SET 
+                deleted_at = NOW(),
+                updated_at = NOW(),
+                updated_by = :updatedBy
+             WHERE id = :id
         """
     )
-    suspend fun deleteOrUpdateStatusCycle(
+    suspend fun deleteCycle(
         id: Long,
-        updatedBy: UUID,
-        actionType: String
+        updatedBy: UUID
+    )
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE dunning_cycles
+             SET 
+                schedule_rule = :scheduleRule,
+                updated_by = :updatedBy
+             WHERE id = :id
+        """
+    )
+    suspend fun updateDunningCycle(
+        id: Long,
+        scheduleRule: DunningScheduleRule,
+        updatedBy: UUID
     )
 }

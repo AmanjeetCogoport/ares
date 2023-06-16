@@ -8,6 +8,7 @@ import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
@@ -105,13 +106,21 @@ class DunningController(
         return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
     }
 
-    @Post("update-status")
-    suspend fun updateCycle(
+    @Put("delete-dunning-cycle")
+    suspend fun deleteCycle(
+        @QueryValue("id") id: String,
+        @QueryValue("updatedBy") updatedBy: UUID
+    ): Boolean {
+        return dunningService.deleteCycle(id, updatedBy)
+    }
+
+    @Put("update-status")
+    suspend fun updateStatusDunningCycle(
         @QueryValue("id") id: String,
         @QueryValue("updatedBy") updatedBy: UUID,
-        @QueryValue("actionType") actionType: String
+        @QueryValue("actionType") status: DunningCycleStatus
     ): Boolean {
-        return dunningService.updateCycle(id, updatedBy, actionType)
+        return dunningService.updateStatusDunningCycle(id, updatedBy, status)
     }
 
     @Put
