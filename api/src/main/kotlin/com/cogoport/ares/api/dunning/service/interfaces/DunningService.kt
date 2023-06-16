@@ -23,7 +23,7 @@ interface DunningService {
 
     suspend fun createDunningCycle(createDunningCycleRequest: CreateDunningCycleRequest): Long
 
-    suspend fun getCustomersOutstandingAndOnAccount(request: DunningCycleFilters): List<CustomerOutstandingAndOnAccountResponse>
+    suspend fun getCustomersOutstandingAndOnAccount(request: DunningCycleFilters): ResponseList<CustomerOutstandingAndOnAccountResponse>
     suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp>
 
     suspend fun createDunningException(request: CreateDunningException): MutableList<String>

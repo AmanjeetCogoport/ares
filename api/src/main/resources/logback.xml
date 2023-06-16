@@ -11,6 +11,11 @@
     <logger name="io.micronaut.data.query" level="error"/>
     <logger name="io.micronaut.rabbitmq" level="error"/>
     <logger name="io.micronaut.management" level="error"/>
+    For http req log
+    <logger name="io.micronaut.http.client" level="DEBUG" />
+
+    For logging DB logs.
+    <logger name="io.micronaut.data.query" level="trace" />
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

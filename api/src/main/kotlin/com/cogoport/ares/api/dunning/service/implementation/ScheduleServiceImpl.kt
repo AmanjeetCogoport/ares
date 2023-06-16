@@ -59,7 +59,7 @@ class ScheduleServiceImpl(
         )
         val masterExclusionList = masterExceptionRepo.getActiveTradePartyDetailIds()
         val exclusionListForThisCycle = cycleExceptionRepo.getActiveTradePartyDetailIds(executionDetails.dunningCycleId)
-        val tradeParties = tradePartyDetails.map { it.tradePartyDetailId }
+        val tradeParties = tradePartyDetails.list.map { it!!.tradePartyDetailId }
         val finalTradePartyIds = tradeParties - masterExclusionList.toSet() - exclusionListForThisCycle.toSet()
         finalTradePartyIds.forEach {
             sendPaymentReminderToTradeParties(executionDetails.id!!, it)

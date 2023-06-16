@@ -46,5 +46,5 @@ interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long>
                     credit_controller_id in (:creditControllerIds);
             """
     )
-    suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>): List<UUID>
+    suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>): List<String>
 }

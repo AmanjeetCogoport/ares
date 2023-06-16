@@ -44,7 +44,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         status: Boolean?,
         dunningCycleType: DunningCycleType?,
         serviceType: ServiceType?,
-        sortBy: String? = "createdAt",
+        sortBy: String? = "created_at",
         sortType: String? = "DESC",
         pageIndex: Int? = 1,
         pageSize: Int? = 10
