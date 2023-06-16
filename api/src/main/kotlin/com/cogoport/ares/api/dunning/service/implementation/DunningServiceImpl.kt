@@ -45,6 +45,7 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
@@ -544,8 +545,12 @@ open class DunningServiceImpl(
         return 1
     }
 
-    override suspend fun listDistinctCreditControllers(): List<CreditControllerResponse> {
-        return creditControllerRepo.listDistinctCreditControllers()
+    override suspend fun listDistinctCreditControllers(request: ListCreditControllerRequest): List<CreditControllerResponse> {
+        var query: String? = null
+        if (request.query != null)
+            query = "%${request.query}%"
+
+        return creditControllerRepo.listDistinctCreditControllers(query)
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
@@ -693,4 +698,8 @@ open class DunningServiceImpl(
         }
         return returnExclusionList.toSet().toMutableList()
     }
+
+//    open suspend fun calculateNextScheduleTime(
+//            scheduleRule: DunningScheduleRule
+//    ): Timestamp
 }

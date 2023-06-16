@@ -11,6 +11,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
@@ -123,10 +124,16 @@ class DunningController(
         )
     }
 
-    @Get("/credit-controllers")
-    suspend fun getAllCreditControllersData(): List<CreditControllerResponse> {
+    @Get("/credit-controllers{?request*}")
+    suspend fun getAllCreditControllersData(
+        @Valid
+        request: ListCreditControllerRequest
+    ): List<CreditControllerResponse> {
         return Response<List<CreditControllerResponse>>().ok(
-            dunningService.listDistinctCreditControllers()
+            dunningService.listDistinctCreditControllers(request)
         )
     }
+
+    // get_payments_dunning_credit_controllers
+    // post_payments_dunning_cycle
 }

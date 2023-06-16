@@ -856,7 +856,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
                                 AND ( :taggedOrganizationIds IS NULL OR tagged_organization_id::VARCHAR IN (:taggedOrganizationIds) )
                                 AND ( :exceptionTradePartyDetailId IS NULL OR organization_id::VARCHAR NOT IN (:exceptionTradePartyDetailId) )
-                                AND ( :serviceTypes IS NULL OR service_type::VARCHAR IN (:serviceTypes) )
+                                AND ( :serviceTypes IS NULL OR service_type::varchar IN (:serviceTypes) )
                                 AND acc_type in (
                                     'REC',
                                     'CTDS',

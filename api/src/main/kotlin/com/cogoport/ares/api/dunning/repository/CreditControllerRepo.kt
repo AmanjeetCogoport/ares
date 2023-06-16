@@ -28,11 +28,15 @@ interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long>
                     credit_controller_name
                 FROM
                     credit_controllers
+                WHERE
+                    (:query IS NULL OR LOWER(credit_controller_name) ILIKE :query)
                 ORDER BY
                     credit_controller_id
             """
     )
-    suspend fun listDistinctCreditControllers(): List<CreditControllerResponse>
+    suspend fun listDistinctCreditControllers(
+        query: String?
+    ): List<CreditControllerResponse>
 
     @NewSpan
     @Query(

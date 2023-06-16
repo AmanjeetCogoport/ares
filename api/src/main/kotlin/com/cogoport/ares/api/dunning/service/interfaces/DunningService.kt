@@ -9,6 +9,7 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
@@ -41,5 +42,5 @@ interface DunningService {
 
     suspend fun updateCycleExecution(request: UpdateCycleExecutionRequest): Long
 
-    suspend fun listDistinctCreditControllers(): List<CreditControllerResponse>
+    suspend fun listDistinctCreditControllers(request: ListCreditControllerRequest): List<CreditControllerResponse>
 }
