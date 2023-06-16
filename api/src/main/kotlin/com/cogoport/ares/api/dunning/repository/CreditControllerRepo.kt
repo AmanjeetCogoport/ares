@@ -29,8 +29,7 @@ interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long>
                 FROM
                     credit_controllers
                 ORDER BY
-                    credit_controller_id,
-                    id;
+                    credit_controller_id
             """
     )
     suspend fun listDistinctCreditControllers(): List<CreditControllerResponse>

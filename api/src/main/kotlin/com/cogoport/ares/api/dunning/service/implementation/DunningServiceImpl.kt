@@ -48,6 +48,7 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
+import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
@@ -303,7 +304,7 @@ open class DunningServiceImpl(
             accountUtilizationRepo.listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
                 query = dunningCycleFilterRequest.query,
                 entityCode = dunningCycleFilterRequest.entityCode,
-//                serviceTypes = seviceTypes,
+                serviceTypes = seviceTypes,
                 ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
                 ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
                 pageSize = dunningCycleFilterRequest.pageSize,
@@ -325,7 +326,7 @@ open class DunningServiceImpl(
         val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
             query = dunningCycleFilterRequest.query,
             entityCode = dunningCycleFilterRequest.entityCode,
-//                serviceTypes = seviceTypes,
+            serviceTypes = seviceTypes,
             ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
             ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
             taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds
@@ -538,6 +539,10 @@ open class DunningServiceImpl(
         )
 
         return 1
+    }
+
+    override suspend fun listDistinctCreditControllers(): List<CreditControllerResponse> {
+        return creditControllerRepo.listDistinctCreditControllers()
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {

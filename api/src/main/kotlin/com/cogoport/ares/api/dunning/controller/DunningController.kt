@@ -14,6 +14,7 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
+import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
@@ -119,6 +120,13 @@ class DunningController(
     ): String {
         return Response<String>().ok(
             Hashids.encode(dunningService.updateCycleExecution(request))
+        )
+    }
+
+    @Get("/credit-controllers")
+    suspend fun getAllCreditControllersData(): List<CreditControllerResponse> {
+        return Response<List<CreditControllerResponse>>().ok(
+            dunningService.listDistinctCreditControllers()
         )
     }
 }
