@@ -416,6 +416,9 @@ open class DunningServiceImpl(
             request.sortBy ?: "DESC",
             request.sortType ?: "dueAmount"
         )
+        responseList.forEach {
+            it.id = Hashids.encode(it.id?.toLong()!!)
+        }
         val totalCount = masterExceptionRepo.listMasterExceptionTotalCount(
             q,
             request.segmentation,

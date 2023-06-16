@@ -7,7 +7,7 @@ import java.math.BigDecimal
 @Introspected
 @MappedEntity
 data class MasterExceptionResp(
-    val id: String,
+    var id: String,
     val name: String,
     val isActive: Boolean,
     val registrationNumber: String,
