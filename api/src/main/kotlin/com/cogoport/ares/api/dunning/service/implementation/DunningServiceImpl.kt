@@ -265,10 +265,10 @@ open class DunningServiceImpl(
             serviceTypes = serviceTypes + getServiceType(serviceType)
         }
 
-        var taggedOrganizationIds: List<String>? = null
-        if (request.creditControllerIds != null) {
+        var taggedOrganizationIds: List<UUID>? = listOf()
+        if (! (request.creditControllerIds == null)) {
             taggedOrganizationIds = creditControllerRepo.listOrganizationIdBasedOnCreditControllers(
-                creditControllerIds = request.creditControllerIds!!
+                creditControllerIds = request.creditControllerIds
             )
         }
 
@@ -285,7 +285,7 @@ open class DunningServiceImpl(
                 totalDueOutstanding = request.totalDueOutstanding,
                 ageingStartDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[0],
                 ageingLastDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[1],
-                exceptionTradePartyDetailId = null
+                exceptionTradePartyDetailId = listOf()
             )
         )
 
@@ -295,49 +295,52 @@ open class DunningServiceImpl(
     open suspend fun listOnAccountAndOutstandingBasedOnDunninCycleFilters(
         dunningCycleFilterRequest: DunningCycleFilterRequest
     ): ResponseList<CustomerOutstandingAndOnAccountResponse> {
-        val seviceTypes: List<ServiceType>? = if (
+        val serviceTypes: List<ServiceType?>? = if (
             dunningCycleFilterRequest.serviceTypes == null || dunningCycleFilterRequest.serviceTypes?.size == 0
         ) null
         else
             dunningCycleFilterRequest.serviceTypes
 
+        val serviceTypeString: MutableList<String> = mutableListOf()
+        if (!serviceTypes.isNullOrEmpty()) {
+            serviceTypes.forEach { serviceType ->
+                serviceTypeString.add(serviceType.toString())
+            }
+        }
+
         val customerOutstandingAndOnAccountResponses: List<CustomerOutstandingAndOnAccountResponse> =
             accountUtilizationRepo.listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
                 query = dunningCycleFilterRequest.query,
+                totalDueOutstanding = dunningCycleFilterRequest.totalDueOutstanding,
                 entityCode = dunningCycleFilterRequest.entityCode,
-                serviceTypes = seviceTypes,
+                serviceTypes = if (serviceTypeString.isNullOrEmpty()) null else serviceTypeString,
                 ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
                 ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
                 pageSize = dunningCycleFilterRequest.pageSize,
                 pageIndex = dunningCycleFilterRequest.pageIndex,
-                taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds
+                taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds,
+                exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
             )
 
 //        TODO("Need to filter based on service type and tagged organization Id")
         val response = customerOutstandingAndOnAccountResponses
-//        val response = customerOutstandingAndOnAccountResponses.filter { customerOutstandingAndOnAccountResponse ->
-//            customerOutstandingAndOnAccountResponse.outstandingAmount > dunningCycleFilterRequest.totalDueOutstanding
-//        }
-//
-//        response.forEach { r ->
-//            r.outstandingAmount = r.outstandingAmount + r.onAccountAmount
-//        }
-//
 
         val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
             query = dunningCycleFilterRequest.query,
+            totalDueOutstanding = dunningCycleFilterRequest.totalDueOutstanding,
             entityCode = dunningCycleFilterRequest.entityCode,
-            serviceTypes = seviceTypes,
+            serviceTypes = serviceTypeString,
             ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
             ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
-            taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds
+            taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds,
+            exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
         )
 
         var responseList = listOf<CustomerOutstandingAndOnAccountResponse>()
 
         responseList = if (dunningCycleFilterRequest.exceptionTradePartyDetailId != null) {
             val customerToRemove = dunningCycleFilterRequest.exceptionTradePartyDetailId!!.map { it }
-            response.filter { customer -> customer.tradePartyDetailId.toString() !in customerToRemove }
+            response.filter { customer -> customer.tradePartyDetailId !in customerToRemove }
         } else {
             response
         }

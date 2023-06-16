@@ -9,7 +9,6 @@ import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountR
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
-import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -846,17 +845,17 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 ) as on_account_amount
                             from
                                 account_utilizations
-                            WHERE 
+                            WHERE
                                 acc_mode = 'AR'
+                                AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
+                                AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
+                                AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
                                 AND transaction_date IS NOT NULL
                                 AND document_status = 'FINAL'
                                 AND organization_id IS NOT NULL
                                 AND amount_loc - pay_loc > 0
                                 AND entity_code = :entityCode
                                 AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
-                                AND ( :taggedOrganizationIds IS NULL OR tagged_organization_id::VARCHAR IN (:taggedOrganizationIds) )
-                                AND ( :exceptionTradePartyDetailId IS NULL OR organization_id::VARCHAR NOT IN (:exceptionTradePartyDetailId) )
-                                AND ( :serviceTypes IS NULL OR service_type::varchar IN (:serviceTypes) )
                                 AND acc_type in (
                                     'REC',
                                     'CTDS',
@@ -884,7 +883,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM
                         a
                 WHERE
-                     (:totalDueOutstanding IS NULL OR ( a.outstanding_amount + a.on_account_amount ) > :totalDueOutstanding)
+                    (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
                 OFFSET 
                     GREATEST(0, ((:pageIndex - 1) * :pageSize))
                 LIMIT 
@@ -893,13 +892,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
         query: String?,
-        serviceTypes: List<ServiceType>?,
+        serviceTypes: List<String>?,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,
         ageingLastDay: Int,
-        taggedOrganizationIds: List<String>? = null,
-        exceptionTradePartyDetailId: List<String>? = null,
+        taggedOrganizationIds: List<UUID>?,
+        exceptionTradePartyDetailId: List<UUID>?,
         sortBy: String? = "created_at",
         sortType: String? = "ASC",
         pageIndex: Int? = 1,
@@ -958,17 +957,17 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 ) as on_account_amount
                             from
                                 account_utilizations
-                            WHERE 
+                            WHERE
                                 acc_mode = 'AR'
+                                AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
+                                AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
+                                AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
                                 AND transaction_date IS NOT NULL
                                 AND document_status = 'FINAL'
                                 AND organization_id IS NOT NULL
                                 AND amount_loc - pay_loc > 0
                                 AND entity_code = :entityCode
                                 AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
-                                AND ( :taggedOrganizationIds IS NULL OR tagged_organization_id::VARCHAR IN (:taggedOrganizationIds) )
-                                AND ( :exceptionTradePartyDetailId IS NULL OR organization_id::VARCHAR NOT IN (:exceptionTradePartyDetailId) )
-                                AND ( :serviceTypes IS NULL OR service_type::VARCHAR IN (:serviceTypes) )
                                 AND acc_type in (
                                     'REC',
                                     'CTDS',
@@ -984,26 +983,22 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 led_currency
                 )
                 
-                select
-                        COUNT(*)
+                SELECT
+                        count(*)
                 FROM
                         a
                 WHERE
-                     (:totalDueOutstanding IS NULL OR ( a.outstanding_amount + a.on_account_amount ) > :totalDueOutstanding)
+                    (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
             """
     )
     suspend fun countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
         query: String?,
-        serviceTypes: List<ServiceType>?,
+        serviceTypes: List<String?>,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,
         ageingLastDay: Int,
-        taggedOrganizationIds: List<String>? = null,
-        exceptionTradePartyDetailId: List<String>? = null,
-        sortBy: String? = "created_at",
-        sortType: String? = "ASC",
-        pageIndex: Int? = 1,
-        pageSize: Int? = 10
+        taggedOrganizationIds: List<UUID?>?,
+        exceptionTradePartyDetailId: List<UUID?>?
     ): Long
 }

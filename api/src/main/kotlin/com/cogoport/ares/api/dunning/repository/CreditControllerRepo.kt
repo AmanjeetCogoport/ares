@@ -41,13 +41,13 @@ interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long>
     @NewSpan
     @Query(
         """
-                SELECT
-                    organization_id
-                from
-                    credit_controllers
-                WHERE
-                    credit_controller_id in (:creditControllerIds);
-            """
+           SELECT
+                organization_id
+            from
+                credit_controllers
+            WHERE
+                credit_controller_id :: UUID in (:creditControllerIds)
+        """
     )
-    suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>): List<String>
+    suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>?): List<UUID>
 }

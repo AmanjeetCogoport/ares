@@ -4,6 +4,7 @@ import com.cogoport.ares.model.common.Pagination
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
+import java.util.UUID
 
 @Introspected
 data class DunningCycleFilterRequest(
@@ -12,7 +13,7 @@ data class DunningCycleFilterRequest(
     val ageingStartDay: Int,
     val ageingLastDay: Int,
     var serviceTypes: List<ServiceType>?,
-    var taggedOrganizationIds: List<String>?,
+    var taggedOrganizationIds: List<UUID>?,
     val totalDueOutstanding: BigDecimal?,
-    val exceptionTradePartyDetailId: List<String>?,
+    val exceptionTradePartyDetailId: List<UUID>?,
 ) : Pagination()
