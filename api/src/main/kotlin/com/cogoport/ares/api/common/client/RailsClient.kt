@@ -37,4 +37,19 @@ interface RailsClient {
 
     @Get("/list_communication_templates?filters%5Bid%5D={id}")
     suspend fun listCommunicationTemplate(id: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/list_partners?filters%5Btwin_importer_exporter_id%5D={organizationId}")
+    suspend fun listPartners(organizationId: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/get_channel_partner_users?partner_id={partnerId}&account_types[]=importer_exporter")
+    suspend fun getCpUsers(partnerId: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/list_organization_users?filters%5Borganization_id%5D={orgId}&status=active")
+    suspend fun listOrgUsers(orgId: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/list_organization_trade_parties?filters%5Borganization_trade_party_detail_id%5D={tradePartyDetailId}&billing_addresses_data_required=true")
+    suspend fun listTradeParties(tradePartyDetailId: UUID): ListOrganizationTradePartyDetailsResponse
+
+    @Get("/list_communications?filters%5Brecipient%5D={email}&filters%5Bservice%5D=dunning_cycle&third_party_response_required=true")
+    suspend fun listCommunication(email: String): ListOrganizationTradePartyDetailsResponse
 }
