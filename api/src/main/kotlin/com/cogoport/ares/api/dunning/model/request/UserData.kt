@@ -1,9 +1,15 @@
 package com.cogoport.ares.api.dunning.model.request
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 
 @Introspected
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class UserData(
     @JsonProperty("name")
     var name: String? = null,

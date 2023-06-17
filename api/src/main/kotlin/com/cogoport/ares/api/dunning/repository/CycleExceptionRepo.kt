@@ -31,7 +31,7 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
 
     @Query(
         """
-            SELECT trade_party_detail_id FROM dunning_cycle_executions where dunning_cycle_id = :cycleId AND deleted_at IS NULL
+            SELECT trade_party_detail_id FROM dunning_cycle_exceptions where dunning_cycle_id = :cycleId AND deleted_at IS NULL
         """
     )
     suspend fun getActiveTradePartyDetailIds(cycleId: Long): List<UUID>

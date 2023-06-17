@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common.client
 
+import com.cogoport.ares.model.common.CommunicationRequest
 import com.cogoport.ares.model.common.GetPartnerRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
@@ -52,4 +53,7 @@ interface RailsClient {
 
     @Get("/list_communications?filters%5Brecipient%5D={email}&filters%5Bservice%5D=dunning_cycle&third_party_response_required=true")
     suspend fun listCommunication(email: String): ListOrganizationTradePartyDetailsResponse
+
+    @Post("/create_communication")
+    suspend fun createCommunication(@Body communicationRequest: CommunicationRequest?): UUID?
 }
