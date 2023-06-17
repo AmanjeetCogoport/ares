@@ -35,7 +35,7 @@ import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
-import com.cogoport.ares.model.dunning.enum.DunningCatagory
+import com.cogoport.ares.model.dunning.enum.DunningCategory
 import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
@@ -45,6 +45,7 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
@@ -60,6 +61,7 @@ import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import java.util.UUID
+import java.util.Calendar
 import javax.transaction.Transactional
 
 @Singleton
@@ -143,9 +145,11 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             ScheduleType.valueOf(createDunningCycleRequest.scheduleType) == ScheduleType.MONTHLY &&
-            createDunningCycleRequest.scheduleRule.dayOfMonth == null &&
             createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
-            != DunningExecutionFrequency.MONTHLY
+            != DunningExecutionFrequency.MONTHLY &&
+            createDunningCycleRequest.scheduleRule.dayOfMonth == null &&
+            createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 &&
+            createDunningCycleRequest.scheduleRule.dayOfMonth!! > 18
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -153,9 +157,9 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             ScheduleType.valueOf(createDunningCycleRequest.scheduleType) == ScheduleType.WEEKLY &&
-            createDunningCycleRequest.scheduleRule.week == null &&
             createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
-            != DunningExecutionFrequency.WEEKLY
+            != DunningExecutionFrequency.WEEKLY &&
+            createDunningCycleRequest.scheduleRule.week == null
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -171,7 +175,7 @@ open class DunningServiceImpl(
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
                 templateId = createDunningCycleRequest.templateId,
-                category = createDunningCycleRequest.category ?: DunningCatagory.CYCLE.toString(),
+                category = createDunningCycleRequest.category ?: DunningCategory.CYCLE.toString(),
                 isActive = createDunningCycleRequest.isActive ?: true,
                 deletedAt = null,
                 createdBy = createDunningCycleRequest.createdBy,
@@ -286,7 +290,9 @@ open class DunningServiceImpl(
                 totalDueOutstanding = request.totalDueOutstanding,
                 ageingStartDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[0],
                 ageingLastDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[1],
-                exceptionTradePartyDetailId = listOf()
+                exceptionTradePartyDetailId = listOf(),
+                pageSizeData = request.pageSize,
+                pageIndexData = request.pageIndex
             )
         )
 
@@ -296,6 +302,7 @@ open class DunningServiceImpl(
     open suspend fun listOnAccountAndOutstandingBasedOnDunninCycleFilters(
         dunningCycleFilterRequest: DunningCycleFilterRequest
     ): ResponseList<CustomerOutstandingAndOnAccountResponse> {
+
         val serviceTypes: List<ServiceType?>? = if (
             dunningCycleFilterRequest.serviceTypes == null || dunningCycleFilterRequest.serviceTypes?.size == 0
         ) null
@@ -317,8 +324,8 @@ open class DunningServiceImpl(
                 serviceTypes = if (serviceTypeString.isNullOrEmpty()) null else serviceTypeString,
                 ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
                 ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
-                pageSize = dunningCycleFilterRequest.pageSize,
-                pageIndex = dunningCycleFilterRequest.pageIndex,
+                pageSize = dunningCycleFilterRequest.pageSizeData ?: dunningCycleFilterRequest.pageSize,
+                pageIndex = dunningCycleFilterRequest.pageIndexData ?: dunningCycleFilterRequest.pageIndex,
                 taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds,
                 exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
             )
@@ -351,7 +358,7 @@ open class DunningServiceImpl(
             list = responseList,
             totalPages = totalPages,
             totalRecords = totalCount,
-            pageNo = dunningCycleFilterRequest.pageIndex
+            pageNo = dunningCycleFilterRequest.pageIndexData ?: dunningCycleFilterRequest.pageIndex,
         )
     }
 
@@ -784,7 +791,67 @@ open class DunningServiceImpl(
         return returnExclusionList.toSet().toMutableList()
     }
 
-//    open suspend fun calculateNextScheduleTime(
-//            scheduleRule: DunningScheduleRule
-//    ): Timestamp
+    open suspend fun calculateNextScheduleTime(
+        scheduleRule: DunningScheduleRule
+    ): Timestamp? {
+        var scheduleTimeStamp: Timestamp? = null
+
+        val scheduleTimeStampInGMT = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
+            DunningExecutionFrequency.ONE_TIME -> null
+            DunningExecutionFrequency.DAILY -> null
+            DunningExecutionFrequency.WEEKLY -> null
+            DunningExecutionFrequency.MONTHLY -> null
+            else -> throw AresException(AresError.ERR_1002, "")
+        }
+
+        return scheduleTimeStamp
+    }
+
+    private suspend fun calculateNextScheduleTimeForOneTime(scheduleDate: Timestamp, scheduledAt: Timestamp): Timestamp {
+        val scheduleDateCal = Calendar.getInstance()
+        val scheduledAtCal = Calendar.getInstance()
+
+        scheduledAtCal.timeInMillis = scheduledAt.time
+        scheduleDateCal.timeInMillis = scheduleDate.time
+
+        scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduledAtCal.get(Calendar.HOUR_OF_DAY))
+        scheduleDateCal.set(Calendar.MINUTE, scheduledAtCal.get(Calendar.MINUTE))
+        scheduleDateCal.set(Calendar.SECOND, scheduledAtCal.get(Calendar.SECOND))
+        scheduleDateCal.set(Calendar.MILLISECOND, scheduledAtCal.get(Calendar.MILLISECOND))
+
+        return Timestamp(scheduleDateCal.timeInMillis)
+    }
+
+    private suspend fun calculateNextScheduleTimeForDaily(scheduledAt: Timestamp): Timestamp {
+        val scheduledAtCal = Calendar.getInstance()
+        scheduledAtCal.timeInMillis = scheduledAt.time
+
+        val todayCal = Calendar.getInstance()
+        todayCal.timeInMillis = System.currentTimeMillis()
+
+        todayCal.set(Calendar.HOUR_OF_DAY, scheduledAtCal.get(Calendar.HOUR_OF_DAY))
+        todayCal.set(Calendar.MINUTE, scheduledAtCal.get(Calendar.MINUTE))
+        todayCal.set(Calendar.SECOND, scheduledAtCal.get(Calendar.SECOND))
+        todayCal.set(Calendar.MILLISECOND, scheduledAtCal.get(Calendar.MILLISECOND))
+
+        if (!(
+            scheduledAtCal.timeInMillis > todayCal.timeInMillis &&
+                scheduledAtCal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR) &&
+                scheduledAtCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH) &&
+                scheduledAtCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH)
+            )
+        ) {
+            todayCal.set(Calendar.DAY_OF_MONTH, (todayCal.get(Calendar.DAY_OF_MONTH) + 1) % AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING)
+        }
+
+        return Timestamp(todayCal.timeInMillis)
+    }
+
+    private suspend fun calculateScheduleTimeForWeekly(scheduledAt: Timestamp): Timestamp {
+        TODO()
+    }
+
+    private suspend fun calculateScheduleTimeForMonthly(scheduledAt: Timestamp): Timestamp {
+        TODO()
+    }
 }

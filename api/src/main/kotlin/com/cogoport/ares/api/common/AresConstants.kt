@@ -190,4 +190,20 @@ object AresConstants {
         301 to "<div><div style=\"border:1px solid #000;height:250px;margin: 0px 8px 16px 8px;\"><div style=\"height:65px;border-bottom:2px solid #000\"><p style=\"text-align:center;font-weight:600;font-size:15px;line-height:25px;padding:5px\">For INR Payments: COGOPORT PVT LTD</p></div><div style=\"text-align:center;line-height:20px;\"><p>Name of Bank: RBL</p><p>Branch: Lower Parel</p><p>IFSC Code: RATN0000088</p><p>INR Account:  409001406475</p></div></div></div><div style=\"border:1px solid #000;height:250px; margin: 0px 8px 0px 8px;\"><div style=\"height:65px;border-bottom:2px solid #000;\"><p style=\"text-align:center;font-weight:600;font-size:15px;line-height:25px;padding:5px\">For USD Payments: COGOPORT PVT LTD</p></div><div style=\"text-align:center;line-height:20px;\"><p>Name of Bank: RBL</p><p>Branch: Lower Parel</p><p>IFSC Code: RATN0000088</p><p>EEFC Account(USD)- 409001685863</p></div></div>",
         401 to "<div><div style=\"border:1px solid #000;height:300px;margin: 0px 8px 16px 8px;\"><div style=\"height:65px;border-bottom:2px solid #000\"><p style=\"text-align:center;font-weight:600;font-size:15px;line-height:25px;padding:5px\">For SGD Payments: COGOPORT PRIVATE LIMITED</p></div><div style=\"text-align:center;line-height:21px;\"><p>Name of Bank: Citibank N.A.</p><p>Account Number: 0-021112-003</p><p>SWIFT Code: CITISGSG</p><p>IFSC /Bank Code: 7214</p><p>Branch Code: 001</p></div></div></div>"
     )
+
+    enum class TimeZone {
+        GMT,
+        IST,
+        VNM,
+        UTC
+    }
+
+    var TIME_DIFFENRENCE = mapOf<TimeZone, Long>(
+        TimeZone.GMT to 0.toLong(),
+        TimeZone.IST to 19800000.toLong(),
+        TimeZone.UTC to 28800000.toLong(),
+        TimeZone.VNM to 25200000.toLong()
+    )
+
+    const val MAX_DAY_IN_MONTH_FOR_DUNNING = 28
 }

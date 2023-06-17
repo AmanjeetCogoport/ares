@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.dunning.request
 
-import com.cogoport.ares.model.dunning.enum.DunningCatagory
+import com.cogoport.ares.model.dunning.enum.DunningCategory
 import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
@@ -14,7 +14,7 @@ data class CreateDunningCycleRequest(
     var filters: DunningCycleFilters,
     var scheduleRule: DunningScheduleRule,
     var templateId: UUID,
-    var category: String? = DunningCatagory.CYCLE.toString(),
+    var category: String? = DunningCategory.CYCLE.toString(),
     var isActive: Boolean? = true,
     var createdBy: UUID,
     var exceptionTradePartyDetailIds: List<UUID>

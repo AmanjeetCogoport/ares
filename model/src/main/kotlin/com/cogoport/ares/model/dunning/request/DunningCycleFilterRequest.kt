@@ -16,4 +16,6 @@ data class DunningCycleFilterRequest(
     var taggedOrganizationIds: List<UUID>?,
     val totalDueOutstanding: BigDecimal?,
     val exceptionTradePartyDetailId: List<UUID>?,
+    val pageSizeData: Int?,
+    val pageIndexData: Int?
 ) : Pagination()

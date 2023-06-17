@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.dunning.entity
 
-import com.cogoport.ares.model.dunning.enum.DunningCatagory
+import com.cogoport.ares.model.dunning.enum.DunningCategory
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import io.micronaut.core.annotation.Introspected
@@ -30,7 +30,7 @@ data class DunningCycle(
     @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
     var templateId: UUID?,
-    var category: String? = DunningCatagory.CYCLE.toString(),
+    var category: String? = DunningCategory.CYCLE.toString(),
     var isActive: Boolean?,
     var deletedAt: Timestamp?,
     @DateCreated

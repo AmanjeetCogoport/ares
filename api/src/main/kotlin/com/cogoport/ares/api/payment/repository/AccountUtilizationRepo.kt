@@ -901,8 +901,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         exceptionTradePartyDetailId: List<UUID>?,
         sortBy: String? = "created_at",
         sortType: String? = "ASC",
-        pageIndex: Int? = 1,
-        pageSize: Int? = 10
+        pageIndex: Int,
+        pageSize: Int
     ): List<CustomerOutstandingAndOnAccountResponse>
 
     @NewSpan

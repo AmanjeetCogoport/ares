@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import java.sql.Time
+import java.sql.Timestamp
 import java.time.DayOfWeek
 
 @Introspected
@@ -16,9 +17,11 @@ data class DunningScheduleRule(
     @JsonProperty("scheduleTimeZone")
     var scheduleTimeZone: String,
     @JsonProperty("dunningExecutionFrequency")
-    var dunningExecutionFrequency: String?,
+    var dunningExecutionFrequency: String,
     @JsonProperty("week")
-    var week: List<DayOfWeek>?,
+    var week: DayOfWeek?,
     @JsonProperty("dayOfMonth")
     var dayOfMonth: Int?,
+    @JsonProperty("oneTimeDate")
+    var oneTimeDate: Timestamp?
 )
