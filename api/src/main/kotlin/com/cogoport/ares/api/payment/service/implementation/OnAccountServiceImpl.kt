@@ -1249,6 +1249,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId)
+            if (paymentDetails.organizationId == UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")) {
+                return false
+            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 thirdPartyApiAuditService.createAudit(
@@ -1748,7 +1751,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         paymentModel.updatedBy = req.performedBy.toString()
         val updatedPayment = updatePaymentEntry(paymentModel)
-        if (updatedPayment.isSuccess) {
+        if (updatedPayment.isSuccess && paymentModel.organizationId != UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")) {
             directFinalPostToSage(
                 PostPaymentToSage(
                     req.paymentId,
