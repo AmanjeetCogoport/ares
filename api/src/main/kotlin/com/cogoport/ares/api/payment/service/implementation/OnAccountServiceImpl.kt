@@ -1249,6 +1249,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId)
+            if (paymentDetails.organizationId == AresConstants.BLUETIDE_OTPD_ID) {
+                return false
+            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 thirdPartyApiAuditService.createAudit(
@@ -1748,7 +1751,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         paymentModel.updatedBy = req.performedBy.toString()
         val updatedPayment = updatePaymentEntry(paymentModel)
-        if (updatedPayment.isSuccess) {
+        if (updatedPayment.isSuccess && paymentModel.organizationId != AresConstants.BLUETIDE_OTPD_ID) {
             directFinalPostToSage(
                 PostPaymentToSage(
                     req.paymentId,
