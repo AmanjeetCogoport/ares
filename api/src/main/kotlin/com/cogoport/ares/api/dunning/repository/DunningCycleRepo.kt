@@ -15,23 +15,36 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
 
     @Query(
         """
-            UPDATE dunning_cycles SET status = :status WHERE id = :id
+            UPDATE 
+                dunning_cycles 
+            SET 
+                is_active = :status 
+            WHERE 
+                id = :id
         """
     )
-    suspend fun updateStatus(id: Long, status: String)
+    suspend fun updateStatus(id: Long, status: Boolean)
 
     @NewSpan
     @Query(
         """
             SELECT
-                id,name,cycle_type::varchar,created_at::timestamp,updated_at::timestamp
+                id,
+                name,
+                cycle_type::varchar,
+                created_at::timestamp,
+                updated_at::timestamp
             FROM
                 dunning_cycles
+            WHERE
+                deleted_at IS NULL AND
+                (:query IS NULL OR name ILIKE :query) AND
+                (:status IS NULL OR is_active = :status)
            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
            LIMIT :pageSize
         """
     )
-    suspend fun listDunningCycleExecution(
+    suspend fun listDunningCycle(
         query: String?,
         status: Boolean?,
         sortBy: String? = "createdAt",
@@ -49,10 +62,11 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 dunning_cycles
             WHERE
                 (:query IS NULL OR name ILIKE :query) AND
-                (:status IS NULL OR is_active = :status)
+                (:status IS NULL OR is_active = :status) AND
+                deleted_at IS NULL
         """
     )
-    suspend fun totalCountDunningCycleExecution(
+    suspend fun totalCountDunningCycle(
         query: String?,
         status: Boolean?,
     ): Long
@@ -78,7 +92,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         """
             UPDATE dunning_cycles
              SET 
-                schedule_rule = :scheduleRule,
+                schedule_rule::JSONB = :scheduleRule
                 updated_by = :updatedBy
              WHERE id = :id
         """

@@ -8,7 +8,6 @@ import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreditControllerRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
@@ -16,6 +15,7 @@ import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
+import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
@@ -23,6 +23,7 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
@@ -97,7 +98,7 @@ class DunningController(
         return dunningService.getCycleWiseExceptions(request)
     }
 
-    @Post("delete-master-exception")
+    @Post("/delete-master-exception")
     suspend fun deleteOrUpdateMasterException(
         @QueryValue("id") id: String,
         @QueryValue("updatedBy") updatedBy: UUID,
@@ -106,21 +107,20 @@ class DunningController(
         return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
     }
 
-    @Put("delete-dunning-cycle")
+    @Put("/update-status")
+    suspend fun updateStatusDunningCycle(
+        @Valid @Body
+        updateDunningCycleExecutionStatusReq: UpdateDunningCycleExecutionStatusReq
+    ): Boolean {
+        return dunningService.updateStatusDunningCycle(updateDunningCycleExecutionStatusReq)
+    }
+
+    @Delete("/delete-dunning-cycle")
     suspend fun deleteCycle(
         @QueryValue("id") id: String,
         @QueryValue("updatedBy") updatedBy: UUID
     ): Boolean {
-        return dunningService.deleteCycle(id, updatedBy)
-    }
-
-    @Put("update-status")
-    suspend fun updateStatusDunningCycle(
-        @QueryValue("id") id: String,
-        @QueryValue("updatedBy") updatedBy: UUID,
-        @QueryValue("actionType") status: DunningCycleStatus
-    ): Boolean {
-        return dunningService.updateStatusDunningCycle(id, updatedBy, status)
+        return Response<Boolean>().ok(dunningService.deleteCycle(id, updatedBy))
     }
 
     @Put

@@ -1,9 +1,7 @@
 package com.cogoport.ares.api.dunning.repository
 
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
-import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
-import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -19,21 +17,30 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         """
             SELECT
                 dc.name as name,
-                dc.is_active as dunningCycleStatus,
-                dc.cycle_type as cycle_type,
-                dce.*
+                dc.is_active as is_dunning_cycle_active,
+                dc.cycle_type as dunning_cycle_type,
+                dce.id as id,
+                dce.dunning_cycle_id as dunning_cycle_id,
+                dce.status as status,
+                dce.filters as filters,
+                dce.schedule_rule as schedule_rule,
+                dce.schedule_type as schedule_type,
+                dce.scheduled_at as scheduled_at,
+                dce.trigger_type as trigger_type,
+                dce.deleted_at as deleted_at,
+                dce.created_by as created_by,
+                dce.updated_by as updated_by,
+                dce.created_at as created_at,
+                dce.updated_at as updated_at
             FROM
                 dunning_cycle_executions dce
             JOIN
-                dunning_cycle dc on
+                dunning_cycles dc on
                 dc.id = dce.dunning_cycle_id
             WHERE
-                (:query IS NULL OR dc.name ILIKE :query) AND
-                (:status IS NULL OR dc.is_active = :status) AND
-                (:cycle_type IS NULL OR dc.cycle_type = :cycle_type) AND
-                (:serviceType IS NULL OR dce.filters->serviceTypes IS NULL OR :serviceType IN dce.filters->serviceTypes) 
-            ORDER BY
-                :sortBy :sortType
+                dce.deleted_at IS NUll AND
+                (:query IS NULL OR dc.name ILIKE :query)
+                 
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
             LIMIT :pageSize
                 
@@ -42,8 +49,8 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     suspend fun listDunningCycleExecution(
         query: String?,
         status: Boolean?,
-        dunningCycleType: DunningCycleType?,
-        serviceType: ServiceType?,
+        dunningCycleType: String?,
+        serviceType: String?,
         sortBy: String? = "created_at",
         sortType: String? = "DESC",
         pageIndex: Int? = 1,
@@ -54,24 +61,22 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @Query(
         """
             SELECT
-                COALESCE(COUNT(*), 0)
+                COALESCE(COUNT(dce.id), 0)
             FROM
                 dunning_cycle_executions dce
             JOIN
-                dunning_cycle dc on
+                dunning_cycles dc on
                 dc.id = dce.dunning_cycle_id
             WHERE
-                (:query IS NULL OR dc.name ILIKE :query) AND
-                (:status IS NULL OR dc.is_active = :status) AND
-                (:cycle_type IS NULL OR dc.cycle_type = :cycle_type) AND
-                (:serviceType IS NULL OR dce.filters->serviceTypes IS NULL OR :serviceType IN dce.filters->serviceTypes) 
+                dce.deleted_at IS NUll AND
+                (:query IS NULL OR dc.name ILIKE :query)
         """
     )
     suspend fun totalCountDunningCycleExecution(
         query: String?,
         status: Boolean?,
-        dunningCycleType: DunningCycleType?,
-        serviceType: ServiceType?
+        dunningCycleType: String?,
+        serviceType: String?
     ): Long
 
     @NewSpan

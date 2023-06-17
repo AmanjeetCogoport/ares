@@ -69,7 +69,10 @@ enum class AresError(
     ERR_1543("ERR_1543", "Wrong Service Type Selected.", HttpStatus.BAD_REQUEST),
     ERR_1544("ERR_1544", "Name of Dunning Cycle Can't  Be Less then 5 character.", HttpStatus.BAD_REQUEST),
     ERR_1545("ERR_1545", "Dunning Cycle Execution Not Found for your request.", HttpStatus.BAD_REQUEST),
-    ERR_1546("ERR_1546", "Dunning Cycle is Already deleted or Cancelled.", HttpStatus.BAD_REQUEST);
+    ERR_1546("ERR_1546", "Dunning Cycle is Already deleted.", HttpStatus.BAD_REQUEST),
+    ERR_1547("ERR_1547", "Schedule Time Size Can't  Be Less Or Greater then 5 character.", HttpStatus.BAD_REQUEST),
+    ERR_1548("ERR_1548", "Dunning Execution Already Deleted Or in inactive status.", HttpStatus.BAD_REQUEST);
+
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"
