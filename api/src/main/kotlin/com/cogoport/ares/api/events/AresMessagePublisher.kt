@@ -25,44 +25,44 @@ import io.micronaut.rabbitmq.annotation.RabbitProperty
 @RabbitProperty(name = "deliveryMode", value = "2")
 @MessageHeader(name = "x-retry-count", value = "0")
 interface AresMessagePublisher {
-    @Binding("supplier.outstanding")
+    @Binding("ares.update.supplier.details")
     suspend fun emitUpdateSupplierOutstanding(request: UpdateSupplierOutstandingRequest)
 
-    @Binding("unfreeze.credit.consumption")
+    @Binding("ares.unfreeze.credit.consumption")
     suspend fun emitUnfreezeCreditConsumption(request: Settlement)
 
-    @Binding("receivables.outstanding.data")
+    @Binding("ares.receivables.outstanding.data")
     suspend fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
 
-    @Binding("update.utilization.amount")
+    @Binding("ares.update.utilization.amount")
     suspend fun emitUtilizationUpdateRecord(payLocUpdateRequest: PayLocUpdateRequest)
 
-    @Binding("settlement.migration")
+    @Binding("ares.settlement.migration")
     suspend fun emitSettlementRecord(settlementRecord: SettlementRecord)
 
-    @Binding("sage.payment.migration")
+    @Binding("ares.sage.payment.migration")
     suspend fun emitPaymentMigration(paymentRecord: PaymentRecord)
 
-    @Binding("sage.jv.migration")
+    @Binding("ares.sage.jv.migration")
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JVParentDetails)
     suspend fun emitJournalVoucherMigration(journalVoucherRecord: JournalVoucherRecord)
 
-    @Binding("customer.outstanding")
+    @Binding("ares.update.customer.details")
     suspend fun emitUpdateCustomerOutstanding(request: UpdateSupplierOutstandingRequest)
 
-    @Binding("delete.invoices.not.present.in.plutus")
+    @Binding("ares.delete.invoices.not.present.in.plutus")
     suspend fun emitDeleteInvoicesNotPresentInPlutus(id: Long)
 
-    @Binding("migrate.settlement.number")
+    @Binding("ares.migrate.settlement.number")
     suspend fun emitMigrateSettlementNumber(ids: Long)
 
-    @Binding("update.settlement.bill.updated")
+    @Binding("ares.update.settlement.bill.updated")
     suspend fun emitUpdateSettlementWhenBillUpdated(updateSettlementWhenBillUpdatedEvent: UpdateSettlementWhenBillUpdatedEvent)
-    @Binding("tagged.bill.auto.knockoff")
+    @Binding("ares.tagged.bill.auto.knockoff")
     suspend fun emitTaggedBillAutoKnockOff(req: OnAccountPaymentRequest)
-    @Binding("migrate.new.period")
+    @Binding("ares.migrate.new.period")
     suspend fun emitNewPeriodRecords(newPeriodRecord: NewPeriodRecord)
-    @Binding("migrate.jv.pay.loc")
+    @Binding("ares.migrate.jv.pay.loc")
     suspend fun emitJVUtilization(record: JVRecordsScheduler)
 
     @Binding("ares.migrate.gl.codes")
