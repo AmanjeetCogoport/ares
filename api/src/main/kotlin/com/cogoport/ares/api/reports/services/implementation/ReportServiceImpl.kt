@@ -76,7 +76,7 @@ class ReportServiceImpl(
         val url = URLDecoder.decode(aresDocumentRepository.getSupplierOutstandingUrl(id), "UTF-8")
         val inputStreamFile = s3Client.download(url)
         val excelFile = File("/tmp/Supplier_Outstanding_Report_${Hashids.encode(id)}_${Instant.now()}.xlsx")
-        Files.copy(inputStreamFile.inputStream(), excelFile.toPath())
+        Files.copy(inputStreamFile, excelFile.toPath())
         return excelFile
     }
 

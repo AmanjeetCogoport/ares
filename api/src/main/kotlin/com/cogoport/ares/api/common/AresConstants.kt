@@ -186,7 +186,8 @@ object AresConstants {
         "bulk-post-settlement-to-sage",
         "partial-payment-mismatch",
         "bulk-update-payment-and-post-on-sage",
-        "bulk-post-payment-from-sage"
+        "bulk-post-payment-from-sage",
+        "send-email"
     )
 
     val RETRY_QUEUES = listOf(
@@ -222,4 +223,17 @@ object AresConstants {
         "bulk-update-payment-and-post-on-sage",
         "bulk-post-payment-from-sage"
     )
+
+    const val performedByUserNameForMail = "Business Finance Tech Team"
+    const val SAGE_PLATFORM_REPORT = "sage_platform_report"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "bhanugoban@cogoport.com"
+
+    val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
+        "abhishek.kumar@cogoport.com",
+        "vivek.garg@cogoport.com",
+        "shikhar.tyagi@cogoport.com",
+        "suhas.latelwar@cogoport.com"
+    )
+
+    const val BUSINESS_FINANCE_TECH_TEAM = "649f3792-b28f-4862-9683-5d5af2c574b4"
 }

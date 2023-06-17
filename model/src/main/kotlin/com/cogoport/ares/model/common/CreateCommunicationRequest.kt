@@ -20,5 +20,5 @@ data class CreateCommunicationRequest(
     @JsonProperty("cc_emails")
     var ccEmails: List<String?>? = mutableListOf<String?>(),
     @JsonProperty("email_variables")
-    var emailVariables: HashMap<String?, String?>?
+    var emailVariables: HashMap<String, String?>?
 )
