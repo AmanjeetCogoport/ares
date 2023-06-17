@@ -1751,7 +1751,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         paymentModel.updatedBy = req.performedBy.toString()
         val updatedPayment = updatePaymentEntry(paymentModel)
-        if (updatedPayment.isSuccess && paymentModel.organizationId != UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")) {
+        if (updatedPayment.isSuccess && paymentModel.organizationId != AresConstants.BLUETIDE_OTPD_ID) {
             directFinalPostToSage(
                 PostPaymentToSage(
                     req.paymentId,
