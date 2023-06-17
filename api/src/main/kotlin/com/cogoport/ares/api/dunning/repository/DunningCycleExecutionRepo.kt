@@ -38,8 +38,10 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
                 dunning_cycles dc on
                 dc.id = dce.dunning_cycle_id
             WHERE
-                dce.deleted_at IS NUll AND
-                (:query IS NULL OR dc.name ILIKE :query)
+                dce.deleted_at IS NUll
+                AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
+                AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
+                AND (:query IS NULL OR dc.name ILIKE :query)
                  
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
             LIMIT :pageSize
@@ -48,8 +50,8 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     )
     suspend fun listDunningCycleExecution(
         query: String?,
-        status: Boolean?,
-        dunningCycleType: String?,
+        status: MutableList<String>,
+        dunningCycleType: MutableList<String>,
         serviceType: String?,
         sortBy: String? = "created_at",
         sortType: String? = "DESC",
@@ -68,13 +70,13 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
                 dunning_cycles dc on
                 dc.id = dce.dunning_cycle_id
             WHERE
-                dce.deleted_at IS NUll AND
-                (:query IS NULL OR dc.name ILIKE :query)
+                dce.deleted_at IS NUll
+                AND (:query IS NULL OR dc.name ILIKE :query)
         """
     )
     suspend fun totalCountDunningCycleExecution(
         query: String?,
-        status: Boolean?,
+        status: String?,
         dunningCycleType: String?,
         serviceType: String?
     ): Long

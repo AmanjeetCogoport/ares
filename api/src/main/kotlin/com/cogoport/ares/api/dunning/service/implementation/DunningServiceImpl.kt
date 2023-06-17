@@ -547,14 +547,47 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): ResponseList<DunningCycleExecutionResponse> {
+        val status: MutableList<String> = mutableListOf()
+        if (request.cycleStatus == null || request.cycleStatus!!.size == null) {
+            CycleExecutionStatus.values().forEach {
+                status.add(it.toString())
+            }
+        } else {
+            request.cycleStatus!!.forEach { it ->
+                status.add(CycleExecutionStatus.valueOf(it).toString())
+            }
+        }
+
+        val dunningCycleType: MutableList<String> = mutableListOf()
+        if (request.dunningCycleType == null || request.dunningCycleType!!.size == 0) {
+            DunningCycleType.values().forEach {
+                dunningCycleType.add(it.toString())
+            }
+        } else {
+            request.dunningCycleType!!.forEach { it ->
+                dunningCycleType.add(DunningCycleType.valueOf(it).toString())
+            }
+        }
+
+        val serviceType: MutableList<String> = mutableListOf()
+        if (request.service == null || request.service!!.size == 0) {
+            ServiceType.values().forEach {
+                serviceType.add(it.toString())
+            }
+        } else {
+            request.service!!.forEach {
+                serviceType.add(ServiceType.valueOf(it).toString())
+            }
+        }
+
         var query: String? = null
         if (request.query != null)
             query = "%${request.query}%"
 
         val response = dunningExecutionRepo.listDunningCycleExecution(
             query = query,
-            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
-            dunningCycleType = request.dunningCycleType.toString(),
+            status = status,
+            dunningCycleType = dunningCycleType,
             serviceType = request.service.toString(),
             sortBy = request.sortBy,
             sortType = request.sortType,
@@ -564,7 +597,7 @@ open class DunningServiceImpl(
 
         val totalCount = dunningExecutionRepo.totalCountDunningCycleExecution(
             query = query,
-            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
+            status = request.cycleStatus.toString(),
             dunningCycleType = request.dunningCycleType.toString(),
             serviceType = request.service.toString()
         )
