@@ -1249,7 +1249,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId)
-            if (paymentDetails.organizationId == UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")) {
+            if (paymentDetails.organizationId == AresConstants.BLUETIDE_OTPD_ID) {
                 return false
             }
 

@@ -2858,7 +2858,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val request = CreateCommunicationRequest(
             templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
-            performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+            performedByUserId = AresConstants.ARES_USER_ID,
             performedByUserName = "Ares",
             recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
             senderEmail = AresConstants.NO_REPLY,

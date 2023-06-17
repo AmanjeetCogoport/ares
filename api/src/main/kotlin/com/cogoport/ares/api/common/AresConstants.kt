@@ -5,9 +5,11 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.IsoFields
+import java.util.UUID
 
 object AresConstants {
-    val ARES_USER_ID = "d815466f-f39f-414e-a799-5cd178da57ce"
+    val ARES_USER_ID: UUID = UUID.fromString("d815466f-f39f-414e-a799-5cd178da57ce")
+    val BLUETIDE_OTPD_ID: UUID = UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")
 
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = LocalDate.now().year
