@@ -198,7 +198,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
-                val message = "Organization id is null, not migrating journal voucher ${journalVoucherRecord.paymentNum}"
+                val message = "Organization id is null, not migrating journal voucher ${journalVoucherRecord.paymentNum} BPR - ${journalVoucherRecord.sageOrganizationId}"
                 logger().info(message)
                 migrationLogService.saveMigrationLogs(
                     null, null, journalVoucherRecord.paymentNum, null, null,
