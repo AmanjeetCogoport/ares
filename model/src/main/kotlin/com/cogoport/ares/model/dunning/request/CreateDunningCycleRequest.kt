@@ -17,5 +17,5 @@ data class CreateDunningCycleRequest(
     var category: String? = DunningCategory.CYCLE.toString(),
     var isActive: Boolean? = true,
     var createdBy: UUID,
-    var exceptionTradePartyDetailIds: List<UUID>
+    var exceptionTradePartyDetailIds: List<UUID>?
 )

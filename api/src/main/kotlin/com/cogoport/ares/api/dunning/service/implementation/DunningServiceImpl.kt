@@ -60,7 +60,8 @@ import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Singleton
 import java.sql.Timestamp
-import java.time.LocalDateTime
+import java.time.DayOfWeek
+import java.time.Instant
 import java.util.Calendar
 import java.util.UUID
 import javax.transaction.Transactional
@@ -187,35 +188,34 @@ open class DunningServiceImpl(
             )
         )
 
-        val organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
-            GetOrganizationTradePartyDetailRequest(
-                organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds
-            )
-        )
-
-        val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
-        organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
-            dunningCycleExceptionList.add(
-                CycleExceptions(
-                    id = null,
-                    dunningCycleId = dunningCycleResponse.id!!,
-                    tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
-                    registrationNumber = organizationTradePartyDetail.registrationNumber!!,
-                    deletedAt = null,
-                    createdBy = dunningCycleResponse.createdBy,
-                    updatedBy = dunningCycleResponse.updatedBy,
-                    createdAt = null,
-                    updatedAt = null
+        if (!createDunningCycleRequest.exceptionTradePartyDetailIds.isNullOrEmpty()) {
+            val organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
+                GetOrganizationTradePartyDetailRequest(
+                    organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
                 )
             )
+
+            val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
+            organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
+                dunningCycleExceptionList.add(
+                    CycleExceptions(
+                        id = null,
+                        dunningCycleId = dunningCycleResponse.id!!,
+                        tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
+                        registrationNumber = organizationTradePartyDetail.registrationNumber!!,
+                        deletedAt = null,
+                        createdBy = dunningCycleResponse.createdBy,
+                        updatedBy = dunningCycleResponse.updatedBy,
+                        createdAt = null,
+                        updatedAt = null
+                    )
+                )
+            }
+
+            cycleExceptionRepo.saveAll(dunningCycleExceptionList)
         }
 
-        cycleExceptionRepo.saveAll(dunningCycleExceptionList)
-
-//        TODO("Write trigger for rabbitMQ.")
-
-        // TODO("WRITE ALGO TO CALCULATE NEXT DUNNING CYCLE.")
-        val dunningCycleScheduledAt: Timestamp = Timestamp(System.currentTimeMillis())
+        val dunningCycleScheduledAt: Timestamp = calculateNextScheduleTime(dunningCycleResponse.scheduleRule)
 
         val dunningCycleExecutionResponse = dunningExecutionRepo.save(
             DunningCycleExecution(
@@ -235,6 +235,8 @@ open class DunningServiceImpl(
                 updatedAt = null
             )
         )
+
+        //        TODO("Write trigger for rabbitMQ.")
 
         auditRepository.save(
             Audit(
@@ -332,7 +334,6 @@ open class DunningServiceImpl(
                 exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
             )
 
-//        TODO("Need to filter based on service type and tagged organization Id")
         val response = customerOutstandingAndOnAccountResponses
 
         val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
@@ -521,7 +522,7 @@ open class DunningServiceImpl(
         )
 
         if (updateDunningCycleExecutionStatusReq.isDunningCycleActive) {
-            val dunningCycleScheduledAt = Timestamp.valueOf(LocalDateTime.now()) // TODO("call nextScheduled Time.")
+            val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycle.scheduleRule)
 
             dunningExecutionRepo.save(
                 DunningCycleExecution(
@@ -658,13 +659,8 @@ open class DunningServiceImpl(
         dunningCycleResp?.updatedBy = request.updatedBy
 
         dunningCycleRepo.update(dunningCycleResp)
-//        dunningCycleRepo.updateDunningCycle(
-//            dunningCycleExecution.dunningCycleId,
-//            request.scheduleRule,
-//            request.updatedBy
-//        )
 
-        val dunningCycleScheduledAt = Timestamp.valueOf(LocalDateTime.now()) // TODO("call nextScheduled Time.")
+        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycleResp.scheduleRule)
 
         dunningCycleExecution.id = null
         dunningCycleExecution.status = CycleExecutionStatus.SCHEDULED.toString()
@@ -834,65 +830,106 @@ open class DunningServiceImpl(
 
     open suspend fun calculateNextScheduleTime(
         scheduleRule: DunningScheduleRule
-    ): Timestamp? {
+    ): Timestamp {
         var scheduleTimeStamp: Timestamp? = null
 
-        val scheduleTimeStampInGMT = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
-            DunningExecutionFrequency.ONE_TIME -> null
-            DunningExecutionFrequency.DAILY -> null
-            DunningExecutionFrequency.WEEKLY -> null
-            DunningExecutionFrequency.MONTHLY -> null
+        val scheduleHour = extractHourAndMinute(scheduleRule.scheduleTime).get("hour")!!
+        val scheduleMinute = extractHourAndMinute(scheduleRule.scheduleTime).get("minute")!!
+
+        val scheduleTimeStampInGMT: Timestamp = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
+            DunningExecutionFrequency.ONE_TIME -> calculateNextScheduleTimeForOneTime(scheduleRule.oneTimeDate!!, scheduleHour, scheduleMinute)
+            DunningExecutionFrequency.DAILY -> calculateNextScheduleTimeForDaily(scheduleHour, scheduleMinute)
+            DunningExecutionFrequency.WEEKLY -> calculateScheduleTimeForWeekly(scheduleRule.week!!, scheduleHour, scheduleMinute)
+            DunningExecutionFrequency.MONTHLY -> calculateScheduleTimeForMonthly(scheduleRule.dayOfMonth!!, scheduleHour, scheduleMinute)
             else -> throw AresException(AresError.ERR_1002, "")
         }
 
-        return scheduleTimeStamp
+        val actiualTimestampInRespectiveTimeZone = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+        )?.plus(scheduleTimeStampInGMT.time) ?: throw AresException(AresError.ERR_1002, "")
+
+        return Timestamp(actiualTimestampInRespectiveTimeZone)
     }
 
-    private suspend fun calculateNextScheduleTimeForOneTime(scheduleDate: Timestamp, scheduledAt: Timestamp): Timestamp {
+    open suspend fun extractHourAndMinute(time: String): Map<String, String> {
+        if (time.length != 5 ||
+            (time.slice(0..1).toLong() > 24 || time.slice(0..1).toLong() < 0) ||
+            (time.slice(3..4).toLong() > 60) || time.slice(3..4).toLong() < 0
+        ) {
+            throw AresException(AresError.ERR_1549, "")
+        }
+
+        return mapOf(
+            "hour" to time.slice(0..1),
+            "minute" to time.slice(3..4)
+        )
+    }
+
+    private suspend fun calculateNextScheduleTimeForOneTime(scheduleDate: Instant, scheduleHour: String, scheduleMinute: String): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
-        val scheduledAtCal = Calendar.getInstance()
 
-        scheduledAtCal.timeInMillis = scheduledAt.time
-        scheduleDateCal.timeInMillis = scheduleDate.time
+        scheduleDateCal.timeInMillis = Timestamp.from(scheduleDate).time
 
-        scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduledAtCal.get(Calendar.HOUR_OF_DAY))
-        scheduleDateCal.set(Calendar.MINUTE, scheduledAtCal.get(Calendar.MINUTE))
-        scheduleDateCal.set(Calendar.SECOND, scheduledAtCal.get(Calendar.SECOND))
-        scheduleDateCal.set(Calendar.MILLISECOND, scheduledAtCal.get(Calendar.MILLISECOND))
+        scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
+        scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
         return Timestamp(scheduleDateCal.timeInMillis)
     }
 
-    private suspend fun calculateNextScheduleTimeForDaily(scheduledAt: Timestamp): Timestamp {
-        val scheduledAtCal = Calendar.getInstance()
-        scheduledAtCal.timeInMillis = scheduledAt.time
-
+    private suspend fun calculateNextScheduleTimeForDaily(scheduleHour: String, scheduleMinute: String): Timestamp {
         val todayCal = Calendar.getInstance()
         todayCal.timeInMillis = System.currentTimeMillis()
 
-        todayCal.set(Calendar.HOUR_OF_DAY, scheduledAtCal.get(Calendar.HOUR_OF_DAY))
-        todayCal.set(Calendar.MINUTE, scheduledAtCal.get(Calendar.MINUTE))
-        todayCal.set(Calendar.SECOND, scheduledAtCal.get(Calendar.SECOND))
-        todayCal.set(Calendar.MILLISECOND, scheduledAtCal.get(Calendar.MILLISECOND))
-
-        if (!(
-            scheduledAtCal.timeInMillis > todayCal.timeInMillis &&
-                scheduledAtCal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR) &&
-                scheduledAtCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH) &&
-                scheduledAtCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH)
-            )
+        if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt() ||
+            (todayCal.get(Calendar.HOUR) <= scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt())
         ) {
-            todayCal.set(Calendar.DAY_OF_MONTH, (todayCal.get(Calendar.DAY_OF_MONTH) + 1) % AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING)
+            todayCal.add(Calendar.DAY_OF_MONTH, 1)
         }
+
+        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
+        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
         return Timestamp(todayCal.timeInMillis)
     }
 
-    private suspend fun calculateScheduleTimeForWeekly(scheduledAt: Timestamp): Timestamp {
-        TODO()
+    private suspend fun calculateScheduleTimeForWeekly(week: DayOfWeek, scheduleHour: String, scheduleMinute: String): Timestamp {
+        val todayCal = Calendar.getInstance()
+        todayCal.timeInMillis = System.currentTimeMillis()
+
+        if (
+            !(
+                (todayCal.get(Calendar.DAY_OF_WEEK) == (week.ordinal + 1)) &&
+                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt()) &&
+                    (todayCal.get(Calendar.MINUTE) < scheduleMinute.toInt())
+                )
+        ) {
+            while (todayCal.get(Calendar.DAY_OF_WEEK) != (week.ordinal + 1)) {
+                todayCal.add(Calendar.DAY_OF_WEEK, 1)
+            }
+        }
+
+        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
+        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
+
+        return Timestamp(todayCal.timeInMillis)
     }
 
-    private suspend fun calculateScheduleTimeForMonthly(scheduledAt: Timestamp): Timestamp {
-        TODO()
+    private suspend fun calculateScheduleTimeForMonthly(dayOfMonth: Int, scheduleHour: String, scheduleMinute: String): Timestamp {
+        val todayCal = Calendar.getInstance()
+        todayCal.timeInMillis = System.currentTimeMillis()
+
+        if (todayCal.get(Calendar.DAY_OF_MONTH) > dayOfMonth ||
+            (todayCal.get(Calendar.DAY_OF_MONTH) == dayOfMonth && (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt())) &&
+            (todayCal.get(Calendar.DAY_OF_MONTH) == dayOfMonth && (todayCal.get(Calendar.HOUR_OF_DAY) == scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt()))
+        ) {
+            todayCal.add(Calendar.MONTH, 1)
+        }
+
+        todayCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+
+        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
+        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
+
+        return Timestamp(todayCal.timeInMillis)
     }
 }

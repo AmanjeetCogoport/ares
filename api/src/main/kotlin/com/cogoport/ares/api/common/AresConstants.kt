@@ -198,12 +198,12 @@ object AresConstants {
         UTC
     }
 
-    var TIME_DIFFENRENCE = mapOf<TimeZone, Long>(
+    var TIME_ZONE_DIFFENRENCE_FROM_GMT = mapOf<TimeZone, Long>(
         TimeZone.GMT to 0.toLong(),
         TimeZone.IST to 19800000.toLong(),
         TimeZone.UTC to 28800000.toLong(),
         TimeZone.VNM to 25200000.toLong()
     )
 
-    const val MAX_DAY_IN_MONTH_FOR_DUNNING = 28
+    const val MAX_DAY_IN_MONTH_FOR_DUNNING: Int = 28
 }
