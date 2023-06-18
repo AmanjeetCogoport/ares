@@ -9,8 +9,10 @@ import javax.validation.constraints.Positive
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 open class Pagination() {
     @JsonProperty("pageSize")
-    @Positive(message = "Index must be positive digit") val pageSize: Int = 10
+    @Positive(message = "Index must be positive digit")
+    var pageSize: Int = 10
 
     @JsonProperty("pageIndex")
-    @Positive(message = "Index must be positive digit") val pageIndex: Int = 1
+    @Positive(message = "Index must be positive digit")
+    var pageIndex: Int = 1
 }
