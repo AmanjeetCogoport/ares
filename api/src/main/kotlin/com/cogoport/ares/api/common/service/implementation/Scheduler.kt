@@ -48,7 +48,7 @@ class Scheduler(
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
-    @Value("\${server.base-url}") // application-prod.yml path
+    @Value("\${micronaut.server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     @Scheduled(cron = "0 0 * * *")

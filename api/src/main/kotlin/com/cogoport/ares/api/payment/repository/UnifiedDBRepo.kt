@@ -109,7 +109,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         WHERE document_status = 'FINAL'
         AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
         AND aau.transaction_date < NOW() 
-        AND (acc_type = :accType)
+        AND (COALESCE(:accType) is null OR acc_type IN (:accType))
         AND (acc_mode = :accMode)
         AND (CASE WHEN :isTillYesterday = TRUE THEN aau.transaction_date < now()::DATE ELSE TRUE END)
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -123,7 +123,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         entityCode: MutableList<Int>?,
         defaultersOrgIds: List<UUID>? = null,
         accMode: String,
-        accType: String,
+        accType: List<String>?,
         serviceTypes: List<ServiceType>? = null,
         startDate: String? = null,
         endDate: String? = null,
@@ -171,7 +171,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE document_status = 'FINAL'
             AND (:entityCode is null OR aau.entity_code = :entityCode)
             AND aau.transaction_date < NOW() 
-            AND acc_type = 'REC'
+            AND acc_type IN ('REC', 'CTDS')
             AND (acc_mode = 'AR')
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
@@ -191,7 +191,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND aau.acc_mode ='AR'
             AND document_status = 'FINAL'
-            AND acc_type in ('SINV','SCN')
+            AND acc_type in ('SINV','SCN',  'SREIMB', 'SREIMBCN')
             AND (aau.entity_code = :entityCode)
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
@@ -546,7 +546,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             due_date is not null 
             AND acc_mode = 'AR' 
             AND 
-            acc_type in ('SINV','SDN') 
+            acc_type in ('SINV','SDN', 'SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
