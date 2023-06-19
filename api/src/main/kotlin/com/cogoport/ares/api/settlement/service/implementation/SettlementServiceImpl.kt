@@ -191,9 +191,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject lateinit var railsClient: RailsClient
 
-    @Inject
-    lateinit var authClient: AuthClient
-
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     @Inject
@@ -1018,7 +1015,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun check(request: CheckRequest): CheckResponse {
         val stack = runSettlement(request, performDbOperation = false, isAutoKnockOff = false)
-        val canSettle = if (request.throughIncident) true else getCanSettleFlag(stack)
+        val canSettle = getCanSettleFlag(stack)
         return CheckResponse(
             stackDetails = stack,
             canSettle = canSettle
@@ -1027,12 +1024,8 @@ open class SettlementServiceImpl : SettlementService {
 
     private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
         var canSettle = true
-        val currencyList = stack.map { it.currency }
-        if (currencyList.distinct().size > 1) canSettle = false
-        if (canSettle) {
-            stack.forEach {
-                if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
-            }
+        stack.forEach {
+            if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
         }
         return canSettle
     }
@@ -2857,7 +2850,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun sendEmailSettlementsMatchingFailed(url: String) {
-        val emailVariables = HashMap<String?, String?>()
+        val emailVariables = HashMap<String, String?>()
         emailVariables["sheet_url"] = url
 
         val request = CreateCommunicationRequest(
@@ -2870,6 +2863,6 @@ open class SettlementServiceImpl : SettlementService {
             emailVariables = emailVariables
         )
 
-        authClient.sendCommunication(request)
+        aresMessagePublisher.sendEmail(request)
     }
 }
