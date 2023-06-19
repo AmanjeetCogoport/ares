@@ -4,7 +4,6 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
-import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
 import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
@@ -67,8 +66,8 @@ import java.sql.Timestamp
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDateTime
-import java.util.UUID
 import java.util.Calendar
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -201,29 +200,28 @@ open class DunningServiceImpl(
             var organizationTradePartyDetailResponse: GetOrganizationTradePartyDetailResponse? = null
             try {
                 organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
-                        GetOrganizationTradePartyDetailRequest(
-                                organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
-                        )
+                    GetOrganizationTradePartyDetailRequest(
+                        organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
+                    )
                 )
             } catch (e: Exception) {
-
             }
 
             val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
             if (organizationTradePartyDetailResponse != null) {
                 organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
                     dunningCycleExceptionList.add(
-                            CycleExceptions(
-                                    id = null,
-                                    dunningCycleId = dunningCycleResponse.id!!,
-                                    tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
-                                    registrationNumber = organizationTradePartyDetail.registrationNumber!!,
-                                    deletedAt = null,
-                                    createdBy = dunningCycleResponse.createdBy,
-                                    updatedBy = dunningCycleResponse.updatedBy,
-                                    createdAt = null,
-                                    updatedAt = null
-                            )
+                        CycleExceptions(
+                            id = null,
+                            dunningCycleId = dunningCycleResponse.id!!,
+                            tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
+                            registrationNumber = organizationTradePartyDetail.registrationNumber!!,
+                            deletedAt = null,
+                            createdBy = dunningCycleResponse.createdBy,
+                            updatedBy = dunningCycleResponse.updatedBy,
+                            createdAt = null,
+                            updatedAt = null
+                        )
                     )
                 }
             }
@@ -711,7 +709,9 @@ open class DunningServiceImpl(
             query = query,
             status = status,
             sortBy = request.sortBy,
-            sortType = request.sortType
+            sortType = request.sortType,
+            pageIndex = request.pageIndex,
+
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycle(
