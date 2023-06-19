@@ -546,7 +546,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             due_date is not null 
             AND acc_mode = 'AR' 
             AND 
-            acc_type in ('SINV','SDN', 'SCN', 'REC', 'CTDS, 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+            acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
@@ -564,9 +564,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT 
         EXTRACT(MONTH FROM transaction_date) AS month,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as outstandings,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN', 'SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+        coalesce(sum(case when aau.acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as outstandings,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'SREIMB', 'SREIMBCN') then sign_flag*amount_loc end),0) as total_sales,
         0 as days,
         0 as value,
         '' as dashboard_currency
