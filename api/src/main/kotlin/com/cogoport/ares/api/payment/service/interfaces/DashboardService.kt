@@ -66,7 +66,7 @@ interface DashboardService {
 
     suspend fun getOutstanding(entityCode: Int?): OutstandingOpensearchResponse?
 
-    suspend fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
+    suspend fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>?
 
     suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 

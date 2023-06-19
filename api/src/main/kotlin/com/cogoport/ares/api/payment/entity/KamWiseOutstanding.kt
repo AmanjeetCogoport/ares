@@ -12,4 +12,6 @@ data class KamWiseOutstanding(
     var openInvoiceAmount: BigDecimal = BigDecimal.ZERO,
     @JsonProperty("total_outstanding_amount")
     var totalOutstandingAmount: BigDecimal = BigDecimal.ZERO,
+    @JsonProperty("entity_code")
+    var entityCode: Int? = null
 )

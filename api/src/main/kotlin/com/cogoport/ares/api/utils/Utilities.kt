@@ -15,9 +15,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Month
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
+import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -141,6 +142,23 @@ class Utilities {
                         .format(Instant.now())
                 )
             }
+        }
+
+        /**
+         * Converts Date into LocalDateTime
+         */
+        fun dateIntoLocalDateTime(date: Date): LocalDateTime {
+            return LocalDateTime.ofInstant(
+                date.toInstant(),
+                ZoneId.systemDefault()
+            )
+        }
+
+        /**
+         * Converts LocalDateTime into Date
+         */
+        fun localDateTimeIntoDate(ldt: LocalDateTime): Date {
+            return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant())
         }
     }
 }

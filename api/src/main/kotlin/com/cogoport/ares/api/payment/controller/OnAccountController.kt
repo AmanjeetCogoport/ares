@@ -125,4 +125,9 @@ class OnAccountController {
     suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo? {
         return sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accMode)
     }
+
+    @Get("/download-sage-platform-report")
+    suspend fun downloadSagePlatformReport(startDate: String, endDate: String) {
+        return onAccountService.downloadSagePlatformReport(startDate, endDate)
+    }
 }

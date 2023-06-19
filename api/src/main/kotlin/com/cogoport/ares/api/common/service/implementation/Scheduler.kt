@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
@@ -24,6 +25,7 @@ import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.time.LocalDate.now
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -44,7 +46,8 @@ class Scheduler(
     private var ledgerBalanceServiceImpl: LedgerBalanceServiceImpl,
     private var aresMessagePublisher: AresMessagePublisher,
     private var aresDocumentRepository: AresDocumentRepository,
-    private var s3Client: S3Client
+    private var s3Client: S3Client,
+    private var onAccountService: OnAccountService
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -180,5 +183,13 @@ class Scheduler(
         runBlocking {
             settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
         }
+    }
+
+    @Scheduled(cron = "0 5 * * *")
+    fun sendSagePlatformPaymentReport() = runBlocking {
+        val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+        val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
+
+        onAccountService.downloadSagePlatformReport(startDate, endDate)
     }
 }
