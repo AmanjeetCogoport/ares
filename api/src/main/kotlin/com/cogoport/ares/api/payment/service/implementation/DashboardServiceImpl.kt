@@ -609,7 +609,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"))
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC", "PAY"))
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
