@@ -630,7 +630,7 @@ class DashboardServiceImpl : DashboardService {
             else -> BigDecimal.ZERO
         }
 
-        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount!!)
+        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount?.multiply(BigDecimal(-1))!!)
 
         openSearchData.outstandingServiceWise = mapData
         openSearchData.overallStats = OverallStats(
