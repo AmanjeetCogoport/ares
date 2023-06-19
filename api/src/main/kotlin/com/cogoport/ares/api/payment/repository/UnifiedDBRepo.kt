@@ -104,7 +104,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-        SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
+        SELECT coalesce(sum(sign_flag * (amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
         WHERE document_status = 'FINAL'
         AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
@@ -171,7 +171,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE document_status = 'FINAL'
             AND (:entityCode is null OR aau.entity_code = :entityCode)
             AND aau.transaction_date < NOW() 
-            AND acc_type IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+            AND acc_type IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY)
             AND (acc_mode = 'AR')
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
@@ -191,7 +191,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND aau.acc_mode ='AR'
             AND document_status = 'FINAL'
-            AND acc_type in ('SINV','SCN',  'SREIMB', 'SREIMBCN')
+            AND acc_type in ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
             AND (aau.entity_code = :entityCode)
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
