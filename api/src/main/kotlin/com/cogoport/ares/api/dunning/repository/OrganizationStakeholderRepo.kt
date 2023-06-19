@@ -1,6 +1,6 @@
 package com.cogoport.ares.api.dunning.repository
 
-import com.cogoport.ares.api.dunning.entity.CreditController
+import com.cogoport.ares.api.dunning.entity.OrganizationStakeholder
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -10,7 +10,7 @@ import io.micronaut.tracing.annotation.NewSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long> {
+interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStakeholder, Long> {
 
     @NewSpan
     @Query(
@@ -18,7 +18,7 @@ interface CreditControllerRepo : CoroutineCrudRepository<CreditController, Long>
             SELECT * FROM credit_controllers WHERE organizationId IN (:organizationIds);
         """
     )
-    suspend fun listCreditControllersUsingOrgId(organizationIds: List<UUID>): List<CreditController>
+    suspend fun listCreditControllersUsingOrgId(organizationIds: List<UUID>): List<OrganizationStakeholder>
 
     @NewSpan
     @Query(

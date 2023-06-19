@@ -10,8 +10,8 @@ import java.time.LocalDateTime
 import java.util.UUID
 import javax.persistence.GeneratedValue
 
-@MappedEntity(value = "credit_controllers")
-data class CreditController(
+@MappedEntity(value = "organization_stakeholders")
+data class OrganizationStakeholder(
     @field:Id @GeneratedValue
     var id: Long?,
     var creditControllerName: String,

@@ -46,7 +46,7 @@ class DunningController(
         return Response<String>().ok(Hashids.encode(dunningService.createDunningCycle(createDunningCycleRequest)))
     }
 
-    @Post("/credit-controller")
+    @Post("/organization-stakeholder")
     suspend fun createCreditController(
         @Valid @Body
         creditControllerRequest: CreditControllerRequest
@@ -54,7 +54,7 @@ class DunningController(
         return Response<String>().ok(Hashids.encode(dunningService.createCreditController(creditControllerRequest)))
     }
 
-    @Put("/credit-controller")
+    @Put("/organization-stakeholder")
     suspend fun updateCreditController(
         @Valid @Body
         updateCreditControllerRequest: UpdateCreditControllerRequest

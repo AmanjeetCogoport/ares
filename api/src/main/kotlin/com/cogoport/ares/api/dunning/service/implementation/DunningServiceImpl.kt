@@ -4,22 +4,22 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
-import com.cogoport.ares.api.dunning.entity.CreditController
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
 import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.MasterExceptions
+import com.cogoport.ares.api.dunning.entity.OrganizationStakeholder
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
-import com.cogoport.ares.api.dunning.repository.CreditControllerRepo
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
+import com.cogoport.ares.api.dunning.repository.OrganizationStakeholderRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -58,17 +58,17 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.rabbitmq.client.interfaces.RabbitmqService
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.DayOfWeek
 import java.time.Instant
-import java.util.Calendar
-import java.util.UUID
+import java.util.*
 import javax.transaction.Transactional
 
 @Singleton
 open class DunningServiceImpl(
-    private var creditControllerRepo: CreditControllerRepo,
+    private var creditControllerRepo: OrganizationStakeholderRepo,
     private var accountUtilizationRepo: AccountUtilizationRepo,
     private var dunningCycleRepo: DunningCycleRepo,
     private var dunningExecutionRepo: DunningCycleExecutionRepo,
@@ -77,7 +77,8 @@ open class DunningServiceImpl(
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val cycleExceptionRepo: CycleExceptionRepo,
     private val util: Util,
-    private val authClient: AuthClient
+    private val authClient: AuthClient,
+    private val rabbitMq: RabbitmqService
 ) : DunningService {
 
     @Transactional
@@ -87,7 +88,7 @@ open class DunningServiceImpl(
             " : created by can't be null"
         )
         val response = creditControllerRepo.save(
-            CreditController(
+            OrganizationStakeholder(
                 id = null,
                 creditControllerName = creditControllerRequest.creditControllerName,
                 creditControllerId = creditControllerRequest.creditControllerId,
@@ -108,7 +109,7 @@ open class DunningServiceImpl(
         val creditController = creditControllerRepo.findById(Hashids.decode(updateCreditController.id)[0])
             ?: throw AresException(AresError.ERR_1541, "")
 
-        val updateCreditController: CreditController = CreditController(
+        val updateOrganizationStakeholder: OrganizationStakeholder = OrganizationStakeholder(
             id = Hashids.decode(updateCreditController.id)[0],
             creditControllerName = updateCreditController.creditControllerName
                 ?: creditController.creditControllerName,
@@ -123,7 +124,7 @@ open class DunningServiceImpl(
             updatedAt = creditController?.updatedAt
         )
 
-        val response = creditControllerRepo.update(updateCreditController)
+        val response = creditControllerRepo.update(updateOrganizationStakeholder)
 
         return response.id!!
     }
@@ -237,6 +238,7 @@ open class DunningServiceImpl(
         )
 
         //        TODO("Write trigger for rabbitMQ.")
+        rabbitMq.delay("dunning-scheduler", dunningCycleExecutionResponse.id!!, Date(dunningCycleScheduledAt.time))
 
         auditRepository.save(
             Audit(

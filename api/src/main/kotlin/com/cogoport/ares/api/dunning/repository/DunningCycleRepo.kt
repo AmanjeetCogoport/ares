@@ -47,7 +47,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     suspend fun listDunningCycle(
         query: String?,
         status: Boolean?,
-        sortBy: String? = "createdAt",
+        sortBy: String? = "created_at",
         sortType: String? = "DESC",
         pageIndex: Int? = 1,
         pageSize: Int? = 10
