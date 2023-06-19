@@ -25,6 +25,7 @@ data class DunningCycle(
     var triggerType: String,
     var frequency: String,
     var severityLevel: Int,
+    var entityCode: Int,
     @MappedProperty(type = DataType.JSON)
     var filters: DunningCycleFilters,
     @MappedProperty(type = DataType.JSON)

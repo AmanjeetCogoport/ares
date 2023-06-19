@@ -20,6 +20,7 @@ data class DunningCycleExecution(
     var dunningCycleId: Long,
     var templateId: UUID,
     var status: String,
+    var entityCode: Int,
     @MappedProperty(type = DataType.JSON)
     var filters: DunningCycleFilters,
     @MappedProperty(type = DataType.JSON)
