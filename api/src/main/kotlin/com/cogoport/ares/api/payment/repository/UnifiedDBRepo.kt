@@ -171,7 +171,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE document_status = 'FINAL'
             AND (:entityCode is null OR aau.entity_code = :entityCode)
             AND aau.transaction_date < NOW() 
-            AND acc_type IN ('REC', 'CTDS')
+            AND acc_type IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
             AND (acc_mode = 'AR')
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
@@ -546,7 +546,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             due_date is not null 
             AND acc_mode = 'AR' 
             AND 
-            acc_type in ('SINV','SDN', 'SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') 
+            acc_type in ('SINV','SDN', 'SCN', 'REC', 'CTDS, 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
             AND document_status in ('FINAL') 
             AND deleted_at is null
             AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
