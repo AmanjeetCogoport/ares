@@ -11,5 +11,5 @@ data class DunningPayments(
     var amountLoc: BigDecimal,
     var payLoc: BigDecimal,
     var transactionDate: Timestamp?,
-    var signFlag: Int?,
+    var signFlag: Int,
 )
