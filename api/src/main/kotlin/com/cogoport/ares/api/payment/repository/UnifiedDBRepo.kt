@@ -596,9 +596,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT to_char(date_trunc('quarter',aau.transaction_date),'Q')::int as duration,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN', 'SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'SREIMB', 'SREIMBCN') then sign_flag*amount_loc end),0) as total_sales,
             '' as dashboard_currency
             from ares.account_utilizations aau
             INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
