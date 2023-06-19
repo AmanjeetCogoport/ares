@@ -23,7 +23,7 @@ data class DunningCycle(
     var name: String,
     var cycle_type: String,
     var triggerType: String,
-    var scheduleType: String,
+    var frequency: String,
     var severityLevel: Int,
     @MappedProperty(type = DataType.JSON)
     var filters: DunningCycleFilters,

@@ -31,6 +31,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             SELECT
                 id,
                 name,
+                schedule_rule,
                 cycle_type::varchar,
                 created_at::timestamp,
                 updated_at::timestamp

@@ -24,7 +24,7 @@ data class DunningCycleExecution(
     var filters: DunningCycleFilters,
     @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
-    var scheduleType: String,
+    var frequency: String,
     var scheduledAt: Timestamp,
     var triggerType: String,
     var deletedAt: Timestamp?,

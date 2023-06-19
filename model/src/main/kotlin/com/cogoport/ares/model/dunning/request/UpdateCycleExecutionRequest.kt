@@ -7,5 +7,6 @@ import java.util.UUID
 data class UpdateCycleExecutionRequest(
     val id: String,
     val updatedBy: UUID,
+    val triggerType: String,
     val scheduleRule: DunningScheduleRule
 )
