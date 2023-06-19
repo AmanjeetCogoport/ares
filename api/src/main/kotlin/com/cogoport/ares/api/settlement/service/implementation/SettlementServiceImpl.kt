@@ -1028,6 +1028,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
         var canSettle = true
         stack.forEach {
+            if (it.balanceAmount < BigDecimal.ZERO) canSettle = false
             if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
         }
         return canSettle

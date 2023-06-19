@@ -312,7 +312,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND due_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND amount_curr - pay_curr > 0
+                AND amount_curr - pay_curr <> 0
                 AND entity_code = :entityCode
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
                 AND acc_type::varchar IN (:accType)
@@ -490,7 +490,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND transaction_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND amount_curr - pay_curr > 0
+                AND amount_curr - pay_curr <> 0
                 AND entity_code = :entityCode
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
                 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')

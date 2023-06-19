@@ -609,7 +609,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"))
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
@@ -948,8 +948,8 @@ class DashboardServiceImpl : DashboardService {
                 request.endDate, request.tradeType, request.entityCode,
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate, true)
         } else {
             val defaultOrgIds = getDefaultersOrgIds()
             val customerTypes = mapOf(
@@ -963,8 +963,8 @@ class DashboardServiceImpl : DashboardService {
                 defaultOrgIds
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate, true)
         }
         var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
         if (request.accountMode == AccMode.AP) {
