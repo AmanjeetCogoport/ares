@@ -971,8 +971,8 @@ class DashboardServiceImpl : DashboardService {
             totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
             receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
         }
-        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
-        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val totalOutStanding = totalReceivableOrPayable?.plus(onAccountPayment!!)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.plus(onAccountTillYesterday ?: 0.toBigDecimal())
         val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
         val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
         response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {
