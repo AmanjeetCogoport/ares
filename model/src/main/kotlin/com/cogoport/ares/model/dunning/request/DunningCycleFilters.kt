@@ -24,8 +24,8 @@ data class DunningCycleFilters(
     val cogoEntityId: UUID? = null,
     @JsonProperty("serviceTypes")
     var serviceTypes: List<ServiceType>? = null,
-    @JsonProperty("creditControllerIds")
-    val creditControllerIds: List<UUID>? = null,
+    @JsonProperty("organizationStakeholderIds")
+    val organizationStakeholderIds: List<UUID>? = null,
     @JsonProperty("ageingBucket")
     val ageingBucket: String? = AgeingBucketEnum.ALL.toString(),
     @JsonProperty("totalDueOutstanding")

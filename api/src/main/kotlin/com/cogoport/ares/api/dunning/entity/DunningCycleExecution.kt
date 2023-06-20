@@ -20,11 +20,12 @@ data class DunningCycleExecution(
     var dunningCycleId: Long,
     var templateId: UUID,
     var status: String,
+    var entityCode: Int,
     @MappedProperty(type = DataType.JSON)
     var filters: DunningCycleFilters,
     @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
-    var scheduleType: String,
+    var frequency: String,
     var scheduledAt: Timestamp,
     var triggerType: String,
     var deletedAt: Timestamp?,

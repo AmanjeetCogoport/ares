@@ -1,6 +1,6 @@
 package com.cogoport.ares.model.dunning.enum
 
-enum class ScheduleType {
+enum class FREQUENCY {
     ONE_TIME,
     DAILY,
     MONTHLY,

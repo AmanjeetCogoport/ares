@@ -50,4 +50,18 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
         """
     )
     suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>?): List<UUID>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                *
+            FROM
+                credit_controllers
+            WHERE
+                organization_id = :organizationId
+            LIMIT 1
+        """
+    )
+    suspend fun getOrganizationStakeholdersUsingOrgId(organizationId: UUID): OrganizationStakeholder
 }

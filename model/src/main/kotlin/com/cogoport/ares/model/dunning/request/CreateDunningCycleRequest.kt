@@ -9,7 +9,7 @@ data class CreateDunningCycleRequest(
     var name: String,
     var cycle_type: String,
     var triggerType: String,
-    var scheduleType: String,
+    var frequency: String,
     var severityLevel: Int,
     var filters: DunningCycleFilters,
     var scheduleRule: DunningScheduleRule,

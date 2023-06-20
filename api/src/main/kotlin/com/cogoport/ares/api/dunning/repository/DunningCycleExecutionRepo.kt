@@ -24,7 +24,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
                 dce.status as status,
                 dce.filters as filters,
                 dce.schedule_rule as schedule_rule,
-                dce.schedule_type as schedule_type,
+                dce.frequency as frequency,
                 dce.scheduled_at as scheduled_at,
                 dce.trigger_type as trigger_type,
                 dce.deleted_at as deleted_at,

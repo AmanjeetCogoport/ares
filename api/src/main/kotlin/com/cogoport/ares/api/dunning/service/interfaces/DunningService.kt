@@ -7,7 +7,7 @@ import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
-import com.cogoport.ares.model.dunning.request.CreditControllerRequest
+import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
@@ -21,8 +21,7 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import java.util.UUID
 
 interface DunningService {
-    suspend fun createCreditController(creditControllerRequest: CreditControllerRequest): Long
-    suspend fun updateCreditController(updateCreditController: UpdateCreditControllerRequest): Long
+    suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long
 
     suspend fun createDunningCycle(createDunningCycleRequest: CreateDunningCycleRequest): Long
 

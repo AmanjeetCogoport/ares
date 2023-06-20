@@ -32,23 +32,26 @@ import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.AuditActionName
 import com.cogoport.ares.model.common.AuditObjectType
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
+import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailResponse
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.dunning.enum.ActionType
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCategory
 import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
-import com.cogoport.ares.model.dunning.enum.ScheduleType
+import com.cogoport.ares.model.dunning.enum.FREQUENCY
+import com.cogoport.ares.model.dunning.enum.OrganizationSegment
+import com.cogoport.ares.model.dunning.enum.OrganizationStakeholderType
 import com.cogoport.ares.model.dunning.enum.TriggerType
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
-import com.cogoport.ares.model.dunning.request.CreditControllerRequest
+import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
-import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
@@ -58,19 +61,18 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
-import com.cogoport.brahma.rabbitmq.client.interfaces.RabbitmqService
 import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.DayOfWeek
 import java.time.Instant
 import java.util.Calendar
 import java.util.Date
-import java.util.UUID
+import java.time.LocalDateTime
 import javax.transaction.Transactional
 
 @Singleton
 open class DunningServiceImpl(
-    private var creditControllerRepo: OrganizationStakeholderRepo,
+    private var organizationStakeholderRepo: OrganizationStakeholderRepo,
     private var accountUtilizationRepo: AccountUtilizationRepo,
     private var dunningCycleRepo: DunningCycleRepo,
     private var dunningExecutionRepo: DunningCycleExecutionRepo,
@@ -79,56 +81,68 @@ open class DunningServiceImpl(
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val cycleExceptionRepo: CycleExceptionRepo,
     private val util: Util,
-    private val authClient: AuthClient,
-    private val rabbitMq: RabbitmqService
+    private val authClient: AuthClient
+//    private val rabbitMq: RabbitmqService
 ) : DunningService {
 
     @Transactional
-    override suspend fun createCreditController(creditControllerRequest: CreditControllerRequest): Long {
-        if (creditControllerRequest.createdBy == null) throw AresException(
-            AresError.ERR_1003,
-            " : created by can't be null"
-        )
-        val response = creditControllerRepo.save(
-            OrganizationStakeholder(
-                id = null,
-                creditControllerName = creditControllerRequest.creditControllerName,
-                creditControllerId = creditControllerRequest.creditControllerId,
-                organizationId = creditControllerRequest.organizationId,
-                organizationSegment = creditControllerRequest.organizationSegment,
-                createdAt = null,
-                updatedAt = null,
-                createdBy = creditControllerRequest.createdBy,
-                updatedBy = creditControllerRequest.updatedBy
+    override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
+        if (ActionType.valueOf(syncOrgStakeholderRequest.actionType) == ActionType.CREATE) {
+
+            if (syncOrgStakeholderRequest.creditControllerName == null ||
+                syncOrgStakeholderRequest.createdBy == null ||
+                syncOrgStakeholderRequest.organizationStakeholderType == null ||
+                syncOrgStakeholderRequest.creditControllerId == null ||
+                syncOrgStakeholderRequest.organizationId == null ||
+                syncOrgStakeholderRequest.organizationSegment == null
+                ) {
+                throw AresException(AresError.ERR_1003, " : created by can't be null")
+            }
+
+            val response = organizationStakeholderRepo.save(
+                OrganizationStakeholder(
+                    id = null,
+                    creditControllerName = syncOrgStakeholderRequest.creditControllerName!!,
+                    creditControllerId = syncOrgStakeholderRequest.creditControllerId!!,
+                    organizationId = syncOrgStakeholderRequest.organizationId,
+                    organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!),
+                    organizationStakeholderType = OrganizationStakeholderType.valueOf(syncOrgStakeholderRequest.organizationStakeholderType!!),
+                    createdAt = null,
+                    updatedAt = null,
+                    createdBy = syncOrgStakeholderRequest.createdBy,
+                    updatedBy = syncOrgStakeholderRequest.createdBy
+                )
             )
-        )
 
-        return response.id!!
-    }
+            return response.id!!
+        } else {
+            val creditController = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
+                organizationId = syncOrgStakeholderRequest.organizationId
+            )
+                ?: throw AresException(AresError.ERR_1541, "")
 
-    @Transactional
-    override suspend fun updateCreditController(updateCreditController: UpdateCreditControllerRequest): Long {
-        val creditController = creditControllerRepo.findById(Hashids.decode(updateCreditController.id)[0])
-            ?: throw AresException(AresError.ERR_1541, "")
+            val updateOrganizationStakeholder: OrganizationStakeholder = OrganizationStakeholder(
+                id = creditController.id,
+                creditControllerName = syncOrgStakeholderRequest.creditControllerName
+                    ?: creditController.creditControllerName,
+                creditControllerId = syncOrgStakeholderRequest.creditControllerId
+                    ?: creditController.creditControllerId,
+                organizationId = creditController?.organizationId,
+                organizationSegment = syncOrgStakeholderRequest.organizationSegment?.let { OrganizationSegment.valueOf(it) }
+                    ?: creditController.organizationSegment,
+                organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType?.let { OrganizationStakeholderType.valueOf(it) }
+                    ?: creditController.organizationStakeholderType,
+                createdBy = creditController?.createdBy,
+                updatedBy = syncOrgStakeholderRequest.updatedBy,
+                createdAt = creditController?.createdAt,
+                updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            )
 
-        val updateOrganizationStakeholder: OrganizationStakeholder = OrganizationStakeholder(
-            id = Hashids.decode(updateCreditController.id)[0],
-            creditControllerName = updateCreditController.creditControllerName
-                ?: creditController.creditControllerName,
-            creditControllerId = updateCreditController.creditControllerId
-                ?: creditController.creditControllerId,
-            organizationId = creditController?.organizationId,
-            organizationSegment = updateCreditController.organizationSegment
-                ?: creditController.organizationSegment,
-            createdBy = creditController?.createdBy,
-            updatedBy = updateCreditController.updatedBy,
-            createdAt = creditController?.createdAt,
-            updatedAt = creditController?.updatedAt
-        )
+            val response = organizationStakeholderRepo.update(updateOrganizationStakeholder)
 
-        val response = creditControllerRepo.update(updateOrganizationStakeholder)
+            return response.id!!
+        }
 
-        return response.id!!
     }
 
     @Transactional
@@ -138,19 +152,19 @@ open class DunningServiceImpl(
 
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.ONE_TIME &&
-            ScheduleType.valueOf(createDunningCycleRequest.scheduleType) != ScheduleType.ONE_TIME
+            FREQUENCY.valueOf(createDunningCycleRequest.frequency) != FREQUENCY.ONE_TIME
         ) {
             throw AresException(AresError.ERR_1003, "")
         } else if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            ScheduleType.valueOf(createDunningCycleRequest.scheduleType) == ScheduleType.ONE_TIME
+            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
 
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            ScheduleType.valueOf(createDunningCycleRequest.scheduleType) == ScheduleType.MONTHLY &&
+            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.MONTHLY &&
             createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.MONTHLY &&
             createDunningCycleRequest.scheduleRule.dayOfMonth == null &&
@@ -162,7 +176,7 @@ open class DunningServiceImpl(
 
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            ScheduleType.valueOf(createDunningCycleRequest.scheduleType) == ScheduleType.WEEKLY &&
+            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.WEEKLY &&
             createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.WEEKLY &&
             createDunningCycleRequest.scheduleRule.week == null
@@ -176,8 +190,9 @@ open class DunningServiceImpl(
                 name = createDunningCycleRequest.name,
                 cycle_type = DunningCycleType.valueOf(createDunningCycleRequest.cycle_type).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
-                scheduleType = ScheduleType.valueOf(createDunningCycleRequest.scheduleType).toString(),
+                frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
                 severityLevel = createDunningCycleRequest.severityLevel,
+                entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
                 templateId = createDunningCycleRequest.templateId,
@@ -192,27 +207,33 @@ open class DunningServiceImpl(
         )
 
         if (!createDunningCycleRequest.exceptionTradePartyDetailIds.isNullOrEmpty()) {
-            val organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
-                GetOrganizationTradePartyDetailRequest(
-                    organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
-                )
-            )
-
-            val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
-            organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
-                dunningCycleExceptionList.add(
-                    CycleExceptions(
-                        id = null,
-                        dunningCycleId = dunningCycleResponse.id!!,
-                        tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
-                        registrationNumber = organizationTradePartyDetail.registrationNumber!!,
-                        deletedAt = null,
-                        createdBy = dunningCycleResponse.createdBy,
-                        updatedBy = dunningCycleResponse.updatedBy,
-                        createdAt = null,
-                        updatedAt = null
+            var organizationTradePartyDetailResponse: GetOrganizationTradePartyDetailResponse? = null
+            try {
+                organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
+                    GetOrganizationTradePartyDetailRequest(
+                        organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
                     )
                 )
+            } catch (e: Exception) {
+            }
+
+            val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
+            if (organizationTradePartyDetailResponse != null) {
+                organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
+                    dunningCycleExceptionList.add(
+                        CycleExceptions(
+                            id = null,
+                            dunningCycleId = dunningCycleResponse.id!!,
+                            tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
+                            registrationNumber = organizationTradePartyDetail.registrationNumber!!,
+                            deletedAt = null,
+                            createdBy = dunningCycleResponse.createdBy,
+                            updatedBy = dunningCycleResponse.updatedBy,
+                            createdAt = null,
+                            updatedAt = null
+                        )
+                    )
+                }
             }
 
             cycleExceptionRepo.saveAll(dunningCycleExceptionList)
@@ -227,8 +248,9 @@ open class DunningServiceImpl(
                 templateId = dunningCycleResponse.templateId!!,
                 status = CycleExecutionStatus.SCHEDULED.toString(),
                 filters = dunningCycleResponse.filters,
+                entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 scheduleRule = dunningCycleResponse.scheduleRule,
-                scheduleType = dunningCycleResponse.scheduleType,
+                frequency = dunningCycleResponse.frequency,
                 scheduledAt = dunningCycleScheduledAt,
                 triggerType = dunningCycleResponse.triggerType,
                 deletedAt = dunningCycleResponse.deletedAt,
@@ -240,7 +262,7 @@ open class DunningServiceImpl(
         )
 
         //        TODO("Write trigger for rabbitMQ.")
-        rabbitMq.delay("dunning-scheduler", dunningCycleExecutionResponse.id!!, Date(dunningCycleScheduledAt.time))
+//        rabbitMq.delay("dunning-scheduler", dunningCycleExecutionResponse.id!!, Date(dunningCycleScheduledAt.time))
 
         auditRepository.save(
             Audit(
@@ -279,9 +301,9 @@ open class DunningServiceImpl(
         }
 
         var taggedOrganizationIds: List<UUID>? = listOf()
-        if (! (request.creditControllerIds == null)) {
-            taggedOrganizationIds = creditControllerRepo.listOrganizationIdBasedOnCreditControllers(
-                creditControllerIds = request.creditControllerIds
+        if (! (request.organizationStakeholderIds == null)) {
+            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnCreditControllers(
+                creditControllerIds = request.organizationStakeholderIds
             )
         }
 
@@ -535,8 +557,9 @@ open class DunningServiceImpl(
                     templateId = dunningCycle.templateId!!,
                     status = CycleExecutionStatus.SCHEDULED.toString(),
                     filters = dunningCycle.filters,
+                    entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[dunningCycle.filters.cogoEntityId.toString()]!!,
                     scheduleRule = dunningCycle.scheduleRule,
-                    scheduleType = dunningCycle.scheduleType,
+                    frequency = dunningCycle.frequency,
                     scheduledAt = dunningCycleScheduledAt,
                     triggerType = dunningCycle.triggerType,
                     deletedAt = dunningCycle.deletedAt,
@@ -634,7 +657,7 @@ open class DunningServiceImpl(
 
         if (
             TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
-            ScheduleType.valueOf(dunningCycleExecution.scheduleType) == ScheduleType.MONTHLY &&
+            FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.MONTHLY &&
             request.scheduleRule.dayOfMonth == null &&
             request.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.MONTHLY
@@ -644,7 +667,7 @@ open class DunningServiceImpl(
 
         if (
             TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
-            ScheduleType.valueOf(dunningCycleExecution.scheduleType) == ScheduleType.WEEKLY &&
+            FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.WEEKLY &&
             request.scheduleRule.week == null &&
             request.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.WEEKLY
@@ -667,6 +690,7 @@ open class DunningServiceImpl(
         val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycleResp.scheduleRule)
 
         dunningCycleExecution.id = null
+        dunningCycleExecution.triggerType = TriggerType.valueOf(request.triggerType).toString()
         dunningCycleExecution.status = CycleExecutionStatus.SCHEDULED.toString()
         dunningCycleExecution.createdBy = request.updatedBy
         dunningCycleExecution.updatedBy = request.updatedBy
@@ -683,7 +707,7 @@ open class DunningServiceImpl(
         if (request.query != null)
             query = "%${request.query}%"
 
-        return creditControllerRepo.listDistinctCreditControllers(query)
+        return organizationStakeholderRepo.listDistinctCreditControllers(query)
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
@@ -691,16 +715,20 @@ open class DunningServiceImpl(
         if (request.query != null)
             query = "%${request.query}%"
 
+        val status: Boolean = if (request.cycleStatus == null) true else request.cycleStatus == DunningCycleStatus.ACTIVE
+
         val response = dunningCycleRepo.listDunningCycle(
             query = query,
-            status = request.cycleStatus == DunningCycleStatus.ACTIVE,
+            status = status,
             sortBy = request.sortBy,
-            sortType = request.sortType
+            sortType = request.sortType,
+            pageIndex = request.pageIndex,
+
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycle(
             query = query,
-            status = request.cycleStatus == DunningCycleStatus.ACTIVE
+            status = status
         )
 
         response.forEach {
@@ -781,6 +809,12 @@ open class DunningServiceImpl(
         regNos: MutableList<String>
     ): MutableList<String> {
         val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
+//        val creditLimitDetailResponse = railsClient.getOrganizationCreditLimitDetail(
+//                OrganizationCreditLimitDetailReq(
+//                        orgId = response.
+//                )
+//        )
+
         val filteredList = response?.list?.distinctBy { it["organization_trade_party_detail_id"] }
         val masterExceptionList = masterExceptionRepo.getAllMasterExceptions()
         val exceptionEntity = mutableListOf<MasterExceptions>()

@@ -18,8 +18,8 @@ data class OrganizationTradePartyDetails(
     val organizationTradePartDetailId: UUID?,
     @JsonProperty("registration_number")
     val registrationNumber: String?,
-    @JsonProperty("partnerId")
-    val partner_id: String?,
+    @JsonProperty("partner_id")
+    val partnerId: String?,
     @JsonProperty("cogo_entity_id")
     val cogoEntityId: String?,
     @JsonProperty("organization_id")

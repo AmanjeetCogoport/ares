@@ -81,7 +81,7 @@ interface AuthClient {
     suspend fun validateTradeParty(request: ValidateTradePartyRequest): Boolean?
 
     @Post("/list_organization_trade_party_business_finance")
-    suspend fun getOrganizationTradePartyDetail(@Body request: GetOrganizationTradePartyDetailRequest): GetOrganizationTradePartyDetailResponse
+    suspend fun getOrganizationTradePartyDetail(@Body request: GetOrganizationTradePartyDetailRequest): GetOrganizationTradePartyDetailResponse?
 
     @Post("/get_users")
     suspend fun getUsers(@Body request: GetUserRequest): List<GetUserResponse>?

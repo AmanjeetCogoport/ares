@@ -9,11 +9,10 @@ import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
-import com.cogoport.ares.model.dunning.request.CreditControllerRequest
+import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
-import com.cogoport.ares.model.dunning.request.UpdateCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
@@ -46,20 +45,12 @@ class DunningController(
         return Response<String>().ok(Hashids.encode(dunningService.createDunningCycle(createDunningCycleRequest)))
     }
 
-    @Post("/organization-stakeholder")
-    suspend fun createCreditController(
+    @Post("/sync-organization-stakeholders")
+    suspend fun syncOrgStakeholders(
         @Valid @Body
-        creditControllerRequest: CreditControllerRequest
+        creditControllerRequest: SyncOrgStakeholderRequest
     ): String {
-        return Response<String>().ok(Hashids.encode(dunningService.createCreditController(creditControllerRequest)))
-    }
-
-    @Put("/organization-stakeholder")
-    suspend fun updateCreditController(
-        @Valid @Body
-        updateCreditControllerRequest: UpdateCreditControllerRequest
-    ): String {
-        return Response<String>().ok(Hashids.encode(dunningService.updateCreditController(updateCreditControllerRequest)))
+        return Response<String>().ok(Hashids.encode(dunningService.syncOrgStakeholders(creditControllerRequest)))
     }
 
     @Get("/customer-outstanding-and-on-account{?request*}")
