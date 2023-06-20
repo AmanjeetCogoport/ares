@@ -46,12 +46,12 @@ import com.cogoport.ares.model.dunning.enum.OrganizationSegment
 import com.cogoport.ares.model.dunning.enum.OrganizationStakeholderType
 import com.cogoport.ares.model.dunning.enum.TriggerType
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
-import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
+import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
@@ -65,9 +65,9 @@ import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.DayOfWeek
 import java.time.Instant
-import java.util.Calendar
-import java.util.Date
 import java.time.LocalDateTime
+import java.util.Calendar
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -95,7 +95,7 @@ open class DunningServiceImpl(
                 syncOrgStakeholderRequest.creditControllerId == null ||
                 syncOrgStakeholderRequest.organizationId == null ||
                 syncOrgStakeholderRequest.organizationSegment == null
-                ) {
+            ) {
                 throw AresException(AresError.ERR_1003, " : created by can't be null")
             }
 
@@ -142,7 +142,6 @@ open class DunningServiceImpl(
 
             return response.id!!
         }
-
     }
 
     @Transactional
