@@ -201,7 +201,7 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
-    @Value("\${server.base-url}") // application-prod.yml path
+    @Value("\${micronaut.server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     /**
@@ -1339,12 +1339,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val sageOrganization = authClient.getSageOrganization(
                 SageOrganizationRequest(
-                    paymentDetails.orgSerialId.toString(),
-                    if (paymentDetails.accMode == AccMode.AP) {
-                        "service_provider"
-                    } else {
-                        "importer_exporter"
-                    }
+                    paymentDetails.orgSerialId.toString()
                 )
             )
 

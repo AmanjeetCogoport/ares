@@ -63,7 +63,9 @@ import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.time.DayOfWeek
 import java.time.Instant
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton

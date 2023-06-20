@@ -1092,5 +1092,4 @@ LIMIT :limit
         """
     )
     suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean, entityCode: Int): CustomerMonthlyPayment?
-
 }

@@ -14,4 +14,10 @@ data class DunningInvoices(
     var dueDate: Date,
     var invoiceType: String,
     var relativeDuration: String,
-)
+) {
+    @javax.persistence.Transient
+    var jobNumber: String? = null
+
+    @javax.persistence.Transient
+    var pdfUrl: String? = null
+}

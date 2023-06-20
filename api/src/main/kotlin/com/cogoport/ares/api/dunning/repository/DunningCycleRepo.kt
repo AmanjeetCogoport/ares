@@ -102,4 +102,12 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         scheduleRule: DunningScheduleRule,
         updatedBy: UUID
     )
+
+    @Query(
+        """
+            SELECT severity_level FROM dunning_cycles WHERE id = :id
+        """
+    )
+
+    suspend fun getSeverityTemplate(id: Long): Int
 }

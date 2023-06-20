@@ -22,12 +22,14 @@ import com.cogoport.ares.api.dunning.model.response.DunningInvoices
 import com.cogoport.ares.api.dunning.model.response.DunningPayments
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
+import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.DunningEmailAuditRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CommunicationRequest
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
@@ -35,6 +37,7 @@ import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentRespo
 import com.cogoport.ares.model.payment.response.SupplyAgent
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.plutus.client.PlutusClient
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import jakarta.inject.Singleton
@@ -57,23 +60,29 @@ class ScheduleServiceImpl(
     private val outstandingService: OutStandingService,
     private val dunningEmailAuditRepo: DunningEmailAuditRepo,
     private val accountUtilizationRepo: AccountUtilizationRepo,
-    private val cogoBackLowLevelClient: CogoBackLowLevelClient
+    private val cogoBackLowLevelClient: CogoBackLowLevelClient,
+    private val plutusClient: PlutusClient,
+    private val dunningCycleRepo: DunningCycleRepo
 ) : ScheduleService {
 
     override suspend fun processCycleExecution(request: CycleExecutionProcessReq) {
-        val executionId = Hashids.decode(request.scheduleId)[0]
+        val executionId = Hashids.decode(request.scheduleId).firstOrNull() ?: return
         val executionDetails = dunningExecutionRepo.findById(executionId)
-        if (executionDetails == null || executionDetails.deletedAt != null) {
-            return
-        }
+        isValidExecution(executionDetails)
         try {
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.IN_PROGRESS.name)
-            fetchOrgsAndSendPaymentReminder(executionDetails)
+            fetchOrgsAndSendPaymentReminder(executionDetails!!)
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.COMPLETED.name)
         } catch (err: Exception) {
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.FAILED.name)
         }
         // logic for next execution creation
+    }
+    private fun isValidExecution(executionDetails: DunningCycleExecution?) {
+        if (executionDetails == null || executionDetails.deletedAt != null || executionDetails.status != CycleExecutionStatus.SCHEDULED.name) {
+            logger().info("Dunning could not be processed because of invalid execution, executionId is${executionDetails?.id}")
+            return
+        }
     }
 
     private suspend fun fetchOrgsAndSendPaymentReminder(executionDetails: DunningCycleExecution) {
@@ -143,8 +152,17 @@ class ScheduleServiceImpl(
             createDunningAudit(executionId, tradePartyDetailId, null, false, "invoices not found")
             return
         }
+        val invoiceIds = invoiceDocuments.map { it.documentNo }
 
-        var creditControllerData = outstandingData.list[0]?.creditController
+        val pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
+
+        invoiceDocuments.forEach { t ->
+            val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
+            t.pdfUrl = data?.invoicePdfUrl
+            t.jobNumber = data?.jobNumber
+        }
+
+        val creditControllerData = outstandingData.list[0]?.creditController
             ?: getCollectionAgencyData().takeUnless { EXCLUDED_CREDIT_CONTROLLERS.contains(it.id.toString()) }
 
         // From Manual Dunning user Emails come to and if they do we need to consider them only
@@ -189,9 +207,8 @@ class ScheduleServiceImpl(
                 it.email?.let { it1 -> ccEmail.add(it1) }
             }
         }
-        val number = 3
-        var severityTemplate =
-            when (number) {
+        val severityTemplate =
+            when (dunningCycleRepo.getSeverityTemplate(cycleExecution.dunningCycleId)) {
                 1 -> SeverityEnum.ONE.severity
                 2 -> SeverityEnum.TWO.severity
                 3 -> SeverityEnum.THREE.severity
@@ -333,14 +350,14 @@ class ScheduleServiceImpl(
         )
     }
 
-    private fun getUnPaidInvoiceSummary(invoiceDocuments: List<DunningInvoices>): MutableList<HashMap<String, String>> {
-        var unpaidInvoiceSummary = mutableListOf<HashMap<String, String>>()
+    private fun getUnPaidInvoiceSummary(invoiceDocuments: List<DunningInvoices>): MutableList<HashMap<String, String?>> {
+        val unpaidInvoiceSummary = mutableListOf<HashMap<String, String?>>()
         invoiceDocuments.forEach {
             unpaidInvoiceSummary.add(
                 hashMapOf(
-                    "shipment_serial_id" to "234",
+                    "shipment_serial_id" to it.jobNumber,
                     "invoice_id" to it.documentValue,
-                    "pdf_url" to "dve",
+                    "pdf_url" to it.pdfUrl,
                     "invoice_sub_type" to it.invoiceType,
                     "grand_total" to it.amountLoc.toString(),
                     "balance" to (it.amountLoc - it.payLoc).toString(),
