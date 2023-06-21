@@ -87,7 +87,7 @@ class ScheduleServiceImpl(
         }
     }
 
-    private suspend  fun saveAndScheduleNextDunning(executionDetails: DunningCycleExecution){
+    private suspend fun saveAndScheduleNextDunning(executionDetails: DunningCycleExecution) {
         val dunningCycleDetails = dunningCycleRepo.findById(executionDetails.dunningCycleId)
         val nextScheduledTime = dunningService.calculateNextScheduleTime(dunningCycleDetails?.scheduleRule!!)
         val dunningCycleExecutionResponse = dunningExecutionRepo.save(

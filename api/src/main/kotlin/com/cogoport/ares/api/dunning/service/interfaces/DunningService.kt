@@ -18,7 +18,8 @@ import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
-import java.util.*
+import java.util.Date
+import java.util.UUID
 
 interface DunningService {
     suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long

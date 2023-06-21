@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.dunning.repository
 
 import com.cogoport.ares.api.dunning.entity.DunningCycle
-import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
