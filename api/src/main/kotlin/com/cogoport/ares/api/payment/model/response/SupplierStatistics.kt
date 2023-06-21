@@ -4,7 +4,7 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class SupplierStatistics(
-        var invoicesDue: AmountAndCount,
-        var onAccountPayment: AmountAndCount,
-        var disputes: AmountAndCount? = null
+    var invoicesDue: AmountAndCount,
+    var onAccountPayment: AmountAndCount,
+    var disputes: AmountAndCount? = null
 )

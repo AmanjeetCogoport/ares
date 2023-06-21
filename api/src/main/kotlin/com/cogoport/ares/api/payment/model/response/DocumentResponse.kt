@@ -8,12 +8,15 @@ import java.util.Date
 @Introspected
 @MappedEntity
 data class DocumentResponse(
-        val taggedOrganizationId: String,
-        val ledCurrency: String,
-        val signFlag: Short,
-        val amountLoc: BigDecimal,
-        val payLoc: BigDecimal,
-        val transactionDate: Date,
-        val dueDate: Date,
-        val entityCode: Int
+    val taggedOrganizationId: String,
+    val currency: String,
+    val ledCurrency: String,
+    val signFlag: Short,
+    val amountCurr: BigDecimal,
+    val payCurr: BigDecimal,
+    val amountLoc: BigDecimal,
+    val payLoc: BigDecimal,
+    val transactionDate: Date,
+    val dueDate: Date,
+    val entityCode: Int
 )

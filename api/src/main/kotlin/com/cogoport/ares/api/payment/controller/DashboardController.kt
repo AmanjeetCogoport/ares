@@ -12,16 +12,16 @@ import com.cogoport.ares.api.payment.model.requests.BfPendingAmountsReq
 import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
-import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
+import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
 import com.cogoport.ares.api.payment.model.requests.SupplierReceivableRequest
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
-import com.cogoport.ares.api.payment.model.response.SupplierStatistics
-import com.cogoport.ares.api.payment.model.response.SupplierReceivables
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
+import com.cogoport.ares.api.payment.model.response.SupplierReceivables
+import com.cogoport.ares.api.payment.model.response.SupplierStatistics
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.Util
@@ -286,7 +286,6 @@ class DashboardController {
     @Get("/lsp-receivable-stats/{orgId}")
     suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         return dashboardService.getReceivableStatsForSupplier(request)
-
     }
 
     @Get("/lsp-payment-stats{?request*}")
