@@ -11,12 +11,12 @@ import com.cogoport.ares.api.common.AresConstants.DUNNING_WORK_SCOPES
 import com.cogoport.ares.api.common.AresConstants.EXCLUDED_CREDIT_CONTROLLERS
 import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
 import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
-import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.DunningEmailAudit
 import com.cogoport.ares.api.dunning.model.SeverityEnum
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
+import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.dunning.model.request.UserData
 import com.cogoport.ares.api.dunning.model.response.DunningInvoices
 import com.cogoport.ares.api.dunning.model.response.DunningPayments
@@ -27,6 +27,7 @@ import com.cogoport.ares.api.dunning.repository.DunningEmailAuditRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.logger
@@ -60,9 +61,9 @@ class ScheduleServiceImpl(
     private val outstandingService: OutStandingService,
     private val dunningEmailAuditRepo: DunningEmailAuditRepo,
     private val accountUtilizationRepo: AccountUtilizationRepo,
-    private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val plutusClient: PlutusClient,
-    private val dunningCycleRepo: DunningCycleRepo
+    private val dunningCycleRepo: DunningCycleRepo,
+    private val aresMessagePublisher: AresMessagePublisher
 ) : ScheduleService {
 
     override suspend fun processCycleExecution(request: CycleExecutionProcessReq) {
@@ -96,11 +97,18 @@ class ScheduleServiceImpl(
         val tradeParties = tradePartyDetails.list.mapNotNull { it?.tradePartyDetailId }
         val finalTradePartyIds = tradeParties - masterExclusionList.toSet() - exclusionListForThisCycle.toSet()
         finalTradePartyIds.forEach {
-            sendPaymentReminderToTradeParties(executionDetails.id!!, it)
+            aresMessagePublisher.sendPaymentReminder(
+                PaymentReminderReq(
+                    cycleExecutionId = executionDetails.id!!,
+                    tradePartyDetailId = it
+                )
+            )
         }
     }
 
-    private suspend fun sendPaymentReminderToTradeParties(executionId: Long, tradePartyDetailId: UUID) {
+    override suspend fun sendPaymentReminderToTradeParty(request: PaymentReminderReq) {
+        val executionId = request.cycleExecutionId
+        val tradePartyDetailId = request.tradePartyDetailId
         val cycleExecution = dunningExecutionRepo.findById(executionId)
         val entityCode = TAGGED_ENTITY_ID_MAPPINGS[cycleExecution?.filters?.cogoEntityId.toString()]
         val templateData = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list

@@ -11,6 +11,7 @@ import com.cogoport.ares.api.dunning.entity.MasterExceptions
 import com.cogoport.ares.api.dunning.entity.OrganizationStakeholder
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
+import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
@@ -61,13 +62,15 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.rabbitmq.client.interfaces.RabbitmqService
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Singleton
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDateTime
-import java.util.Calendar
-import java.util.UUID
+import java.util.*
 import javax.transaction.Transactional
 
 @Singleton
@@ -81,8 +84,8 @@ open class DunningServiceImpl(
     private val cogoBackLowLevelClient: CogoBackLowLevelClient,
     private val cycleExceptionRepo: CycleExceptionRepo,
     private val util: Util,
-    private val authClient: AuthClient
-//    private val rabbitMq: RabbitmqService
+    private val authClient: AuthClient,
+    private val rabbitMq: RabbitmqService
 ) : DunningService {
 
     @Transactional
@@ -238,7 +241,7 @@ open class DunningServiceImpl(
             cycleExceptionRepo.saveAll(dunningCycleExceptionList)
         }
 
-        val dunningCycleScheduledAt: Timestamp = calculateNextScheduleTime(dunningCycleResponse.scheduleRule)
+        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycleResponse.scheduleRule)
 
         val dunningCycleExecutionResponse = dunningExecutionRepo.save(
             DunningCycleExecution(
@@ -250,7 +253,7 @@ open class DunningServiceImpl(
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 scheduleRule = dunningCycleResponse.scheduleRule,
                 frequency = dunningCycleResponse.frequency,
-                scheduledAt = dunningCycleScheduledAt,
+                scheduledAt = Timestamp(dunningCycleScheduledAt.time),
                 triggerType = dunningCycleResponse.triggerType,
                 deletedAt = dunningCycleResponse.deletedAt,
                 createdBy = dunningCycleResponse.createdBy,
@@ -259,9 +262,14 @@ open class DunningServiceImpl(
                 updatedAt = null
             )
         )
-
         //        TODO("Write trigger for rabbitMQ.")
-//        rabbitMq.delay("dunning-scheduler", dunningCycleExecutionResponse.id!!, Date(dunningCycleScheduledAt.time))
+
+        val request = ObjectMapper().writeValueAsString(
+            CycleExecutionProcessReq(
+                scheduleId = Hashids.encode(dunningCycleExecutionResponse.id!!)
+            )
+        )
+        rabbitMq.delay("ares.dunning.scheduler", request, dunningCycleScheduledAt)
 
         auditRepository.save(
             Audit(
@@ -559,7 +567,7 @@ open class DunningServiceImpl(
                     entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[dunningCycle.filters.cogoEntityId.toString()]!!,
                     scheduleRule = dunningCycle.scheduleRule,
                     frequency = dunningCycle.frequency,
-                    scheduledAt = dunningCycleScheduledAt,
+                    scheduledAt = Timestamp(dunningCycleScheduledAt.time),
                     triggerType = dunningCycle.triggerType,
                     deletedAt = dunningCycle.deletedAt,
                     createdBy = dunningCycle.createdBy,
@@ -658,7 +666,7 @@ open class DunningServiceImpl(
             TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.MONTHLY &&
             request.scheduleRule.dayOfMonth == null &&
-            request.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
+            request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.MONTHLY
         ) {
             throw AresException(AresError.ERR_1003, "")
@@ -668,7 +676,7 @@ open class DunningServiceImpl(
             TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.WEEKLY &&
             request.scheduleRule.week == null &&
-            request.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
+            request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.WEEKLY
         ) {
             throw AresException(AresError.ERR_1003, "")
@@ -681,8 +689,8 @@ open class DunningServiceImpl(
 
         val dunningCycleResp: DunningCycle = dunningCycleRepo.findById(dunningCycleExecution.dunningCycleId)
             ?: throw AresException(AresError.ERR_1003, "")
-        dunningCycleResp?.scheduleRule = request.scheduleRule
-        dunningCycleResp?.updatedBy = request.updatedBy
+        dunningCycleResp.scheduleRule = request.scheduleRule
+        dunningCycleResp.updatedBy = request.updatedBy
 
         dunningCycleRepo.update(dunningCycleResp)
 
@@ -696,7 +704,7 @@ open class DunningServiceImpl(
         dunningCycleExecution.createdAt = null
         dunningCycleExecution.updatedAt = null
         dunningCycleExecution.scheduleRule = request.scheduleRule
-        dunningCycleExecution.scheduledAt = dunningCycleScheduledAt
+        dunningCycleExecution.scheduledAt = Timestamp(dunningCycleScheduledAt.time)
 
         return dunningExecutionRepo.save(dunningCycleExecution).id!!
     }
@@ -734,7 +742,7 @@ open class DunningServiceImpl(
             it.id = Hashids.encode(it.id?.toLong()!!)
         }
 
-        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize!!)
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
         val responseList = ResponseList<DunningCycleResponse>()
         responseList.list = response
         responseList.totalRecords = totalCount
@@ -867,7 +875,7 @@ open class DunningServiceImpl(
 
     open suspend fun calculateNextScheduleTime(
         scheduleRule: DunningScheduleRule
-    ): Timestamp {
+    ): Date {
         var scheduleTimeStamp: Timestamp? = null
 
         val scheduleHour = extractHourAndMinute(scheduleRule.scheduleTime).get("hour")!!
@@ -884,8 +892,9 @@ open class DunningServiceImpl(
         val actiualTimestampInRespectiveTimeZone = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
             AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
         )?.plus(scheduleTimeStampInGMT.time) ?: throw AresException(AresError.ERR_1002, "")
-
-        return Timestamp(actiualTimestampInRespectiveTimeZone)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        val formattedDate = dateFormat.format(actiualTimestampInRespectiveTimeZone)
+        return dateFormat.parse(formattedDate)
     }
 
     open suspend fun extractHourAndMinute(time: String): Map<String, String> {
