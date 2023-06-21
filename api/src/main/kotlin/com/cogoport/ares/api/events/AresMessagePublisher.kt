@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
+import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.JournalVoucherRecord
@@ -95,4 +97,10 @@ interface AresMessagePublisher {
 
     @Binding("ares.send.email")
     suspend fun sendEmail(req: CreateCommunicationRequest)
+
+    @Binding("ares.dunning.scheduler")
+    suspend fun scheduleDunning(req: CycleExecutionProcessReq)
+
+    @Binding("ares.send.dunning.payment.reminder")
+    suspend fun sendPaymentReminder(request: PaymentReminderReq)
 }

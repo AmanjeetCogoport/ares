@@ -245,7 +245,9 @@ object AresConstants {
         "partial-payment-mismatch",
         "bulk-update-payment-and-post-on-sage",
         "bulk-post-payment-from-sage",
-        "send-email"
+        "send-email",
+        "dunning-scheduler",
+        "send-dunning-payment-reminder"
     )
 
     val RETRY_QUEUES = listOf(

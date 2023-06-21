@@ -1,6 +1,9 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
+import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
+import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
@@ -81,6 +84,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var authClient: AuthClient
+
+    @Inject
+    lateinit var scheduleService: ScheduleService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -250,5 +256,15 @@ class AresMessageConsumer {
     @Queue("ares-send-email", prefetch = 1)
     fun sendEmail(req: CreateCommunicationRequest) = runBlocking {
         authClient.sendCommunication(req)
+    }
+
+    @Queue("ares-dunning-scheduler", prefetch = 1)
+    fun scheduleDunning(req: CycleExecutionProcessReq) = runBlocking {
+        scheduleService.processCycleExecution(req)
+    }
+
+    @Queue("ares-send-dunning-payment-reminder", prefetch = 1)
+    fun sendPaymentReminder(request: PaymentReminderReq) = runBlocking {
+        scheduleService.sendPaymentReminderToTradeParty(request)
     }
 }
