@@ -70,7 +70,9 @@ import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.UUID
 import javax.transaction.Transactional
 
 @Singleton
@@ -262,8 +264,6 @@ open class DunningServiceImpl(
                 updatedAt = null
             )
         )
-        //        TODO("Write trigger for rabbitMQ.")
-
         val request = ObjectMapper().writeValueAsString(
             CycleExecutionProcessReq(
                 scheduleId = Hashids.encode(dunningCycleExecutionResponse.id!!)
@@ -443,7 +443,6 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp> {
-        val query = util.toQueryString(request.query)
         var creditDaysFrom: Long? = null
         var creditDaysTo: Long? = null
         if (request.creditDays != null) {

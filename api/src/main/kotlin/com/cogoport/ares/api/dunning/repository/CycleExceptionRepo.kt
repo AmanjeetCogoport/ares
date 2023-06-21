@@ -40,7 +40,8 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
         """
        SELECT (array_agg(au.organization_name))[1] as trade_party_name , ce.registration_number , ce.trade_party_detail_id ,
             SUM(CASE WHEN au.acc_type IN ('SINV','SCN') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_outstanding,
-            SUM(CASE WHEN au.acc_type IN ('REC','CTDS') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_on_account
+            SUM(CASE WHEN au.acc_type IN ('REC','CTDS') THEN au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) as total_on_account,
+            (array_agg(led_currency))[1] as currency
             FROM dunning_cycle_exceptions ce INNER JOIN account_utilizations au ON ce.trade_party_detail_id = au.organization_id
             WHERE ce.dunning_cycle_id = :cycleId
             AND ce.deleted_at IS NULL

@@ -10,5 +10,6 @@ data class CycleWiseExceptionResp(
     var registrationNumber: String,
     var tradePartyDetailId: UUID,
     var totalOutstanding: BigDecimal,
-    var totalOnAccount: BigDecimal
+    var totalOnAccount: BigDecimal,
+    var currency: String
 )

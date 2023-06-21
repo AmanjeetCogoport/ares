@@ -23,7 +23,8 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
                 me.organization_segment::varchar,
                 me.credit_days,
                 me.credit_amount,
-                SUM((amount_loc - pay_loc) * sign_flag) AS total_due_amount
+                SUM((amount_loc - pay_loc) * sign_flag) AS total_due_amount,
+                (array_agg(led_currency))[1] as currency
             FROM
                 account_utilizations au
                 JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id

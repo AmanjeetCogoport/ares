@@ -15,4 +15,5 @@ data class MasterExceptionResp(
     val creditDays: Long?,
     val creditAmount: BigDecimal?,
     val totalDueAmount: BigDecimal?,
+    val currency: String?
 )
