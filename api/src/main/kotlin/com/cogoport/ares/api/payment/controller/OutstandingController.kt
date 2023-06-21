@@ -14,11 +14,15 @@ import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
+import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
@@ -148,5 +152,15 @@ class OutstandingController {
     @Get("/{orgId}")
     suspend fun getCustomerOutstanding(@PathVariable("orgId") orgId: String): MutableList<CustomerOutstanding?> {
         return Response<MutableList<CustomerOutstanding?>>().ok(outStandingService.getCustomerOutstanding(orgId))
+    }
+
+    @Get("/account-payables-for-org{?request*}")
+    suspend fun getApOfOrganization(@Valid request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
+        return Response<List<AccPayablesOfOrgRes>>().ok(outStandingService.getPayableOfOrganization(request))
+    }
+
+    @Get("/customer-monthly-payment{?request*}")
+    suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
+        return Response<CustomerMonthlyPayment>().ok(outStandingService.getCustomerMonthlyPayment(request))
     }
 }

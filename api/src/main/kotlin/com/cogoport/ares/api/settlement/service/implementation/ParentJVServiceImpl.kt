@@ -4,6 +4,10 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.ThirdPartyApiNames
+import com.cogoport.ares.api.common.enums.ThirdPartyApiType
+import com.cogoport.ares.api.common.enums.ThirdPartyObjectName
+import com.cogoport.ares.api.common.enums.ThirdPartyResponseCode
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -30,6 +34,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -51,10 +56,12 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.JSONObject
 import org.json.XML
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -122,7 +129,7 @@ open class ParentJVServiceImpl : ParentJVService {
      * @return: Parent JV Id
      */
 
-    @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class])
+    @Transactional
     override suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String? {
         validateCreateRequest(request)
 
@@ -160,6 +167,16 @@ open class ParentJVServiceImpl : ParentJVService {
         )
 
         creatingLineItemsAndRequestToIncident(request, parentJvData, transactionDate)
+
+        if (parentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(parentJvData.id!!),
+                    performedBy = parentJvData.createdBy!!
+
+                )
+            )
+        }
 
         return parentJvData.jvNum
     }
@@ -222,8 +239,14 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private fun getSignFlag(type: String): Short {
         return when (type.uppercase()) {
-            "CREDIT" -> { -1 }
-            "DEBIT" -> { 1 }
+            "CREDIT" -> {
+                -1
+            }
+
+            "DEBIT" -> {
+                1
+            }
+
             else -> {
                 throw AresException(AresError.ERR_1009, "JV type")
             }
@@ -287,7 +310,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 val signFlag = getSignFlag(it.type!!)
 
                 if (it.tradePartyId != null) {
-                    journalVoucherService.createJvAccUtil(it, accMode, signFlag)
+                    journalVoucherService.createJvAccUtil(it, accMode, signFlag, true)
                 }
             }
         }
@@ -303,26 +326,39 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun deleteJournalVoucherById(id: String, performedBy: UUID): String {
         val parentJvId = Hashids.decode(id)[0]
-        parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
-        val jvLineItemData = journalVoucherRepository.getJournalVoucherByParentJVId(parentJvId)
-        jvLineItemData.forEach { lineItem ->
-            if (lineItem.status == JVStatus.APPROVED) {
-                accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(lineItem.jvNum, AccountType.valueOf(lineItem.category))
+        try {
+            val parentJvDetails = parentJVRepository.findById(parentJvId) ?: throw AresException(AresError.ERR_1002, "JV")
+            if (parentJvDetails.isUtilized == true) {
+                throw AresException(AresError.ERR_1540, "JV is already utilized.")
             }
-        }
-        journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
+            if (parentJvDetails.status == JVStatus.POSTED) {
+                val isDeletedFromSage = deleteJvFromSage(parentJvId, parentJvDetails.jvNum!!)
+                if (!isDeletedFromSage) {
+                    throw AresException(AresError.ERR_1540, "${parentJvDetails.jvNum!!} could not get deleted from sage")
+                }
+            }
+            parentJVRepository.deleteJournalVoucherById(parentJvId, performedBy)
+            accountUtilizationRepository.deleteAccountUtilizationByDocumentValueAndAccType(parentJvDetails.jvNum, AccountType.valueOf(parentJvDetails.category))
+            journalVoucherRepository.deleteJvLineItemByParentJvId(parentJvId, performedBy)
 
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.JOURNAL_VOUCHERS,
-                objectId = parentJvId,
-                actionName = AresConstants.DELETE,
-                data = mapOf("id" to id, "status" to "DELETED"),
-                performedBy = performedBy.toString(),
-                performedByUserType = null
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
+                    objectId = parentJvId,
+                    actionName = AresConstants.DELETE,
+                    data = mapOf("id" to id, "status" to "DELETED"),
+                    performedBy = performedBy.toString(),
+                    performedByUserType = null
+                )
             )
-        )
-
+        } catch (aresException: AresException) {
+            logger().error("""${mapOf("data" to id, "error" to "${aresException.error.message} ${aresException.context} ")}""")
+            throw aresException
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+            Sentry.captureException(ex)
+            throw ex
+        }
         return id
     }
 
@@ -362,13 +398,15 @@ open class ParentJVServiceImpl : ParentJVService {
 
         creatingLineItemsAndRequestToIncident(request, updatedParentJvData, transactionDate)
 
-        aresMessagePublisher.emitPostJvToSage(
-            PostJVToSageRequest(
-                parentJvId = Hashids.encode(updatedParentJvData.id!!),
-                performedBy = updatedParentJvData.createdBy!!
+        if (updatedParentJvData.entityCode != 501) {
+            aresMessagePublisher.emitPostJvToSage(
+                PostJVToSageRequest(
+                    parentJvId = Hashids.encode(updatedParentJvData.id!!),
+                    performedBy = updatedParentJvData.createdBy!!
 
+                )
             )
-        )
+        }
 
         return Hashids.encode(parentJvData.id!!)
     }
@@ -380,6 +418,13 @@ open class ParentJVServiceImpl : ParentJVService {
                 if (data.list.isNotEmpty()) {
                     lineItem.tradePartyName = data.list[0]["legal_business_name"].toString()
                 }
+            }
+
+            if (lineItem.glCode.isNullOrEmpty() or lineItem.glCode.isNullOrBlank()) {
+                throw AresException(AresError.ERR_1003, "GL code")
+            }
+            if (lineItem.type.isNullOrEmpty() or lineItem.type.isNullOrBlank()) {
+                throw AresException(AresError.ERR_1003, "Type")
             }
 
             val jvLineItemData = JournalVoucher(
@@ -416,7 +461,7 @@ open class ParentJVServiceImpl : ParentJVService {
             if (jvLineItem.tradePartyId != null && jvLineItem.accMode != AccMode.OTHER) {
                 val accMode = AccMode.valueOf(jvLineItem.accMode!!.name)
                 val signFlag = getSignFlag(lineItem.type)
-                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag)
+                journalVoucherService.createJvAccUtil(jvLineItem, accMode, signFlag, true)
             }
         }
     }
@@ -431,6 +476,10 @@ open class ParentJVServiceImpl : ParentJVService {
         try {
             val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
+
+            if (parentJVDetails.entityCode == 501) {
+                throw AresException(AresError.ERR_1526, "Not allowed to post jv of entity 501.")
+            }
 
             if (parentJVDetails.status == JVStatus.POSTED) {
                 throw AresException(AresError.ERR_1518, "")
@@ -514,8 +563,9 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.jvCodeNum!!,
                     parentJVDetails.currency!!,
                     parentJVDetails.jvNum!!,
-                    parentJVDetails.createdAt!!,
+                    parentJVDetails.transactionDate!!,
                     parentJVDetails.description!!,
+                    parentJVDetails.exchangeRate!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     jvLineItemsDetails
                 )
             )
@@ -572,6 +622,21 @@ open class ParentJVServiceImpl : ParentJVService {
                 )
             )
             throw exception
+        } catch (aresException: AresException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostJVToSage",
+                    "Journal Voucher",
+                    parentJVId,
+                    "JOURNAL_VOUCHER",
+                    "500",
+                    parentJVId.toString(),
+                    "${aresException.error.message} ${aresException.context}",
+                    false
+                )
+            )
+            throw aresException
         } catch (e: Exception) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -581,7 +646,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVId,
                     "JOURNAL_VOUCHER",
                     "500",
-                    "",
+                    parentJVId.toString(),
                     e.toString(),
                     false
                 )
@@ -598,13 +663,13 @@ open class ParentJVServiceImpl : ParentJVService {
             sageBPRNumber = if (sageOrganizationId.isNullOrEmpty()) "" else sageOrganizationId,
             description = if (journalVoucher.description.isNullOrEmpty()) "" else journalVoucher.description!!,
             signFlag = getSignFlag(journalVoucher.type.toString().uppercase()).toInt(),
-            amount = journalVoucher.amount!!,
+            amount = journalVoucher.amount!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
             currency = journalVoucher.currency!!
         )
     }
 
     private fun getAccModeValue(accMode: AccMode): String {
-        val accMode = when (accMode) {
+        val accModeName = when (accMode) {
             AccMode.AP -> JVSageControls.AP.value
             AccMode.AR -> JVSageControls.AR.value
             AccMode.PDA -> JVSageControls.PDA.value
@@ -622,7 +687,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
         }
-        return accMode
+        return accModeName
     }
 
     private fun getStatus(processedResponse: JSONObject?): Int? {
@@ -633,6 +698,24 @@ open class ParentJVServiceImpl : ParentJVService {
             ?.getJSONObject("status")
             ?.get("content")
         return status as Int?
+    }
+
+    private fun getZstatus(processedResponse: JSONObject?): String {
+        val content = processedResponse?.getJSONObject("soapenv:Envelope")
+            ?.getJSONObject("soapenv:Body")
+            ?.getJSONObject("wss:runResponse")
+            ?.getJSONObject("runReturn")
+            ?.getJSONObject("resultXml")
+            ?.get("content")
+
+        val response = XML.toJSONObject(content.toString())
+        val status = response?.getJSONObject("RESULT")
+            ?.getJSONObject("GRP")
+            ?.getJSONArray("FLD")
+            ?.getJSONObject(1)
+            ?.get("content")
+
+        return status.toString()
     }
 
     override suspend fun getJvCategory(q: String?, pageLimit: Int?): List<JvCategory> {
@@ -678,5 +761,22 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         return uniqueAccountModeList
+    }
+
+    private suspend fun deleteJvFromSage(jvId: Long, jvNum: String): Boolean {
+        try {
+            val result = Client.deleteJvFromSage(jvNum)
+            val processedResponse = XML.toJSONObject(result.response)
+            val status = getZstatus(processedResponse)
+            if (status == "DONE") {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.SUCCESS.value, result.requestString, result.response, true))
+                return true
+            } else {
+                thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, result.requestString, result.response, false))
+            }
+        } catch (err: Exception) {
+            thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, jvNum, err.toString(), false))
+        }
+        return false
     }
 }

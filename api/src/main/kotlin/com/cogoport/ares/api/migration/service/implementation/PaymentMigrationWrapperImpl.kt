@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.migration.constants.MigrationRecordType
 import com.cogoport.ares.api.migration.model.InvoiceDetails
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
@@ -14,12 +15,16 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.repository.AccountClassRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
-import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.settlement.GlCodeMaster
+import com.cogoport.ares.model.settlement.event.InvoiceBalance
+import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import javax.transaction.Transactional
@@ -28,7 +33,7 @@ import javax.transaction.Transactional
 open class PaymentMigrationWrapperImpl(
     private var paymentRepository: PaymentRepository,
     private var sequenceGeneratorImpl: SequenceGeneratorImpl,
-    private var settlementRepository: SettlementRepository
+    private var plutusMessagePublisher: PlutusMessagePublisher
 ) : PaymentMigrationWrapper {
 
     @Inject lateinit var sageService: SageService
@@ -46,6 +51,8 @@ open class PaymentMigrationWrapperImpl(
     lateinit var glCodeMasterRepository: GlCodeMasterRepository
 
     @Inject lateinit var accountClassRepo: AccountClassRepository
+
+    private var accountUtilizationUpdateCount: Int = 0
 
     override suspend fun migratePaymentsFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): Int {
         val paymentRecords = sageService.getPaymentDataFromSage(startDate, endDate, bpr, mode)
@@ -205,7 +212,8 @@ open class PaymentMigrationWrapperImpl(
             payCurr = paymentRecord.accountUtilPayCurr,
             payLoc = paymentRecord.accountUtilPayLed,
             accMode = paymentRecord.accMode,
-            recordType = recordType
+            recordType = recordType,
+            entityCode = paymentRecord.entityCode
         )
     }
     private fun getPayLocRecordForInvoice(invoiceDetails: InvoiceDetails, recordType: MigrationRecordType): PayLocUpdateRequest {
@@ -216,7 +224,8 @@ open class PaymentMigrationWrapperImpl(
             payCurr = invoiceDetails.currencyAmountPaid,
             payLoc = invoiceDetails.ledgerAmountPaid,
             accMode = invoiceDetails.accMode,
-            recordType = recordType
+            recordType = recordType,
+            entityCode = invoiceDetails.entityCodeNum?.toInt()
         )
     }
 
@@ -311,10 +320,9 @@ open class PaymentMigrationWrapperImpl(
         return formattedData.substring(0, formattedData.length - 1).toString()
     }
 
-    @Transactional
-    override suspend fun removeDuplicatePayNums(paymentNums: List<Long>) {
-        paymentNums.forEach { it ->
-            val payments = paymentRepository.findByPaymentNum(it) ?: return@forEach
+    override suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int {
+        payNumValues.forEach { it ->
+            val payments = paymentRepository.findByPaymentNumValue(it) ?: return@forEach
             val groupedPayments = payments.groupBy { it.narration }
 
             groupedPayments.forEach {
@@ -324,6 +332,7 @@ open class PaymentMigrationWrapperImpl(
                     updatePaymentNumAndValue(it.value)
             }
         }
+        return accountUtilizationUpdateCount
     }
 
     @Transactional
@@ -351,7 +360,7 @@ open class PaymentMigrationWrapperImpl(
             tdsPayment.paymentNumValue = newPayNumAndValueForTds.first
             paymentRepository.update(tdsPayment)
         }
-        accountUtilizationRepo.updateAccountUtilizationForPayment(
+        val count = accountUtilizationRepo.updateAccountUtilizationForPayment(
             payment.paymentNumValue!!,
             amount,
             payment.transactionDate!!,
@@ -361,8 +370,47 @@ open class PaymentMigrationWrapperImpl(
             newPayNumAndValue.first,
             newPayNumAndValue.second
         )
+        accountUtilizationUpdateCount += count
         payment.paymentNum = newPayNumAndValue.second
         payment.paymentNumValue = newPayNumAndValue.first
         paymentRepository.update(payment)
+    }
+
+    override suspend fun paymentStatusSyncMigration(paymentStatusSyncMigrationReq: PaymentStatusSyncMigrationReq): Int {
+        val accountUtilizations = accountUtilizationRepo.findRecords(
+            paymentStatusSyncMigrationReq.documentNumbers!!,
+            paymentStatusSyncMigrationReq.accTypes?.map { it.name }!!,
+            paymentStatusSyncMigrationReq.accMode?.name
+        )
+        accountUtilizations.forEach {
+            val paymentStatus = Utilities.getPaymentStatus(it)
+            plutusMessagePublisher.emitInvoiceBalance(
+                invoiceBalanceEvent = UpdateInvoiceBalanceEvent(
+                    invoiceBalance = InvoiceBalance(
+                        invoiceId = it.documentNo,
+                        balanceAmount = paymentStatus.second,
+                        performedBy = paymentStatusSyncMigrationReq.performedBy,
+                        performedByUserType = paymentStatusSyncMigrationReq.performedByUserType,
+                        paymentStatus = paymentStatus.first
+                    ),
+                    null
+                )
+            )
+        }
+        return accountUtilizations.size
+    }
+
+    override suspend fun migrateSagePaymentNum(sageRefNumber: List<String>): Int {
+        val sagePaymentNum = sageService.getSagePaymentNum(sageRefNumber)
+
+        logger().info("Total number of payment record to process : ${sagePaymentNum.size}")
+        for (paymentRecord in sagePaymentNum) {
+            val sagePayment = SagePaymentNumMigrationResponse(
+                sageRefNum = paymentRecord.sageRefNum,
+                sagePaymentNum = paymentRecord.sagePaymentNum
+            )
+            aresMessagePublisher.emitSagePaymentNumMigration(sagePayment)
+        }
+        return sagePaymentNum.size
     }
 }

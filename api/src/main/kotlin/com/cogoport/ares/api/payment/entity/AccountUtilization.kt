@@ -49,5 +49,7 @@ data class AccountUtilization(
     var isVoid: Boolean? = false,
     var taggedBillId: String? = null,
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
-    var tdsAmount: BigDecimal? = BigDecimal.ZERO
+    var tdsAmount: BigDecimal? = BigDecimal.ZERO,
+    var settlementEnabled: Boolean? = false,
+    var deletedAt: Timestamp? = null
 )

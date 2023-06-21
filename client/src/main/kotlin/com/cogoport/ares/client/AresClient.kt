@@ -12,6 +12,7 @@ import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
+import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
@@ -27,6 +28,7 @@ import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.CreateInvoiceResponse
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.InvoicePaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
@@ -149,7 +151,7 @@ interface AresClient {
     @Get("/payments/invoice/missing-invoices")
     suspend fun getInvoicesNotPresentInAres(): List<Long>?
 
-    @Post("/payments/accounts/settle-tagged-invoice-payment")
+    @Post("/payments/settlement/settle-tagged-invoice-payment")
     suspend fun settleOnAccountTaggedInvoicePayment(@Body req: OnAccountPaymentRequest)
 
     @Put("/payments/tds-amount")
@@ -163,4 +165,7 @@ interface AresClient {
 
     @Post("/payments/parent-jv/update")
     suspend fun updateParentJv(@Body req: ParentJVUpdateRequest): String
+
+    @Get("/payments/outstanding/customer-monthly-payment{?request*}")
+    suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment
 }

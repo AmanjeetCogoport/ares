@@ -11,12 +11,12 @@ enum class AresError(
     ERR_1008("ERR_1008", "Resource not found", HttpStatus.NOT_FOUND),
     ERR_1001("ERR_1001", "Something went wrong. Please contact admin", HttpStatus.SERVICE_UNAVAILABLE),
     ERR_1002("ERR_1002", "Not found", HttpStatus.NOT_FOUND),
-    ERR_1003("ERR_1003", "Mandatory field missing : ", HttpStatus.BAD_REQUEST),
+    ERR_1003("ERR_1003", "Mandatory field missing:", HttpStatus.BAD_REQUEST),
     ERR_1004("ERR_1004", "Invalid Quarter : ", HttpStatus.BAD_REQUEST),
     ERR_1005("ERR_1005", "Data not found", HttpStatus.NO_CONTENT),
     ERR_1006("ERR_1006", "Invalid Year : ", HttpStatus.BAD_REQUEST),
     ERR_1007("ERR_1007", "Record already deleted", HttpStatus.BAD_REQUEST),
-    ERR_1010("ERR_1008", "Payment is already posted", HttpStatus.CONFLICT),
+    ERR_1010("ERR_1008", "Payment is already approved", HttpStatus.CONFLICT),
     ERR_1009("ERR_1009", "Invalid ", HttpStatus.BAD_REQUEST),
     ERR_1201("ERR_12101", "Document number already exists", HttpStatus.BAD_REQUEST),
     ERR_1203("ERR_1203", "Invalid date format", HttpStatus.BAD_REQUEST),
@@ -52,7 +52,6 @@ enum class AresError(
     ERR_1525("ERR_1525", "Payment entry already exist on sage", HttpStatus.NOT_ACCEPTABLE),
     ERR_1526("ERR_1526", "Unauthorised", HttpStatus.UNAUTHORIZED),
     ERR_1527("ERR_1527", "Credit Amount is not equal to Debit Amount", HttpStatus.NOT_ACCEPTABLE),
-    ERR_1528("ERR_1528", "Jv is yet not been approved.", HttpStatus.NOT_ACCEPTABLE),
     ERR_1529("ERR_1529", "No value exists for this Acc Mode: ", HttpStatus.BAD_REQUEST),
     ERR_1530("ERR_1530", "No Organization is present with this Trade Party Id ", HttpStatus.BAD_REQUEST),
     ERR_1531("ERR_1531", "Documents must be posted on Sage", HttpStatus.BAD_REQUEST),
@@ -62,8 +61,9 @@ enum class AresError(
     ERR_1535("ERR_1535", "Payment must be posted", HttpStatus.BAD_REQUEST),
     ERR_1536("ERR_1536", "Payment is not posted from sage", HttpStatus.BAD_REQUEST),
     ERR_1537("ERR_1537", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST),
-    ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST);
-
+    ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST),
+    ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST),
+    ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"

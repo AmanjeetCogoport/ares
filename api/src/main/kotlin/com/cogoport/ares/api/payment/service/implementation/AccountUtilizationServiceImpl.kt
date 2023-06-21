@@ -145,14 +145,15 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 )
             )
             if (accUtilRes.payCurr.compareTo(BigDecimal.ZERO) == 1 && (accUtilRes.accType == AccountType.SINV || accUtilRes.accType == AccountType.SREIMB)) {
+                val paymentStatus = Utilities.getPaymentStatus(accUtilRes)
                 plutusMessagePublisher.emitInvoiceBalance(
                     UpdateInvoiceBalanceEvent(
                         invoiceBalance = InvoiceBalance(
                             invoiceId = accUtilRes.documentNo,
-                            balanceAmount = (accUtilRes.amountCurr - accUtilRes.payCurr),
+                            balanceAmount = paymentStatus.second,
                             performedBy = accUtilizationRequest.performedBy,
                             performedByUserType = accUtilizationRequest.performedByType,
-                            paymentStatus = Utilities.getPaymentStatus(accUtilRes),
+                            paymentStatus = paymentStatus.first
                         ),
                         knockOffDocuments = null,
                     )
@@ -277,6 +278,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.serviceType = updateInvoiceRequest.serviceType.toString() ?: accountUtilization.serviceType
         accountUtilization.category = updateInvoiceRequest.category ?: accountUtilization.category
         accountUtilization.migrated = updateInvoiceRequest.migrated ?: accountUtilization.migrated
+        accountUtilization.settlementEnabled = updateInvoiceRequest.settlementEnabled ?: accountUtilization.settlementEnabled
 
         val data = accUtilRepository.update(accountUtilization)
 
@@ -339,6 +341,7 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         accountUtilization.documentValue = updateInvoiceStatusRequest.newDocumentValue
         accountUtilization.documentStatus = updateInvoiceStatusRequest.docStatus
         accountUtilization.updatedAt = Timestamp.from(Instant.now())
+        accountUtilization.settlementEnabled = updateInvoiceStatusRequest.settlementEnabled
 
         if (updateInvoiceStatusRequest.transactionDate != null) {
             accountUtilization.transactionDate = updateInvoiceStatusRequest.transactionDate
@@ -382,13 +385,13 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             invoiceRequest.documentNo,
             invoiceRequest.accType.name
         ) ?: return null
-
+        val paymentStatus = Utilities.getPaymentStatus(accountUtilization)
         return InvoicePaymentResponse(
             documentNo = invoiceRequest.documentNo,
             accType = invoiceRequest.accType,
-            balanceAmount = accountUtilization.amountCurr - accountUtilization.payCurr,
+            balanceAmount = paymentStatus.second,
             balanceAmountInLedgerCurrency = accountUtilization.amountLoc - accountUtilization.payLoc,
-            paymentStatus = Utilities.getPaymentStatus(accountUtilization)
+            paymentStatus = paymentStatus.first
         )
     }
 

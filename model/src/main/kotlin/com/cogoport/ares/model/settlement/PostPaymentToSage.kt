@@ -1,8 +1,10 @@
 package com.cogoport.ares.model.settlement
 
 import io.micronaut.core.annotation.Introspected
+import java.util.UUID
 
 @Introspected
-data class FailedSettlementIds(
-    var failedSettlementIds: List<Long>?
+data class PostPaymentToSage(
+    var paymentId: Long,
+    var performedBy: UUID
 )

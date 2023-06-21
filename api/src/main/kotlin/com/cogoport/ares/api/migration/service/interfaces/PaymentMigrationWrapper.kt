@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.migration.service.interfaces
 
+import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
 import com.cogoport.ares.model.settlement.GlCodeMaster
 
@@ -29,5 +30,9 @@ interface PaymentMigrationWrapper {
 
     suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?): Int
 
-    suspend fun removeDuplicatePayNums(paymentNums: List<Long>)
+    suspend fun removeDuplicatePayNums(payNumValues: List<String>): Int
+
+    suspend fun paymentStatusSyncMigration(paymentStatusSyncMigrationReq: PaymentStatusSyncMigrationReq): Int
+
+    suspend fun migrateSagePaymentNum(sageRefNumber: List<String>): Int
 }

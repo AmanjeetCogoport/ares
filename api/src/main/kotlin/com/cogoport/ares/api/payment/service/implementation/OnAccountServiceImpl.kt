@@ -14,6 +14,7 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.migration.model.SagePlatformPaymentHeader
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -30,17 +31,20 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
-import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
+import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -66,7 +70,6 @@ import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
-import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -81,6 +84,7 @@ import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
@@ -110,6 +114,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -121,6 +126,9 @@ import java.nio.file.StandardCopyOption
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
@@ -130,6 +138,9 @@ import com.cogoport.brahma.sage.Client as SageClient
 open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var settlementRepository: SettlementRepository
 
     @Inject
     lateinit var paymentConverter: PaymentToPaymentMapper
@@ -173,9 +184,6 @@ open class OnAccountServiceImpl : OnAccountService {
     private lateinit var s3Bucket: String
 
     @Inject
-    lateinit var settlementService: SettlementService
-
-    @Inject
     lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     @Inject
@@ -189,6 +197,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var util: Util
+
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Value("\${server.base-url}") // application-prod.yml path
+    private lateinit var baseUrl: String
 
     /**
      * Fetch Account Collection payments from DB.
@@ -271,6 +285,10 @@ open class OnAccountServiceImpl : OnAccountService {
         val filterDateFromTs = Timestamp(dateFormat.parse(receivableRequest.paymentDate).time)
         receivableRequest.transactionDate = filterDateFromTs
 
+        if (receivableRequest.transactionDate!! > Date()) {
+            throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
+        }
+
         setPaymentAmounts(receivableRequest)
         val paymentId = createNonSuspensePaymentEntry(receivableRequest)
 
@@ -280,6 +298,10 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
+        if (receivableRequest.docType != DocType.TDS && receivableRequest.bankAccountNumber.isNullOrBlank()) {
+            throw AresException(AresError.ERR_1003, "Bank Account")
+        }
+
         var isUtrExit: Boolean? = false
         if (receivableRequest.accMode == AccMode.AR) {
             isUtrExit = paymentRepository.isARTransRefNumberExists(accMode = AccMode.AR.name, transRefNumber = receivableRequest.utr!!)
@@ -288,6 +310,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (isUtrExit == true) {
             throw AresException(AresError.ERR_1537, "")
         }
+
         receivableRequest.signFlag = when (receivableRequest.docType == DocType.TDS) {
             true -> when (receivableRequest.accMode == AccMode.AR) {
                 true -> SignSuffix.CTDS.sign
@@ -363,8 +386,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtilEntity.organizationId))
-
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -379,6 +400,9 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -432,6 +456,12 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
+        if (receivableRequest.transactionDate!! > Date()) {
+            throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
+        }
+
+//        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
+
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
         val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
 
@@ -446,6 +476,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (receivableRequest.paymentDocumentStatus != null && receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
             paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+            accountUtilizationEntity.settlementEnabled = true
         } else {
 
 //            setOrganizations(receivableRequest)
@@ -476,7 +507,25 @@ open class OnAccountServiceImpl : OnAccountService {
         /*UPDATE THE DATABASE WITH UPDATED ACCOUNT UTILIZATION ENTRY*/
         val accUtilRes = accountUtilizationRepository.update(accountUtilizationEntity)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+        if ((paymentDetails.entityCode != 501) && (paymentDetails.paymentCode in listOf(PaymentCode.REC, PaymentCode.CTDS))) {
+//            aresMessagePublisher.emitPostPaymentToSage(
+//                PostPaymentToSage(
+//                    paymentId = paymentEntity.id!!,
+//                    performedBy = paymentEntity.updatedBy!!
+//                )
+//            )
+            try {
+                directFinalPostToSage(
+                    PostPaymentToSage(
+                        paymentId = paymentEntity.id!!,
+                        performedBy = paymentEntity.updatedBy!!
+
+                    )
+                )
+            } catch (ex: Exception) {
+                logger().info(ex.stackTraceToString())
+            }
+        }
 
         auditService.createAudit(
             AuditRequest(
@@ -494,6 +543,10 @@ open class OnAccountServiceImpl : OnAccountService {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             // EMITTING KAFKA MESSAGE TO UPDATE OUTSTANDING and DASHBOARD
             emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+            // EMITTING RABITMQ MESSAGE TO UPDATE CUSTOMER OUTSTANDING
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+            }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
         }
@@ -524,6 +577,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentEntity.cogoAccountNo = receivableRequest.bankAccountNumber ?: paymentEntity.cogoAccountNo
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
         paymentEntity.bankId = receivableRequest.bankId ?: paymentEntity.bankId
+        paymentEntity.updatedBy = UUID.fromString(receivableRequest.updatedBy) ?: paymentEntity.updatedBy
     }
 
     private fun updateAccountUtilizationEntity(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization) {
@@ -541,65 +595,86 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun deletePaymentEntry(deletePaymentRequest: DeletePaymentRequest): OnAccountApiCommonResponse {
-        val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId) ?: throw AresException(AresError.ERR_1001, "")
-        if (payment.deletedAt != null)
-            throw AresException(AresError.ERR_1007, "")
-
-        payment.deletedAt = Timestamp.from(Instant.now())
-        payment.paymentDocumentStatus = PaymentDocumentStatus.DELETED
-        /*MARK THE PAYMENT AS DELETED IN DATABASE*/
-        val paymentResponse = paymentRepository.update(payment)
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.PAYMENTS,
-                objectId = payment.id,
-                actionName = AresConstants.DELETE,
-                data = payment,
-                performedBy = deletePaymentRequest.performedById,
-                performedByUserType = deletePaymentRequest.performedByUserType
-            )
-        )
-
-        val accType = AccountType.valueOf(payment.paymentCode?.name!!)
-
-        val accountUtilization = accountUtilizationRepository.findRecord(
-            payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
-        ) ?: throw AresException(AresError.ERR_1005, "")
-        accountUtilization.documentStatus = DocumentStatus.DELETED
-
-        /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
-        val accUtilRes = accountUtilizationRepository.update(accountUtilization)
-
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
-
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                objectId = accountUtilization.id,
-                actionName = AresConstants.DELETE,
-                data = accountUtilization,
-                performedBy = deletePaymentRequest.performedById,
-                performedByUserType = deletePaymentRequest.performedByUserType
-            )
-        )
-        if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED && payment.paymentCode == PaymentCode.PAY) {
-            val request = DeleteSettlementRequest(
-                documentNo = Hashids.encode(payment.paymentNum!!),
-                deletedBy = UUID.fromString(deletePaymentRequest.performedById),
-                deletedByUserType = deletePaymentRequest.performedByUserType,
-                settlementType = SettlementType.PAY
-            )
-            settlementService.delete(request)
-        }
         try {
-            /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
-//             Emitting Kafka message to Update Outstanding and Dashboard
-            emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
-        } catch (ex: Exception) {
-            logger().error(ex.stackTraceToString())
-        }
+            val payment = paymentRepository.findByPaymentId(deletePaymentRequest.paymentId)
+            if (payment.deletedAt != null) throw AresException(AresError.ERR_1007, "")
 
+            val settlement = settlementRepository.findBySourceIdAndSourceType(payment.paymentNum!!, listOf(SettlementType.valueOf(payment.paymentCode?.name!!)))
+            logger().info("settlementDetails: $settlement")
+            if (!settlement.isNullOrEmpty()) throw AresException(AresError.ERR_1540, "Payment is already utilized.")
+
+            payment.deletedAt = Timestamp.from(Instant.now())
+            payment.updatedAt = payment.deletedAt
+            payment.paymentDocumentStatus = PaymentDocumentStatus.DELETED
+            payment.updatedBy = when (deletePaymentRequest.performedById == null) {
+                true -> payment.createdBy
+                false -> UUID.fromString(deletePaymentRequest.performedById)
+            }
+            /*MARK THE PAYMENT AS DELETED IN DATABASE*/
+            val paymentResponse = paymentRepository.update(payment)
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.PAYMENTS,
+                    objectId = payment.id,
+                    actionName = AresConstants.DELETE,
+                    data = payment,
+                    performedBy = deletePaymentRequest.performedById,
+                    performedByUserType = deletePaymentRequest.performedByUserType
+                )
+            )
+
+            val accType = AccountType.valueOf(payment.paymentCode?.name!!)
+
+            val accountUtilization = accountUtilizationRepository.findRecord(
+                payment.paymentNum!!, accType.name, deletePaymentRequest.accMode?.name
+            ) ?: throw AresException(AresError.ERR_1005, "")
+            accountUtilization.documentStatus = DocumentStatus.DELETED
+            accountUtilization.settlementEnabled = false
+            accountUtilization.deletedAt = Timestamp.valueOf(LocalDateTime.now())
+            accountUtilization.updatedAt = accountUtilization.deletedAt
+
+            /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN DATABASE*/
+            val accUtilRes = accountUtilizationRepository.update(accountUtilization)
+
+            auditService.createAudit(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = accountUtilization.id,
+                    actionName = AresConstants.DELETE,
+                    data = accountUtilization,
+                    performedBy = deletePaymentRequest.performedById,
+                    performedByUserType = deletePaymentRequest.performedByUserType
+                )
+            )
+//            if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED && payment.paymentCode == PaymentCode.PAY) {
+//                val request = DeleteSettlementRequest(
+//                    documentNo = Hashids.encode(payment.paymentNum!!),
+//                    deletedBy = UUID.fromString(deletePaymentRequest.performedById),
+//                    deletedByUserType = deletePaymentRequest.performedByUserType,
+//                    settlementType = SettlementType.PAY
+//                )
+//                settlementService.delete(request)
+//            }
+            try {
+                /*MARK THE ACCOUNT UTILIZATION  AS DELETED IN OPEN SEARCH*/
+                Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes, true)
+                // Emitting Kafka message to Update Outstanding and Dashboard
+                emitDashboardAndOutstandingEvent(accountUtilizationMapper.convertToModel(accUtilRes))
+                // Emitting RabbitMq message to Update Customer Outstanding
+                if (accountUtilization.accMode == AccMode.AR) {
+                    aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+                }
+            } catch (ex: Exception) {
+                logger().error(ex.stackTraceToString())
+            }
+        } catch (aresException: AresException) {
+            logger().error("""${mapOf("paymentId" to deletePaymentRequest.paymentId, "error" to "${aresException.error.message} ${aresException.context}")}""")
+            throw aresException
+        } catch (e: Exception) {
+            logger().error(e.stackTraceToString())
+            Sentry.captureException(e)
+            throw e
+        }
         return OnAccountApiCommonResponse(id = deletePaymentRequest.paymentId, message = Messages.PAYMENT_DELETED, isSuccess = true)
     }
 
@@ -683,11 +758,15 @@ open class OnAccountServiceImpl : OnAccountService {
         accUtilizationModel.ledgerAmount = receivableRequest.ledAmount
         accUtilizationModel.ledCurrency = receivableRequest.ledCurrency!!
         accUtilizationModel.currency = receivableRequest.currency!!
-        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
+        accUtilizationModel.docStatus = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
             true -> DocumentStatus.FINAL
             false -> DocumentStatus.PROFORMA
         }
         accUtilizationModel.migrated = false
+        accUtilizationModel.settlementEnabled = when (receivableRequest.paymentDocumentStatus in listOf(PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTED, PaymentDocumentStatus.POSTING_FAILED, PaymentDocumentStatus.FINAL_POSTED)) {
+            true -> true
+            false -> false
+        }
     }
 
     private suspend fun setOrganizations(receivableRequest: Payment) {
@@ -909,7 +988,8 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentData.forEach {
             val input = SerialIdsInput(
                 organizationSerialId = it["organization_serial_id"].toString().toLong(),
-                tradePartyDetailSerialId = it["trade_party_serial_id"].toString().toLong()
+                tradePartyDetailSerialId = it["trade_party_serial_id"].toString().toLong(),
+                cogoEntityId = AresConstants.ENTITY_ID[it["entity_code"].toString().toInt()]
             )
             if (input !in orgTradeSerialIdMap) orgTradeSerialIdMap.add(input)
         }
@@ -940,7 +1020,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val ledgerCurrency = cogoEntities.bankList.find { det -> det.entityCode.toString() == it["entity_code"].toString() }?.ledgerCurrency
             val utr = it["utr"].toString()
             val serialIdDetails = serialClientResponse?.find { detail ->
-                detail?.organization?.orgSerialId == organizationSerialNo.toLong() && detail?.tradePartySerial.toString() == tradePartySerialNo
+                detail?.organization?.orgSerialId == organizationSerialNo.toLong() && detail.tradePartySerial.toString() == tradePartySerialNo
             }
 
             var payModeValue: PayMode? = null
@@ -1180,14 +1260,40 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
-            val paymentDetails = paymentRepository.findByPaymentId(paymentId) ?: throw AresException(AresError.ERR_1002, "")
+            val paymentDetails = paymentRepository.findByPaymentId(paymentId)
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
-                throw AresException(AresError.ERR_1523, "")
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment already posted",
+                        false
+                    )
+                )
+                return false
             }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.CREATED) {
-                throw AresException(AresError.ERR_1524, "")
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        paymentDetails.paymentNumValue!!,
+                        "Payment is not approved",
+                        false
+                    )
+                )
+                return false
             }
 
             val isPaymentPresentOnSage = isPaymentPresentOnSage(paymentDetails.paymentNumValue!!)
@@ -1214,7 +1320,20 @@ open class OnAccountServiceImpl : OnAccountService {
             val resultFromSageOrganizationQuery = SageClient.sqlQuery(sageOrganizationQuery)
             val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
             if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
-                throw AresException(AresError.ERR_1002, "BPR")
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "PostPaymentToSage",
+                        "Payment",
+                        paymentId,
+                        "PAYMENT",
+                        "500",
+                        "Registration Number: ${organization.list[0]["registration_number"]}",
+                        "Not Found BPR",
+                        false
+                    )
+                )
+                return false
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
@@ -1257,8 +1376,8 @@ open class OnAccountServiceImpl : OnAccountService {
                         paymentId,
                         "PAYMENT",
                         "500",
-                        sageOrganization.toString(),
-                        "sage serial organization id different in sage db and cogoport db",
+                        """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganization.sageOrganizationId}""",
+                        "sage serial organization id different on Sage and Cogoport Platform",
                         false
                     )
                 )
@@ -1355,8 +1474,9 @@ open class OnAccountServiceImpl : OnAccountService {
                     currency!!,
                     entityCode!!,
                     if (paymentDetails.accMode == AccMode.AP) 1 else 2,
-                    paymentDetails.amount,
+                    paymentDetails.amount.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentDetails.transRefNumber,
+                    paymentDetails.ledAmount!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentLineItemDetails
                 )
             )
@@ -1370,7 +1490,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
                 val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
                 val records = mappedResponse["recordset"] as? ArrayList<*>
-
                 if (records?.size != 0) {
                     val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
                     paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
@@ -1434,7 +1553,20 @@ open class OnAccountServiceImpl : OnAccountService {
                     false
                 )
             )
-            throw exception
+        } catch (aresException: AresException) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    null,
+                    "PostPaymentToSage",
+                    "Payment",
+                    paymentId,
+                    "PAYMENT",
+                    "500",
+                    paymentId.toString(),
+                    "${aresException.error.message} ${aresException.context}",
+                    false
+                )
+            )
         } catch (e: Exception) {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
@@ -1444,14 +1576,37 @@ open class OnAccountServiceImpl : OnAccountService {
                     paymentId,
                     "PAYMENT",
                     "500",
-                    "",
+                    paymentId.toString(),
                     e.toString(),
                     false
                 )
             )
-            throw e
         }
         return false
+    }
+
+    override suspend fun bulkPostPaymentToSage(paymentIds: List<Long>, performedBy: UUID) {
+        val statusGrouping = paymentRepository.getPaymentDocumentStatusWiseIds(paymentIds)
+        statusGrouping?.map {
+            when (it.paymentDocumentStatus) {
+                PaymentDocumentStatus.CREATED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkUpdatePaymentAndPostOnSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                PaymentDocumentStatus.APPROVED, PaymentDocumentStatus.POSTING_FAILED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkPostPaymentToSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                PaymentDocumentStatus.POSTED -> {
+                    it.paymentIds.map { paymentId ->
+                        aresMessagePublisher.emitBulkPostPaymentFromSage(PostPaymentToSage(paymentId, performedBy))
+                    }
+                }
+                else -> return
+            }
+        }
     }
 
     private fun getPaymentLineItem(payment: com.cogoport.ares.api.payment.entity.Payment): PaymentLineItem {
@@ -1487,12 +1642,13 @@ open class OnAccountServiceImpl : OnAccountService {
         for (id in paymentIds) {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
-
-                if (payment.paymentDocumentStatus != PaymentDocumentStatus.POSTED) {
-                    throw AresException(AresError.ERR_1535, "")
-                }
                 if (!isPaymentPresentOnSage(payment.paymentNumValue!!)) {
-                    throw AresException(AresError.ERR_1002, "payment ${payment.paymentNumValue} is not present on sage for final posting")
+                    logger().info("Document ${payment.paymentNumValue} is not present on sage for final posting")
+                    createThirdPartyAudit(id, "PostPaymentFromSage", payment.paymentNumValue.toString(), "Document is not present on sage for final posting", false)
+                    failedIds.add(id)
+                    return SageFailedResponse(
+                        failedIdsList = failedIds
+                    )
                 }
 
                 val result = SageClient.postPaymentFromSage(payment.sageRefNumber!!)
@@ -1505,8 +1661,11 @@ open class OnAccountServiceImpl : OnAccountService {
                     createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
+            } catch (sageException: SageException) {
+                createThirdPartyAudit(id, "PostPaymentFromSage", sageException.data, sageException.context, false)
+                failedIds.add(id)
             } catch (e: Exception) {
-                createThirdPartyAudit(id, "PostPaymentFromSage", "", e.toString(), false)
+                createThirdPartyAudit(id, "PostPaymentFromSage", id.toString(), e.toString(), false)
                 failedIds.add(id)
             }
         }
@@ -1533,8 +1692,14 @@ open class OnAccountServiceImpl : OnAccountService {
                     createThirdPartyAudit(id, "CancelPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
                 }
+            } catch (sageException: SageException) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", sageException.data, sageException.context, false)
+                failedIds.add(id)
+            } catch (aresException: AresException) {
+                createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), "${aresException.error.message} ${aresException.context}", false)
+                failedIds.add(id)
             } catch (e: Exception) {
-                createThirdPartyAudit(id, "CancelPaymentFromSage", "", e.toString(), false)
+                createThirdPartyAudit(id, "CancelPaymentFromSage", id.toString(), e.toString(), false)
                 failedIds.add(id)
             }
         }
@@ -1578,6 +1743,111 @@ open class OnAccountServiceImpl : OnAccountService {
                 transactionRefNo = request.utr!!
             )
             kuberMessagePublisher.updateAdvanceDocumentStatus(onAccountWithUtrResponse)
+        }
+    }
+
+    override suspend fun directFinalPostToSage(req: PostPaymentToSage) {
+        val postingStatusData = postPaymentToSage(req.paymentId, req.performedBy)
+
+        if (postingStatusData) {
+            postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
+        }
+    }
+
+    override suspend fun bulkUpdatePaymentAndPostOnSage(req: PostPaymentToSage) {
+        val payment = paymentRepository.findByPaymentId(req.paymentId)
+        val paymentModel = paymentConverter.convertToModel(payment)
+        paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+        paymentModel.updatedBy = req.performedBy.toString()
+        val updatedPayment = updatePaymentEntry(paymentModel)
+        if (updatedPayment.isSuccess) {
+            directFinalPostToSage(
+                PostPaymentToSage(
+                    req.paymentId,
+                    req.performedBy
+                )
+            )
+        }
+    }
+
+    override suspend fun downloadSagePlatformReport(startDate: String, endDate: String) {
+        val platformPaymentData = unifiedDBRepo.getPaymentsByTransactionDate(
+            startDate,
+            endDate
+        )
+        val paymentNumValues = platformPaymentData
+            ?.map { it.paymentNumValue }
+            ?.toCollection(ArrayList())
+
+        val platformAndSagePaymentResponse = mutableListOf<SagePlatformPaymentHeader>()
+
+        if (!paymentNumValues.isNullOrEmpty()) {
+            val sagePaymentData = sageServiceImpl.sagePaymentBySageRefNumbers(paymentNumValues)
+            platformPaymentData.map { platformPayment ->
+                val sagePayment = sagePaymentData.firstOrNull { it.platformPaymentNum == platformPayment.paymentNumValue }
+
+                platformAndSagePaymentResponse.add(
+                    SagePlatformPaymentHeader(
+                        paymentNumValueAtPlatform = platformPayment.paymentNumValue,
+                        sageOrganizationIdAtPlatform = platformPayment.sageOrganizationId,
+                        paymentCodeAtPlatform = platformPayment.paymentCode,
+                        bankCodeAtPlatform = platformPayment.accCode,
+                        entityCodeAtPlatform = platformPayment.entityCode,
+                        currencyAtPlatform = platformPayment.currency,
+                        amountAtPlatform = platformPayment.amount,
+                        utrAtPlatform = platformPayment.utr,
+                        paymentNumValueAtSage = sagePayment?.sagePaymentNum,
+                        sageOrganizationIdAtSage = sagePayment?.bprNumber,
+                        paymentCodeAtSage = sagePayment?.paymentCode,
+                        bankCodeAtSage = sagePayment?.glCode,
+                        entityCodeAtSage = sagePayment?.entityCode,
+                        currencyAtSage = sagePayment?.currency,
+                        amountAtSage = sagePayment?.amount,
+                        utrAtSage = sagePayment?.narration,
+                        isAmountMatched = sagePayment?.amount?.compareTo(platformPayment.amount) == 0,
+                        isCurrencyMatched = sagePayment?.currency == platformPayment.currency,
+                        isBPRMatched = sagePayment?.sageOrganizationId == platformPayment.sageOrganizationId,
+                        isEntityMatched = sagePayment?.entityCode == platformPayment.entityCode,
+                        isPanMatched = sagePayment?.panNumber == platformPayment.panNumber,
+                        panNumberAtPlatform = platformPayment.panNumber,
+                        panNumberAtSage = sagePayment?.panNumber,
+                        isGLCodeMatched = sagePayment?.glCode?.compareTo(platformPayment.accCode!!) == 0,
+                        isUtrMatched = sagePayment?.narration == platformPayment.utr
+                    )
+                )
+            }
+            val excelName: String = "Payment_Report" + "_" + LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) + ".xlsx"
+
+            val file = ExcelUtils.writeIntoExcel(platformAndSagePaymentResponse, excelName, "Payment_Report")
+            val url = s3Client.upload(s3Bucket, excelName, file).toString()
+            val excelDocument = aresDocumentRepository.save(
+                AresDocument(
+                    id = null,
+                    documentUrl = url,
+                    documentName = "sage_platform_report",
+                    documentType = url.substringAfterLast('.'),
+                    uploadedBy = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                    createdAt = Timestamp.valueOf(LocalDateTime.now()),
+                    updatedAt = Timestamp.valueOf(LocalDateTime.now())
+                )
+            )
+
+            val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(excelDocument.id!!)}"
+
+            val emailVariables: HashMap<String, String?> = hashMapOf("file_url" to visibleUrl, "type" to "Payment", "subject" to "Sage Platform Payment Report")
+
+            val request = CreateCommunicationRequest(
+                templateName = AresConstants.SAGE_PLATFORM_REPORT,
+                performedByUserId = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                performedByUserName = AresConstants.performedByUserNameForMail,
+                recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
+                senderEmail = AresConstants.NO_REPLY,
+                ccEmails = AresConstants.CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
+                emailVariables = emailVariables,
+            )
+
+            aresMessagePublisher.sendEmail(request)
         }
     }
 }

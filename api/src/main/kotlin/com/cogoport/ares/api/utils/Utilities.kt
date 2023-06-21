@@ -15,8 +15,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Month
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -38,8 +40,9 @@ class Utilities {
         }
 
         fun isInvoiceAccountType(accType: AccountType): Boolean {
-            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN || accType == AccountType.PCN ||
-                accType == AccountType.PINV || accType == AccountType.PDN || accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP
+            if (accType == AccountType.SINV || accType == AccountType.SCN || accType == AccountType.SDN ||
+                accType == AccountType.PCN || accType == AccountType.PINV || accType == AccountType.PDN ||
+                accType == AccountType.PREIMB || accType == AccountType.SREIMB || accType == AccountType.EXP || accType == AccountType.SREIMBCN
             ) {
                 return true
             }
@@ -110,13 +113,17 @@ class Utilities {
             }
         }
 
-        fun getPaymentStatus(accountUtilization: AccountUtilization): PaymentStatus {
-            if (accountUtilization.amountCurr.compareTo(accountUtilization.payCurr) == 0) {
-                return PaymentStatus.PAID
-            } else if ((accountUtilization.amountCurr - accountUtilization.payCurr).compareTo(0.toBigDecimal()) > 0 && accountUtilization.payCurr.compareTo(0.toBigDecimal()) != 0) {
-                return PaymentStatus.PARTIAL_PAID
-            }
-            return PaymentStatus.UNPAID
+        fun getPaymentStatus(accountUtilization: AccountUtilization): Pair<PaymentStatus, BigDecimal> {
+            val balanceAmount = (
+                accountUtilization.amountCurr.setScale(4, RoundingMode.HALF_UP).minus(accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP))
+                ).setScale(4, RoundingMode.HALF_UP)
+            if (balanceAmount.compareTo(BigDecimal.ZERO) == 0 || balanceAmount.abs().compareTo(BigDecimal("0.1")) <= 0) {
+                return Pair(PaymentStatus.PAID, balanceAmount)
+            } else if (balanceAmount.compareTo(BigDecimal.ZERO) > 0 && accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(0.toBigDecimal()) != 0) {
+                return Pair(PaymentStatus.PARTIAL_PAID, balanceAmount)
+            } else if (accountUtilization.payCurr.setScale(4, RoundingMode.HALF_UP).compareTo(BigDecimal.ZERO) == 0)
+                return Pair(PaymentStatus.UNPAID, balanceAmount)
+            return Pair(PaymentStatus.PAID, balanceAmount)
         }
 
         fun localDateTimeToTimeStamp(date: LocalDateTime): Timestamp {
@@ -135,6 +142,23 @@ class Utilities {
                         .format(Instant.now())
                 )
             }
+        }
+
+        /**
+         * Converts Date into LocalDateTime
+         */
+        fun dateIntoLocalDateTime(date: Date): LocalDateTime {
+            return LocalDateTime.ofInstant(
+                date.toInstant(),
+                ZoneId.systemDefault()
+            )
+        }
+
+        /**
+         * Converts LocalDateTime into Date
+         */
+        fun localDateTimeIntoDate(ldt: LocalDateTime): Date {
+            return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant())
         }
     }
 }

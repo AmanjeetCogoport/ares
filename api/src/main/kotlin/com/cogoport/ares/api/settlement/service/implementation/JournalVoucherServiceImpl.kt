@@ -1,7 +1,10 @@
 package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -24,6 +27,7 @@ import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import javax.transaction.Transactional
 
 @Singleton
 open class JournalVoucherServiceImpl : JournalVoucherService {
@@ -43,26 +47,36 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     @Inject
     lateinit var parentJvRepo: ParentJVRepository
 
+    @Inject
+    lateinit var railsClient: RailsClient
+
+    @Transactional
     override suspend fun updateJournalVoucherStatus(id: Long, isUtilized: Boolean, performedBy: UUID, performedByUserType: String?, documentValue: String?) {
-        val jvDetails = parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
+        parentJvRepo.updateIsUtilizedColumn(id, isUtilized, performedBy, documentValue)
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
-                objectId = jvDetails.id,
+                objectId = id,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to jvDetails.id, "status" to "UTILIZED"),
+                data = mapOf("id" to id, "status" to "UTILIZED"),
                 performedBy = performedBy.toString(),
                 performedByUserType = performedByUserType
             )
         )
     }
 
-    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short): AccountUtilization {
+    override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short, settlementEnabled: Boolean): AccountUtilization {
+        val organization = railsClient.getListOrganizationTradePartyDetails(request.tradePartyId!!)
+
+        if (organization.list.isEmpty()) {
+            throw AresException(AresError.ERR_1530, "")
+        }
+        val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
             entityCode = request.entityCode!!,
-            orgSerialId = 1,
+            orgSerialId = orgSerialId,
             sageOrganizationId = null,
             organizationId = request.tradePartyId,
             taggedOrganizationId = null,
@@ -88,11 +102,14 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             accCode = AresModelConstants.AR_ACCOUNT_CODE,
-            migrated = false
+            migrated = false,
+            settlementEnabled = settlementEnabled
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 
-        aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        if (accUtilObj.accMode == AccMode.AR) {
+            aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+        }
 
         auditService.createAudit(
             AuditRequest(

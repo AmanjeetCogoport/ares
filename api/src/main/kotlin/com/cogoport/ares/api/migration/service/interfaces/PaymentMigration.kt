@@ -7,6 +7,7 @@ import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 
 interface PaymentMigration {
     suspend fun migratePayment(paymentRecord: PaymentRecord): Int
@@ -21,4 +22,8 @@ interface PaymentMigration {
     suspend fun migrateNewPeriodRecords(records: NewPeriodRecord)
 
     suspend fun migrateJVUtilization(record: JVRecordsScheduler)
+
+    suspend fun migrateSagePaymentNum(request: SagePaymentNumMigrationResponse)
+
+    suspend fun partialPaymentMismatchDocument(documentNo: Long)
 }

@@ -28,12 +28,16 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
+import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
@@ -53,6 +57,7 @@ import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Year
 import java.util.UUID
 import kotlin.math.ceil
 
@@ -458,8 +463,8 @@ class OutStandingServiceImpl : OutStandingService {
             if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
                 updateCustomerDetails(request.organizationId!!, flag = true, searchResponse?.hits()?.hits()?.map { it.source() }?.get(0))
             } else {
-                val queryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SINV, request.organizationId)
-                val creditNoteQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SCN, request.organizationId)
+                val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV.name, AccountType.SREIMB.name), request.organizationId)
+                val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN.name, AccountType.SREIMBCN.name), request.organizationId)
                 val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, request.organizationId)
                 if (queryResponse.isNullOrEmpty()) {
                     return@forEach
@@ -698,8 +703,8 @@ class OutStandingServiceImpl : OutStandingService {
                     }
 
                     if (customerOutstanding != null) {
-                        val queryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SINV, id)
-                        val creditNoteQueryResponse = accountUtilizationRepo.getInvoicesOutstandingAgeingBucket(entity, AccountType.SCN, id)
+                        val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV.name, AccountType.SREIMB.name), id)
+                        val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN.name, AccountType.SREIMBCN.name), id)
                         val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, id)
                         if (queryResponse.isNullOrEmpty()) {
                             return@forEach
@@ -941,5 +946,39 @@ class OutStandingServiceImpl : OutStandingService {
         }
         val res = listSupplierDetails(request)
         return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
+    }
+
+    override suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
+        val accountPayablesRes = accountUtilizationRepository.getApPerOrganization(request.orgId, request.entityCode)
+        accountPayablesRes.map { it.accountPayables *= (-1).toBigDecimal() }
+        return accountPayablesRes
+    }
+
+    override suspend fun getCustomerMonthlyPayment(request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
+        var response = CustomerMonthlyPayment(
+            january = BigDecimal.ZERO, february = BigDecimal.ZERO, march = BigDecimal.ZERO, april = BigDecimal.ZERO, may = BigDecimal.ZERO,
+            june = BigDecimal.ZERO, july = BigDecimal.ZERO, august = BigDecimal.ZERO, september = BigDecimal.ZERO, october = BigDecimal.ZERO,
+            november = BigDecimal.ZERO, december = BigDecimal.ZERO
+        )
+        val isLeapYear = Year.isLeap(request.year.toLong())
+        val monthlyPaymentData = accountUtilizationRepo.getCustomerMonthlyPayment(request.orgId, request.year, isLeapYear, request.entityCode)
+        if (monthlyPaymentData != null) {
+            response = CustomerMonthlyPayment(
+                ledgerCurrency = monthlyPaymentData.ledgerCurrency,
+                january = monthlyPaymentData.january,
+                february = monthlyPaymentData.february,
+                march = monthlyPaymentData.march,
+                april = monthlyPaymentData.april,
+                may = monthlyPaymentData.may,
+                june = monthlyPaymentData.june,
+                july = monthlyPaymentData.july,
+                august = monthlyPaymentData.august,
+                september = monthlyPaymentData.september,
+                october = monthlyPaymentData.october,
+                november = monthlyPaymentData.november,
+                december = monthlyPaymentData.december
+            )
+        }
+        return response
     }
 }

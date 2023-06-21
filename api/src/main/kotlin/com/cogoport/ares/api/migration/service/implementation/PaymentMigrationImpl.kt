@@ -46,6 +46,7 @@ import com.cogoport.ares.api.migration.repository.SettlementsMigrationRepository
 import com.cogoport.ares.api.migration.service.interfaces.MigrationLogService
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentNumGeneratorRepo
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -60,6 +61,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.settlement.SettlementType
@@ -68,7 +70,9 @@ import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.request.JournalVoucherRequest
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.kuber.client.KuberClient
+import io.sentry.Sentry
 import jakarta.inject.Inject
+import java.lang.Math.min
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -87,6 +91,8 @@ class PaymentMigrationImpl : PaymentMigration {
     @Inject lateinit var cogoClient: AuthClient
 
     @Inject lateinit var accountUtilizationRepositoryMigration: AccountUtilizationRepositoryMigration
+
+    @Inject lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     @Inject lateinit var journalVoucherRepository: JournalVoucherRepository
 
@@ -130,7 +136,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = paymentRecord.sageOrganizationId,
-                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense"
+                    organizationType = if (paymentRecord.accMode == "AR") "income" else "expense",
+                    cogoEntityId = AresConstants.ENTITY_ID[paymentRecord.entityCode]
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
@@ -186,7 +193,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val response = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = journalVoucherRecord.sageOrganizationId,
-                    organizationType = if (journalVoucherRecord.accMode.equals("AR")) "income" else "expense"
+                    organizationType = if (journalVoucherRecord.accMode.equals("AR")) "income" else "expense",
+                    cogoEntityId = AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]
                 )
             )
             if (response == null || response.organizationId.isNullOrEmpty()) {
@@ -244,7 +252,7 @@ class PaymentMigrationImpl : PaymentMigration {
             ledAmount = paymentRecord.ledgerAmount,
             payMode = PayMode.valueOf(paymentRecord.paymentMode!!), // getPaymentMode(paymentRecord)?.let { PaymentModeMapping.getPayMode(it) },
             narration = paymentRecord.narration,
-            transRefNumber = if (paymentRecord.narration.isNullOrEmpty()) null else getUTR(paymentRecord.narration!!),
+            transRefNumber = paymentRecord.narration,
             refPaymentId = null,
             transactionDate = paymentRecord.transactionDate,
             createdAt = paymentRecord.createdAt!!,
@@ -363,7 +371,7 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId, receivableRequest.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -403,7 +411,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = receivableRequest.organizationId,
             bankPayAmount = receivableRequest.bankPayAmount,
             migrated = true,
-            paymentDocumentStatus = PaymentDocumentStatus.POSTED,
+            paymentDocumentStatus = PaymentDocumentStatus.FINAL_POSTED,
             updatedBy = MigrationConstants.createdUpdatedBy,
             createdBy = MigrationConstants.createdUpdatedBy,
             sageRefNumber = receivableRequest.sageRefNumber
@@ -441,7 +449,8 @@ class PaymentMigrationImpl : PaymentMigration {
             tradePartyMappingId = paymentEntity.tradePartyMappingId,
             taggedOrganizationId = paymentEntity.taggedOrganizationId,
             taxableAmount = BigDecimal.ZERO,
-            migrated = true
+            migrated = true,
+            settlementEnabled = true
         )
     }
 
@@ -455,7 +464,7 @@ class PaymentMigrationImpl : PaymentMigration {
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
         // val tradePartyResponse = getTradePartyInfo(orgDetailsResponse.organizationId.toString())
-        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong())
+        val serialIdInputs = SerialIdsInput(organizationSerialId!!, orgDetailsResponse.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[receivableRequest.entityCode])
 
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs)
@@ -493,7 +502,8 @@ class PaymentMigrationImpl : PaymentMigration {
             taggedOrganizationId = UUID.fromString(orgDetailsResponse.organizationId),
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
-            taggedBillId = null
+            taggedBillId = null,
+            settlementEnabled = true
         )
     }
 
@@ -523,7 +533,7 @@ class PaymentMigrationImpl : PaymentMigration {
             )
         ).organizationSerialId ?: throw AresException(AresError.ERR_1008, "organization serial_id not found")
 
-        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong()) } }
+        val serialIdInputs = organizationSerialId.let { response.tradePartySerialId?.let { it1 -> SerialIdsInput(it, it1.toLong(), AresConstants.ENTITY_ID[journalVoucherRecord.entityCode]) } }
         val serialIdRequest = SerialIdDetailsRequest(
             organizationTradePartyMappings = arrayListOf(serialIdInputs!!)
         )
@@ -696,7 +706,8 @@ class PaymentMigrationImpl : PaymentMigration {
             val tradePartyDetailId = cogoClient.getOrgDetailsBySageOrgId(
                 GetOrgDetailsRequest(
                     sageOrganizationId = payLocUpdateRequest.sageOrganizationId,
-                    organizationType = organizationType
+                    organizationType = organizationType,
+                    cogoEntityId = AresConstants.ENTITY_ID[payLocUpdateRequest.entityCode]
                 )
             ).organizationTradePartyDetailId ?: throw AresException(AresError.ERR_1003, "organizationTradePartyDetailId not found")
             var migrationStatus = MigrationStatus.PAYLOC_UPDATED
@@ -927,7 +938,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 throw AresException(AresError.ERR_1008, "Organization serial_id information not found")
             }
             val organizationSerialId = cogoOrganization.organizationSerialId!!
-            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong())
+            val serialIdInputs = SerialIdsInput(organizationSerialId, response.tradePartySerialId!!.toLong(), AresConstants.ENTITY_ID[record.cogoEntity!!.toInt()])
             val serialIdRequest = SerialIdDetailsRequest(
                 organizationTradePartyMappings = arrayListOf(serialIdInputs)
             )
@@ -1033,5 +1044,43 @@ class PaymentMigrationImpl : PaymentMigration {
             logger().error(e.stackTraceToString())
         }
         return "NA"
+    }
+
+    override suspend fun migrateSagePaymentNum(request: SagePaymentNumMigrationResponse) {
+        val paymentDetails = paymentMigrationRepository.getPaymentFromSageRefNum(request.sageRefNum!!)
+        if (!paymentDetails.toString().isNullOrEmpty()) {
+            paymentMigrationRepository.updateSageRefNum(paymentDetails, request.sagePaymentNum!!)
+        }
+    }
+    override suspend fun partialPaymentMismatchDocument(documentNo: Long) {
+        try {
+            val accountUtilization = accountUtilizationRepositoryMigration.findNonMigratedRecord(documentNo, accMode = AccMode.AP.name, accType = null)
+            if (accountUtilization?.accType !in listOf(AccountType.PINV, AccountType.PREIMB)) {
+                return
+            }
+            val ledgerExchangeRate = accountUtilization?.amountLoc!! / accountUtilization.amountCurr
+            val settlementDetails = settlementRepository.getPaymentsCorrespondingDocumentNos(destinationId = documentNo, sourceId = null)
+            val paidTdsAmount = settlementDetails.filter { it?.sourceType == SettlementType.VTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
+            val payableAmount = accountUtilization.amountCurr - (accountUtilization.tdsAmount ?: BigDecimal.ZERO)
+            val paidAmountWithoutTds = accountUtilization.payCurr - paidTdsAmount
+            var leftAmount = payableAmount - paidAmountWithoutTds
+            if (settlementDetails.isEmpty() || paidTdsAmount.compareTo(BigDecimal.ZERO) == 0 || leftAmount.compareTo(BigDecimal.ZERO) == 0) return
+            val paymentDetails = paymentMigrationRepository.paymentDetailsByPaymentNum(settlementDetails.map { it?.sourceId!! }).filter { it.documentNo != null }
+            var totalUnutilizedAmount = paymentDetails.sumOf { it.unutilisedAmount }
+            paymentDetails.forEach { payment ->
+                var amount = BigDecimal.ZERO
+                if (payment.unutilisedAmount > BigDecimal.ZERO && leftAmount <= totalUnutilizedAmount && (accountUtilization.amountCurr > accountUtilization.payCurr) && leftAmount > BigDecimal.ZERO) {
+                    amount = payment.unutilisedAmount.min(leftAmount)
+                    accountUtilizationRepositoryMigration.updateSettlementAmount(documentNo, payment.paymentNum, amount, (amount * ledgerExchangeRate))
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(payment.id, amount, amount * ledgerExchangeRate)
+                    accountUtilizationRepositoryMigration.updateAccountUtilizationsAmount(accountUtilization.id!!, amount, amount * ledgerExchangeRate)
+                }
+                leftAmount -= amount
+                totalUnutilizedAmount -= amount
+            }
+        } catch (e: Exception) {
+            Sentry.captureException(e)
+            throw e
+        }
     }
 }

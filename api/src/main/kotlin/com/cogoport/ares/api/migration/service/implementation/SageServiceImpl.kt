@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.migration.service.implementation
 
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.migration.constants.MigrationConstants
 import com.cogoport.ares.api.migration.model.GlCodeRecordsManager
 import com.cogoport.ares.api.migration.model.InvoiceDetailRecordManager
@@ -19,23 +21,34 @@ import com.cogoport.ares.api.migration.model.PaymentRecordManager
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.model.SettlementRecordManager
 import com.cogoport.ares.api.migration.service.interfaces.SageService
+import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.PaymentDetailsInfo
+import com.cogoport.ares.model.payment.PaymentNumInfo
+import com.cogoport.ares.model.payment.PlatformPostPaymentDetails
+import com.cogoport.ares.model.payment.PostPaymentInfo
+import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
+import com.cogoport.ares.model.payment.SagePostPaymentDetails
 import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 
 @Singleton
 class SageServiceImpl : SageService {
 
     @Value("\${sage.databaseName}")
-    var sageSchema: String? = null
+    var sageDatabase: String? = null
+
+    @Inject lateinit var paymentRepository: PaymentRepository
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """
         SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -145,7 +158,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -203,7 +216,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
              SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -452,7 +465,7 @@ class SageServiceImpl : SageService {
             """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
-            ,GC.NUM_0 as sage_ref_number
+            ,P.NUM_0 as sage_ref_number
             ,P.BPANAM_0 as organization_name
             ,P.ACC_0 as acc_code
             ,case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode
@@ -588,5 +601,99 @@ class SageServiceImpl : SageService {
         val result = Client.sqlQuery(sqlQuery)
         val glCodeRecords = ObjectMapper().readValue(result, GlCodeRecordsManager::class.java)
         return glCodeRecords.recordSets!![0]
+    }
+
+    override suspend fun getPaymentPostSageInfo(
+        paymentNumValue: String,
+        entityCode: Long?,
+        accMode: AccMode
+    ): PaymentDetailsInfo? {
+        val platformPaymentDetails = paymentRepository.getPaymentByPaymentNumValue(paymentNumValue, entityCode, accMode)
+
+        if (platformPaymentDetails == null) {
+            throw AresException(AresError.ERR_1539, "")
+        }
+        val paymentDetails = PlatformPostPaymentDetails(
+            sagePaymentNum = platformPaymentDetails.sageRefNumber ?: " ",
+            platformPaymentNum = platformPaymentDetails.paymentNumValue,
+            bprNumber = platformPaymentDetails.sageOrganizationId,
+            glCode = platformPaymentDetails.accCode,
+            currency = platformPaymentDetails.currency!!,
+            entityCode = platformPaymentDetails.entityCode!!.toLong(),
+            amount = platformPaymentDetails.amount,
+            status = platformPaymentDetails.paymentDocumentStatus.toString(),
+            organizationName = platformPaymentDetails.organizationName
+        )
+
+        var accountMode = accMode.name
+        if (accountMode == AccMode.AP.name) {
+            accountMode = "SC"
+        }
+
+        val sagePaymentDetails = when (platformPaymentDetails.migrated) {
+            true -> getMigratedPaymentSageInfo(platformPaymentDetails.sageRefNumber!!, entityCode, accountMode)
+            else -> getPaymentSageInfo(paymentNumValue, entityCode, accountMode)
+        }
+
+        return PaymentDetailsInfo(
+            sagePaymentInfo = sagePaymentDetails,
+            platformPaymentInfo = paymentDetails
+        )
+    }
+    private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
+        val sqlQuery = """
+            select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
+            case WHEN STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN STA_0 = 1 THEN 'POSTED' end as sage_status, 
+                 BPR_0 as bpr_number, 
+                 ACC_0 as gl_code, 
+                 CUR_0 as currency, 
+                 FCY_0 as entity_code, 
+                 AMTCUR_0 as amount,
+                 BPANAM_0 as organization_name
+            from $sageDatabase.PAYMENTH where UMRNUM_0 in ('$paymentNumValue') and FCY_0 = $entityCode and BPRSAC_0 = '$accMode'
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
+
+        if (paymentRecords.recordSets!![0].isNullOrEmpty()) {
+            return null
+        }
+        return paymentRecords.recordSets!![0].first()
+    }
+
+    private fun getMigratedPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
+        val sqlQuery = """
+            SELECT P.NUM_0 AS sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
+            CASE WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN P.STA_0 = 1 THEN 'POSTED' end as sage_status, 
+                 P.BPR_0 as bpr_number, 
+                 P.ACC_0 as gl_code, 
+                 P.CUR_0 as currency, 
+                 P.FCY_0 as entity_code, 
+                 P.AMTCUR_0 as amount,
+                 P.BPANAM_0 as organization_name
+            from $sageDatabase.PAYMENTH P
+            JOIN $sageDatabase.GACCENTRY GA on P.NUM_0 = GA.REF_0
+            where GA.NUM_0 in ('$paymentNumValue') and P.FCY_0 = $entityCode and P.BPRSAC_0 = '$accMode'
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfo::class.java)
+
+        if (paymentRecords.recordSets!![0].isNullOrEmpty()) {
+            return null
+        }
+
+        return paymentRecords.recordSets!![0].first()
+    }
+
+    override suspend fun getSagePaymentNum(sageRefNumber: List<String>): ArrayList<SagePaymentNumMigrationResponse> {
+        val sqlQuery = """
+            select NUM_0 as sage_ref_num, REF_0 as sage_payment_num from $sageDatabase.GACCENTRY where NUM_0 in ('${sageRefNumber.joinToString("','")}')
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val paymentRecords = ObjectMapper().readValue(result, PaymentNumInfo::class.java)
+
+        return paymentRecords.recordSets!![0]
     }
 }

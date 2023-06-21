@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
+import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -13,6 +14,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
+import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -397,4 +399,124 @@ ORDER BY
             """
     )
     suspend fun updateSettlementStatus(id: Long, settlementStatus: SettlementStatus, performedBy: UUID)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                p.id
+            FROM
+                settlements s 
+            INNER JOIN payments p ON p.payment_num = s.source_id
+            WHERE 
+                s.destination_id = :destinationId
+            AND
+                s.destination_type::varchar = :destinationType
+            AND
+                s.source_type::varchar = :sourceType
+            AND
+                p.entity_code != '501'
+            AND 
+                p.payment_document_status::varchar NOT IN ('POSTED', 'FINAL_POSTED')
+            AND 
+                p.deleted_at IS NULL
+            AND
+                s.deleted_at IS NULL
+            """
+    )
+    suspend fun getPaymentIdByDestinationIdAndType(destinationId: Long, destinationType: SettlementType?, sourceType: SettlementType?): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+                SELECT id  FROM settlements
+                WHERE settlement_status::varchar = 'CREATED'
+                AND deleted_at IS NULL
+                AND led_currency != 'VND'
+                AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
+                AND destination_type not in ('PINV', 'PREIMB')
+                AND created_at >= :date
+            """
+    )
+    suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            WITH z AS (
+                SELECT
+                    s.id,
+                    aaus.document_value AS source_doc_value,
+                    aaud.document_value AS destination_doc_value,
+                    s.currency,
+                    s.amount,
+                    s.led_currency,
+                    s.led_amount,
+                    tpa.request_params AS request,
+                    CASE
+                        WHEN tpa.response ILIKE '%<?xml version="1.0" encoding="utf-8"?>%' THEN 'Unknown error. Possible reason: This document might have already been settled on Sage'
+                        ELSE tpa.response
+                    END AS response,
+                    tpa.created_at,
+                    CASE WHEN s.source_type IN ('REC', 'CTDS') THEN p.sage_ref_number ELSE aaus.document_value END AS source_sage_ref_number,
+                    aaud.document_value AS destination_sage_ref_number,
+                    ROW_NUMBER() OVER (PARTITION BY tpa.object_id ORDER BY tpa.created_at DESC) AS rn
+                FROM
+                    settlements s
+                    JOIN third_party_api_audits tpa ON s.id = tpa.object_id
+                    JOIN account_utilizations aaus ON s.source_id = aaus.document_no AND s.source_type::VARCHAR = aaus.acc_type::VARCHAR
+                    JOIN account_utilizations aaud ON s.destination_id = aaud.document_no AND s.destination_type::VARCHAR = aaud.acc_type::VARCHAR
+                    LEFT JOIN payments p ON aaus.document_value = p.payment_num_value AND CASE WHEN COALESCE(s.source_type IN ('REC','CTDS')) THEN TRUE ELSE FALSE END
+                WHERE
+                    s.settlement_status = 'POSTING_FAILED'
+                    AND s.created_at > '2023-05-15'
+                    AND s.source_type NOT IN ('SECH', 'PAY', 'PCN')
+                    AND s.destination_type NOT IN ('PINV', 'PCN')
+                    AND s.led_currency != 'VND'
+                    AND s.amount > 0
+            )
+            SELECT
+                source_doc_value,
+                destination_doc_value,
+                source_sage_ref_number,
+                destination_sage_ref_number,
+                currency,
+                amount,
+                led_currency,
+                led_amount,
+                request,
+                response
+            FROM
+                z
+            WHERE
+                rn = 1
+            ORDER BY z.created_at DESC
+        """
+    )
+    suspend fun getAllSettlementsMatchingFailedOnSage(): List<SettlementMatchingFailedOnSageExcelResponse>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+               s.id as settlement_id, p.trans_ref_number, source_id, source_type, destination_id, destination_type, s.currency, s.amount,
+                s.settlement_date::TIMESTAMP, s.is_void, au.tagged_bill_id
+            FROM
+                settlements s
+                LEFT JOIN payments p ON p.payment_num = s.source_id
+                LEFT JOIN account_utilizations au on au.document_no = s.destination_id
+            WHERE
+                (:sourceId is null or s.source_id = :sourceId) and
+                (:destinationId is null or s.destination_id = :destinationId)
+                and au.acc_mode = 'AP'
+                And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
+                AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
+                and s.deleted_at is null
+                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
+            ORDER BY
+                s.created_at DESC
+
+        """
+    )
+    suspend fun getPaymentsCorrespondingDocumentNos(destinationId: Long?, sourceId: Long?): MutableList<TaggedInvoiceSettlementInfo?>
 }

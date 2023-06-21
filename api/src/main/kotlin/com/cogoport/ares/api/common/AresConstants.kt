@@ -7,6 +7,8 @@ import java.time.LocalDate
 import java.time.temporal.IsoFields
 
 object AresConstants {
+    val ARES_USER_ID = "d815466f-f39f-414e-a799-5cd178da57ce"
+
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = LocalDate.now().year
     val CURR_DATE: Timestamp = Timestamp.from(Instant.now())
@@ -51,6 +53,7 @@ object AresConstants {
     const val DECIMAL_NUMBER_UPTO = 12
     const val ROUND_DECIMAL_TO = 4
     const val NO_DEDUCTION_RATE = 0
+    const val ROUND_OFF_DECIMAL_TO_2 = 2
 
     const val PAYING_PARTY = "self,paying_party"
 
@@ -75,17 +78,19 @@ object AresConstants {
     const val JV = "JV"
     const val TDS = "TDS"
     const val IND = "IND"
+    const val VND = "VND"
 
     const val UNIFIED = "dms"
 
     const val LIMIT = 10000
 
     var WHITE_LISTED_PATHS = mutableListOf(
-        "get_payments_health_check",
+        "get_payments_health",
         "get_payments_service_discovery_reachability",
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
-        "get_payments_service_discovery_kuber_reachability"
+        "get_payments_service_discovery_kuber_reachability",
+        "get_payments_download"
     )
 
     val ENTITY_ID = mapOf(
@@ -136,4 +141,99 @@ object AresConstants {
         ServiceType.RAIL_DOMESTIC_FREIGHT,
         ServiceType.TRUCKING
     )
+
+    val CC_MAIL_FOR_SETTLEMENTS_MATCHING_FAILED_ON_SAGE = listOf(
+        "preeti.pandey@cogoport.com",
+        "rajnish.bahl@cogoport.com",
+        "pankaj.pal@cogoport.com",
+        "abhishek.kumar@cogoport.com"
+    )
+
+    const val FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE = "Failed Settlements Matching on Sage"
+    const val NO_REPLY = "no-reply@cogoport.com"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL = "sachin.yadav@cogoport.com"
+
+    const val ARES_EXCHANGE = "ares"
+
+    val QUEUES = listOf(
+        "update-supplier-details",
+        "knockoff-payables",
+        "reverse-utr",
+        "unfreeze-credit-consumption",
+        "receivables-outstanding-data",
+        "update-utilization-amount",
+        "create-account-utilization",
+        "update-account-utilization",
+        "delete-account-utilization",
+        "update-account-status",
+        "settlement-migration",
+        "sage-payment-migration",
+        "sage-jv-migration",
+        "send-payment-details-for-autoKnockOff",
+        "update-customer-details",
+        "migrate-settlement-number",
+        "update-settlement-bill-updated",
+        "tagged-bill-auto-knockoff",
+        "delete-invoices-not-present-in-plutus",
+        "migrate-gl-codes",
+        "post-jv-to-sage",
+        "migrate-new-period",
+        "migrate-jv-pay-loc",
+        "send-payment-details",
+        "post-payment-to-sage",
+        "sage-payment-num-migration",
+        "bulk-post-payment-to-sage",
+        "bulk-post-settlement-to-sage",
+        "partial-payment-mismatch",
+        "bulk-update-payment-and-post-on-sage",
+        "bulk-post-payment-from-sage",
+        "send-email"
+    )
+
+    val RETRY_QUEUES = listOf(
+        "update-supplier-details",
+        "knockoff-payables",
+        "reverse-utr",
+        "unfreeze-credit-consumption",
+        "receivables-outstanding-data",
+        "update-utilization-amount",
+        "create-account-utilization",
+        "update-account-utilization",
+        "delete-account-utilization",
+        "update-account-status",
+        "settlement-migration",
+        "sage-payment-migration",
+        "sage-jv-migration",
+        "send-payment-details-for-autoKnockOff",
+        "update-customer-details",
+        "migrate-settlement-number",
+        "update-settlement-bill-updated",
+        "tagged-bill-auto-knockoff",
+        "delete-invoices-not-present-in-plutus",
+        "migrate-gl-codes",
+        "post-jv-to-sage",
+        "migrate-new-period",
+        "migrate-jv-pay-loc",
+        "send-payment-details",
+        "post-payment-to-sage",
+        "sage-payment-num-migration",
+        "bulk-post-payment-to-sage",
+        "bulk-post-settlement-to-sage",
+        "partial-payment-mismatch",
+        "bulk-update-payment-and-post-on-sage",
+        "bulk-post-payment-from-sage"
+    )
+
+    const val performedByUserNameForMail = "Business Finance Tech Team"
+    const val SAGE_PLATFORM_REPORT = "sage_platform_report"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "bhanugoban@cogoport.com"
+
+    val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
+        "abhishek.kumar@cogoport.com",
+        "vivek.garg@cogoport.com",
+        "shikhar.tyagi@cogoport.com",
+        "suhas.latelwar@cogoport.com"
+    )
+
+    const val BUSINESS_FINANCE_TECH_TEAM = "649f3792-b28f-4862-9683-5d5af2c574b4"
 }

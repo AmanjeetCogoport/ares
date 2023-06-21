@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.PlatformPayment
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
 import com.cogoport.ares.model.payment.response.PaymentResponse
 import io.micronaut.data.annotation.Query
@@ -95,11 +96,14 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 array_agg(id) AS payment_ids
             FROM 
                 payments
-            GROUP BY 
-                payment_document_status
+            WHERE 
+                    id IN (:paymentIds) 
+            AND 
+                payment_document_status != 'DELETED'::payment_document_status 
+            GROUP BY payment_document_status
         """
     )
-    suspend fun getPaymentDocumentStatusWiseIds(): List<PaymentDocumentStatusForPayments>
+    suspend fun getPaymentDocumentStatusWiseIds(paymentIds: List<Long>): List<PaymentDocumentStatusForPayments>?
 
     @NewSpan
     @Query(
@@ -147,7 +151,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             payment_num_value,
             created_at,
             deleted_at,
-            narration
+            narration,
+            bank_id,
+            pay_mode
             FROM 
             payments
             WHERE 
@@ -230,8 +236,45 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     ): Int
 
     @NewSpan
-    suspend fun findByPaymentNum(paymentNum: Long): List<Payment>?
+    suspend fun findByPaymentNumValue(paymentNumValue: String): List<Payment>?
 
     @NewSpan
     suspend fun countByPaymentNumValueEquals(paymentNumValues: String): Int
+
+    @NewSpan
+    @Query(
+        """
+          SELECT * FROM payments WHERE payment_num_value = :paymentNumValues AND entity_code = :entityCode AND acc_mode::varchar = :accMode
+        """
+    )
+    suspend fun getPaymentByPaymentNumValue(paymentNumValues: String, entityCode: Long?, accMode: AccMode): PlatformPayment
+
+    @NewSpan
+    @Query(
+        """
+            SELECT sage_ref_number FROM payments WHERE payment_num_value = :paymentNumValue AND deleted_at IS NULL and payment_document_status != 'DELETED'::payment_document_status LIMIT 1
+        """
+    )
+    suspend fun findBySinglePaymentNumValue(paymentNumValue: String): String?
+
+    @NewSpan
+    @Query(
+        """
+                SELECT
+                    id
+                FROM
+                    payments
+                WHERE
+                    acc_mode = 'AP'
+                AND 
+                    deleted_at IS NULL
+                AND 
+                    payment_document_status = 'APPROVED'::payment_document_status
+                AND 
+                    organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
+                AND 
+                    date_trunc('day', transaction_date) = date_trunc('day', current_date - interval '1 days')
+            """
+    )
+    suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
 }

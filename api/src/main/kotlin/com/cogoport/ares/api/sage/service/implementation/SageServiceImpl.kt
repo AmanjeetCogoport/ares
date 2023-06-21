@@ -3,6 +3,8 @@ package com.cogoport.ares.api.sage.service.implementation
 import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.PostPaymentInfos
+import com.cogoport.ares.model.payment.SagePaymentDetails
 import com.cogoport.brahma.sage.Client
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -66,7 +68,7 @@ class SageServiceImpl : SageService {
 
     open fun isPaymentPostedFromSage(paymentValue: String): String? {
 
-        val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue'"
+        val query = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0='$paymentValue' AND STA_0 = 9"
         val resultFromQuery = Client.sqlQuery(query)
         logger().info("paymentData: $resultFromQuery")
         var records = ObjectMapper().readValue<MutableMap<String, Any?>>(resultFromQuery)
@@ -89,5 +91,34 @@ class SageServiceImpl : SageService {
             return recordMap["NUM_0"]
         }
         return null
+    }
+
+    override suspend fun sagePaymentBySageRefNumbers(paymentNumValue: ArrayList<String?>): ArrayList<SagePaymentDetails> {
+        val sqlQuery = """
+            select P.NUM_0 as sage_payment_num, P.UMRNUM_0 as platform_payment_num, 
+            case WHEN P.STA_0 = 9 THEN 'FINAL_POSTED'
+                 WHEN P.STA_0 = 1 THEN 'POSTED' end as sage_status, 
+                 P.FCY_0 as entity_code,
+                 P.BPR_0 as bpr_number, 
+                 P.ACC_0 as gl_code, 
+                 P.CUR_0 as currency,
+                 P.BPR_0 as sage_organization_id,
+                 P.AMTCUR_0 as amount,
+                 P.ACCDAT_0 as transaction_date,
+                 P.BPANAM_0 as organization_name,
+                 case when P.PAYTYP_0 in ('TDSC','TDS') and P.BPRSAC_0='AR' then 'CTDS' 
+                  when P.PAYTYP_0 in ('TDSC','TDS') and P.BPRSAC_0='SC' then 'VTDS'
+                  else P.PAYTYP_0 end as payment_code,
+                 case when P.BPRSAC_0='SC' then 'AP' else 'AR' end as acc_mode,
+                 case when P.BPRSAC_0='AR' then
+                 (select XX1P4PANNO_0 from $sageDatabase.BPCUSTOMER where BPCNUM_0=P.BPR_0)
+                 else (select XX1P4PANNO_0 from $sageDatabase.BPSUPPLIER where BPSNUM_0=P.BPR_0) end as pan_number,
+                 P.DES_0 as narration
+            from $sageDatabase.PAYMENTH P
+            where UMRNUM_0 in ('${paymentNumValue.joinToString("','")}')
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val paymentRecords = ObjectMapper().readValue(result, PostPaymentInfos::class.java)
+        return paymentRecords.recordSets!![0]
     }
 }
