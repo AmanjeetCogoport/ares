@@ -1,0 +1,35 @@
+environment: ${MICRONAUT_ENVIRONMENTS:dev}
+micronaut:
+  application:
+    name: ares
+  server:
+    base-url: http://127.0.0.1:8086
+    port: 8086
+    context-path: /payments
+    cors:
+      enabled: true
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+  http:
+    client:
+      read-timeout: 30s
+  executors:
+    rabbit:
+      type: FIXED
+    consumer:
+      type: FIXED
+
+services:
+  service:
+    - id: bf-rails
+      url: http://rails:5000
+      enabledLocally: true
+  staging: https://api.stage.cogoport.io
+  namespace: ${DNS_NAMESPACE:cogoport.stage}
+  auth:
+    alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
+    authDisabled: ${AUTH_DISABLED:true}
+    microserviceAuthToken: ${MS_AUTH_TOKEN:c3ad6b5c-a100-46e3-8728-8e2bf83f7de0}

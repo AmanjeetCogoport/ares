@@ -46,7 +46,7 @@ class CogoAWSServiceDiscovery : DiscoveryClient {
      * @return list of serviceInstances usable by MN.
      */
     override fun getInstances(serviceId: String?): Publisher<List<ServiceInstance>?> {
-        if (environment == "local") {
+        if (environment == "local" || environment == "dev") {
             return Publisher { subscriber ->
                 subscriber.onNext(getServiceForLocalEnvironment(serviceId))
                 subscriber.onComplete()
