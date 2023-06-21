@@ -8,6 +8,7 @@ import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
@@ -17,7 +18,7 @@ import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
-import java.util.UUID
+import java.util.*
 
 interface DunningService {
     suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long
@@ -44,4 +45,6 @@ interface DunningService {
     suspend fun updateCycleExecution(request: UpdateCycleExecutionRequest): Long
 
     suspend fun listDistinctCreditControllers(request: ListCreditControllerRequest): List<CreditControllerResponse>
+
+    suspend fun calculateNextScheduleTime(scheduleRule: DunningScheduleRule): Date
 }

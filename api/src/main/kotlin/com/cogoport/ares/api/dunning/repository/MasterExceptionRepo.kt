@@ -6,6 +6,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.micronaut.tracing.annotation.NewSpan
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -13,6 +14,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
 
     suspend fun saveAll(paymentDetails: Iterable<MasterExceptions>): List<MasterExceptions>
 
+    @NewSpan
     @Query(
         """
              SELECT
@@ -61,6 +63,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
         sortType: String
     ): List<MasterExceptionResp>
 
+    @NewSpan
     @Query(
         """
             SELECT
@@ -84,6 +87,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
         segment: String?
     ): Long
 
+    @NewSpan
     @Query(
         """
             SELECT * FROM dunning_master_exceptions where deleted_at IS NULL
@@ -91,6 +95,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     )
     suspend fun getAllMasterExceptions(): List<MasterExceptions>?
 
+    @NewSpan
     @Query(
         """
             SELECT trade_party_detail_id FROM dunning_master_exceptions where deleted_at IS NULL AND is_active = TRUE
@@ -98,6 +103,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     )
     suspend fun getActiveTradePartyDetailIds(): List<UUID>
 
+    @NewSpan
     @Query(
         """
              UPDATE dunning_master_exceptions

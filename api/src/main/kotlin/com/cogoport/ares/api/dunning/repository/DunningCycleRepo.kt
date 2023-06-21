@@ -91,21 +91,6 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE dunning_cycles
-             SET 
-                schedule_rule::JSONB = :scheduleRule
-                updated_by = :updatedBy
-             WHERE id = :id
-        """
-    )
-    suspend fun updateDunningCycle(
-        id: Long,
-        scheduleRule: DunningScheduleRule,
-        updatedBy: UUID
-    )
-
-    @Query(
-        """
             SELECT severity_level FROM dunning_cycles WHERE id = :id
         """
     )

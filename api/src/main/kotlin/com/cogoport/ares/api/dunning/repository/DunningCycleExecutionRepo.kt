@@ -98,6 +98,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         updatedBy: UUID
     )
 
+    @NewSpan
     @Query(
         """
             UPDATE dunning_cycle_executions
@@ -113,6 +114,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         updatedBy: UUID
     )
 
+    @NewSpan
     @Query(
         """
             UPDATE dunning_cycle_executions SET status = :status WHERE id = :id

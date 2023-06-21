@@ -40,11 +40,11 @@ import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsRespo
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.plutus.client.PlutusClient
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import jakarta.inject.Singleton
 import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigDecimal
+import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -78,6 +78,7 @@ class ScheduleServiceImpl(
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.FAILED.name)
         }
         // logic for next execution creation
+        saveAndScheduleNextDunning(executionDetails!!)
     }
     private fun isValidExecution(executionDetails: DunningCycleExecution?) {
         if (executionDetails == null || executionDetails.deletedAt != null || executionDetails.status != CycleExecutionStatus.SCHEDULED.name) {
@@ -86,8 +87,32 @@ class ScheduleServiceImpl(
         }
     }
 
+    private suspend  fun saveAndScheduleNextDunning(executionDetails: DunningCycleExecution){
+        val dunningCycleDetails = dunningCycleRepo.findById(executionDetails.dunningCycleId)
+        val nextScheduledTime = dunningService.calculateNextScheduleTime(dunningCycleDetails?.scheduleRule!!)
+        val dunningCycleExecutionResponse = dunningExecutionRepo.save(
+            DunningCycleExecution(
+                id = null,
+                dunningCycleId = dunningCycleDetails.id!!,
+                templateId = dunningCycleDetails.templateId!!,
+                status = CycleExecutionStatus.SCHEDULED.toString(),
+                filters = dunningCycleDetails.filters,
+                entityCode = TAGGED_ENTITY_ID_MAPPINGS[dunningCycleDetails.filters.cogoEntityId.toString()]!!,
+                scheduleRule = dunningCycleDetails.scheduleRule,
+                frequency = dunningCycleDetails.frequency,
+                scheduledAt = Timestamp(nextScheduledTime.time),
+                triggerType = dunningCycleDetails.triggerType,
+                deletedAt = dunningCycleDetails.deletedAt,
+                createdBy = dunningCycleDetails.createdBy,
+                updatedBy = dunningCycleDetails.updatedBy,
+                createdAt = null,
+                updatedAt = null
+            )
+        )
+    }
+
     private suspend fun fetchOrgsAndSendPaymentReminder(executionDetails: DunningCycleExecution) {
-        var customerRequest = executionDetails.filters
+        val customerRequest = executionDetails.filters
         customerRequest.pageSize = 10000
         val tradePartyDetails = dunningService.getCustomersOutstandingAndOnAccount(
             customerRequest

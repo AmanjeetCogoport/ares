@@ -872,11 +872,9 @@ open class DunningServiceImpl(
         return returnExclusionList.toSet().toMutableList()
     }
 
-    open suspend fun calculateNextScheduleTime(
+    override suspend fun calculateNextScheduleTime(
         scheduleRule: DunningScheduleRule
     ): Date {
-        var scheduleTimeStamp: Timestamp? = null
-
         val scheduleHour = extractHourAndMinute(scheduleRule.scheduleTime).get("hour")!!
         val scheduleMinute = extractHourAndMinute(scheduleRule.scheduleTime).get("minute")!!
 
