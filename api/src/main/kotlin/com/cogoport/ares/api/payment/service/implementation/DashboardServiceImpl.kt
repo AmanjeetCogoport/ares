@@ -42,8 +42,10 @@ import com.cogoport.ares.api.payment.model.response.SupplierReceivables
 import com.cogoport.ares.api.payment.model.response.SupplierStatistics
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
+import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
@@ -62,6 +64,7 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
+import com.cogoport.ares.model.payment.request.LSPLedgerRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
@@ -69,6 +72,7 @@ import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
+import com.cogoport.ares.model.payment.response.LSPLedgerResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
@@ -95,6 +99,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Date
+import java.util.UUID
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.LinkedHashMap
@@ -122,6 +127,12 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     lateinit var outStandingServiceImpl: OutStandingServiceImpl
+
+    @Inject
+    private lateinit var documentMapper: DocumentMapper
+
+    @Inject
+    private lateinit var paymentRepository: PaymentRepository
 
     private suspend fun getDefaultersOrgIds(): List<UUID>? {
         return businessPartnersServiceImpl.listTradePartyDetailIds()
@@ -1378,5 +1389,45 @@ class DashboardServiceImpl : DashboardService {
             invoicesDue = invoiceDueStats,
             onAccountPayment = onAccountPayment
         )
+    }
+
+    override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
+        val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
+        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes)
+        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
+        if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+
+        val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
+        val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
+
+        val documentUTRNoMap = mutableMapOf<Long, String?>()
+        val transRefNos = paymentRepository.findTransRefNumByPaymentNums(documentNos, AccMode.AP.name, request.orgId, AccountType.PAY.name)
+        transRefNos.forEach {
+            documentUTRNoMap[it.paymentNum] = it.transRefNumber
+        }
+
+        var balance = BigDecimal.ZERO
+        ledgerDocs.forEach {
+            it.type = description[it.type].toString()
+            it.documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue
+            balance += (it.debit - it.credit)
+            it.balance = balance
+            it.debitBalance = if (it.balance > BigDecimal.ZERO) { it.balance } else {
+                BigDecimal.ZERO
+            }
+            it.creditBalance = if (it.balance < BigDecimal.ZERO) { it.balance.negate() } else {
+                BigDecimal.ZERO
+            }
+        }
+        return LSPLedgerResponse(
+            ledgerCurrency = ledgerDocs[0].ledgerCurrency,
+            openingBalance = ledgerDocs[0].balance,
+            closingBalance = balance,
+            ledgerDocuments = ledgerDocs
+        )
+    }
+
+    override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String? {
+        return "cvv"
     }
 }

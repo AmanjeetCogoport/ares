@@ -31,12 +31,14 @@ import com.cogoport.ares.model.payment.QuarterlyOutstanding
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
+import com.cogoport.ares.model.payment.request.LSPLedgerRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
+import com.cogoport.ares.model.payment.response.LSPLedgerResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
@@ -93,4 +95,8 @@ interface DashboardService {
     suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables
 
     suspend fun getPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics
+
+    suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse
+
+    suspend fun downloadLSPLedger(request: LSPLedgerRequest): String?
 }

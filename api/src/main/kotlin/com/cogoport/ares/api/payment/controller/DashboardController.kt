@@ -37,12 +37,14 @@ import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
+import com.cogoport.ares.model.payment.request.LSPLedgerRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
+import com.cogoport.ares.model.payment.response.LSPLedgerResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
@@ -292,5 +294,15 @@ class DashboardController {
     @Get("/lsp-payment-stats{?request*}")
     suspend fun getOnAccountPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
         return dashboardService.getPaymentStatsForSupplier(request)
+    }
+
+    @Get("/lsp-ledger{?request*}")
+    suspend fun getLedgerForLSP(request: LSPLedgerRequest): LSPLedgerResponse {
+        return dashboardService.getLSPLedger(request)
+    }
+
+    @Get("/lsp-ledger-download{?request*}")
+    suspend fun downloadLedger(request: LSPLedgerRequest): String? {
+        return dashboardService.downloadLSPLedger(request)
     }
 }

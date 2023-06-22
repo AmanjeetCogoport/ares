@@ -7,6 +7,7 @@ import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.PlatformPayment
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
 import com.cogoport.ares.model.payment.response.PaymentResponse
+import com.cogoport.ares.model.payment.response.TransRefNumberResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -277,4 +278,16 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT payment_num, trans_ref_number FROM payments 
+            WHERE payment_num IN (:paymentNums) AND acc_mode = :accMode
+            AND tagged_organization_id = :taggedOrgId
+            AND payment_code = :paymentCode
+            AND deleted_at is null
+        """
+    )
+    suspend fun findTransRefNumByPaymentNums(paymentNums: List<Long>, accMode: String, taggedOrgId: String, paymentCode: String): List<TransRefNumberResponse>
 }
