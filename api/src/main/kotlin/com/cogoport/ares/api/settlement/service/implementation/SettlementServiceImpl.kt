@@ -2106,9 +2106,9 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
-        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)){
+        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)) {
             SettlementStatus.POSTED
-        }else {
+        } else {
             SettlementStatus.CREATED
         }
 
