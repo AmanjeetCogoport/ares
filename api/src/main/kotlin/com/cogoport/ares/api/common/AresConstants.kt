@@ -234,6 +234,4 @@ object AresConstants {
         "shikhar.tyagi@cogoport.com",
         "suhas.latelwar@cogoport.com"
     )
-
-    const val BUSINESS_FINANCE_TECH_TEAM = "649f3792-b28f-4862-9683-5d5af2c574b4"
 }
