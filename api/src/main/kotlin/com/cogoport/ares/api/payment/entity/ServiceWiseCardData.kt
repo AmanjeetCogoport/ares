@@ -13,4 +13,7 @@ data class ServiceWiseCardData(
     var totalOtherDue: BigDecimal? = 0.toBigDecimal(),
     var totalDomesticDue: BigDecimal? = 0.toBigDecimal(),
     var totalLocalDue: BigDecimal? = 0.toBigDecimal()
-)
+) {
+    @field:Transient
+    var currency: String? = "INR"
+}

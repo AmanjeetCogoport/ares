@@ -28,4 +28,7 @@ data class BfReceivableAndPayable(
 
     @field:Transient
     var outstandingChangeFromYesterday: BigDecimal? = 0.toBigDecimal()
+
+    @field:Transient
+    var currency: String? = "INR"
 }

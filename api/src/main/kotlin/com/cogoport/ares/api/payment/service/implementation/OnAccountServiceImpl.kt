@@ -231,7 +231,7 @@ open class OnAccountServiceImpl : OnAccountService {
         )
 
         val updatedByIds = paymentsData
-            ?.mapNotNull { it.updatedBy?.toString() }
+            ?.mapNotNull { it.createdBy?.toString() }
             ?.filterNot { it.isEmpty() }
             ?.distinct()
             ?.let { ArrayList(it) }

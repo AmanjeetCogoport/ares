@@ -1,9 +1,10 @@
 package com.cogoport.ares.api.migration.constants
 
+import com.cogoport.ares.api.common.AresConstants
 import java.util.UUID
 
 object MigrationConstants {
-    val createdUpdatedBy: UUID? = UUID.fromString("649f3792-b28f-4862-9683-5d5af2c574b4")
+    val createdUpdatedBy: UUID? = AresConstants.ARES_USER_ID
     val uploadedByConstant: String = "MIGRATED"
     val inactiveBRPNo = mapOf(
         "40" to "37910",
