@@ -73,7 +73,8 @@ enum class AresError(
     ERR_1547("ERR_1547", "Schedule Time Size Can't  Be Less Or Greater then 5 character.", HttpStatus.BAD_REQUEST),
     ERR_1548("ERR_1548", "Dunning Execution Already Deleted Or in inactive status.", HttpStatus.BAD_REQUEST),
     ERR_1549("ERR_1549", "Wrong Time string format, Please Send in this (HH:MM) format.", HttpStatus.BAD_REQUEST),
-    ERR_1550("ERR_1550", "Something Went Wrong. Unable to get next Schedule time.", HttpStatus.BAD_REQUEST);
+    ERR_1550("ERR_1550", "Something Went Wrong. Unable to get next Schedule time.", HttpStatus.BAD_REQUEST),
+    ERR_1551("ERR_1551", "Schedule Can't be in past", HttpStatus.BAD_REQUEST);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {

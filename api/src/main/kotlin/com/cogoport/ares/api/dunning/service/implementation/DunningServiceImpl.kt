@@ -269,6 +269,7 @@ open class DunningServiceImpl(
                 scheduleId = Hashids.encode(dunningCycleExecutionResponse.id!!)
             )
         )
+
         rabbitMq.delay("ares.dunning.scheduler", request, dunningCycleScheduledAt)
 
         auditRepository.save(
@@ -915,6 +916,10 @@ open class DunningServiceImpl(
 
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
+
+        if (scheduleDateCal.timeInMillis < System.currentTimeMillis()) {
+            throw AresException(AresError.ERR_1551, "")
+        }
 
         return Timestamp(scheduleDateCal.timeInMillis)
     }
