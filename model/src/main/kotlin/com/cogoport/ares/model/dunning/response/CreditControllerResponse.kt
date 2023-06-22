@@ -12,8 +12,8 @@ import java.util.UUID
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class CreditControllerResponse(
-    @JsonProperty("credit_controller_id")
-    var creditControllerId: UUID,
-    @JsonProperty("credit_controller_name")
-    var creditControllerName: String
+    @JsonProperty("organization_stakeholder_id")
+    var organizationStakeholderId: UUID,
+    @JsonProperty("organization_stakeholder_name")
+    var organizationStakeholderName: String
 )

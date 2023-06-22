@@ -2,7 +2,7 @@ package com.cogoport.ares.model.dunning.request
 
 import java.util.UUID
 
-data class UpdateCreditControllerRequest(
+data class UpdateOrganizationStakeholderRequest(
     var id: String,
     var creditControllerName: String?,
     var creditControllerId: UUID?,

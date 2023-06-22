@@ -15,8 +15,8 @@ import javax.persistence.GeneratedValue
 data class OrganizationStakeholder(
     @field:Id @GeneratedValue
     var id: Long?,
-    var creditControllerName: String,
-    var creditControllerId: UUID,
+    var organizationStakeholderName: String,
+    var organizationStakeholderId: UUID,
     var organizationId: UUID,
     var organizationStakeholderType: OrganizationStakeholderType,
     var organizationSegment: OrganizationSegment,

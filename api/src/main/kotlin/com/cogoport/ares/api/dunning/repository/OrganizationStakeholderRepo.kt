@@ -15,26 +15,26 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
     @NewSpan
     @Query(
         """
-            SELECT * FROM credit_controllers WHERE organizationId IN (:organizationIds);
+            SELECT * FROM organization_stakeholders WHERE organizationId IN (:organizationIds);
         """
     )
-    suspend fun listCreditControllersUsingOrgId(organizationIds: List<UUID>): List<OrganizationStakeholder>
+    suspend fun listOrganizationStakeholderUsingOrgId(organizationIds: List<UUID>): List<OrganizationStakeholder>
 
     @NewSpan
     @Query(
         """
                 SELECT
-                    DISTINCT ON (credit_controller_id) credit_controller_id,
-                    credit_controller_name
+                    DISTINCT ON (organization_stakeholder_id) organization_stakeholder_id,
+                    organization_stakeholder_name
                 FROM
-                    credit_controllers
+                    organization_stakeholders
                 WHERE
-                    (:query IS NULL OR LOWER(credit_controller_name) ILIKE :query)
+                    (:query IS NULL OR LOWER(organization_stakeholder_name) ILIKE :query)
                 ORDER BY
-                    credit_controller_id
+                    organization_stakeholder_id
             """
     )
-    suspend fun listDistinctCreditControllers(
+    suspend fun listDistinctlistOnorganizationStakeholders(
         query: String?
     ): List<CreditControllerResponse>
 
@@ -44,12 +44,12 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
            SELECT
                 organization_id
             from
-                credit_controllers
+                organization_stakeholders
             WHERE
-                credit_controller_id :: UUID in (:creditControllerIds)
+                organization_stakeholder_id :: UUID in (:organizationStakeholderIds)
         """
     )
-    suspend fun listOrganizationIdBasedOnCreditControllers(creditControllerIds: List<UUID>?): List<UUID>
+    suspend fun listOrganizationIdBasedOnorganizationStakeholderIds(organizationStakeholderIds: List<UUID>?): List<UUID>
 
     @NewSpan
     @Query(
@@ -57,7 +57,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
             SELECT
                 *
             FROM
-                credit_controllers
+                organization_stakeholders
             WHERE
                 organization_id = :organizationId
             LIMIT 1

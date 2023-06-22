@@ -50,8 +50,8 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
-import com.cogoport.ares.model.dunning.request.ListCreditControllerRequest
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
+import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -107,8 +107,8 @@ open class DunningServiceImpl(
             val response = organizationStakeholderRepo.save(
                 OrganizationStakeholder(
                     id = null,
-                    creditControllerName = syncOrgStakeholderRequest.creditControllerName!!,
-                    creditControllerId = syncOrgStakeholderRequest.creditControllerId!!,
+                    organizationStakeholderName = syncOrgStakeholderRequest.creditControllerName!!,
+                    organizationStakeholderId = syncOrgStakeholderRequest.creditControllerId!!,
                     organizationId = syncOrgStakeholderRequest.organizationId,
                     organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!),
                     organizationStakeholderType = OrganizationStakeholderType.valueOf(syncOrgStakeholderRequest.organizationStakeholderType!!),
@@ -128,10 +128,10 @@ open class DunningServiceImpl(
 
             val updateOrganizationStakeholder: OrganizationStakeholder = OrganizationStakeholder(
                 id = creditController.id,
-                creditControllerName = syncOrgStakeholderRequest.creditControllerName
-                    ?: creditController.creditControllerName,
-                creditControllerId = syncOrgStakeholderRequest.creditControllerId
-                    ?: creditController.creditControllerId,
+                organizationStakeholderName = syncOrgStakeholderRequest.creditControllerName
+                    ?: creditController.organizationStakeholderName,
+                organizationStakeholderId = syncOrgStakeholderRequest.creditControllerId
+                    ?: creditController.organizationStakeholderId,
                 organizationId = creditController?.organizationId,
                 organizationSegment = syncOrgStakeholderRequest.organizationSegment?.let { OrganizationSegment.valueOf(it) }
                     ?: creditController.organizationSegment,
@@ -309,8 +309,8 @@ open class DunningServiceImpl(
 
         var taggedOrganizationIds: List<UUID>? = listOf()
         if (! (request.organizationStakeholderIds == null)) {
-            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnCreditControllers(
-                creditControllerIds = request.organizationStakeholderIds
+            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnorganizationStakeholderIds(
+                organizationStakeholderIds = request.organizationStakeholderIds
             )
         }
 
@@ -708,12 +708,12 @@ open class DunningServiceImpl(
         return dunningExecutionRepo.save(dunningCycleExecution).id!!
     }
 
-    override suspend fun listDistinctCreditControllers(request: ListCreditControllerRequest): List<CreditControllerResponse> {
+    override suspend fun listDistinctCreditControllers(request: ListOrganizationStakeholderRequest): List<CreditControllerResponse> {
         var query: String? = null
         if (request.query != null)
             query = "%${request.query}%"
 
-        return organizationStakeholderRepo.listDistinctCreditControllers(query)
+        return organizationStakeholderRepo.listDistinctlistOnorganizationStakeholders(query)
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
