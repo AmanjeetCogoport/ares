@@ -2106,6 +2106,12 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
+        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)){
+            SettlementStatus.POSTED
+        }else {
+            SettlementStatus.CREATED
+        }
+
         val settledDoc =
             Settlement(
                 null,
@@ -2126,7 +2132,7 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl,
                 false,
                 sequenceGeneratorImpl.getSettlementNumber(),
-                SettlementStatus.CREATED
+                settlementStatus
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
