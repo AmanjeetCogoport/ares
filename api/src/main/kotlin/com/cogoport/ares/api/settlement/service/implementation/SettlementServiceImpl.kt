@@ -625,7 +625,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 accMode,
                 request.sortBy,
                 request.sortType,
@@ -642,7 +642,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 request.documentPaymentStatus
             )
 
