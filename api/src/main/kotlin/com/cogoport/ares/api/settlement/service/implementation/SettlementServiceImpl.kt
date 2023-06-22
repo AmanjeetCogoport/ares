@@ -1303,6 +1303,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.VTDS -> listOf(SettlementType.VTDS)
+                SettlementType.CTDS -> listOf(SettlementType.CTDS)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -2104,6 +2106,12 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
+        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)) {
+            SettlementStatus.POSTED
+        } else {
+            SettlementStatus.CREATED
+        }
+
         val settledDoc =
             Settlement(
                 null,
@@ -2124,7 +2132,7 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl,
                 false,
                 sequenceGeneratorImpl.getSettlementNumber(),
-                SettlementStatus.CREATED
+                settlementStatus
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
