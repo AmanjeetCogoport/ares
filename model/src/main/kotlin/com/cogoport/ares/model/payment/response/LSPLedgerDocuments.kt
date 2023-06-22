@@ -14,7 +14,7 @@ data class LSPLedgerDocuments(
     var type: String,
     var debit: BigDecimal,
     var credit: BigDecimal,
-    var debitBalance: BigDecimal,
-    var creditBalance: BigDecimal,
-    var balance: BigDecimal
+    var debitBalance: BigDecimal?,
+    var creditBalance: BigDecimal?,
+    var balance: BigDecimal?
 )

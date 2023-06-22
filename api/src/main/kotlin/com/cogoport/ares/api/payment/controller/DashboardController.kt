@@ -286,7 +286,7 @@ class DashboardController {
         return dashboardService.getFinanceServiceWiseOverdue(request)
     }
 
-    @Get("/lsp-receivable-stats/{orgId}")
+    @Get("/lsp-receivable-stats{?request*}")
     suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         return dashboardService.getReceivableStatsForSupplier(request)
     }
@@ -297,7 +297,7 @@ class DashboardController {
     }
 
     @Get("/lsp-ledger{?request*}")
-    suspend fun getLedgerForLSP(request: LSPLedgerRequest): LSPLedgerResponse {
+    suspend fun getLedgerForLSP(@Valid request: LSPLedgerRequest): LSPLedgerResponse {
         return dashboardService.getLSPLedger(request)
     }
 

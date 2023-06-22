@@ -283,9 +283,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @Query(
         """
             SELECT payment_num, trans_ref_number FROM payments 
-            WHERE payment_num IN (:paymentNums) AND acc_mode = :accMode
-            AND tagged_organization_id = :taggedOrgId
-            AND payment_code = :paymentCode
+            WHERE payment_num IN (:paymentNums) AND acc_mode::varchar = :accMode
+            AND tagged_organization_id = :taggedOrgId::uuid
+            AND payment_code::varchar = :paymentCode
             AND deleted_at is null
         """
     )

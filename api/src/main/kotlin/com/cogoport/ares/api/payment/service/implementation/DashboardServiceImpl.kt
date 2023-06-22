@@ -46,6 +46,8 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
+import com.cogoport.ares.api.utils.ExcelUtils
+import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
@@ -73,6 +75,7 @@ import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.DsoResponse
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.LSPLedgerResponse
+import com.cogoport.ares.model.payment.response.LedgerExcelResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
@@ -82,8 +85,10 @@ import com.cogoport.ares.model.payment.response.QsoResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.s3.client.S3Client
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.opensearch.core.SearchResponse
@@ -133,6 +138,12 @@ class DashboardServiceImpl : DashboardService {
 
     @Inject
     private lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    private lateinit var s3Client: S3Client
+
+    @Value("\${aws.s3.bucket}")
+    private lateinit var s3Bucket: String
 
     private suspend fun getDefaultersOrgIds(): List<UUID>? {
         return businessPartnersServiceImpl.listTradePartyDetailIds()
@@ -1393,9 +1404,11 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
-        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes)
-        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
+        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page!!, request.pageLimit!!)
         if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+
+        val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, request.month, accTypes)
+        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
@@ -1412,22 +1425,69 @@ class DashboardServiceImpl : DashboardService {
             it.documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue
             balance += (it.debit - it.credit)
             it.balance = balance
-            it.debitBalance = if (it.balance > BigDecimal.ZERO) { it.balance } else {
+            it.debitBalance = if (it.balance!! > BigDecimal.ZERO) { it.balance } else {
                 BigDecimal.ZERO
             }
-            it.creditBalance = if (it.balance < BigDecimal.ZERO) { it.balance.negate() } else {
+            it.creditBalance = if (it.balance!! < BigDecimal.ZERO) { it.balance!!.negate() } else {
                 BigDecimal.ZERO
             }
         }
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageLimit!!)
         return LSPLedgerResponse(
             ledgerCurrency = ledgerDocs[0].ledgerCurrency,
-            openingBalance = ledgerDocs[0].balance,
+            openingBalance = ledgerDocs[0].balance!!,
             closingBalance = balance,
-            ledgerDocuments = ledgerDocs
+            ledgerDocuments = ledgerDocs,
+            totalPages = totalPages,
+            page = request.page,
+            totalRecords = totalCount
         )
     }
 
-    override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String? {
-        return "cvv"
+    override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String {
+        val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
+        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page, request.pageLimit)
+        if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
+
+        val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
+        val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
+
+        val documentUTRNoMap = mutableMapOf<Long, String?>()
+        val transRefNos = paymentRepository.findTransRefNumByPaymentNums(documentNos, AccMode.AP.name, request.orgId, AccountType.PAY.name)
+        transRefNos.forEach {
+            documentUTRNoMap[it.paymentNum] = it.transRefNumber
+        }
+
+        val ledgerExcelList = mutableListOf<LedgerExcelResponse>()
+        var balance = BigDecimal.ZERO
+        ledgerDocs.forEach {
+            balance += (it.debit - it.credit)
+            it.balance = balance
+            it.debitBalance = if (it.balance!! > BigDecimal.ZERO) { it.balance } else {
+                BigDecimal.ZERO
+            }
+            it.creditBalance = if (it.balance!! < BigDecimal.ZERO) { it.balance!!.negate() } else {
+                BigDecimal.ZERO
+            }
+            val ledgerExcelResponse = LedgerExcelResponse(
+                transactionDate = it.transactionDate.toString(),
+                ledgerCurrency = it.ledgerCurrency,
+                serviceType = it.serviceType,
+                type = description[it.type].toString(),
+                documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue,
+                balance = it.balance,
+                debitBalance = it.debitBalance,
+                creditBalance = it.creditBalance,
+                debit = it.debit,
+                credit = it.credit
+            )
+            ledgerExcelList.add(ledgerExcelResponse)
+        }
+
+        val excelName = "Ledger_" + request.month + "_" + request.year + "_" + ledgerDocs.size
+        val file = ExcelUtils.writeIntoExcel(ledgerExcelList, excelName, "Ledger Sheet")
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file).toString()
+        return url
     }
 }

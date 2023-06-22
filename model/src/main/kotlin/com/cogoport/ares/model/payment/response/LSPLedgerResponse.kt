@@ -8,5 +8,8 @@ data class LSPLedgerResponse(
     val ledgerCurrency: String,
     val openingBalance: BigDecimal,
     val closingBalance: BigDecimal,
-    val ledgerDocuments: List<LSPLedgerDocuments>
+    val ledgerDocuments: List<LSPLedgerDocuments>,
+    var totalPages: Long? = 0,
+    var totalRecords: Long? = 0,
+    var page: Int? = 0
 )
