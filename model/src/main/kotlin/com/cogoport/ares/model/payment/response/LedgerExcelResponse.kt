@@ -10,8 +10,8 @@ import java.math.BigDecimal
 data class LedgerExcelResponse(
     @ExcelColumn("Transaction Date")
     val transactionDate: String,
-    @ExcelColumn("Service Type")
-    val serviceType: String,
+    @ExcelColumn("Shipment ID")
+    val shipmentId: String,
     @ExcelColumn("Document No/UTR")
     var documentValue: String,
     @ExcelColumn("Type")

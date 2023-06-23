@@ -1412,17 +1412,25 @@ class DashboardServiceImpl : DashboardService {
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
+        val nonPaymentDocumentNos = ledgerDocs.filter { doc -> doc.type in listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PREIMB.name) }.map { it.documentNo }
+        val sids = unifiedDBRepo.getJobNumbersByDocumentNos(nonPaymentDocumentNos)
 
         val documentUTRNoMap = mutableMapOf<Long, String?>()
+        val documentSIDMap = mutableMapOf<Long, String?>()
         val transRefNos = paymentRepository.findTransRefNumByPaymentNums(documentNos, AccMode.AP.name, request.orgId, AccountType.PAY.name)
         transRefNos.forEach {
             documentUTRNoMap[it.paymentNum] = it.transRefNumber
+        }
+
+        sids.forEach {
+            documentSIDMap[it.id] = it.jobNumber
         }
 
         var balance = BigDecimal.ZERO
         ledgerDocs.forEach {
             it.type = description[it.type].toString()
             it.documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue
+            it.shipmentId = documentSIDMap[it.documentNo] ?: "NA"
             balance += (it.debit - it.credit)
             it.balance = balance
             it.debitBalance = if (it.balance!! > BigDecimal.ZERO) { it.balance } else {
@@ -1452,11 +1460,19 @@ class DashboardServiceImpl : DashboardService {
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
+        val nonPaymentDocumentNos = ledgerDocs.filter { doc -> doc.type in listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PREIMB.name) }.map { it.documentNo }
 
         val documentUTRNoMap = mutableMapOf<Long, String?>()
+        val documentSIDMap = mutableMapOf<Long, String?>()
         val transRefNos = paymentRepository.findTransRefNumByPaymentNums(documentNos, AccMode.AP.name, request.orgId, AccountType.PAY.name)
         transRefNos.forEach {
             documentUTRNoMap[it.paymentNum] = it.transRefNumber
+        }
+
+        val sids = unifiedDBRepo.getJobNumbersByDocumentNos(nonPaymentDocumentNos)
+
+        sids.forEach {
+            documentSIDMap[it.id] = it.jobNumber
         }
 
         val ledgerExcelList = mutableListOf<LedgerExcelResponse>()
@@ -1473,7 +1489,7 @@ class DashboardServiceImpl : DashboardService {
             val ledgerExcelResponse = LedgerExcelResponse(
                 transactionDate = it.transactionDate.toString(),
                 ledgerCurrency = it.ledgerCurrency,
-                serviceType = it.serviceType,
+                shipmentId = documentSIDMap[it.documentNo] ?: "NA",
                 type = description[it.type].toString(),
                 documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue,
                 balance = it.balance,

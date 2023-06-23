@@ -8,7 +8,7 @@ import java.util.Date
 data class LSPLedgerDocuments(
     val transactionDate: Date,
     val ledgerCurrency: String,
-    val serviceType: String,
+    var shipmentId: String?,
     var documentNo: Long,
     var documentValue: String,
     var type: String,
