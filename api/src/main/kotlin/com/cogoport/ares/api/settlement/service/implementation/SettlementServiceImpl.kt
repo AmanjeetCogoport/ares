@@ -191,9 +191,6 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject lateinit var railsClient: RailsClient
 
-    @Inject
-    lateinit var authClient: AuthClient
-
     @Inject lateinit var thirdPartyApiAuditService: ThirdPartyApiAuditService
 
     @Inject
@@ -2853,7 +2850,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     override suspend fun sendEmailSettlementsMatchingFailed(url: String) {
-        val emailVariables = HashMap<String?, String?>()
+        val emailVariables = HashMap<String, String?>()
         emailVariables["sheet_url"] = url
 
         val request = CreateCommunicationRequest(
@@ -2866,6 +2863,6 @@ open class SettlementServiceImpl : SettlementService {
             emailVariables = emailVariables
         )
 
-        authClient.sendCommunication(request)
+        aresMessagePublisher.sendEmail(request)
     }
 }
