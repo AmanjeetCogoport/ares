@@ -14,6 +14,7 @@ import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.migration.model.SagePlatformPaymentHeader
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.payment.entity.AccountUtilization
@@ -30,17 +31,20 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -89,6 +93,7 @@ import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
 import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
+import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.s3.client.S3Client
 import com.cogoport.brahma.sage.SageException
@@ -122,6 +127,7 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
@@ -191,6 +197,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var util: Util
+
+    @Inject
+    lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Value("\${server.base-url}") // application-prod.yml path
+    private lateinit var baseUrl: String
 
     /**
      * Fetch Account Collection payments from DB.
@@ -1755,6 +1767,87 @@ open class OnAccountServiceImpl : OnAccountService {
                     req.performedBy
                 )
             )
+        }
+    }
+
+    override suspend fun downloadSagePlatformReport(startDate: String, endDate: String) {
+        val platformPaymentData = unifiedDBRepo.getPaymentsByTransactionDate(
+            startDate,
+            endDate
+        )
+        val paymentNumValues = platformPaymentData
+            ?.map { it.paymentNumValue }
+            ?.toCollection(ArrayList())
+
+        val platformAndSagePaymentResponse = mutableListOf<SagePlatformPaymentHeader>()
+
+        if (!paymentNumValues.isNullOrEmpty()) {
+            val sagePaymentData = sageServiceImpl.sagePaymentBySageRefNumbers(paymentNumValues)
+            platformPaymentData.map { platformPayment ->
+                val sagePayment = sagePaymentData.firstOrNull { it.platformPaymentNum == platformPayment.paymentNumValue }
+
+                platformAndSagePaymentResponse.add(
+                    SagePlatformPaymentHeader(
+                        paymentNumValueAtPlatform = platformPayment.paymentNumValue,
+                        sageOrganizationIdAtPlatform = platformPayment.sageOrganizationId,
+                        paymentCodeAtPlatform = platformPayment.paymentCode,
+                        bankCodeAtPlatform = platformPayment.accCode,
+                        entityCodeAtPlatform = platformPayment.entityCode,
+                        currencyAtPlatform = platformPayment.currency,
+                        amountAtPlatform = platformPayment.amount,
+                        utrAtPlatform = platformPayment.utr,
+                        paymentNumValueAtSage = sagePayment?.sagePaymentNum,
+                        sageOrganizationIdAtSage = sagePayment?.bprNumber,
+                        paymentCodeAtSage = sagePayment?.paymentCode,
+                        bankCodeAtSage = sagePayment?.glCode,
+                        entityCodeAtSage = sagePayment?.entityCode,
+                        currencyAtSage = sagePayment?.currency,
+                        amountAtSage = sagePayment?.amount,
+                        utrAtSage = sagePayment?.narration,
+                        isAmountMatched = sagePayment?.amount?.compareTo(platformPayment.amount) == 0,
+                        isCurrencyMatched = sagePayment?.currency == platformPayment.currency,
+                        isBPRMatched = sagePayment?.sageOrganizationId == platformPayment.sageOrganizationId,
+                        isEntityMatched = sagePayment?.entityCode == platformPayment.entityCode,
+                        isPanMatched = sagePayment?.panNumber == platformPayment.panNumber,
+                        panNumberAtPlatform = platformPayment.panNumber,
+                        panNumberAtSage = sagePayment?.panNumber,
+                        isGLCodeMatched = sagePayment?.glCode?.compareTo(platformPayment.accCode!!) == 0,
+                        isUtrMatched = sagePayment?.narration == platformPayment.utr
+                    )
+                )
+            }
+            val excelName: String = "Payment_Report" + "_" + LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss")) + ".xlsx"
+
+            val file = ExcelUtils.writeIntoExcel(platformAndSagePaymentResponse, excelName, "Payment_Report")
+            val url = s3Client.upload(s3Bucket, excelName, file).toString()
+            val excelDocument = aresDocumentRepository.save(
+                AresDocument(
+                    id = null,
+                    documentUrl = url,
+                    documentName = "sage_platform_report",
+                    documentType = url.substringAfterLast('.'),
+                    uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                    createdAt = Timestamp.valueOf(LocalDateTime.now()),
+                    updatedAt = Timestamp.valueOf(LocalDateTime.now())
+                )
+            )
+
+            val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(excelDocument.id!!)}"
+
+            val emailVariables: HashMap<String, String?> = hashMapOf("file_url" to visibleUrl, "type" to "Payment", "subject" to "Sage Platform Payment Report")
+
+            val request = CreateCommunicationRequest(
+                templateName = AresConstants.SAGE_PLATFORM_REPORT,
+                performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+                performedByUserName = AresConstants.performedByUserNameForMail,
+                recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
+                senderEmail = AresConstants.NO_REPLY,
+                ccEmails = AresConstants.CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
+                emailVariables = emailVariables,
+            )
+
+            aresMessagePublisher.sendEmail(request)
         }
     }
 }
