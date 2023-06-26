@@ -151,7 +151,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     @Query(
         """
             SELECT
-                COALESCE(COUNT(dce.id), 0)
+                count(*)
             FROM
                 dunning_cycles dc
             LEFT JOIN LATERAL (
@@ -170,8 +170,8 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     )
     suspend fun totalCountDunningCycleExecution(
         query: String?,
-        status: String?,
-        dunningCycleType: String?,
+        status: MutableList<String>,
+        dunningCycleType: MutableList<String>,
         serviceType: String?
     ): Long
 }

@@ -625,8 +625,8 @@ open class DunningServiceImpl(
 
         val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
             query = query,
-            status = request.cycleStatus.toString(),
-            dunningCycleType = request.dunningCycleType.toString(),
+            status = status,
+            dunningCycleType = dunningCycleType,
             serviceType = request.serviceType
         )
 
