@@ -123,7 +123,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 SELECT *
                 FROM dunning_cycle_executions dce_inner
                 WHERE dce_inner.dunning_cycle_id = dc.id
-                ORDER BY dce_inner.updated_at
+                ORDER BY dce_inner.updated_at desc
                 LIMIT 1
             ) dce ON true                
             WHERE
@@ -158,7 +158,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 SELECT *
                 FROM dunning_cycle_executions dce_inner
                 WHERE dce_inner.dunning_cycle_id = dc.id
-                ORDER BY dce_inner.updated_at
+                ORDER BY dce_inner.updated_at desc
                 LIMIT 1
             ) dce ON true                
             WHERE
