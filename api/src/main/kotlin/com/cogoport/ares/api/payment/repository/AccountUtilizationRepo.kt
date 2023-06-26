@@ -7,6 +7,8 @@ import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
+import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
@@ -763,46 +765,46 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
 
     @Query(
         """
- SELECT
-    document_no,
-    document_value,
-    led_currency,
-    amount_loc,
-    pay_loc,
-    due_date,
-    CASE
-        WHEN acc_type = 'SINV' THEN 'INVOICE'
-        WHEN acc_type = 'SCN' THEN 'CREDIT_NOTE'
-        ELSE NULL
-    END AS invoice_type,
-    CASE
-        WHEN (CURRENT_DATE - due_date) BETWEEN 0 AND 30 THEN '0-30 days'
-        WHEN (CURRENT_DATE - due_date) BETWEEN 31 AND 60 THEN '31-60 days'
-        WHEN (CURRENT_DATE - due_date) BETWEEN 61 AND 90 THEN '61-90 days'
-        WHEN (CURRENT_DATE - due_date) BETWEEN 91 AND 180 THEN '91-180 days'
-        WHEN (CURRENT_DATE - due_date) BETWEEN 181 AND 365 THEN '181-365 days'
-        WHEN (CURRENT_DATE - due_date) > 365 THEN '365+ days'
-    END AS relative_duration
-FROM
-    account_utilizations
-WHERE
-    organization_id::uuid = :tradePartyDetailId
-    AND acc_mode = 'AR'
-    AND acc_type IN ('SINV', 'SCN')
-    AND document_status = 'FINAL'
-    AND deleted_at IS NULL
-    AND amount_loc - pay_loc NOT BETWEEN -1 AND 1
-    AND entity_code = :entityCode
-    AND (
-        :transactionDateStart IS NULL
-        OR :transactionDateEnd IS NULL
-        OR (transaction_date::DATE BETWEEN CAST(:transactionDateStart AS DATE) AND CAST(:transactionDateEnd AS DATE))
-    )
-ORDER BY
-    CASE
-        WHEN :sortType = 'ASC' THEN transaction_date
-        ELSE transaction_date END DESC
-LIMIT :limit
+             SELECT
+                document_no,
+                document_value,
+                led_currency,
+                amount_loc,
+                pay_loc,
+                due_date,
+                CASE
+                    WHEN acc_type = 'SINV' THEN 'INVOICE'
+                    WHEN acc_type = 'SCN' THEN 'CREDIT_NOTE'
+                    ELSE NULL
+                END AS invoice_type,
+                CASE
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 0 AND 30 THEN '0-30 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 31 AND 60 THEN '31-60 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 61 AND 90 THEN '61-90 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 91 AND 180 THEN '91-180 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 181 AND 365 THEN '181-365 days'
+                    WHEN (CURRENT_DATE - due_date) > 365 THEN '365+ days'
+                END AS relative_duration
+            FROM
+                account_utilizations
+            WHERE
+                organization_id::uuid = :tradePartyDetailId
+                AND acc_mode = 'AR'
+                AND acc_type IN ('SINV', 'SCN')
+                AND document_status = 'FINAL'
+                AND deleted_at IS NULL
+                AND amount_loc - pay_loc NOT BETWEEN -1 AND 1
+                AND entity_code = :entityCode
+                AND (
+                    :transactionDateStart IS NULL
+                    OR :transactionDateEnd IS NULL
+                    OR (transaction_date::DATE BETWEEN CAST(:transactionDateStart AS DATE) AND CAST(:transactionDateEnd AS DATE))
+                )
+            ORDER BY
+                CASE
+                    WHEN :sortType = 'ASC' THEN transaction_date
+                    ELSE transaction_date END DESC
+            LIMIT :limit
         """
     )
     suspend fun getInvoicesForDunning(
@@ -1092,4 +1094,212 @@ LIMIT :limit
         """
     )
     suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean, entityCode: Int): CustomerMonthlyPayment?
+
+    @NewSpan
+    @Query(
+        """
+                WITH temp_table AS (
+                  SELECT 
+                    organization_id as trade_party_detail_id, 
+                    entity_code, 
+                    led_currency, 
+                    max(organization_name) as trade_party_detail_name, 
+                    max(id) as id, 
+                    max(
+                      tagged_organization_id :: VARCHAR
+                    ) as tagged_organization_id, 
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as open_invoice_amount,
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN', 'REC', 'CTDS'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as outstanding_amount, 
+                    (
+                      sum(
+                        CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as on_account_amount 
+                  from 
+                    account_utilizations 
+                  WHERE 
+                    acc_mode = 'AR' 
+                    AND (
+                      COALESCE(:serviceTypes) IS NULL 
+                      OR service_type :: VARCHAR IN (:serviceTypes)
+                    ) 
+                    AND transaction_date IS NOT NULL 
+                    AND document_status = 'FINAL' 
+                    AND organization_id IS NOT NULL 
+                    AND amount_loc - pay_loc > 0 
+                    AND (
+                      COALESCE(:entityCode) IS NULL 
+                      OR entity_code IN (:entityCode)
+                    )
+                    AND (
+                      :query IS NULL 
+                      OR LOWER(organization_name) ILIKE :query
+                    ) 
+                    AND acc_type in (
+                      'REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 
+                      'SREIMBCN'
+                    ) 
+                    AND deleted_at IS NULL 
+                  GROUP BY 
+                    organization_id, 
+                    entity_code, 
+                    led_currency
+                ) 
+                select 
+                      tt.trade_party_detail_id, 
+                      tt.entity_code, 
+                      tt.led_currency, 
+                      tt.trade_party_detail_name, 
+                      tt.id, 
+                      tt.tagged_organization_id, 
+                      tt.open_invoice_amount, 
+                      tt.on_account_amount, 
+                      tt.outstanding_amount, 
+                      os.organization_stakeholder_name 
+                FROM 
+                      temp_table tt 
+                      left join organization_stakeholders os on os.organization_id :: varchar = tt.tagged_organization_id 
+                      and os.organization_stakeholder_type = 'CREDIT_CONTROLLER'
+                ORDER BY
+                    CASE WHEN :sortBy = 'onAccountAmount'
+                        THEN CASE WHEN :sortType = 'Asc' THEN on_account_amount END
+                    END ASC,
+                    CASE WHEN :sortBy = 'onAccountAmount'
+                        THEN CASE WHEN :sortType = 'Desc' THEN on_account_amount END
+                    END DESC,
+                    CASE WHEN :sortBy = 'outstandingAmount'
+                        THEN CASE WHEN :sortType = 'Asc' THEN outstanding_amount END
+                    END ASC,
+                    CASE WHEN :sortBy = 'outstandingAmount'
+                        THEN CASE WHEN :sortType = 'Desc' THEN outstanding_amount END
+                    END DESC
+                OFFSET 
+                    GREATEST(0, ((:pageIndex - 1) * :pageSize))
+                LIMIT 
+                    :pageSize
+            """
+    )
+    suspend fun overallOutstandingAndOnAccountPerTradeParty(
+        pageSize: Int? = 10,
+        pageIndex: Int? = 1,
+        entityCode: List<Int>?,
+        query: String?,
+        serviceTypes: List<String>?,
+        sortBy: String? = "outstandingAmount",
+        sortType: String? = "Desc"
+    ): List<OverallOutstandingAndOnAccountResponse>
+
+    @NewSpan
+    @Query(
+        """
+                WITH temp_table AS (
+                  SELECT 
+                    organization_id as trade_party_detail_id, 
+                    entity_code, 
+                    led_currency, 
+                    max(organization_name) as trade_party_detail_name, 
+                    max(id) as id, 
+                    max(
+                      tagged_organization_id :: VARCHAR
+                    ) as tagged_organization_id, 
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as open_invoice_amount, 
+                    (
+                      sum(
+                        CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as on_account_amount 
+                  from 
+                    account_utilizations 
+                  WHERE 
+                    acc_mode = 'AR' 
+                    AND (
+                      COALESCE(:serviceTypes) IS NULL 
+                      OR service_type :: VARCHAR IN (:serviceTypes)
+                    ) 
+                    AND transaction_date IS NOT NULL 
+                    AND document_status = 'FINAL' 
+                    AND organization_id IS NOT NULL 
+                    AND amount_loc - pay_loc > 0 
+                    AND (
+                      COALESCE(:entityCode) IS NULL 
+                      OR entity_code IN (:entityCode)
+                    )
+                    AND (
+                      :query IS NULL 
+                      OR LOWER(organization_name) ILIKE :query
+                    ) 
+                    AND acc_type in (
+                      'REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 
+                      'SREIMBCN'
+                    ) 
+                    AND deleted_at IS NULL 
+                  GROUP BY 
+                    organization_id, 
+                    entity_code, 
+                    led_currency
+                ) 
+                select 
+                  count(tt.id)
+                FROM 
+                  temp_table tt 
+                  left join organization_stakeholders os on os.organization_id :: varchar = tt.tagged_organization_id 
+                  and os.organization_stakeholder_type = 'CREDIT_CONTROLLER'
+            """
+    )
+    suspend fun countOverallOutstandingAndOnAccountPerTradeParty(
+        entityCode: List<Int>?,
+        query: String?,
+        serviceTypes: List<String>?
+    ): Long
+
+    @Query(
+        """
+        SELECT
+            TO_CHAR(transaction_date, 'Mon') AS month,
+            TO_CHAR(transaction_date, 'YYYY') AS year,
+            SUM(CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as on_account_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as open_invoice_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as outstanding_amount
+        FROM
+            account_utilizations
+        WHERE
+            transaction_date >= DATE_TRUNC('MONTH', :timestamp::TIMESTAMP) - INTERVAL '11 months'
+            AND transaction_date <= :timestamp::TIMESTAMP
+            AND acc_mode = 'AR'
+            AND transaction_date IS NOT NULL
+            AND document_status = 'FINAL'
+            AND organization_id IS NOT NULL
+            AND amount_loc - pay_loc > 0
+            AND acc_type IN ('REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+            AND deleted_at IS NULL
+            AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
+        GROUP BY
+            TO_CHAR(transaction_date, 'Mon'),
+            TO_CHAR(transaction_date, 'YYYY')
+        ORDER BY
+            MIN(transaction_date)
+    """
+    )
+    suspend fun monthWiseStatisticsOfAccountUtilization(
+        timestamp: Timestamp,
+        serviceTypes: List<String>?
+    ): List<MonthWiseStatisticsOfAccountUtilizationResponse>
 }

@@ -52,6 +52,8 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
+import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
+import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -59,6 +61,8 @@ import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
+import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
+import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
@@ -604,37 +608,26 @@ open class DunningServiceImpl(
             }
         }
 
-        val serviceType: MutableList<String> = mutableListOf()
-        if (request.service == null || request.service!!.size == 0) {
-            ServiceType.values().forEach {
-                serviceType.add(it.toString())
-            }
-        } else {
-            request.service!!.forEach {
-                serviceType.add(ServiceType.valueOf(it).toString())
-            }
-        }
-
         var query: String? = null
         if (request.query != null)
             query = "%${request.query}%"
 
-        val response = dunningExecutionRepo.listDunningCycleExecution(
+        val response = dunningCycleRepo.listDunningCycleExecution(
             query = query,
             status = status,
             dunningCycleType = dunningCycleType,
-            serviceType = request.service.toString(),
+            serviceType = request.serviceType,
             sortBy = request.sortBy,
             sortType = request.sortType,
             pageIndex = request.pageIndex,
             pageSize = request.pageSize
         )
 
-        val totalCount = dunningExecutionRepo.totalCountDunningCycleExecution(
+        val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
             query = query,
             status = request.cycleStatus.toString(),
             dunningCycleType = request.dunningCycleType.toString(),
-            serviceType = request.service.toString()
+            serviceType = request.serviceType
         )
 
         response.forEach {
@@ -725,6 +718,7 @@ open class DunningServiceImpl(
         val status: Boolean = if (request.cycleStatus == null) true else request.cycleStatus == DunningCycleStatus.ACTIVE
 
         val response = dunningCycleRepo.listDunningCycle(
+            pageSize = request.pageSize,
             query = query,
             status = status,
             sortBy = request.sortBy,
@@ -750,6 +744,71 @@ open class DunningServiceImpl(
         responseList.pageNo = request.pageIndex
 
         return responseList
+    }
+
+    override suspend fun overallOutstandingAndOnAccountPerTradeParty(
+        request: OverallOutstandingAndOnAccountRequest
+    ): ResponseList<OverallOutstandingAndOnAccountResponse> {
+        var query: String? = null
+        if (request.query != null)
+            query = "%${request.query}%"
+
+        val totalCount = accountUtilizationRepo.countOverallOutstandingAndOnAccountPerTradeParty(
+            query = query,
+            entityCode = request.entityCode,
+            serviceTypes = request.serviceTypes,
+        )
+
+        val response = accountUtilizationRepo.overallOutstandingAndOnAccountPerTradeParty(
+            pageIndex = request.pageIndex,
+            pageSize = request.pageSize,
+            sortBy = request.sortBy,
+            sortType = request.sortType,
+            entityCode = request.entityCode,
+            serviceTypes = request.serviceTypes,
+            query = query
+        )
+
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
+        val responseList = ResponseList<OverallOutstandingAndOnAccountResponse>()
+        responseList.list = response
+        responseList.totalRecords = totalCount
+        responseList.totalPages = totalPages
+        responseList.pageNo = request.pageIndex
+
+        return responseList
+    }
+
+    override suspend fun monthWiseStatisticsOfAccountUtilization(
+        request: MonthWiseStatisticsOfAccountUtilizationReuest
+    ): List<MonthWiseStatisticsOfAccountUtilizationResponse> {
+        var timestamp = Timestamp(System.currentTimeMillis())
+        val cal = Calendar.getInstance()
+
+        cal.timeInMillis = timestamp.time
+
+        if (request.viewType != "TTM") {
+            cal.set(Calendar.DAY_OF_MONTH, 31)
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+
+            if (request.viewType == "FY") {
+                cal.set(Calendar.YEAR, request.year!! + 1)
+                cal.set(Calendar.MONTH, Calendar.MARCH)
+            } else if (request.viewType == "CY") {
+                cal.set(Calendar.YEAR, request.year!!)
+                cal.set(Calendar.MONTH, Calendar.DECEMBER)
+            }
+
+            timestamp = Timestamp.from(cal.toInstant())
+        }
+
+        val response = accountUtilizationRepo.monthWiseStatisticsOfAccountUtilization(
+            timestamp = timestamp,
+            serviceTypes = null
+        )
+
+        return response
     }
 
     override suspend fun createDunningException(request: CreateDunningException): MutableList<String> {

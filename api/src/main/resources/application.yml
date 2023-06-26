@@ -44,6 +44,9 @@ services:
     - id: bf-rails
       url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
+    - auth: bf-rails
+      url: https://api-mustangs2.dev.cogoport.io
+      enabledLocally: true
     - id: plutus
       url: http://localhost:8083
       enabledLocally: true

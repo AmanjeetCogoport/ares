@@ -12,6 +12,8 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
+import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
+import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -19,6 +21,9 @@ import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
+import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
+import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
+import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -134,6 +139,24 @@ class DunningController(
         )
     }
 
-    // get_payments_dunning_credit_controllers
-    // post_payments_dunning_cycle
+    @Auth
+    @Get("/list-overall-outstanding-and-on-account-per-trade-party{?request*}")
+    suspend fun overallOutstandingAndOnAccountPerTradeParty(
+        @Valid
+        request: OverallOutstandingAndOnAccountRequest
+    ): ResponseList<OverallOutstandingAndOnAccountResponse> {
+        return Response<ResponseList<OverallOutstandingAndOnAccountResponse>>().ok(
+            dunningService.overallOutstandingAndOnAccountPerTradeParty(request)
+        )
+    }
+
+    @Get("/month-wise-statistics-of-account-utilization{?request*}")
+    suspend fun monthWiseStatisticsOfAccountUtilization(
+        @Valid
+        request: MonthWiseStatisticsOfAccountUtilizationReuest
+    ): List<MonthWiseStatisticsOfAccountUtilizationResponse> {
+        return Response<List<MonthWiseStatisticsOfAccountUtilizationResponse>>().ok(
+            dunningService.monthWiseStatisticsOfAccountUtilization(request)
+        )
+    }
 }

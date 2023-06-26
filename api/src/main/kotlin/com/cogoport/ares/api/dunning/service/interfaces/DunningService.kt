@@ -11,6 +11,8 @@ import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
+import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
+import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -18,6 +20,8 @@ import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
+import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
+import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import java.util.Date
 import java.util.UUID
 
@@ -48,4 +52,8 @@ interface DunningService {
     suspend fun listDistinctCreditControllers(request: ListOrganizationStakeholderRequest): List<CreditControllerResponse>
 
     suspend fun calculateNextScheduleTime(scheduleRule: DunningScheduleRule): Date
+
+    suspend fun overallOutstandingAndOnAccountPerTradeParty(request: OverallOutstandingAndOnAccountRequest): ResponseList<OverallOutstandingAndOnAccountResponse>
+
+    suspend fun monthWiseStatisticsOfAccountUtilization(request: MonthWiseStatisticsOfAccountUtilizationReuest): List<MonthWiseStatisticsOfAccountUtilizationResponse>
 }

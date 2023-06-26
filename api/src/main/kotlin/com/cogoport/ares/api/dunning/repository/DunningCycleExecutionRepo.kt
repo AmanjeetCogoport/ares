@@ -15,7 +15,8 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-            SELECT
+            With temp_table as (
+                SELECT
                 dc.name as name,
                 dc.is_active as is_dunning_cycle_active,
                 dc.cycle_type as dunning_cycle_type,
@@ -42,7 +43,9 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
                 AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
                 AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
                 AND (:query IS NULL OR dc.name ILIKE :query)
-                 
+            LIMIT 1
+            )
+            select * from temp_table
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
             LIMIT :pageSize
                 
@@ -58,28 +61,6 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         pageIndex: Int? = 1,
         pageSize: Int? = 10
     ): List<DunningCycleExecutionResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-                COALESCE(COUNT(dce.id), 0)
-            FROM
-                dunning_cycle_executions dce
-            JOIN
-                dunning_cycles dc on
-                dc.id = dce.dunning_cycle_id
-            WHERE
-                dce.deleted_at IS NUll
-                AND (:query IS NULL OR dc.name ILIKE :query)
-        """
-    )
-    suspend fun totalCountDunningCycleExecution(
-        query: String?,
-        status: String?,
-        dunningCycleType: String?,
-        serviceType: String?
-    ): Long
 
     @NewSpan
     @Query(
