@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.AresConstants.ENTITY_ID
 import com.cogoport.ares.api.common.AresConstants.OCEAN_SERVICES
 import com.cogoport.ares.api.common.AresConstants.SURFACE_SERVICES
 import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
+import com.cogoport.ares.api.common.models.ExchangeResponse
 import com.cogoport.ares.api.common.models.InvoiceEventResponse
 import com.cogoport.ares.api.common.models.InvoiceTatStatsResponse
 import com.cogoport.ares.api.common.models.OutstandingDocument
@@ -1270,7 +1271,7 @@ class DashboardServiceImpl : DashboardService {
         if (documents.isEmpty()) throw AresException(AresError.ERR_1005, "")
         val transactionDates = mutableListOf<Date>()
         val currencyList = mutableListOf<String>()
-        val exchangeRateResponse = mutableMapOf<Date, BigDecimal>()
+        val exchangeRateResponse = mutableListOf<ExchangeResponse>()
         var totalReceivableAmount = BigDecimal.ZERO
         var unpaidReceivableAmount = BigDecimal.ZERO
         var partialPaidReceivableAmount = BigDecimal.ZERO
@@ -1280,25 +1281,27 @@ class DashboardServiceImpl : DashboardService {
 
         if (request.currency != documents[0]?.ledCurrency) {
             documents.forEach { doc ->
-                transactionDates.add(doc?.transactionDate!!)
-                currencyList.add(doc.currency)
+                if (doc?.currency != request.currency) {
+                    transactionDates.add(doc?.transactionDate!!)
+                    currencyList.add(doc.currency)
+                }
             }
 //        exchangeRateResponse = authClient.getExchangeRates(transactionDates,documents.get(0)?.ledCurrency,request.currency)
-            documents.forEach {
-                val exchangeRate = exchangeRateResponse.getOrDefault(it?.transactionDate, BigDecimal.ONE)
-                totalReceivableAmount += exchangeRate.multiply((it?.amountCurr!! - it.payCurr) * BigDecimal.valueOf(it.signFlag.toLong(), 0))
+            documents.forEach { doc ->
+                val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrencyType == doc?.currency }.firstOrNull()?.exchangeRate
+                totalReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
             }
 
             if (unpaidDocuments.isNotEmpty()) {
-                unpaidDocuments.forEach {
-                    val exchangeRate = exchangeRateResponse.getOrDefault(it?.transactionDate, BigDecimal.ONE)
-                    unpaidReceivableAmount += exchangeRate.multiply((it?.amountCurr!! - it.payCurr) * BigDecimal.valueOf(it.signFlag.toLong(), 0))
+                unpaidDocuments.forEach { doc ->
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrencyType == doc?.currency }.firstOrNull()?.exchangeRate
+                    unpaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
-                partialPaidDocuments.forEach {
-                    val exchangeRate = exchangeRateResponse.getOrDefault(it?.transactionDate, BigDecimal.ONE)
-                    partialPaidReceivableAmount += exchangeRate.multiply((it?.amountCurr!! - it.payCurr) * BigDecimal.valueOf(it.signFlag.toLong(), 0))
+                partialPaidDocuments.forEach { doc ->
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrencyType == doc?.currency }.firstOrNull()?.exchangeRate
+                    partialPaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             }
         } else {
@@ -1349,19 +1352,23 @@ class DashboardServiceImpl : DashboardService {
         if (documentsForDue.isEmpty()) {
             invoiceDueStats = AmountAndCount(BigDecimal.ZERO, 0)
         } else {
-            val transactionDates = mutableListOf<Date>()
-            val currencyList = mutableListOf<String>()
-            val exchangeRateResponse = mutableMapOf<Date, BigDecimal>()
+            var transactionDates = arrayListOf<Date>()
+            var currencyList = arrayListOf<String>()
+            val exchangeRateResponse = mutableListOf<ExchangeResponse>()
 
             if (request.currency != documentsForDue[0]?.ledCurrency) {
                 documentsForDue.forEach { doc ->
-                    transactionDates.add(doc?.transactionDate!!)
-                    currencyList.add(doc.currency)
+                    if (doc?.currency != request.currency) {
+                        transactionDates.add(doc?.transactionDate!!)
+                        currencyList.add(doc.currency)
+                    }
                 }
-//        exchangeRateResponse = authClient.getExchangeRates(transactionDates,documentsForDue.get(0)?.ledCurrency,request.currency)
-                documentsForDue.forEach {
-                    val exchangeRate = exchangeRateResponse.getOrDefault(it?.transactionDate, BigDecimal.ONE)
-                    invoicesDueAmount += exchangeRate.multiply((it?.amountCurr!! - it.payCurr) * BigDecimal.valueOf(it.signFlag.toLong(), 0))
+                transactionDates = transactionDates.distinct() as ArrayList<Date>
+                currencyList = currencyList.distinct() as ArrayList<String>
+//        exchangeRateResponse = authClient.getExchangeRates(transactionDates,currencyList,request.currency)
+                documentsForDue.forEach { doc ->
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrencyType == doc?.currency }.firstOrNull()?.exchangeRate
+                    invoicesDueAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             } else {
                 documentsForDue.forEach {
@@ -1374,19 +1381,23 @@ class DashboardServiceImpl : DashboardService {
         if (documentsForOnAccount.isEmpty()) {
             onAccountPayment = AmountAndCount(BigDecimal.ZERO, 0)
         } else {
-            val transactionDates = mutableListOf<Date>()
-            val currencyList = mutableListOf<String>()
-            val exchangeRateResponse = mutableMapOf<Date, BigDecimal>()
+            var transactionDates = mutableListOf<Date>()
+            var currencyList = mutableListOf<String>()
+            val exchangeRateResponse = mutableListOf<ExchangeResponse>()
 
             if (request.currency != documentsForDue[0]?.ledCurrency) {
                 documentsForOnAccount.forEach { doc ->
-                    transactionDates.add(doc?.transactionDate!!)
-                    currencyList.add(doc.currency)
+                    if (doc?.currency != request.currency) {
+                        transactionDates.add(doc?.transactionDate!!)
+                        currencyList.add(doc.currency)
+                    }
                 }
+                transactionDates = transactionDates.distinct() as ArrayList<Date>
+                currencyList = currencyList.distinct() as ArrayList<String>
 //        exchangeRateResponse = authClient.getExchangeRates(transactionDates,documentsForOnAccount.get(0)?.ledCurrency,request.currency)
-                documentsForOnAccount.forEach {
-                    val exchangeRate = exchangeRateResponse.getOrDefault(it?.transactionDate, BigDecimal.ONE)
-                    onAccountAmount += exchangeRate.multiply((it?.amountCurr!! - it.payCurr) * BigDecimal.valueOf(it.signFlag.toLong(), 0))
+                documentsForOnAccount.forEach { doc ->
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrencyType == doc?.currency }.firstOrNull()?.exchangeRate
+                    onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             } else {
                 documentsForOnAccount.forEach {
