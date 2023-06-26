@@ -546,7 +546,8 @@ open class DunningServiceImpl(
         if (CycleExecutionStatus.valueOf(dunningCycleExecution.status) == CycleExecutionStatus.SCHEDULED) {
             dunningExecutionRepo.cancelCycleExecution(
                 id = dunningCycleExecution.id!!,
-                updatedBy = updateDunningCycleExecutionStatusReq.updatedBy
+                updatedBy = updateDunningCycleExecutionStatusReq.updatedBy,
+                updatedAt = Timestamp(System.currentTimeMillis())
             )
         }
 
@@ -677,7 +678,8 @@ open class DunningServiceImpl(
 
         dunningExecutionRepo.cancelCycleExecution(
             dunningCycleExecution.id!!,
-            request.updatedBy
+            request.updatedBy,
+            Timestamp(System.currentTimeMillis())
         )
 
         val dunningCycleResp: DunningCycle = dunningCycleRepo.findById(dunningCycleExecution.dunningCycleId)
