@@ -520,7 +520,7 @@ open class DunningServiceImpl(
     override suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean {
         val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(id)[0])
             ?: throw AresException(AresError.ERR_1545, "")
-        if (dunningCycleExecution.status == CycleExecutionStatus.CANCELLED.toString() ||
+        if (
             dunningCycleExecution.deletedAt != null
         ) {
             throw AresException(AresError.ERR_1548, "")
