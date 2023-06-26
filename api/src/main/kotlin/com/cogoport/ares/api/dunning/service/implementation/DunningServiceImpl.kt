@@ -684,6 +684,7 @@ open class DunningServiceImpl(
 
         val dunningCycleResp: DunningCycle = dunningCycleRepo.findById(dunningCycleExecution.dunningCycleId)
             ?: throw AresException(AresError.ERR_1003, "")
+
         dunningCycleResp.scheduleRule = request.scheduleRule
         dunningCycleResp.updatedBy = request.updatedBy
 
@@ -696,8 +697,8 @@ open class DunningServiceImpl(
         dunningCycleExecution.status = CycleExecutionStatus.SCHEDULED.toString()
         dunningCycleExecution.createdBy = request.updatedBy
         dunningCycleExecution.updatedBy = request.updatedBy
-        dunningCycleExecution.createdAt = null
-        dunningCycleExecution.updatedAt = null
+        dunningCycleExecution.createdAt = Timestamp(System.currentTimeMillis())
+        dunningCycleExecution.updatedAt = Timestamp(System.currentTimeMillis())
         dunningCycleExecution.scheduleRule = request.scheduleRule
         dunningCycleExecution.scheduledAt = Timestamp(dunningCycleScheduledAt.time)
 
