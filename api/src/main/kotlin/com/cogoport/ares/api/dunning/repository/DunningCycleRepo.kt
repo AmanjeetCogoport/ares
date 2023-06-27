@@ -131,6 +131,21 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
                 AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
                 AND (:query IS NULL OR dc.name ILIKE :query)
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE 
+                         WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
+                         WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
+                    END  
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE 
+                        WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
+                        WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
+                    END       
+            END 
+            Asc
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
             LIMIT :pageSize
                 
@@ -141,8 +156,8 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         status: MutableList<String>,
         dunningCycleType: MutableList<String>,
         serviceType: String?,
-        sortBy: String? = "created_at",
-        sortType: String? = "DESC",
+        sortBy: String? = "updatedAt",
+        sortType: String? = "Desc",
         pageIndex: Int? = 1,
         pageSize: Int? = 10
     ): List<DunningCycleExecutionResponse>
