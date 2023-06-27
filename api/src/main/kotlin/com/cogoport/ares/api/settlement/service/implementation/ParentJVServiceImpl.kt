@@ -496,6 +496,32 @@ open class ParentJVServiceImpl : ParentJVService {
                         throw AresException(AresError.ERR_1530, "")
                     }
 
+                    val sageOrganizationQuery = if (lineItem.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+                    val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
+                    val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
+
+                    if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
+                        parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
+                        journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
+
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "PostJVToSage",
+                                "Journal Voucher",
+                                parentJVId,
+                                "JOURNAL_VOUCHER",
+                                "500",
+                                "Registration Number: ${organization.list[0]["registration_number"]}",
+                                "Not Found BPR",
+                                false
+                            )
+                        )
+                        return false
+                    }
+
+                    val sageOrganizationFromSageId = if (lineItem.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+
                     sageOrganization = authClient.getSageOrganization(
                         SageOrganizationRequest(
                             organization.list[0]["serial_id"]!!.toString(),
@@ -503,15 +529,9 @@ open class ParentJVServiceImpl : ParentJVService {
                         )
                     )
 
-                    val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
-                    val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
-                    val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
-                    val sageOrganizationFromSageId = recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId
-
-                    if (sageOrganization?.sageOrganizationId.isNullOrEmpty()) {
+                    if (sageOrganization!!.sageOrganizationId.isNullOrEmpty()) {
                         parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
                         journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
-
                         thirdPartyApiAuditService.createAudit(
                             ThirdPartyApiAudit(
                                 null,
@@ -528,7 +548,7 @@ open class ParentJVServiceImpl : ParentJVService {
                         return false
                     }
 
-                    if (sageOrganization?.sageOrganizationId != sageOrganizationFromSageId) {
+                    if (sageOrganization!!.sageOrganizationId != sageOrganizationFromSageId) {
                         parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
                         journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
 
@@ -540,8 +560,8 @@ open class ParentJVServiceImpl : ParentJVService {
                                 parentJVId,
                                 "JOURNAL_VOUCHER",
                                 "500",
-                                sageOrganization.toString(),
-                                "Sage organization not present",
+                                """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganization!!.sageOrganizationId}""",
+                                "sage serial organization id different on Sage and Cogoport Platform",
                                 false
                             )
                         )
