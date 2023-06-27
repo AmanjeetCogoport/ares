@@ -191,11 +191,13 @@ open class ParentJVServiceImpl : ParentJVService {
         val query = util.toQueryString(jvListRequest.query)
         val sortType = jvListRequest.sortType ?: "DESC"
         val sortBy = jvListRequest.sortBy ?: "createdAt"
+        val entityCode = jvListRequest.entityCode
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
             query,
             jvListRequest.page,
+            entityCode!!,
             jvListRequest.pageLimit,
             sortType,
             sortBy

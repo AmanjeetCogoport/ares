@@ -46,6 +46,8 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
                 ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
             AND
                 pjv.deleted_at is NULL
+            AND
+                pjv.entity_code = :entityCode
             ORDER BY
                 CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN pjv.created_at                         
@@ -67,6 +69,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         category: String?,
         query: String?,
         page: Int,
+        entityCode: Int,
         pageLimit: Int,
         sortType: String?,
         sortBy: String?
