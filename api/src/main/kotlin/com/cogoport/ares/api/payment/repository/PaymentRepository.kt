@@ -284,8 +284,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @Query(
         """
             select payment_num, payment_num_value, payment_code 
-            from payments p 
-            where p.acc_mode::varchar = :accMode AND p.payment_document_status != 'DELETED'::payment_document_status and p.deleted_at is null
+            from payments
+            where acc_mode::varchar = :accMode AND payment_document_status != 'DELETED'::payment_document_status and deleted_at is null
         """
     )
     suspend fun getPaymentRelatedField(accMode: String): List<PaymentRelatedFields>
@@ -297,5 +297,5 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         set deleted_at = NOW(), pre_migrated_deleted = true
         where payment_num_value in (:paymentNumValue)
     """)
-    suspend fun deletingApPayments (paymentNumValue: List<String>)
+    suspend fun deletingApPayments(paymentNumValue: List<String>)
 }
