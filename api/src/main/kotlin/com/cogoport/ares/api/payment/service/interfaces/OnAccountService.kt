@@ -41,4 +41,6 @@ interface OnAccountService {
     suspend fun createPaymentEntryAndReturnUtr(request: Payment)
     suspend fun directFinalPostToSage(req: PostPaymentToSage)
     suspend fun bulkUpdatePaymentAndPostOnSage(req: PostPaymentToSage)
+
+    suspend fun downloadSagePlatformReport(startDate: String, endDate: String)
 }

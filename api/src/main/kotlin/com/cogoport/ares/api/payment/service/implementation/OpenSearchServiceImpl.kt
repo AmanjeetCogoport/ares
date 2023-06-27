@@ -13,9 +13,12 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
+import com.cogoport.brahma.opensearch.Client
+import com.cogoport.brahma.rabbitmq.model.RabbitmqEventLogDocument
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @Singleton
 class OpenSearchServiceImpl : OpenSearchService {
@@ -112,5 +115,9 @@ class OpenSearchServiceImpl : OpenSearchService {
                 data.add(DueAmount(curr, 0.0.toBigDecimal(), 0))
             }
         }
+    }
+
+    override suspend fun pushEventLogsToOpenSearch(rabbitmqEventLogDocument: RabbitmqEventLogDocument) {
+        Client.addDocument(com.cogoport.brahma.rabbitmq.model.Constants.EVENT_LOG_INDEX, UUID.randomUUID().toString(), rabbitmqEventLogDocument, true)
     }
 }
