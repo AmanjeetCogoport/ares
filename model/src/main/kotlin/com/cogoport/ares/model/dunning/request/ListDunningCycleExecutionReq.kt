@@ -11,5 +11,5 @@ data class ListDunningCycleExecutionReq(
     var serviceType: String? = null,
     var sortType: String? = "desc",
     var sortBy: String? = "updatedAt",
-        var frequency: String? = null
+    var frequency: String? = null
 ) : Pagination()

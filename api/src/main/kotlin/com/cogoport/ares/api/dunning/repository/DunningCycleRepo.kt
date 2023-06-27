@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.dunning.repository
 
 import com.cogoport.ares.api.dunning.entity.DunningCycle
-import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import io.micronaut.data.annotation.Query
@@ -154,7 +153,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         """
     )
     suspend fun listDunningCycleExecution(
-            frequency: String?,
+        frequency: String?,
         query: String?,
         status: MutableList<String>,
         dunningCycleType: MutableList<String>,

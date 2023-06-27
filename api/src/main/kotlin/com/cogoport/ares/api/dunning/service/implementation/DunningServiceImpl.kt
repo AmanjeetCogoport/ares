@@ -627,7 +627,7 @@ open class DunningServiceImpl(
             sortType = request.sortType,
             pageIndex = request.pageIndex,
             pageSize = request.pageSize,
-                frequency = frequency
+            frequency = frequency
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
@@ -635,7 +635,7 @@ open class DunningServiceImpl(
             status = status,
             dunningCycleType = dunningCycleType,
             serviceType = request.serviceType,
-                    frequency = frequency
+            frequency = frequency
         )
 
         response.forEach {

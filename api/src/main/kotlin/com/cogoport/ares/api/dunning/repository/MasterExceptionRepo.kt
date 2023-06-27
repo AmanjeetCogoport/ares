@@ -18,24 +18,18 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     @Query(
         """
              SELECT
-                me.id,
-                me.is_active,
-                me.trade_party_name AS name,
-                me.registration_number,
-                me.organization_segment::varchar,
-                me.credit_days,
-                me.credit_amount,
-                SUM((amount_loc - pay_loc) * sign_flag) AS total_due_amount,
-                (array_agg(led_currency))[1] as currency
+	        me.id,
+	        me.is_active,
+	        me.trade_party_name AS name,
+	        me.registration_number,
+	        me.organization_segment::varchar,
+	        me.credit_days,
+	        me.credit_amount,
+	        COALESCE(SUM((amount_loc - pay_loc) * sign_flag),0) AS total_due_amount,
+	        COALESCE((array_agg(led_currency)) [1],'INR') AS currency
             FROM
-                account_utilizations au
-                JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id
-            WHERE
-                me.deleted_at IS NULL
-                AND au.document_status = 'FINAL'
-                AND au.acc_mode = 'AR'
-                AND acc_type != 'NEWPR'
-                AND au.deleted_at IS NULL
+	        dunning_master_exceptions me
+	        LEFT JOIN account_utilizations au ON me.trade_party_detail_id = au.organization_id
                 AND :query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query
                 AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment
                 AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR me.credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
@@ -69,16 +63,11 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             SELECT
                 COALESCE(count(DISTINCT me.id),0)
             FROM
-                account_utilizations au
-                JOIN dunning_master_exceptions me ON me.trade_party_detail_id = au.organization_id
+                dunning_master_exceptions 
             WHERE
-                me.deleted_at IS NULL
-                AND au.document_status = 'FINAL'
-                AND au.acc_mode = 'AR'
-                AND acc_type != 'NEWPR'
-                AND au.deleted_at IS NULL
-                AND (:query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query)
-                AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment          
+                deleted_at IS NULL
+                AND (:query IS NULL OR trade_party_name ILIKE :query OR registration_number ILIKE :query)
+                AND :segment IS NULL OR organization_segment::VARCHAR = :segment          
         """
     )
 
