@@ -159,4 +159,11 @@ class DunningController(
             dunningService.monthWiseStatisticsOfAccountUtilization(request)
         )
     }
+
+    @Get("/severity-level-templates")
+    suspend fun listSeverityLevelTemplates(): MutableMap<String, String> {
+        return Response<MutableMap<String, String>>().ok(
+            dunningService.listSeverityLevelTemplates()
+        )
+    }
 }

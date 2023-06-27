@@ -56,4 +56,6 @@ interface DunningService {
     suspend fun overallOutstandingAndOnAccountPerTradeParty(request: OverallOutstandingAndOnAccountRequest): ResponseList<OverallOutstandingAndOnAccountResponse>
 
     suspend fun monthWiseStatisticsOfAccountUtilization(request: MonthWiseStatisticsOfAccountUtilizationReuest): List<MonthWiseStatisticsOfAccountUtilizationResponse>
+
+    suspend fun listSeverityLevelTemplates(): MutableMap<String, String>
 }

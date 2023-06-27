@@ -1275,9 +1275,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         SELECT
             TO_CHAR(transaction_date, 'Mon') AS month,
             TO_CHAR(transaction_date, 'YYYY') AS year,
-            SUM(CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as on_account_amount,
-            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as open_invoice_amount,
-            SUM(CASE WHEN acc_type :: varchar IN ('REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as outstanding_amount
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (pay_loc) ELSE 0 END) as collected_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc) ELSE 0 END) as open_invoice_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as outstanding_amount
         FROM
             account_utilizations
         WHERE

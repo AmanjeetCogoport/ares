@@ -10,6 +10,7 @@ import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.MasterExceptions
 import com.cogoport.ares.api.dunning.entity.OrganizationStakeholder
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
+import com.cogoport.ares.api.dunning.model.SeverityEnum
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
@@ -817,6 +818,16 @@ open class DunningServiceImpl(
             timestamp = timestamp,
             serviceTypes = null
         )
+
+        return response
+    }
+
+    override suspend fun listSeverityLevelTemplates(): MutableMap<String, String> {
+        val response: MutableMap<String, String> = mutableMapOf()
+
+        SeverityEnum.values().forEach { severityLeve ->
+            response.put(severityLeve.name, severityLeve.severity)
+        }
 
         return response
     }
