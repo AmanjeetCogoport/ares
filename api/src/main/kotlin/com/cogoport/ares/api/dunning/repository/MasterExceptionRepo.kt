@@ -61,7 +61,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     @Query(
         """
             SELECT
-                COALESCE(count(DISTINCT me.id),0)
+                COALESCE(count(DISTINCT id),0)
             FROM
                 dunning_master_exceptions 
             WHERE
