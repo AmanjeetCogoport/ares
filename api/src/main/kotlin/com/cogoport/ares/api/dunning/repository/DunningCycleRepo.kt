@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.dunning.repository
 
 import com.cogoport.ares.api.dunning.entity.DunningCycle
+import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import io.micronaut.data.annotation.Query
@@ -131,15 +132,16 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
                 AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
                 AND (:query IS NULL OR dc.name ILIKE :query)
+                AND (:frequency IS NULL OR dc.frequency::VARCHAR = :frequency)
             ORDER BY
-            CASE WHEN :sortType = 'Desc' THEN
+            CASE WHEN :sortType = 'desc' THEN
                     CASE 
                          WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
                          WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
                     END  
             END 
             Desc,
-            CASE WHEN :sortType = 'Asc' THEN
+            CASE WHEN :sortType = 'asc' THEN
                     CASE 
                         WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
                         WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
@@ -152,12 +154,13 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         """
     )
     suspend fun listDunningCycleExecution(
+            frequency: String?,
         query: String?,
         status: MutableList<String>,
         dunningCycleType: MutableList<String>,
         serviceType: String?,
         sortBy: String? = "updatedAt",
-        sortType: String? = "Desc",
+        sortType: String? = "desc",
         pageIndex: Int? = 1,
         pageSize: Int? = 10
     ): List<DunningCycleExecutionResponse>
@@ -181,12 +184,14 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
                 AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
                 AND (:query IS NULL OR dc.name ILIKE :query)
+                AND (:frequency IS NULL OR dc.frequency::VARCHAR = :frequency)
         """
     )
     suspend fun totalCountDunningCycleExecution(
         query: String?,
         status: MutableList<String>,
         dunningCycleType: MutableList<String>,
-        serviceType: String?
+        serviceType: String?,
+        frequency: String?,
     ): Long
 }

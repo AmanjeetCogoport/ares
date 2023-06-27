@@ -609,6 +609,11 @@ open class DunningServiceImpl(
             }
         }
 
+        var frequency: String? = null
+        if (request.frequency != null) {
+            frequency = DunningExecutionFrequency.valueOf(request.frequency!!).toString()
+        }
+
         var query: String? = null
         if (request.query != null)
             query = "%${request.query}%"
@@ -621,14 +626,16 @@ open class DunningServiceImpl(
             sortBy = request.sortBy,
             sortType = request.sortType,
             pageIndex = request.pageIndex,
-            pageSize = request.pageSize
+            pageSize = request.pageSize,
+                frequency = frequency
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
             query = query,
             status = status,
             dunningCycleType = dunningCycleType,
-            serviceType = request.serviceType
+            serviceType = request.serviceType,
+                    frequency = frequency
         )
 
         response.forEach {
