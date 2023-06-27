@@ -44,5 +44,5 @@ interface OnAccountService {
 
     suspend fun downloadSagePlatformReport(startDate: String, endDate: String)
 
-    suspend fun deletingApPayments()
+    suspend fun deletingApPayments(paymentNumValues: List<String>)
 }

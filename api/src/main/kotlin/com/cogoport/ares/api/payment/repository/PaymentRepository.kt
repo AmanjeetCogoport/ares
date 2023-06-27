@@ -286,9 +286,10 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             select payment_num, payment_num_value, payment_code 
             from payments
             where acc_mode::varchar = :accMode AND payment_document_status != 'DELETED'::payment_document_status and deleted_at is null and transaction_date < 'Apr 1, 2023'
+            and payment_num_value in (:paymentNumValues)
         """
     )
-    suspend fun getPaymentRelatedField(accMode: String): List<PaymentRelatedFields>
+    suspend fun getPaymentRelatedField(accMode: String, paymentNumValues: List<String>): List<PaymentRelatedFields>
 
     @NewSpan
     @Query(

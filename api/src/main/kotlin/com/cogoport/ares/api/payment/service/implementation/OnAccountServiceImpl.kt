@@ -201,7 +201,7 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
-    @Value("\${server.base-url}") // application-prod.yml path
+    @Value("\${micronaut.server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     /**
@@ -1854,8 +1854,8 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    override suspend fun deletingApPayments() {
-        val paymentsData = paymentRepository.getPaymentRelatedField(AccMode.AP.name)
+    override suspend fun deletingApPayments(paymentNumValues: List<String>) {
+        val paymentsData = paymentRepository.getPaymentRelatedField(AccMode.AP.name, paymentNumValues)
 
         if (paymentsData.isNotEmpty()) {
             val docValues = paymentsData.map { it.paymentNumValue!! }

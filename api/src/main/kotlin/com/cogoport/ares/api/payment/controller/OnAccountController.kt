@@ -131,8 +131,8 @@ class OnAccountController {
         return onAccountService.downloadSagePlatformReport(startDate, endDate)
     }
 
-    @Delete("/ap-payments")
-    suspend fun deletingApPayments() {
-        return onAccountService.deletingApPayments()
+    @Delete("/delete-payments")
+    suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
+        return onAccountService.deletingApPayments(paymentNumValues)
     }
 }
