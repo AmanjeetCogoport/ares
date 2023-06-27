@@ -132,7 +132,7 @@ class OnAccountController {
     }
 
     @Delete("/ap-payments")
-    suspend fun deletingApPayments () {
+    suspend fun deletingApPayments() {
         return onAccountService.deletingApPayments()
     }
 }

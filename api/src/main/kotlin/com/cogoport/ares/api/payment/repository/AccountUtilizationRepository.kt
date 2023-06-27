@@ -1182,7 +1182,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     )
     suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
 
-
     @NewSpan
     @Query(
         """
@@ -1195,5 +1194,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             where document_value in (:documentValues)
         """
     )
-    suspend fun updateAccountUtilizationUsingDocValue (documentValues: List<String>)
+    suspend fun updateAccountUtilizationUsingDocValue(documentValues: List<String>)
 }
