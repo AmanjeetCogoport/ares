@@ -1853,4 +1853,21 @@ open class OnAccountServiceImpl : OnAccountService {
             aresMessagePublisher.sendEmail(request)
         }
     }
+
+    override suspend fun deletingApPayments(paymentNumValues: List<String>) {
+        val paymentsData = paymentRepository.getPaymentRelatedField(AccMode.AP.name, paymentNumValues)
+
+        if (paymentsData.isNotEmpty()) {
+            val docValues = paymentsData.map { it.paymentNumValue!! }
+
+            // deleting payments
+            paymentRepository.deletingApPayments(docValues)
+
+            // marking account utilization deleted
+            accountUtilizationRepository.updateAccountUtilizationUsingDocValue(docValues)
+
+            // marking settlement deleted for utilized payments
+            settlementRepository.markingSettlementAsDeleted(paymentsData.map { it.paymentNum!! }, paymentsData.map { it.paymentCode.toString() })
+        }
+    }
 }

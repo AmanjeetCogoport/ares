@@ -1,0 +1,2 @@
+ALTER TABLE payments
+ADD COLUMN pre_migrated_deleted BOOLEAN DEFAULT FALSE;
