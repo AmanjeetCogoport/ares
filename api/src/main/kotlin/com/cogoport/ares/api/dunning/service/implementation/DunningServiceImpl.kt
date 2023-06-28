@@ -142,7 +142,7 @@ open class DunningServiceImpl(
                     ?: organizationStakeholder.organizationId
             organizationStakeholder.organizationStakeholderId = syncOrgStakeholderRequest.organizationStakeholderId
                     ?: organizationStakeholder.organizationStakeholderId
-            organizationStakeholder.organizationStakeholderType = organizationStakeholderType,
+            organizationStakeholder.organizationStakeholderType = organizationStakeholderType
             organizationStakeholder.organizationSegment = organizationSegment
             organizationStakeholder.organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName
                     ?: organizationStakeholder.organizationStakeholderName
