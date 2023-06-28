@@ -73,7 +73,6 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.Date
 import java.util.UUID
@@ -97,28 +96,28 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
         var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
-                organizationId = syncOrgStakeholderRequest.organizationId!!,
-                organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType
+            organizationId = syncOrgStakeholderRequest.organizationId!!,
+            organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType
         )
 
         if (organizationStakeholder == null) {
             organizationStakeholder = organizationStakeholderRepo.save(
-                    OrganizationStakeholder(
-                            id = null,
-                            organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
-                            organizationStakeholderType = OrganizationStakeholderType.valueOf(
-                                    syncOrgStakeholderRequest.organizationStakeholderType!!
-                            ).toString(),
-                            organizationId = syncOrgStakeholderRequest.organizationId!!,
-                            organizationSegment = OrganizationSegment.valueOf(
-                                    syncOrgStakeholderRequest.organizationSegment!!
-                            ).toString(),
-                            organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
-                            createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
-                            updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
-                            createdAt = null,
-                            updatedAt = null
-                    )
+                OrganizationStakeholder(
+                    id = null,
+                    organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
+                    organizationStakeholderType = OrganizationStakeholderType.valueOf(
+                        syncOrgStakeholderRequest.organizationStakeholderType!!
+                    ).toString(),
+                    organizationId = syncOrgStakeholderRequest.organizationId!!,
+                    organizationSegment = OrganizationSegment.valueOf(
+                        syncOrgStakeholderRequest.organizationSegment!!
+                    ).toString(),
+                    organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
+                    createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                    updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                    createdAt = null,
+                    updatedAt = null
+                )
             )
         } else {
             var organizationSegment = organizationStakeholder.organizationSegment.toString()
@@ -129,7 +128,7 @@ open class DunningServiceImpl(
             var organizationStakeholderType = organizationStakeholder.organizationStakeholderType.toString()
             if (syncOrgStakeholderRequest.organizationStakeholderType != null) {
                 organizationStakeholderType = OrganizationStakeholderType.valueOf(
-                        syncOrgStakeholderRequest.organizationStakeholderType!!
+                    syncOrgStakeholderRequest.organizationStakeholderType!!
                 ).toString()
             }
 
@@ -139,20 +138,20 @@ open class DunningServiceImpl(
             }
 
             organizationStakeholder.organizationId = syncOrgStakeholderRequest.organizationId
-                    ?: organizationStakeholder.organizationId
+                ?: organizationStakeholder.organizationId
             organizationStakeholder.organizationStakeholderId = syncOrgStakeholderRequest.organizationStakeholderId
-                    ?: organizationStakeholder.organizationStakeholderId
+                ?: organizationStakeholder.organizationStakeholderId
             organizationStakeholder.organizationStakeholderType = organizationStakeholderType
             organizationStakeholder.organizationSegment = organizationSegment
             organizationStakeholder.organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName
-                    ?: organizationStakeholder.organizationStakeholderName
+                ?: organizationStakeholder.organizationStakeholderName
             organizationStakeholder.isActive = isActive
             organizationStakeholder.updatedBy = syncOrgStakeholderRequest.updatedBy ?: organizationStakeholder.updatedBy
 
             organizationStakeholderRepo.update(organizationStakeholder)
         }
 
-            return organizationStakeholder.id!!
+        return organizationStakeholder.id!!
     }
 
     @Transactional
