@@ -242,9 +242,9 @@ class ScheduleServiceImpl(
         }
         val severityTemplate =
             when (dunningCycleRepo.getSeverityTemplate(cycleExecution.dunningCycleId)) {
-                1 -> SeverityEnum.ONE.severity
-                2 -> SeverityEnum.TWO.severity
-                3 -> SeverityEnum.THREE.severity
+                1 -> SeverityEnum.LOW.severity
+                2 -> SeverityEnum.MEDIUM.severity
+                3 -> SeverityEnum.HIGH.severity
                 else -> throw Error("Severity is Invalid")
             }
 
