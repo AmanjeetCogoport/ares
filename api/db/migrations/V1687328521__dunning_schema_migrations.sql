@@ -38,6 +38,7 @@ CREATE TYPE CATEGORY AS ENUM ('CYCLE','MANUAL');
  	organization_segment              ORGANIZATION_SEGMENT    NOT NULL,
     created_by                        UUID                    NOT NULL,
     updated_by                        UUID                    NOT NULL,
+    is_active                         BOOLEAN 		          NOT NULL   DEFAULT TRUE,
  	created_at                        TIMESTAMP               NOT NULL   DEFAULT now(),
  	updated_at                        TIMESTAMP               NOT NULL   DEFAULT now()
  );
