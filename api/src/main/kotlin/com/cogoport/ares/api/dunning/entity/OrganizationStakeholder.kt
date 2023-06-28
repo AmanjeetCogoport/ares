@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.dunning.entity
 
+import com.cogoport.ares.model.dunning.enum.OrganizationSegment
+import com.cogoport.ares.model.dunning.enum.OrganizationStakeholderType
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
@@ -16,8 +18,8 @@ data class OrganizationStakeholder(
     var organizationStakeholderName: String,
     var organizationStakeholderId: UUID,
     var organizationId: UUID,
-    var organizationStakeholderType: String,
-    var organizationSegment: String,
+    var organizationStakeholderType: OrganizationStakeholderType,
+    var organizationSegment: OrganizationSegment,
     var isActive: Boolean? = true,
     @DateCreated
     var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),

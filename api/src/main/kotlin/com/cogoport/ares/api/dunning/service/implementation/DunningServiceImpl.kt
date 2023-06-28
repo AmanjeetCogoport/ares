@@ -108,11 +108,11 @@ open class DunningServiceImpl(
                     organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
                     organizationStakeholderType = OrganizationStakeholderType.valueOf(
                         syncOrgStakeholderRequest.organizationStakeholderType!!
-                    ).toString(),
+                    ),
                     organizationId = syncOrgStakeholderRequest.organizationId!!,
                     organizationSegment = OrganizationSegment.valueOf(
                         syncOrgStakeholderRequest.organizationSegment!!
-                    ).toString(),
+                    ),
                     organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
                     createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
                     updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
@@ -121,16 +121,16 @@ open class DunningServiceImpl(
                 )
             )
         } else {
-            var organizationSegment = organizationStakeholder.organizationSegment.toString()
+            var organizationSegment = organizationStakeholder.organizationSegment
             if (syncOrgStakeholderRequest.organizationSegment != null) {
-                organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!).toString()
+                organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!)
             }
 
-            var organizationStakeholderType = organizationStakeholder.organizationStakeholderType.toString()
+            var organizationStakeholderType = organizationStakeholder.organizationStakeholderType
             if (syncOrgStakeholderRequest.organizationStakeholderType != null) {
                 organizationStakeholderType = OrganizationStakeholderType.valueOf(
                     syncOrgStakeholderRequest.organizationStakeholderType!!
-                ).toString()
+                )
             }
 
             var isActive = organizationStakeholder.isActive
