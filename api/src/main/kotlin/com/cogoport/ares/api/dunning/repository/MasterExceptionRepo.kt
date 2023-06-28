@@ -17,33 +17,39 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     @NewSpan
     @Query(
         """
-             SELECT
-	        me.id,
-	        me.is_active,
-	        me.trade_party_name AS name,
-	        me.registration_number,
-	        me.organization_segment::varchar,
-	        me.credit_days,
-	        me.credit_amount,
-	        COALESCE(SUM((amount_loc - pay_loc) * sign_flag),0) AS total_due_amount,
-	        COALESCE((array_agg(led_currency)) [1],'INR') AS currency
-            FROM
-	        dunning_master_exceptions me
-	        LEFT JOIN account_utilizations au ON me.trade_party_detail_id = au.organization_id
-                AND :query IS NULL OR me.trade_party_name ILIKE :query OR me.registration_number ILIKE :query
-                AND :segment IS NULL OR me.organization_segment::VARCHAR = :segment
-                AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR me.credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
-            GROUP BY
-                me.id
-            ORDER BY
-                CASE WHEN :sortType = 'ASC' AND :sortBy = 'dueAmount' THEN SUM((amount_loc - pay_loc) * sign_flag) END ASC,
-                CASE WHEN :sortType = 'DESC' AND :sortBy = 'dueAmount' THEN SUM((amount_loc - pay_loc) * sign_flag) END DESC,
-                CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditDays' THEN me.credit_days END ASC,
-                CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditDays' THEN me.credit_days END DESC,
-                CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditAmount' THEN me.credit_amount END ASC,
-                CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditAmount' THEN me.credit_amount END DESC 
-            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize  
-        
+           WITH list_data AS (
+            SELECT
+            me.id,
+            me.is_active,
+            me.trade_party_name AS name,
+            me.registration_number,
+            me.organization_segment::varchar,
+            me.credit_days,
+            me.credit_amount,
+            COALESCE(SUM((amount_loc - pay_loc) * sign_flag), 0) AS total_due_amount,
+            COALESCE((array_agg(led_currency))[1], 'INR') AS currency
+        FROM
+            dunning_master_exceptions me
+        LEFT JOIN
+            account_utilizations au ON me.trade_party_detail_id = au.organization_id
+            WHERE me.deleted_at IS NULL
+        GROUP BY
+        me.id
+    )
+    SELECT *
+        FROM list_data
+     WHERE
+         (:query IS NULL OR name ILIKE :query OR registration_number ILIKE :query)
+         AND (:segment IS NULL OR organization_segment::VARCHAR = :segment)
+         AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
+    ORDER BY
+    CASE WHEN :sortType = 'ASC' AND :sortBy = 'dueAmount' THEN total_due_amount END ASC,
+    CASE WHEN :sortType = 'DESC' AND :sortBy = 'dueAmount' THEN total_due_amount END DESC,
+    CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditDays' THEN credit_days END ASC,
+    CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditDays' THEN credit_days END DESC,
+    CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditAmount' THEN credit_amount END ASC,
+    CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditAmount' THEN credit_amount END DESC
+    OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize    
     """
     )
     suspend fun listMasterException(
@@ -67,13 +73,17 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             WHERE
                 deleted_at IS NULL
                 AND (:query IS NULL OR trade_party_name ILIKE :query OR registration_number ILIKE :query)
-                AND :segment IS NULL OR organization_segment::VARCHAR = :segment          
+                AND (:segment IS NULL OR organization_segment::VARCHAR = :segment)
+                AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
+
         """
     )
 
     suspend fun listMasterExceptionTotalCount(
         query: String?,
-        segment: String?
+        segment: String?,
+        creditDateFrom: Long?,
+        creditDaysTo: Long?
     ): Long
 
     @NewSpan

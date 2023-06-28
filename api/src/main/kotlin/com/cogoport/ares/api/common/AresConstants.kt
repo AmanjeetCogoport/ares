@@ -156,15 +156,15 @@ object AresConstants {
 
     val CREDIT_DAYS_MAPPING = mapOf(
         30L to Pair(0L, 30L),
-        60L to Pair(30L, 60L),
-        90L to Pair(60L, 90L)
+        60L to Pair(31L, 60L),
+        90L to Pair(61L, 90L)
     )
-    val ON_ACCOUNT_ACCOUNT_TYPE = listOf<AccountType>(
+    val ON_ACCOUNT_ACCOUNT_TYPE = listOf(
         AccountType.REC,
         AccountType.CTDS
     )
 
-    val OUTSTANDING_ACCOUNT_TYPE = listOf<AccountType>(
+    val OUTSTANDING_ACCOUNT_TYPE = listOf(
         AccountType.SINV,
         AccountType.SCN,
         AccountType.SREIMB,

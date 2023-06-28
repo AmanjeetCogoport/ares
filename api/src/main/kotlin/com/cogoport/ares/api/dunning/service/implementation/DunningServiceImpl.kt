@@ -470,11 +470,13 @@ open class DunningServiceImpl(
             request.sortType ?: "dueAmount"
         )
         responseList.forEach {
-            it.id = Hashids.encode(it.id?.toLong()!!)
+            it.id = Hashids.encode(it.id.toLong())
         }
         val totalCount = masterExceptionRepo.listMasterExceptionTotalCount(
             q,
             request.segmentation,
+            creditDaysFrom,
+            creditDaysTo
         )
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
         return ResponseList(

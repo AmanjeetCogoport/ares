@@ -29,7 +29,7 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST:`localhost`}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      url: r2dbc:postgresql://${DB_HOST:`localhost`}:${DB_PORT:3001}/${DB_NAME:ares}?preparedStatementCacheQueries=0
       username: ${DB_USER:mustangs2}
       password: ${DB_PASSWORD:DI8E64c5clAyWuAz0Tqm4pgeUj12KZ}
       dialect: POSTGRES
