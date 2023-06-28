@@ -37,7 +37,6 @@ import com.cogoport.ares.model.common.AuditObjectType
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailResponse
 import com.cogoport.ares.model.common.ResponseList
-import com.cogoport.ares.model.dunning.enum.ActionType
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCategory
@@ -75,7 +74,6 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.Date
 import java.util.UUID
@@ -98,61 +96,63 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
-        if (ActionType.valueOf(syncOrgStakeholderRequest.actionType) == ActionType.CREATE) {
+        var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
+            organizationId = syncOrgStakeholderRequest.organizationId!!,
+            organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType
+        )
 
-            if (syncOrgStakeholderRequest.creditControllerName == null ||
-                syncOrgStakeholderRequest.createdBy == null ||
-                syncOrgStakeholderRequest.organizationStakeholderType == null ||
-                syncOrgStakeholderRequest.creditControllerId == null ||
-                syncOrgStakeholderRequest.organizationId == null ||
-                syncOrgStakeholderRequest.organizationSegment == null
-            ) {
-                throw AresException(AresError.ERR_1003, " : created by can't be null")
-            }
-
-            val response = organizationStakeholderRepo.save(
+        if (organizationStakeholder == null) {
+            organizationStakeholder = organizationStakeholderRepo.save(
                 OrganizationStakeholder(
                     id = null,
-                    organizationStakeholderName = syncOrgStakeholderRequest.creditControllerName!!,
-                    organizationStakeholderId = syncOrgStakeholderRequest.creditControllerId!!,
-                    organizationId = syncOrgStakeholderRequest.organizationId,
-                    organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!),
-                    organizationStakeholderType = OrganizationStakeholderType.valueOf(syncOrgStakeholderRequest.organizationStakeholderType!!),
+                    organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
+                    organizationStakeholderType = OrganizationStakeholderType.valueOf(
+                        syncOrgStakeholderRequest.organizationStakeholderType!!
+                    ).toString(),
+                    organizationId = syncOrgStakeholderRequest.organizationId!!,
+                    organizationSegment = OrganizationSegment.valueOf(
+                        syncOrgStakeholderRequest.organizationSegment!!
+                    ).toString(),
+                    organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
+                    createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                    updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
                     createdAt = null,
-                    updatedAt = null,
-                    createdBy = syncOrgStakeholderRequest.createdBy,
-                    updatedBy = syncOrgStakeholderRequest.createdBy
+                    updatedAt = null
                 )
             )
-
-            return response.id!!
         } else {
-            val creditController = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
-                organizationId = syncOrgStakeholderRequest.organizationId
-            )
-                ?: throw AresException(AresError.ERR_1541, "")
+            var organizationSegment = organizationStakeholder.organizationSegment.toString()
+            if (syncOrgStakeholderRequest.organizationSegment != null) {
+                organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!).toString()
+            }
 
-            val updateOrganizationStakeholder: OrganizationStakeholder = OrganizationStakeholder(
-                id = creditController.id,
-                organizationStakeholderName = syncOrgStakeholderRequest.creditControllerName
-                    ?: creditController.organizationStakeholderName,
-                organizationStakeholderId = syncOrgStakeholderRequest.creditControllerId
-                    ?: creditController.organizationStakeholderId,
-                organizationId = creditController?.organizationId,
-                organizationSegment = syncOrgStakeholderRequest.organizationSegment?.let { OrganizationSegment.valueOf(it) }
-                    ?: creditController.organizationSegment,
-                organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType?.let { OrganizationStakeholderType.valueOf(it) }
-                    ?: creditController.organizationStakeholderType,
-                createdBy = creditController?.createdBy,
-                updatedBy = syncOrgStakeholderRequest.updatedBy,
-                createdAt = creditController?.createdAt,
-                updatedAt = Timestamp.valueOf(LocalDateTime.now())
-            )
+            var organizationStakeholderType = organizationStakeholder.organizationStakeholderType.toString()
+            if (syncOrgStakeholderRequest.organizationStakeholderType != null) {
+                organizationStakeholderType = OrganizationStakeholderType.valueOf(
+                    syncOrgStakeholderRequest.organizationStakeholderType!!
+                ).toString()
+            }
 
-            val response = organizationStakeholderRepo.update(updateOrganizationStakeholder)
+            var isActive = organizationStakeholder.isActive
+            if (syncOrgStakeholderRequest.status != null) {
+                isActive = syncOrgStakeholderRequest.status == "Active"
+            }
 
-            return response.id!!
+            organizationStakeholder.organizationId = syncOrgStakeholderRequest.organizationId
+                ?: organizationStakeholder.organizationId
+            organizationStakeholder.organizationStakeholderId = syncOrgStakeholderRequest.organizationStakeholderId
+                ?: organizationStakeholder.organizationStakeholderId
+            organizationStakeholder.organizationStakeholderType = organizationStakeholderType
+            organizationStakeholder.organizationSegment = organizationSegment
+            organizationStakeholder.organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName
+                ?: organizationStakeholder.organizationStakeholderName
+            organizationStakeholder.isActive = isActive
+            organizationStakeholder.updatedBy = syncOrgStakeholderRequest.updatedBy ?: organizationStakeholder.updatedBy
+
+            organizationStakeholderRepo.update(organizationStakeholder)
         }
+
+        return organizationStakeholder.id!!
     }
 
     @Transactional

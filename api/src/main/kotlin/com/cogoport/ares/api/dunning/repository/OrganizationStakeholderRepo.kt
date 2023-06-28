@@ -60,8 +60,12 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
                 organization_stakeholders
             WHERE
                 organization_id = :organizationId
+                AND :organizationStakeholderType is null or organization_stakeholder_type = :organizationStakeholderType
             LIMIT 1
         """
     )
-    suspend fun getOrganizationStakeholdersUsingOrgId(organizationId: UUID): OrganizationStakeholder
+    suspend fun getOrganizationStakeholdersUsingOrgId(
+        organizationId: UUID,
+        organizationStakeholderType: String?
+    ): OrganizationStakeholder?
 }
