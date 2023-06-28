@@ -728,29 +728,28 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
-        var query: String? = null
-        if (request.query != null)
-            query = "%${request.query}%"
+        if (request.query != null) {
+            request.query = util.toQueryString(request.query)
+        }
 
         val status: Boolean = if (request.cycleStatus == null) true else request.cycleStatus == DunningCycleStatus.ACTIVE
 
         val response = dunningCycleRepo.listDunningCycle(
             pageSize = request.pageSize,
-            query = query,
+            query = request.query,
             status = status,
             sortBy = request.sortBy,
             sortType = request.sortType,
             pageIndex = request.pageIndex,
-
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycle(
-            query = query,
+            query = request.query,
             status = status
         )
 
         response.forEach {
-            it.id = Hashids.encode(it.id?.toLong()!!)
+            it.id = Hashids.encode(it.id.toLong())
         }
 
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
