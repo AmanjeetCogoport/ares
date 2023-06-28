@@ -23,7 +23,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             me.is_active,
             me.trade_party_name AS name,
             me.registration_number,
-            me.organization_segment::varchar,
+            me.organization_segment::VARCHAR AS org_segment,
             me.credit_days,
             me.credit_amount,
             COALESCE(SUM((amount_loc - pay_loc) * sign_flag), 0) AS total_due_amount,
@@ -40,7 +40,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
         FROM list_data
      WHERE
          (:query IS NULL OR name ILIKE :query OR registration_number ILIKE :query)
-         AND (:segment IS NULL OR organization_segment::VARCHAR = :segment)
+         AND (:segment IS NULL OR org_segment::VARCHAR = :segment)
          AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
     ORDER BY
     CASE WHEN :sortType = 'ASC' AND :sortBy = 'dueAmount' THEN total_due_amount END ASC,
@@ -49,7 +49,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditDays' THEN credit_days END DESC,
     CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditAmount' THEN credit_amount END ASC,
     CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditAmount' THEN credit_amount END DESC
-    OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize    
+    OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize   
     """
     )
     suspend fun listMasterException(

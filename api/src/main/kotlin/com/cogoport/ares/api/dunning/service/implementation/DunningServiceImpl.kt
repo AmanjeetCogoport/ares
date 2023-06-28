@@ -2,6 +2,7 @@ package com.cogoport.ares.api.dunning.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
+import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
@@ -454,6 +455,9 @@ open class DunningServiceImpl(
         if (request.creditDays != null) {
             creditDaysFrom = CREDIT_DAYS_MAPPING[request.creditDays]?.first
             creditDaysTo = CREDIT_DAYS_MAPPING[request.creditDays]?.second
+        }
+        if (request.segmentation != null) {
+            request.segmentation = SEGMENT_MAPPING[request.segmentation]
         }
         var q: String? = null
         if (request.query != null) {

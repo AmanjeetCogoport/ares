@@ -195,6 +195,12 @@ object AresConstants {
         401 to "<div><div style=\"border:1px solid #000;height:300px;margin: 0px 8px 16px 8px;\"><div style=\"height:65px;border-bottom:2px solid #000\"><p style=\"text-align:center;font-weight:600;font-size:15px;line-height:25px;padding:5px\">For SGD Payments: COGOPORT PRIVATE LIMITED</p></div><div style=\"text-align:center;line-height:21px;\"><p>Name of Bank: Citibank N.A.</p><p>Account Number: 0-021112-003</p><p>SWIFT Code: CITISGSG</p><p>IFSC /Bank Code: 7214</p><p>Branch Code: 001</p></div></div></div>"
     )
 
+    var SEGMENT_MAPPING = mapOf(
+        "sme" to "MID_SIZE",
+        "enterprise" to "ENTERPRISE",
+        "large" to "LONG_TAIL"
+    )
+
     enum class TimeZone {
         GMT,
         IST,
