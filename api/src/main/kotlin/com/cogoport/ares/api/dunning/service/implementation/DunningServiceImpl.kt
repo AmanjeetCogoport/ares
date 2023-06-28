@@ -102,17 +102,18 @@ open class DunningServiceImpl(
         )
 
         if (organizationStakeholder == null) {
+            val organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType!!
+                .replace("_", " ").toUpperCase().replace(" ", "_")
+            val organizationSegment = syncOrgStakeholderRequest.organizationSegment!!
+                .replace("_", " ").toUpperCase().replace(" ", "_")
+
             organizationStakeholder = organizationStakeholderRepo.save(
                 OrganizationStakeholder(
                     id = null,
                     organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
-                    organizationStakeholderType = OrganizationStakeholderType.valueOf(
-                        syncOrgStakeholderRequest.organizationStakeholderType!!
-                    ),
+                    organizationStakeholderType = OrganizationStakeholderType.valueOf(organizationStakeholderType),
                     organizationId = syncOrgStakeholderRequest.organizationId!!,
-                    organizationSegment = OrganizationSegment.valueOf(
-                        syncOrgStakeholderRequest.organizationSegment!!
-                    ),
+                    organizationSegment = OrganizationSegment.valueOf(organizationSegment),
                     organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
                     createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
                     updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
@@ -123,13 +124,17 @@ open class DunningServiceImpl(
         } else {
             var organizationSegment = organizationStakeholder.organizationSegment
             if (syncOrgStakeholderRequest.organizationSegment != null) {
-                organizationSegment = OrganizationSegment.valueOf(syncOrgStakeholderRequest.organizationSegment!!)
+                organizationSegment = OrganizationSegment.valueOf(
+                    syncOrgStakeholderRequest.organizationSegment!!
+                        .replace("_", " ").toUpperCase().replace(" ", "_")
+                )
             }
 
             var organizationStakeholderType = organizationStakeholder.organizationStakeholderType
             if (syncOrgStakeholderRequest.organizationStakeholderType != null) {
                 organizationStakeholderType = OrganizationStakeholderType.valueOf(
                     syncOrgStakeholderRequest.organizationStakeholderType!!
+                        .replace("_", " ").toUpperCase().replace(" ", "_")
                 )
             }
 
