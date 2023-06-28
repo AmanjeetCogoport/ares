@@ -41,14 +41,19 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 deleted_at IS NULL AND
                 (:query IS NULL OR name ILIKE :query) AND
                 (:status IS NULL OR is_active = :status)
+                 ORDER BY
+                 CASE WHEN :sortType = 'ASC' AND :sortBy = 'createdAt' THEN created_at END ASC,
+                 CASE WHEN :sortType = 'DESC' AND :sortBy = 'createdAt' THEN created_at END DESC,
+                 CASE WHEN :sortType = 'ASC' AND :sortBy = 'updatedAt' THEN updated_at END ASC,
+                 CASE WHEN :sortType = 'DESC' AND :sortBy = 'updatedAt' THEN updated_at END DESC
            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
            LIMIT :pageSize
         """
     )
     suspend fun listDunningCycle(
-        query: String?,
-        status: Boolean?,
-        sortBy: String? = "created_at",
+        query: String? = null,
+        status: Boolean? = null,
+        sortBy: String? = "createdAt",
         sortType: String? = "DESC",
         pageIndex: Int? = 1,
         pageSize: Int? = 10

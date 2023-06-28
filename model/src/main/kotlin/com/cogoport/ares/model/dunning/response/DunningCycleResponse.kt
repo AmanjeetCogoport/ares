@@ -10,7 +10,7 @@ import java.sql.Timestamp
 @MappedEntity
 @Introspected
 data class DunningCycleResponse(
-    var id: String?,
+    var id: String,
     var name: String,
     @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
