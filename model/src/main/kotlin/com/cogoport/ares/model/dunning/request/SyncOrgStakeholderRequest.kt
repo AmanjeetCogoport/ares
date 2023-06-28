@@ -15,7 +15,7 @@ data class SyncOrgStakeholderRequest(
     @JsonProperty("organization_stakeholder_id")
     var organizationStakeholderId: UUID?,
     @JsonProperty("organization_stakeholder_type")
-    var organizationStakeholderType: String?,
+    var organizationStakeholderType: String,
     @JsonProperty("organization_id")
     var organizationId: UUID,
     @JsonProperty("organization_segment")

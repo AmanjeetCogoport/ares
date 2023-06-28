@@ -96,46 +96,41 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
+        val organizationStakeholderType = OrganizationStakeholderType.valueOf(
+            syncOrgStakeholderRequest.organizationStakeholderType!!
+                .replace("_", " ").toUpperCase().replace(" ", "_")
+        ).toString()
+
         var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
             organizationId = syncOrgStakeholderRequest.organizationId!!,
-            organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType
+            organizationStakeholderType = organizationStakeholderType
         )
 
         if (organizationStakeholder == null) {
-            val organizationStakeholderType = syncOrgStakeholderRequest.organizationStakeholderType!!
-                .replace("_", " ").toUpperCase().replace(" ", "_")
+
             val organizationSegment = syncOrgStakeholderRequest.organizationSegment!!
                 .replace("_", " ").toUpperCase().replace(" ", "_")
 
-            organizationStakeholder = organizationStakeholderRepo.save(
-                OrganizationStakeholder(
-                    id = null,
-                    organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
-                    organizationStakeholderType = OrganizationStakeholderType.valueOf(organizationStakeholderType),
-                    organizationId = syncOrgStakeholderRequest.organizationId!!,
-                    organizationSegment = OrganizationSegment.valueOf(organizationSegment),
-                    organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
-                    createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
-                    updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
-                    createdAt = null,
-                    updatedAt = null
-                )
+            val organizationStakeholderEntity = OrganizationStakeholder(
+                id = null,
+                organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
+                organizationStakeholderType = organizationStakeholderType,
+                organizationId = syncOrgStakeholderRequest.organizationId!!,
+                organizationSegment = OrganizationSegment.valueOf(organizationSegment).toString(),
+                organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
+                createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                createdAt = null,
+                updatedAt = null
             )
+            organizationStakeholder = organizationStakeholderRepo.save(organizationStakeholderEntity)
         } else {
             var organizationSegment = organizationStakeholder.organizationSegment
             if (syncOrgStakeholderRequest.organizationSegment != null) {
                 organizationSegment = OrganizationSegment.valueOf(
                     syncOrgStakeholderRequest.organizationSegment!!
                         .replace("_", " ").toUpperCase().replace(" ", "_")
-                )
-            }
-
-            var organizationStakeholderType = organizationStakeholder.organizationStakeholderType
-            if (syncOrgStakeholderRequest.organizationStakeholderType != null) {
-                organizationStakeholderType = OrganizationStakeholderType.valueOf(
-                    syncOrgStakeholderRequest.organizationStakeholderType!!
-                        .replace("_", " ").toUpperCase().replace(" ", "_")
-                )
+                ).toString()
             }
 
             var isActive = organizationStakeholder.isActive

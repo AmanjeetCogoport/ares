@@ -59,7 +59,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
             FROM
                 organization_stakeholders
             WHERE
-                organization_id = :organizationId
+                organization_id::UUID = :organizationId
                 AND :organizationStakeholderType is null or organization_stakeholder_type::varchar = :organizationStakeholderType
             LIMIT 1
         """
