@@ -1034,7 +1034,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
                 SELECT tagged_organization_id::VARCHAR, currency,led_currency , sign_flag, amount_curr, pay_curr,amount_loc, pay_loc, transaction_date,due_date,entity_code
                 FROM account_utilizations 
-                WHERE tagged_organization_id IS NOT NULL AND acc_type in (:accType)
+                WHERE tagged_organization_id IS NOT NULL AND acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
                 AND acc_code = 321000

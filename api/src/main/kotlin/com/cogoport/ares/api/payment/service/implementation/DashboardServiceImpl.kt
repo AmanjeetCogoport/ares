@@ -1337,14 +1337,35 @@ class DashboardServiceImpl : DashboardService {
         val accountTypesForDue = listOf(AccountType.PINV.name, AccountType.PREIMB.name)
         val accountTypesForOnAccount = listOf(AccountType.PAY.name, AccountType.BANK.name, AccountType.MISC.name)
         if (request.endDate.isNullOrEmpty()) {
-            request.endDate = now().toString()
-            request.startDate = when (request.timePeriod) {
-                "seven" -> (now().minusDays(7)).toString()
-                "fifteen" -> (now().minusDays(15)).toString()
-                "thirty" -> (now().minusDays(30)).toString()
-                "threeMonth" -> (now().minusDays(90)).toString()
-                "sixMonth" -> (now().minusDays(180)).toString()
-                else -> { now().toString() }
+            val localDate = now()
+            val lastMonth = localDate.minusMonths(1)
+            when (request.timePeriod) {
+                "seven" -> {
+                    request.endDate = localDate.toString()
+                    request.startDate = (now().minusDays(7)).toString()
+                }
+                "fifteen" -> {
+                    request.endDate = localDate.toString()
+                    request.startDate = (now().minusDays(14)).toString()
+                }
+                "thirty" -> {
+                    request.startDate = lastMonth.withDayOfMonth(1).toString()
+                    request.endDate = lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()).toString()
+                }
+                "threeMonth" -> {
+                    val last3Months = localDate.minusMonths(3)
+                    request.startDate = last3Months.withDayOfMonth(1).toString()
+                    request.endDate = lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()).toString()
+                }
+                "sixMonth" -> {
+                    val last6Months = localDate.minusMonths(6)
+                    request.startDate = last6Months.withDayOfMonth(1).toString()
+                    request.endDate = lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()).toString()
+                }
+                else -> {
+                    request.startDate = now().toString()
+                    request.endDate = now().toString()
+                }
             }
         }
         val documentsForOnAccount = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, request.startDate, request.endDate, accountTypesForOnAccount)
