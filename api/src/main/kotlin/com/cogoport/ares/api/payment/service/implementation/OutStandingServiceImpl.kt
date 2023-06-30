@@ -706,9 +706,9 @@ class OutStandingServiceImpl : OutStandingService {
                         val queryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SINV.name, AccountType.SREIMB.name), id)
                         val creditNoteQueryResponse = accountUtilizationRepo.getOutstandingAgeingBucket(entity, listOf(AccountType.SCN.name, AccountType.SREIMBCN.name), id)
                         val onAccountRecQueryResponse = accountUtilizationRepo.getInvoicesOnAccountAgeingBucket(entity, id)
-//                        if (queryResponse.isNullOrEmpty()) {
-//                            return@forEach
-//                        }
+                        if (queryResponse.isNullOrEmpty()) {
+                            return@forEach
+                        }
                         val openInvoiceAgeingBucket = getAgeingBucketForCustomerOutstanding(queryResponse, entity)
                         val creditNoteAgeingBucket = getAgeingBucketForCustomerOutstanding(creditNoteQueryResponse, entity)
                         val onAccountRecAgeingBucket = getAgeingBucketForCustomerOutstanding(onAccountRecQueryResponse, entity)
