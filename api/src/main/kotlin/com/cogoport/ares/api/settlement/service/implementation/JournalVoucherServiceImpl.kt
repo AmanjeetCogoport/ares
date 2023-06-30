@@ -72,6 +72,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             throw AresException(AresError.ERR_1530, "")
         }
         val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
+
+        val accCode = when (accMode == AccMode.AR) {
+            true -> AresModelConstants.AR_ACCOUNT_CODE
+            else -> AresModelConstants.AP_ACCOUNT_CODE
+        }
+
         val accountAccUtilizationRequest = AccountUtilization(
             id = null,
             documentNo = request.id!!,
@@ -101,7 +107,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             category = null,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            accCode = if (request.accMode == AccMode.AR) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
+            accCode = accCode,
             migrated = false,
             settlementEnabled = settlementEnabled
         )
