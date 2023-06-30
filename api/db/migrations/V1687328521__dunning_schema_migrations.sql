@@ -111,7 +111,8 @@ deleted_at 				TIMESTAMP 	DEFAULT NULL,
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 updated_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 created_by 				UUID 		NOT NULL,
-updated_by 				UUID 		NOT NULL
+updated_by 				UUID 		NOT NULL,
+CONSTRAINT constraint_name UNIQUE (registration_number, dunning_cycle_id, deleted_at)
 );
 
 

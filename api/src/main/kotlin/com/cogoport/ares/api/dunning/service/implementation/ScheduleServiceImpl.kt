@@ -120,7 +120,7 @@ class ScheduleServiceImpl(
         val masterExclusionList = masterExceptionRepo.getActiveTradePartyDetailIds()
         val exclusionListForThisCycle = cycleExceptionRepo.getActiveTradePartyDetailIds(executionDetails.dunningCycleId)
         val tradeParties = tradePartyDetails.list.mapNotNull { it?.tradePartyDetailId }
-        val finalTradePartyIds = tradeParties - masterExclusionList.toSet() - exclusionListForThisCycle.toSet()
+        val finalTradePartyIds = tradeParties.toSet() - masterExclusionList.toSet() - exclusionListForThisCycle.toSet()
         finalTradePartyIds.forEach {
             aresMessagePublisher.sendPaymentReminder(
                 PaymentReminderReq(
@@ -146,7 +146,7 @@ class ScheduleServiceImpl(
             createDunningAudit(executionId, tradePartyDetailId, null, false, "template name is not valid")
             return
         }
-
+        // remember to consider logic ,in case of 101 or 301 , data from both indexes i.e 101_301
         val outstandingData = outstandingService.listCustomerDetails(
             CustomerOutstandingRequest(
                 tradePartyDetailId = tradePartyDetailId,
@@ -248,7 +248,7 @@ class ScheduleServiceImpl(
                 else -> throw Error("Severity is Invalid")
             }
 
-        // for tagged state collectionAgency we need to alter cc and recipient
+        // for tagged state collectionAgency we need to alter cc and recipient in future
 
         val variables = when (templateName) {
             DUNNING_NEW_INVOICE_GENERATION_TEMPLATE -> {
@@ -278,8 +278,9 @@ class ScheduleServiceImpl(
         var communicationId: UUID? = null
         try {
             communicationId = railsClient.createCommunication(communicationRequest)
+            createDunningAudit(executionId, tradePartyDetailId, communicationId, true, "")
         } catch (err: Exception) {
-            print(err)
+            createDunningAudit(executionId, tradePartyDetailId, communicationId, false, "something went wrong with create communication$err")
         }
     }
 
