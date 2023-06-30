@@ -1289,7 +1289,7 @@ class DashboardServiceImpl : DashboardService {
                     currencyList.add(doc.currency)
                 }
             }
-            val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, request.currency, transactionDates.map { it.toString() }))
+            val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
             documents.forEach { doc ->
                 val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                 totalReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
@@ -1388,7 +1388,7 @@ class DashboardServiceImpl : DashboardService {
                 }
                 transactionDates = transactionDates.distinct() as ArrayList<Date>
                 currencyList = currencyList.distinct() as ArrayList<String>
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, request.currency, transactionDates.map { it.toString() }))
+                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
                 documentsForDue.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                     invoicesDueAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
@@ -1416,7 +1416,7 @@ class DashboardServiceImpl : DashboardService {
                 }
                 transactionDates = transactionDates.distinct() as ArrayList<Date>
                 currencyList = currencyList.distinct() as ArrayList<String>
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, request.currency, transactionDates.map { it.toString() }))
+                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
                 documentsForOnAccount.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                     onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
