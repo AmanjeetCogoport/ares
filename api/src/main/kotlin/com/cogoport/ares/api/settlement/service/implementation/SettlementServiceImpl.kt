@@ -375,7 +375,7 @@ open class SettlementServiceImpl : SettlementService {
         ) + SettlementServiceHelper().getJvList(SettlementType::class.java)
 
         settledDocuments.forEach {
-            if(request.settlementType in irnAllowedDocuments) {
+            if (request.settlementType in irnAllowedDocuments) {
                 it.irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(
                     it.documentNo.toLong(), "IrnNumber"
                 )?.value.toString()
