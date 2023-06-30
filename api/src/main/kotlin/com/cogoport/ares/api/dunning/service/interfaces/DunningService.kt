@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.dunning.service.interfaces
 
+import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
 import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
@@ -58,4 +59,6 @@ interface DunningService {
     suspend fun monthWiseStatisticsOfAccountUtilization(request: MonthWiseStatisticsOfAccountUtilizationReuest): List<MonthWiseStatisticsOfAccountUtilizationResponse>
 
     suspend fun listSeverityLevelTemplates(): MutableMap<String, String>
+
+    suspend fun saveAndScheduleExecution(dunningCycle: DunningCycle): Long
 }

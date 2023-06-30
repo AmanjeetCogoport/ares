@@ -44,7 +44,6 @@ import jakarta.inject.Singleton
 import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigDecimal
-import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -68,6 +67,7 @@ class ScheduleServiceImpl(
 
     override suspend fun processCycleExecution(request: CycleExecutionProcessReq) {
         val executionId = Hashids.decode(request.scheduleId).firstOrNull() ?: return
+        logger().info("dunning processing started for execution $executionId")
         val executionDetails = dunningExecutionRepo.findById(executionId)
         isValidExecution(executionDetails)
         try {
@@ -89,26 +89,10 @@ class ScheduleServiceImpl(
 
     private suspend fun saveAndScheduleNextDunning(executionDetails: DunningCycleExecution) {
         val dunningCycleDetails = dunningCycleRepo.findById(executionDetails.dunningCycleId)
-        val nextScheduledTime = dunningService.calculateNextScheduleTime(dunningCycleDetails?.scheduleRule!!)
-        val dunningCycleExecutionResponse = dunningExecutionRepo.save(
-            DunningCycleExecution(
-                id = null,
-                dunningCycleId = dunningCycleDetails.id!!,
-                templateId = dunningCycleDetails.templateId!!,
-                status = CycleExecutionStatus.SCHEDULED.toString(),
-                filters = dunningCycleDetails.filters,
-                entityCode = TAGGED_ENTITY_ID_MAPPINGS[dunningCycleDetails.filters.cogoEntityId.toString()]!!,
-                scheduleRule = dunningCycleDetails.scheduleRule,
-                frequency = dunningCycleDetails.frequency,
-                scheduledAt = Timestamp(nextScheduledTime.time),
-                triggerType = dunningCycleDetails.triggerType,
-                deletedAt = dunningCycleDetails.deletedAt,
-                createdBy = dunningCycleDetails.createdBy,
-                updatedBy = dunningCycleDetails.updatedBy,
-                createdAt = null,
-                updatedAt = null
-            )
-        )
+        if (dunningCycleDetails?.triggerType == "ONE_TIME" || dunningCycleDetails?.isActive == false || dunningCycleDetails?.deletedAt != null) {
+            return
+        }
+        dunningService.saveAndScheduleExecution(dunningCycleDetails!!)
     }
 
     private suspend fun fetchOrgsAndSendPaymentReminder(executionDetails: DunningCycleExecution) {
@@ -134,6 +118,7 @@ class ScheduleServiceImpl(
     override suspend fun sendPaymentReminderToTradeParty(request: PaymentReminderReq) {
         val executionId = request.cycleExecutionId
         val tradePartyDetailId = request.tradePartyDetailId
+        logger().info("mail sending process started for execution $executionId and customer $tradePartyDetailId")
         val cycleExecution = dunningExecutionRepo.findById(executionId)
         val entityCode = TAGGED_ENTITY_ID_MAPPINGS[cycleExecution?.filters?.cogoEntityId.toString()]
         val templateData = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list
@@ -278,6 +263,7 @@ class ScheduleServiceImpl(
         var communicationId: UUID? = null
         try {
             communicationId = railsClient.createCommunication(communicationRequest)
+            logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
             createDunningAudit(executionId, tradePartyDetailId, communicationId, true, "")
         } catch (err: Exception) {
             createDunningAudit(executionId, tradePartyDetailId, communicationId, false, "something went wrong with create communication$err")

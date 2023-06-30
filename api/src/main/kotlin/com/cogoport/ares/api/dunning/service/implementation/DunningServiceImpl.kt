@@ -245,27 +245,43 @@ open class DunningServiceImpl(
                     )
                 }
             }
-
             cycleExceptionRepo.saveAll(dunningCycleExceptionList)
         }
+        saveAndScheduleExecution(dunningCycleResponse)
+        auditRepository.save(
+            Audit(
+                id = null,
+                objectType = AuditObjectType.DUNNING_CYCLE.value,
+                objectId = dunningCycleResponse.id,
+                actionName = AuditActionName.CREATE.value,
+                data = dunningCycleResponse,
+                performedBy = dunningCycleResponse.createdBy,
+                performedByUserType = null,
+                createdAt = null
+            )
+        )
+        return dunningCycleResponse.id!!
+    }
 
-        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycleResponse.scheduleRule)
+    override suspend fun saveAndScheduleExecution(dunningCycle: DunningCycle): Long {
+
+        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycle.scheduleRule)
 
         val dunningCycleExecutionResponse = dunningExecutionRepo.save(
             DunningCycleExecution(
                 id = null,
-                dunningCycleId = dunningCycleResponse.id!!,
-                templateId = dunningCycleResponse.templateId!!,
+                dunningCycleId = dunningCycle.id!!,
+                templateId = dunningCycle.templateId!!,
                 status = CycleExecutionStatus.SCHEDULED.toString(),
-                filters = dunningCycleResponse.filters,
-                entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
-                scheduleRule = dunningCycleResponse.scheduleRule,
-                frequency = dunningCycleResponse.frequency,
+                filters = dunningCycle.filters,
+                entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[dunningCycle.filters.cogoEntityId.toString()]!!,
+                scheduleRule = dunningCycle.scheduleRule,
+                frequency = dunningCycle.frequency,
                 scheduledAt = Timestamp(dunningCycleScheduledAt.time),
-                triggerType = dunningCycleResponse.triggerType,
-                deletedAt = dunningCycleResponse.deletedAt,
-                createdBy = dunningCycleResponse.createdBy,
-                updatedBy = dunningCycleResponse.updatedBy,
+                triggerType = dunningCycle.triggerType,
+                deletedAt = dunningCycle.deletedAt,
+                createdBy = dunningCycle.createdBy,
+                updatedBy = dunningCycle.updatedBy,
                 createdAt = null,
                 updatedAt = null
             )
@@ -281,19 +297,6 @@ open class DunningServiceImpl(
         auditRepository.save(
             Audit(
                 id = null,
-                objectType = AuditObjectType.DUNNING_CYCLE.value,
-                objectId = dunningCycleResponse.id,
-                actionName = AuditActionName.CREATE.value,
-                data = dunningCycleResponse,
-                performedBy = dunningCycleResponse.createdBy,
-                performedByUserType = null,
-                createdAt = null
-            )
-        )
-
-        auditRepository.save(
-            Audit(
-                id = null,
                 objectType = AuditObjectType.DUNNING_CYCLE_EXECUTION.value,
                 objectId = dunningCycleExecutionResponse.id,
                 actionName = AuditActionName.CREATE.value,
@@ -303,8 +306,7 @@ open class DunningServiceImpl(
                 createdAt = null
             )
         )
-
-        return dunningCycleResponse.id!!
+        return dunningCycleExecutionResponse.id!!
     }
 
     override suspend fun getCustomersOutstandingAndOnAccount(request: DunningCycleFilters): ResponseList<CustomerOutstandingAndOnAccountResponse> {

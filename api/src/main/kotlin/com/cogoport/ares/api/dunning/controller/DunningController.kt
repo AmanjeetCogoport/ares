@@ -10,6 +10,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
+import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
@@ -33,6 +34,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
+import java.util.Date
 import java.util.UUID
 import javax.validation.Valid
 
@@ -165,5 +167,10 @@ class DunningController(
         return Response<MutableMap<String, String>>().ok(
             dunningService.listSeverityLevelTemplates()
         )
+    }
+
+    @Post("check-schedule-time")
+    suspend fun calculateNextScheduleTime(@Body scheduleRule: DunningScheduleRule): Date {
+        return dunningService.calculateNextScheduleTime(scheduleRule)
     }
 }
