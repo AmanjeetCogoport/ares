@@ -197,7 +197,7 @@ open class ParentJVServiceImpl : ParentJVService {
             if (jvListRequest.category != null) jvListRequest.category!! else null,
             query,
             jvListRequest.page,
-            entityCode!!,
+            listOf(entityCode!!),
             jvListRequest.pageLimit,
             sortType,
             sortBy

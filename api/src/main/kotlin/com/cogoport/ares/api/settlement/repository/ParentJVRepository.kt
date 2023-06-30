@@ -69,7 +69,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         category: String?,
         query: String?,
         page: Int,
-        entityCodes: List<String>,
+        entityCodes: List<Int>,
         pageLimit: Int,
         sortType: String?,
         sortBy: String?
