@@ -538,7 +538,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                     FROM ares.account_utilizations aau
                   INNER JOIN organization_trade_parties otp ON otp.id = aau.trade_party_mapping_id
                   INNER JOIN organizations o ON o.id = otp.organization_id
-                  LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+                  LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
                   WHERE
                     due_date is not null 
                     AND acc_mode = 'AR' 
