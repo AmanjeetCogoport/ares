@@ -292,7 +292,12 @@ open class DunningServiceImpl(
             )
         )
 
-        rabbitMq.delay("ares.dunning.scheduler", request, dunningCycleScheduledAt)
+        val calendar = Calendar.getInstance()
+        calendar.time = dunningCycleScheduledAt
+        calendar.add(Calendar.HOUR_OF_DAY, -5)
+        calendar.add(Calendar.MINUTE, -30)
+        val updatedDate = calendar.time
+        rabbitMq.delay("ares.dunning.scheduler", request, updatedDate)
 
         auditRepository.save(
             Audit(
@@ -307,6 +312,9 @@ open class DunningServiceImpl(
             )
         )
         return dunningCycleExecutionResponse.id!!
+    }
+
+    private fun pushDunningInDelay(timeToProcess: Date) {
     }
 
     override suspend fun getCustomersOutstandingAndOnAccount(request: DunningCycleFilters): ResponseList<CustomerOutstandingAndOnAccountResponse> {
