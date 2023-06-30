@@ -40,7 +40,8 @@ CREATE TYPE CATEGORY AS ENUM ('CYCLE','MANUAL');
     updated_by                        UUID                    NOT NULL,
     is_active                         BOOLEAN 		          NOT NULL   DEFAULT TRUE,
  	created_at                        TIMESTAMP               NOT NULL   DEFAULT now(),
- 	updated_at                        TIMESTAMP               NOT NULL   DEFAULT now()
+ 	updated_at                        TIMESTAMP               NOT NULL   DEFAULT now(),
+ 	CONSTRAINT org_stakeholder_uniqueness UNIQUE (organization_id, organization_stakeholder_type)
  );
 
 CREATE TABLE dunning_cycles (
