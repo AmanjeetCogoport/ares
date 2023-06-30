@@ -536,7 +536,8 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                     aau.led_currency,
                     aau.due_date
                     FROM ares.account_utilizations aau
-                  INNER JOIN organization_trade_parties otp ON otp.id = aau.trade_party_mapping_id
+                  INNER JOIN organization_trade_party_details otpd on otpd.id = aau.organization_id
+                  INNER JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id
                   INNER JOIN organizations o ON o.id = otp.organization_id
                   LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
                   WHERE
