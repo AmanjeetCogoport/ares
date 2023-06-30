@@ -239,17 +239,9 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private fun getSignFlag(type: String): Short {
         return when (type.uppercase()) {
-            "CREDIT" -> {
-                -1
-            }
-
-            "DEBIT" -> {
-                1
-            }
-
-            else -> {
-                throw AresException(AresError.ERR_1009, "JV type")
-            }
+            "CREDIT" -> -1
+            "DEBIT" -> 1
+            else -> throw AresException(AresError.ERR_1009, "JV type")
         }
     }
 
