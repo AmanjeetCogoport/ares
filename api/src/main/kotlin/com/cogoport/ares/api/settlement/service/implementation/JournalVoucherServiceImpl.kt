@@ -101,7 +101,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             category = null,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            accCode = AresModelConstants.AR_ACCOUNT_CODE,
+            accCode = if (request.accMode == AccMode.AR) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
             migrated = false,
             settlementEnabled = settlementEnabled
         )
