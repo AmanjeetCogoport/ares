@@ -466,7 +466,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
-            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
+            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "JV")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
 
             if (parentJVDetails.entityCode == 501) {

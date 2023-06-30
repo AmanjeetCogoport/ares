@@ -2578,7 +2578,6 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    @Transactional
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
@@ -2613,6 +2612,7 @@ open class SettlementServiceImpl : SettlementService {
 
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
                 recordAudits(settlementId, """$nullDoc""", "Documents must be posted on Sage", false)
+                settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
                 return false
             }
 
@@ -2704,7 +2704,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            recordAudits(settlementId, """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganizationResponse.sageOrganizationId}""", "sage serial organization id different in sage db and cogoport db", false)
             throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
         }
 
