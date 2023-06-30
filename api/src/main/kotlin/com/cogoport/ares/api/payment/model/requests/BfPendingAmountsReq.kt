@@ -8,14 +8,14 @@ import javax.validation.constraints.NotNull
 
 @Introspected
 data class BfPendingAmountsReq(
-    var serviceTypes: List<ServiceType>?,
+    var serviceTypes: List<ServiceType>? = null,
     @NotNull
-    var accountMode: AccMode,
-    var buyerType: String?,
+    var accountMode: AccMode? = AccMode.AR,
+    var buyerType: String? = null,
     @JsonFormat(pattern = "yyyy-MM-dd")
-    var startDate: String?,
+    var startDate: String? = null,
     @JsonFormat(pattern = "yyyy-MM-dd")
-    var endDate: String?,
-    var tradeType: List<String>?,
-    var entityCode: MutableList<Int>? = null
+    var endDate: String? = null,
+    var tradeType: List<String>? = null,
+    var entityCode: MutableList<Int>? = mutableListOf(101, 301)
 )

@@ -622,7 +622,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 accMode,
                 request.sortBy,
                 request.sortType,
@@ -639,7 +639,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 request.documentPaymentStatus
             )
 
@@ -1025,6 +1025,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
         var canSettle = true
         stack.forEach {
+            if (it.balanceAmount < BigDecimal.ZERO) canSettle = false
             if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
         }
         return canSettle
@@ -1299,6 +1300,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.VTDS -> listOf(SettlementType.VTDS)
+                SettlementType.CTDS -> listOf(SettlementType.CTDS)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1563,7 +1566,8 @@ open class SettlementServiceImpl : SettlementService {
                         createdBy = request.createdBy,
                         createdByUserType = request.createdByUserType,
                         supportingDocUrl = request.supportingDocUrl,
-                        exchangeRate = payment.exchangeRate
+                        exchangeRate = payment.exchangeRate,
+                        paymentTransactionDate = payment.transactionDate
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1746,7 +1750,8 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy = request.createdBy,
                 createdByUserType = request.createdByUserType,
                 supportingDocUrl = request.supportingDocUrl,
-                exchangeRate = invoice.exchangeRate
+                exchangeRate = invoice.exchangeRate,
+                paymentTransactionDate = payment.transactionDate
             )
             invoice.settledTds += invoiceTds
         }
@@ -1841,7 +1846,8 @@ open class SettlementServiceImpl : SettlementService {
         createdBy: UUID?,
         createdByUserType: String?,
         supportingDocUrl: String?,
-        exchangeRate: BigDecimal?
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
         val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
@@ -1861,7 +1867,8 @@ open class SettlementServiceImpl : SettlementService {
             createdByUserType,
             tdsType,
             invoiceAndBillData,
-            exchangeRate
+            exchangeRate,
+            paymentTransactionDate
         )
 
         createSettlement(
@@ -2096,6 +2103,12 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
+        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)) {
+            SettlementStatus.POSTED
+        } else {
+            SettlementStatus.CREATED
+        }
+
         val settledDoc =
             Settlement(
                 null,
@@ -2116,7 +2129,7 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl,
                 false,
                 sequenceGeneratorImpl.getSettlementNumber(),
-                SettlementStatus.CREATED
+                settlementStatus
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
@@ -2606,12 +2619,12 @@ open class SettlementServiceImpl : SettlementService {
             val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
             var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
@@ -2710,7 +2723,8 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         tdsType: SettlementType?,
         invoiceAndBillData: AccountUtilization?,
-        exchangeRate: BigDecimal?
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date
     ): Long? {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
@@ -2760,7 +2774,7 @@ open class SettlementServiceImpl : SettlementService {
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
             docType = DocType.TDS,
-            transactionDate = invoiceAndBillData?.transactionDate,
+            transactionDate = paymentTransactionDate,
             exchangeRate = exchangeRate
         )
 
@@ -2855,7 +2869,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val request = CreateCommunicationRequest(
             templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
-            performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+            performedByUserId = AresConstants.ARES_USER_ID,
             performedByUserName = "Ares",
             recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
             senderEmail = AresConstants.NO_REPLY,
