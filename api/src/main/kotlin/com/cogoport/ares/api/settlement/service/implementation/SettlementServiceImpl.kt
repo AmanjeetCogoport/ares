@@ -368,6 +368,9 @@ open class SettlementServiceImpl : SettlementService {
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
         settledDocuments.forEach {
+            it.irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(
+                it.documentNo.toLong(), "IrnNumber"
+            )?.value.toString()
             it.documentNo = Hashids.encode(it.documentNo.toLong())
             it.id = it.id?.let { it1 -> Hashids.encode(it1.toLong()) }
         }

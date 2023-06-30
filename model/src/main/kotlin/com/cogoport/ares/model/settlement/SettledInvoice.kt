@@ -37,5 +37,6 @@ data class SettledInvoice(
     var sid: String?,
     var nostroAmount: BigDecimal,
     var accMode: AccMode,
-    var settlementStatus: SettlementStatus
+    var settlementStatus: SettlementStatus,
+    var irnNumber: String?
 )
