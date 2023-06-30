@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.AresConstants.ARES_USER_ID
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
 import com.cogoport.ares.api.common.client.AuthClient
@@ -975,7 +976,7 @@ open class DunningServiceImpl(
         val scheduleMinute = extractHourAndMinute(scheduleRule.scheduleTime).get("minute")!!
 
         val scheduleTimeStampInGMT: Timestamp = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
-            DunningExecutionFrequency.ONE_TIME -> calculateNextScheduleTimeForOneTime(scheduleRule.oneTimeDate!!, scheduleHour, scheduleMinute)
+            DunningExecutionFrequency.ONE_TIME -> calculateNextScheduleTimeForOneTime(scheduleRule, scheduleRule.oneTimeDate!!, scheduleHour, scheduleMinute)
             DunningExecutionFrequency.DAILY -> calculateNextScheduleTimeForDaily(scheduleHour, scheduleMinute)
             DunningExecutionFrequency.WEEKLY -> calculateScheduleTimeForWeekly(scheduleRule.week!!, scheduleHour, scheduleMinute)
             DunningExecutionFrequency.MONTHLY -> calculateScheduleTimeForMonthly(scheduleRule.dayOfMonth!!, scheduleHour, scheduleMinute)
@@ -1004,7 +1005,7 @@ open class DunningServiceImpl(
         )
     }
 
-    private suspend fun calculateNextScheduleTimeForOneTime(scheduleDate: Instant, scheduleHour: String, scheduleMinute: String): Timestamp {
+    private suspend fun calculateNextScheduleTimeForOneTime(scheduleRule: DunningScheduleRule, scheduleDate: Instant, scheduleHour: String, scheduleMinute: String): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
 
         scheduleDateCal.timeInMillis = Timestamp.from(scheduleDate).time
@@ -1012,7 +1013,11 @@ open class DunningServiceImpl(
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-        if (scheduleDateCal.timeInMillis < System.currentTimeMillis()) {
+        val localTimestampWRTZone = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+        )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_FOR_PROCESS_DUNNING)
+
+        if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
         }
 
