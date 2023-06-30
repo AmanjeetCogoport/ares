@@ -215,7 +215,7 @@ object AresConstants {
         TimeZone.VNM to 25200000.toLong()
     )
 
-    val EXTRA_TIME_FOR_PROCESS_DUNNING = 3600
+    val EXTRA_TIME_TO_PROCESS_DATA_DUNNING = 3600
 
     const val MAX_DAY_IN_MONTH_FOR_DUNNING: Int = 28
 
