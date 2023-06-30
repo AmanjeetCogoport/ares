@@ -239,17 +239,9 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private fun getSignFlag(type: String): Short {
         return when (type.uppercase()) {
-            "CREDIT" -> {
-                -1
-            }
-
-            "DEBIT" -> {
-                1
-            }
-
-            else -> {
-                throw AresException(AresError.ERR_1009, "JV type")
-            }
+            "CREDIT" -> -1
+            "DEBIT" -> 1
+            else -> throw AresException(AresError.ERR_1009, "JV type")
         }
     }
 
@@ -474,7 +466,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
-            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
+            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "JV")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
 
             if (parentJVDetails.entityCode == 501) {

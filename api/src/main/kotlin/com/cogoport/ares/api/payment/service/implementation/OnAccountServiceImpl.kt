@@ -463,10 +463,10 @@ open class OnAccountServiceImpl : OnAccountService {
 //        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
 
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
-        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "Payment")
 
         if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) throw AresException(AresError.ERR_1010, "")
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "Account Utilization")
         return updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
     }
 
