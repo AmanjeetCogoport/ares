@@ -4,6 +4,8 @@ import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.common.models.ExchangeResponse
 import com.cogoport.ares.api.common.models.ExchangeResponseForPeriod
+import com.cogoport.ares.model.common.ExchangeRateRequest
+import com.cogoport.ares.model.common.ExchangeRateResponseByDate
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
@@ -25,4 +27,7 @@ interface ExchangeClient {
 
     @Post("/avg-rate")
     suspend fun getExchangeRateForPeriod(@Body request: HashMap<String, List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
+
+    @Get("/exchange-rate")
+    suspend fun getExchangeRates(request: ExchangeRateRequest): MutableList<ExchangeRateResponseByDate>
 }

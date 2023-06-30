@@ -12,5 +12,5 @@ data class SupplierPaymentStatsRequest(
     var endDate: String? = null,
     var timePeriod: String? = null,
     var entityCode: Int? = null,
-    var currency: String? = null
+    var currency: String
 )
