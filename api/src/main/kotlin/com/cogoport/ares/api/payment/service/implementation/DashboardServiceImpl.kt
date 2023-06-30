@@ -1219,7 +1219,7 @@ class DashboardServiceImpl : DashboardService {
                 true -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value)
                 else -> listOf(companyType.value)
             }
-            else -> null
+            else -> listOf(CompanyType.LONGTAIL.value, CompanyType.MIDSIZE.value, CompanyType.ENTERPRISE.value, CompanyType.CP.value)
         }
     }
 }

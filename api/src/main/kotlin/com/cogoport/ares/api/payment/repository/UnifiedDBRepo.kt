@@ -526,34 +526,45 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            select coalesce(
-                case 
-                WHEN due_date >= now()::date then 'Not Due'
-                WHEN (now()::date - due_date) between 1 AND 30 then '1-30'
-                WHEN (now()::date - due_date) between 31 AND 60 then '31-60'
-                WHEN (now()::date - due_date) between 61 AND 90 then '61-90'
-                WHEN (now()::date - due_date) between 91 AND 180 then '91-180'
-                WHEN (now()::date - due_date) between 181 AND 365 then '181-365'
-                WHEN (now()::date - due_date) > 365 then '>365' 
-                end
-            ) as ageing_duration, 
-            sum(sign_flag * (amount_loc- pay_loc)) as amount,
+            WITH z AS (
+                  SELECT 
+                    distinct 
+                    aau.id,
+                    aau.amount_loc,
+                    aau.pay_loc,
+                    aau.sign_flag,
+                    aau.led_currency,
+                    aau.due_date
+                    FROM ares.account_utilizations aau
+                  INNER JOIN organization_trade_parties otp ON otp.id = aau.trade_party_mapping_id
+                  INNER JOIN organizations o ON o.id = otp.organization_id
+                  LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
+                  WHERE
+                    due_date is not null 
+                    AND acc_mode = 'AR' 
+                    AND acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                    AND document_status in ('FINAL') 
+                    AND deleted_at is null
+                    AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
+                    AND (COALESCE(:companyType) is null OR los.id is null OR los.segment in (:companyType))
+                    AND (:serviceType is null OR aau.service_type = :serviceType)
+                    AND ( aau.entity_code = :entityCode)
+                  )
+            SELECT 
+            coalesce(
+                    case 
+                    WHEN due_date >= now()::date then 'Not Due'
+                    WHEN (now()::date - due_date) between 1 AND 30 then '1-30'
+                    WHEN (now()::date - due_date) between 31 AND 60 then '31-60'
+                    WHEN (now()::date - due_date) between 61 AND 90 then '61-90'
+                    WHEN (now()::date - due_date) between 91 AND 180 then '91-180'
+                    WHEN (now()::date - due_date) between 181 AND 365 then '181-365'
+                    WHEN (now()::date - due_date) > 365 then '>365' 
+                    end
+            ) as ageing_duration,
+            sum(sign_flag*(amount_loc-pay_loc)) as amount,
             led_currency as dashboard_currency
-            from ares.account_utilizations aau
-            INNER JOIN organization_trade_parties otp on otp.id = aau.trade_party_mapping_id
-            INNER JOIN organizations o on o.id = otp.organization_id
-            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE 
-            due_date is not null 
-            AND acc_mode = 'AR' 
-            AND 
-            acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
-            AND document_status in ('FINAL') 
-            AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
-            AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
-            AND (:serviceType is null OR aau.service_type = :serviceType)
-            AND ( aau.entity_code = :entityCode)
+            FROM z
             GROUP BY ageing_duration, dashboard_currency
             ORDER BY ageing_duration
         """
