@@ -13,6 +13,7 @@ import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.balances.GetOpeningBalances
+import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -1182,4 +1183,19 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                document_value,
+                amount_curr,
+                pay_curr
+            FROM
+                account_utilizations
+            where
+                document_value in (:invoiceNumbers)
+        """
+    )
+    suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>): List<InvoiceBalanceResponse>?
 }

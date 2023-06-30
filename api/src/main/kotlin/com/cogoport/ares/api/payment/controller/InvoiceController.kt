@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
+import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
@@ -13,6 +14,7 @@ import io.micronaut.http.annotation.Delete
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Put
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import javax.validation.Valid
@@ -60,5 +62,10 @@ class InvoiceController {
     @Put("/scheduler/delete-from-ares")
     suspend fun updateInvoicesAmountMismatch() {
         return scheduler.deleteInvoicesNotPresentInPlutus()
+    }
+
+    @Get("/balance-amount")
+    suspend fun getInvoiceBalanceAmount(@QueryValue("invoiceNumbers") invoiceNumbers: List<String>): List<InvoiceBalanceResponse>? {
+        return accUtilService.getInvoiceBalanceAmount(invoiceNumbers)
     }
 }
