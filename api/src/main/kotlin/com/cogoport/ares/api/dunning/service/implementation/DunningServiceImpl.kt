@@ -1046,7 +1046,7 @@ open class DunningServiceImpl(
         )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt() ||
-            (todayCal.get(Calendar.HOUR) <= scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt())
+            (todayCal.get(Calendar.HOUR_OF_DAY) <= scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt())
         ) {
             todayCal.add(Calendar.DAY_OF_MONTH, 1)
         }
