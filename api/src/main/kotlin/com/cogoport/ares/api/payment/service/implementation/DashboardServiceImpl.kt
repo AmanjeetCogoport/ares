@@ -1273,8 +1273,8 @@ class DashboardServiceImpl : DashboardService {
         val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
         if (documents.isEmpty()) throw AresException(AresError.ERR_1005, "")
-        val transactionDates = mutableListOf<Date>()
-        val currencyList = mutableListOf<String>()
+        var transactionDates = mutableListOf<Date>()
+        var currencyList = mutableListOf<String>()
         var totalReceivableAmount = BigDecimal.ZERO
         var unpaidReceivableAmount = BigDecimal.ZERO
         var partialPaidReceivableAmount = BigDecimal.ZERO
@@ -1289,37 +1289,40 @@ class DashboardServiceImpl : DashboardService {
                     currencyList.add(doc.currency)
                 }
             }
-            val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
+            currencyList = ArrayList(currencyList.distinct())
+            transactionDates = ArrayList(transactionDates.distinct())
+
+            val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
             documents.forEach { doc ->
-                val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                totalReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                totalReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    unpaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    unpaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    partialPaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    partialPaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
                 }
             }
         } else {
             documents.forEach {
-                totalReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
+                totalReceivableAmount += (it?.amountLoc!! - it.payLoc)
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach {
-                    unpaidReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
+                    unpaidReceivableAmount += (it?.amountLoc!! - it.payLoc)
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach {
-                    partialPaidReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
+                    partialPaidReceivableAmount += (it?.amountLoc!! - it.payLoc)
                 }
             }
         }
@@ -1387,15 +1390,15 @@ class DashboardServiceImpl : DashboardService {
                     }
                 }
                 transactionDates = transactionDates.distinct() as ArrayList<Date>
-                currencyList = currencyList.distinct() as ArrayList<String>
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
+                currencyList = ArrayList(currencyList.distinct())
+                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, arrayListOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
                 documentsForDue.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    invoicesDueAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    invoicesDueAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
                 }
             } else {
                 documentsForDue.forEach {
-                    invoicesDueAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
+                    invoicesDueAmount += (it?.amountLoc!! - it.payLoc)
                 }
             }
             invoiceDueStats = AmountAndCount(invoicesDueAmount, documentsForDue.size)
@@ -1415,10 +1418,10 @@ class DashboardServiceImpl : DashboardService {
                     }
                 }
                 transactionDates = transactionDates.distinct() as ArrayList<Date>
-                currencyList = currencyList.distinct() as ArrayList<String>
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { it.toString() }))
+                currencyList = ArrayList(currencyList.distinct())
+                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
                 documentsForOnAccount.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == doc?.transactionDate.toString() && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                     onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             } else {
