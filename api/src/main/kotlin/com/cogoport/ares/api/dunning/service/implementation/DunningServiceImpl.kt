@@ -1004,9 +1004,9 @@ open class DunningServiceImpl(
     }
 
     private suspend fun calculateNextScheduleTimeForOneTime(
-            scheduleRule: DunningScheduleRule,
-            scheduleHour: String,
-            scheduleMinute: String
+        scheduleRule: DunningScheduleRule,
+        scheduleHour: String,
+        scheduleMinute: String
     ): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
 
@@ -1027,13 +1027,13 @@ open class DunningServiceImpl(
     }
 
     private suspend fun calculateNextScheduleTimeForDaily(
-            scheduleRule: DunningScheduleRule,
-            scheduleHour: String,
-            scheduleMinute: String
+        scheduleRule: DunningScheduleRule,
+        scheduleHour: String,
+        scheduleMinute: String
     ): Timestamp {
         val todayCal = Calendar.getInstance()
         todayCal.timeInMillis = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
         )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt() ||
