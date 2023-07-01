@@ -293,8 +293,8 @@ open class DunningServiceImpl(
 
         val calendar = Calendar.getInstance()
         calendar.time = dunningCycleScheduledAt
-        calendar.add(Calendar.HOUR_OF_DAY, -5)
-        calendar.add(Calendar.MINUTE, -30)
+//        calendar.add(Calendar.HOUR_OF_DAY, -5)
+//        calendar.add(Calendar.MINUTE, -30)
         val updatedDate = calendar.time
         rabbitMq.delay("ares.dunning.scheduler", request, updatedDate)
 
