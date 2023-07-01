@@ -1040,7 +1040,7 @@ open class DunningServiceImpl(
         )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (
-                todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
+            todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
         ) {
             println("********************** Amanjeet Kumar ***************************")
             println("todayCal : $todayCal")
