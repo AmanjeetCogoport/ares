@@ -293,8 +293,6 @@ open class DunningServiceImpl(
 
         val calendar = Calendar.getInstance()
         calendar.time = dunningCycleScheduledAt
-//        calendar.add(Calendar.HOUR_OF_DAY, -5)
-//        calendar.add(Calendar.MINUTE, -30)
         val updatedDate = calendar.time
         rabbitMq.delay("ares.dunning.scheduler", request, updatedDate)
 
@@ -1018,9 +1016,11 @@ open class DunningServiceImpl(
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-        val localTimestampWRTZone = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-        )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        val localTimestampWRTZone = System.currentTimeMillis().minus(
+            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+            ) ?: throw AresException(AresError.ERR_1002, "")
+        )
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
