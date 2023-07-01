@@ -368,14 +368,8 @@ open class SettlementServiceImpl : SettlementService {
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
 
-        val irnAllowedDocuments = listOf(
-            SettlementType.SCN,
-            SettlementType.CTDS,
-            SettlementType.REC,
-        ) + SettlementServiceHelper().getJvList(SettlementType::class.java)
-
         settledDocuments.forEach {
-            if (request.settlementType in irnAllowedDocuments) {
+            if (it.accountType in listOf(AccountType.SINV.name, AccountType.SCN.name)) {
                 it.irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(
                     it.documentNo.toLong(), "IrnNumber"
                 )?.value.toString()
