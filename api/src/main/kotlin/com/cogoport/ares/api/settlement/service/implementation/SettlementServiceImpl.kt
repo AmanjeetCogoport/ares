@@ -367,13 +367,7 @@ open class SettlementServiceImpl : SettlementService {
         // Pagination Data
         val totalRecords =
             settlementRepository.countSettlement(request.documentNo.toLong(), request.settlementType)
-
         settledDocuments.forEach {
-            if (it.accountType in listOf(AccountType.SINV.name, AccountType.SCN.name)) {
-                it.irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(
-                    it.documentNo.toLong(), "IrnNumber"
-                )?.value.toString()
-            }
             it.documentNo = Hashids.encode(it.documentNo.toLong())
             it.id = it.id?.let { it1 -> Hashids.encode(it1.toLong()) }
         }
