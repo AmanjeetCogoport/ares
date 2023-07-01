@@ -74,6 +74,7 @@ import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -2878,5 +2879,34 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         aresMessagePublisher.sendEmail(request)
+    }
+
+    override suspend fun getSettlementList(request: SettlementHistoryRequest): ResponseList<SettlementListDoc?> {
+        val possibleAccTypes = stringAccountTypes(request)
+
+        val settlementDocs = settlementRepository.getSettlementList(
+            request.orgId!!,
+            possibleAccTypes,
+            request.page,
+            request.pageLimit,
+            request.query,
+            request.entityCode?.let { listOf(it) },
+            request.sortBy,
+            request.sortType
+        )
+
+        val totalRecords = settlementRepository.getSettlementCount(
+            request.orgId!!,
+            possibleAccTypes,
+            request.query,
+            request.entityCode?.let { listOf(it) }
+        )
+
+        return ResponseList(
+            list = settlementDocs,
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
+            totalRecords,
+            pageNo = request.page
+        )
     }
 }

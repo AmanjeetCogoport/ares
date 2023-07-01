@@ -13,6 +13,7 @@ import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
@@ -66,4 +67,6 @@ interface SettlementService {
     suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID)
 
     suspend fun sendEmailSettlementsMatchingFailed(url: String)
+
+    suspend fun getSettlementList(request: SettlementHistoryRequest): ResponseList<SettlementListDoc?>
 }

@@ -24,6 +24,7 @@ import com.cogoport.ares.model.settlement.SettlementInvoiceRequest
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementKnockoffRequest
 import com.cogoport.ares.model.settlement.SettlementKnockoffResponse
+import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -212,5 +213,14 @@ class SettlementController {
     suspend fun cronSettlementMatchingFailedOnSageEmail(): HttpResponse<Map<String, String>> {
         scheduler.settlementMatchingFailedOnSageEmail()
         return HttpResponse.ok(mapOf("status" to "ok"))
+    }
+
+    @Auth
+    @Get("/list{?request*}")
+    suspend fun getSettlementList(@Valid request: SettlementHistoryRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<SettlementListDoc?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        request.sortBy = request.sortBy ?: "settlementDate"
+        request.sortType = request.sortType ?: "Desc"
+        return Response<ResponseList<SettlementListDoc?>>().ok(settlementService.getSettlementList(request))
     }
 }

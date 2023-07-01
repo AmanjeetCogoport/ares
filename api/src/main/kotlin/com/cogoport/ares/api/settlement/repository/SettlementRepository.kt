@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
+import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
@@ -528,4 +529,172 @@ ORDER BY
         """
     )
     suspend fun markingSettlementAsDeleted(sourceIds: List<Long>, sourceTypes: List<String>)
+
+    @NewSpan
+    @Query(
+        """
+        WITH z AS (
+            SELECT
+                s.id,
+                s.amount,
+                s.led_amount,
+                s.settlement_status,
+                s.currency,
+                s.led_currency,
+                s.settlement_date,
+                aau.document_value AS destination_document_value,
+                aau1.document_value AS source_document_value,
+                aau.organization_id,
+                aau.entity_code,
+                s.deleted_at,
+                aau.deleted_at,
+                aau.acc_type AS source_acc_type,
+                aau1.acc_type AS destination_acc_type
+            FROM
+                settlements s
+                LEFT JOIN account_utilizations aau
+                    ON s.destination_id = aau.document_no
+                    AND s.destination_type::varchar = aau.acc_type::varchar
+                JOIN account_utilizations aau1
+                    ON s.source_id = aau1.document_no
+                    AND s.source_type::varchar = aau1.acc_type::varchar
+            WHERE
+                s.deleted_at IS NULL
+                AND aau.deleted_at IS NULL
+                AND aau1.deleted_at IS NULL
+                AND aau.document_status != 'DELETED'::document_status
+                AND aau1.document_status != 'DELETED'::document_status
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE WHEN :sortBy = 'amount' THEN s.amount
+                         WHEN :sortBy = 'ledAmount' THEN s.led_amount
+                         WHEN :sortBy = 'settlementDate' THEN EXTRACT(epoch FROM s.settlement_date)::numeric
+                    END
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'amount' THEN s.amount
+                         WHEN :sortBy = 'ledAmount' THEN s.led_amount
+                         WHEN :sortBy = 'settlementDate' THEN EXTRACT(epoch FROM s.settlement_date)::numeric
+                    END        
+            END 
+            Asc
+            )
+            SELECT DISTINCT
+            id,
+            source_document_value,
+            destination_document_value,
+            settlement_date,
+            entity_code,
+            amount,
+            led_amount,
+            currency,
+            led_currency
+            FROM
+            z
+            WHERE
+            (
+                COALESCE(:orgIds) IS NULL
+                OR z.organization_id IN (:orgIds)
+            )
+            AND (
+                :query IS NULL
+                OR (
+                    z.source_document_value ILIKE (:query || '%')
+                    OR z.destination_document_value ILIKE (:query || '%')
+                )
+            )
+            AND (
+                COALESCE(:entityCode) IS NULL
+                OR z.entity_code IN (:entityCode)
+            )
+            AND (
+                COALESCE(:accTypes) IS NULL
+                OR (
+                    z.source_acc_type::VARCHAR IN (:accTypes)
+                    OR z.destination_acc_type::VARCHAR IN (:accTypes)
+                )
+            )
+            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
+            """
+    )
+    suspend fun getSettlementList(
+        orgIds: List<UUID>,
+        accTypes: List<String>,
+        pageIndex: Int?,
+        pageSize: Int?,
+        query: String?,
+        entityCode: List<Int>?,
+        sortBy: String?,
+        sortType: String?
+    ): List<SettlementListDoc>
+
+    @NewSpan
+    @Query(
+        """
+            WITH z AS (
+            SELECT
+                s.id,
+                s.amount,
+                s.led_amount,
+                s.settlement_status,
+                s.currency,
+                s.led_currency,
+                s.settlement_date,
+                aau.document_value AS destination_document_value,
+                aau1.document_value AS source_document_value,
+                aau.organization_id,
+                aau.entity_code,
+                s.deleted_at,
+                aau.deleted_at,
+                aau.acc_type AS source_acc_type,
+                aau1.acc_type AS destination_acc_type
+            FROM
+                settlements s
+                LEFT JOIN account_utilizations aau
+                    ON s.destination_id = aau.document_no
+                    AND s.destination_type::varchar = aau.acc_type::varchar
+                JOIN account_utilizations aau1
+                    ON s.source_id = aau1.document_no
+                    AND s.source_type::varchar = aau1.acc_type::varchar
+            WHERE
+                s.deleted_at IS NULL
+                AND aau.deleted_at IS NULL
+                AND aau1.deleted_at IS NULL
+                AND aau.document_status != 'DELETED'::document_status
+                AND aau1.document_status != 'DELETED'::document_status
+            )
+            SELECT COUNT(DISTINCT(z.id)) FROM 
+            z
+            WHERE
+            (
+                COALESCE(:orgIds) IS NULL
+                OR z.organization_id IN (:orgIds)
+            )
+            AND (
+                :query IS NULL
+                OR (
+                    z.source_document_value ILIKE (:query || '%')
+                    OR z.destination_document_value ILIKE (:query || '%')
+                )
+            )
+            AND (
+                COALESCE(:entityCode) IS NULL
+                OR z.entity_code IN (:entityCode)
+            )
+            AND (
+                COALESCE(:accTypes) IS NULL
+                OR (
+                    z.source_acc_type::VARCHAR IN (:accTypes)
+                    OR z.destination_acc_type::VARCHAR IN (:accTypes)
+                )
+            )
+        """
+    )
+    suspend fun getSettlementCount(
+        orgIds: List<UUID>,
+        accTypes: List<String>,
+        query: String?,
+        entityCode: List<Int>?
+    ): Long
 }
