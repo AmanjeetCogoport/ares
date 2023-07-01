@@ -1039,18 +1039,11 @@ open class DunningServiceImpl(
             AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
         )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        val localTimestampWRTZone = System.currentTimeMillis().minus(
-            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-            ) ?: throw AresException(AresError.ERR_1002, "")
-        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-
-        if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt() ||
-            (todayCal.get(Calendar.HOUR_OF_DAY) <= scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt())
+        if (
+                todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
         ) {
             println("********************** Amanjeet Kumar ***************************")
             println("todayCal : $todayCal")
-            println("localTimestampWRTZone: $localTimestampWRTZone")
             println("Hour : $scheduleHour , Minute : $scheduleMinute")
             println("hour of day: ${todayCal.get(Calendar.HOUR_OF_DAY)}")
             todayCal.add(Calendar.DAY_OF_MONTH, 1)
