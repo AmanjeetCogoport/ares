@@ -1035,15 +1035,15 @@ open class DunningServiceImpl(
         scheduleMinute: String
     ): Timestamp {
         val todayCal = Calendar.getInstance()
-//        todayCal.timeInMillis = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-//            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-//        )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        todayCal.timeInMillis = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+        )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        todayCal.timeInMillis = System.currentTimeMillis().minus(
-            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-            ) ?: throw AresException(AresError.ERR_1002, "")
-        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+//        todayCal.timeInMillis = System.currentTimeMillis().minus(
+//            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+//                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+//            ) ?: throw AresException(AresError.ERR_1002, "")
+//        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt() ||
             (todayCal.get(Calendar.HOUR_OF_DAY) <= scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt())
