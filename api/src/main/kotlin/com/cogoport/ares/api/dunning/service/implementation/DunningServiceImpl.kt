@@ -982,9 +982,9 @@ open class DunningServiceImpl(
         }
 
         val actiualTimestampInRespectiveTimeZone = scheduleTimeStampInGMT.time?.minus(
-                AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                        AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-                ) ?: throw AresException(AresError.ERR_1002, "")
+            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+            ) ?: throw AresException(AresError.ERR_1002, "")
         )
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
