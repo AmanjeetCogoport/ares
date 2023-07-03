@@ -1034,11 +1034,11 @@ open class DunningServiceImpl(
             ) ?: throw AresException(AresError.ERR_1002, "")
         )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        println("************** localTimestampWRTZone1 : $localTimestampWRTZone **************")
+        println("************** localTimestampWRTZone1 : ${Timestamp(localTimestampWRTZone)} **************")
 
         localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        println("************** localTimestampWRTZone2 : $localTimestampWRTZone **************")
+        println("************** localTimestampWRTZone2 : ${Timestamp(localTimestampWRTZone)} **************")
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
