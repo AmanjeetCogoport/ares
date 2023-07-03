@@ -709,6 +709,18 @@ open class DunningServiceImpl(
             throw AresException(AresError.ERR_1003, "")
         }
 
+        if (FREQUENCY.valueOf(request.scheduleRule.dunningExecutionFrequency) == FREQUENCY.ONE_TIME) {
+            request.scheduleRule.oneTimeDate = Timestamp(
+                request.scheduleRule.oneTimeDate!!.time.plus(
+                    AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+                        AresConstants.TimeZone.valueOf(request.scheduleRule.scheduleTimeZone)
+                    ) ?: throw AresException(AresError.ERR_1002, "")
+                )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+            )
+        }
+
+        println("************** UpdateOneTimeDate : ${request.scheduleRule.oneTimeDate} **************")
+
         dunningExecutionRepo.cancelCycleExecution(
             dunningCycleExecution.id!!,
             request.updatedBy,
@@ -1034,11 +1046,7 @@ open class DunningServiceImpl(
             ) ?: throw AresException(AresError.ERR_1002, "")
         )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        println("************** localTimestampWRTZone1 : ${Timestamp(localTimestampWRTZone)} **************")
-
         localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-
-        println("************** localTimestampWRTZone2 : ${Timestamp(localTimestampWRTZone)} **************")
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
