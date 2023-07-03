@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
+import java.sql.Timestamp
 import java.time.DayOfWeek
-import java.time.Instant
 
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -22,5 +22,5 @@ data class DunningScheduleRule(
     @JsonProperty("dayOfMonth")
     var dayOfMonth: Int?,
     @JsonProperty("oneTimeDate")
-    var oneTimeDate: Instant?
+    var oneTimeDate: Timestamp?
 )

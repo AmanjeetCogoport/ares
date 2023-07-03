@@ -193,6 +193,16 @@ open class DunningServiceImpl(
             throw AresException(AresError.ERR_1003, "")
         }
 
+        if (FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME) {
+            createDunningCycleRequest.scheduleRule.oneTimeDate = Timestamp(
+                createDunningCycleRequest.scheduleRule.oneTimeDate!!.time.minus(
+                    AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+                        AresConstants.TimeZone.valueOf(createDunningCycleRequest.scheduleRule.scheduleTimeZone)
+                    ) ?: throw AresException(AresError.ERR_1002, "")
+                )
+            )
+        }
+
         val dunningCycleResponse = dunningCycleRepo.save(
             DunningCycle(
                 id = null,
@@ -200,7 +210,7 @@ open class DunningServiceImpl(
                 cycle_type = DunningCycleType.valueOf(createDunningCycleRequest.cycle_type).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
                 frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
-                severityLevel = createDunningCycleRequest.severityLevel,
+                severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL.get(SeverityEnum.valueOf(createDunningCycleRequest.severityLevel))!!,
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
@@ -1011,16 +1021,18 @@ open class DunningServiceImpl(
     ): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
 
-        scheduleDateCal.timeInMillis = Timestamp.from(scheduleRule.oneTimeDate!!).time
+        scheduleDateCal.timeInMillis = scheduleRule.oneTimeDate!!.time
 
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-        val localTimestampWRTZone = System.currentTimeMillis().minus(
-            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-            ) ?: throw AresException(AresError.ERR_1002, "")
-        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+//        val localTimestampWRTZone = System.currentTimeMillis().minus(
+//            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+//                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+//            ) ?: throw AresException(AresError.ERR_1002, "")
+//        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+
+        val localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
@@ -1042,10 +1054,6 @@ open class DunningServiceImpl(
         if (
             todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
         ) {
-            println("********************** Amanjeet Kumar ***************************")
-            println("todayCal : $todayCal")
-            println("Hour : $scheduleHour , Minute : $scheduleMinute")
-            println("hour of day: ${todayCal.get(Calendar.HOUR_OF_DAY)}")
             todayCal.add(Calendar.DAY_OF_MONTH, 1)
         }
 
@@ -1062,8 +1070,7 @@ open class DunningServiceImpl(
         if (
             !(
                 (todayCal.get(Calendar.DAY_OF_WEEK) == (week.ordinal + 1)) &&
-                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt()) &&
-                    (todayCal.get(Calendar.MINUTE) < scheduleMinute.toInt())
+                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt())
                 )
         ) {
             while (todayCal.get(Calendar.DAY_OF_WEEK) != (week.ordinal + 1)) {

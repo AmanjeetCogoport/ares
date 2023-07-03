@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.api.dunning.model.SeverityEnum
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
@@ -301,5 +302,11 @@ object AresConstants {
         "vivek.garg@cogoport.com",
         "shikhar.tyagi@cogoport.com",
         "suhas.latelwar@cogoport.com"
+    )
+
+    val DUNNING_SEVERITY_LEVEL: Map<SeverityEnum, Int> = mapOf(
+        SeverityEnum.LOW to 1,
+        SeverityEnum.MEDIUM to 2,
+        SeverityEnum.HIGH to 3
     )
 }
