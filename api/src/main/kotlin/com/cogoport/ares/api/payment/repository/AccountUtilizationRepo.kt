@@ -563,7 +563,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND (amount_curr - pay_curr) > 1
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
