@@ -551,7 +551,9 @@ ORDER BY
                 aau1.acc_type AS source_acc_type,
                 aau.acc_type AS destination_acc_type,
                 s.source_id,
-                s.destination_id
+                s.destination_id,
+                aau.amount_loc as destination_invoice_amount,
+                (aau.amount_loc - aau.pay_loc) as destination_open_invoice_amount
             FROM
                 settlements s
                 LEFT JOIN account_utilizations aau
@@ -570,6 +572,8 @@ ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'amount' THEN s.amount
                          WHEN :sortBy = 'ledAmount' THEN s.led_amount
+                         WHEN :sortBy = 'destinationOpenInvoiceAmount' THEN (aau.amount_loc - aau.pay_loc)
+                         WHEN :sortBy = 'destinationInvoiceAmount' THEN aau.amount_loc
                          WHEN :sortBy = 'settlementDate' THEN EXTRACT(epoch FROM s.settlement_date)::numeric
                     END
             END 
@@ -577,6 +581,8 @@ ORDER BY
             CASE WHEN :sortType = 'Asc' THEN
                     CASE WHEN :sortBy = 'amount' THEN s.amount
                          WHEN :sortBy = 'ledAmount' THEN s.led_amount
+                         WHEN :sortBy = 'destinationOpenInvoiceAmount' THEN (aau.amount_loc - aau.pay_loc)
+                         WHEN :sortBy = 'destinationInvoiceAmount' THEN aau.amount_loc
                          WHEN :sortBy = 'settlementDate' THEN EXTRACT(epoch FROM s.settlement_date)::numeric
                     END        
             END 
@@ -597,7 +603,9 @@ ORDER BY
             '' as source_irn_number,
             '' as destination_irn_number,
             source_id,
-            destination_id
+            destination_id,
+            destination_invoice_amount,
+            destination_open_invoice_amount
             FROM
             z
             WHERE

@@ -23,5 +23,7 @@ data class SettlementListDoc(
     val sourceAccType: AccountType,
     val destinationAccType: AccountType,
     val sourceId: Long,
-    val destinationId: Long
+    val destinationId: Long,
+    val destinationOpenInvoiceAmount: BigDecimal,
+    val destinationInvoiceAmount: BigDecimal
 )
