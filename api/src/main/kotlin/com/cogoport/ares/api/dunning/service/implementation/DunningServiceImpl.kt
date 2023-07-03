@@ -200,7 +200,7 @@ open class DunningServiceImpl(
                 cycle_type = DunningCycleType.valueOf(createDunningCycleRequest.cycle_type).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
                 frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
-                severityLevel = createDunningCycleRequest.severityLevel,
+                severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL.get(SeverityEnum.valueOf(createDunningCycleRequest.severityLevel))!!,
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
@@ -1011,7 +1011,7 @@ open class DunningServiceImpl(
     ): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
 
-        scheduleDateCal.timeInMillis = Timestamp.from(scheduleRule.oneTimeDate!!).time
+        scheduleDateCal.timeInMillis = scheduleRule.oneTimeDate!!.time
 
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
@@ -1042,10 +1042,6 @@ open class DunningServiceImpl(
         if (
             todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
         ) {
-            println("********************** Amanjeet Kumar ***************************")
-            println("todayCal : $todayCal")
-            println("Hour : $scheduleHour , Minute : $scheduleMinute")
-            println("hour of day: ${todayCal.get(Calendar.HOUR_OF_DAY)}")
             todayCal.add(Calendar.DAY_OF_MONTH, 1)
         }
 
@@ -1062,8 +1058,7 @@ open class DunningServiceImpl(
         if (
             !(
                 (todayCal.get(Calendar.DAY_OF_WEEK) == (week.ordinal + 1)) &&
-                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt()) &&
-                    (todayCal.get(Calendar.MINUTE) < scheduleMinute.toInt())
+                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt())
                 )
         ) {
             while (todayCal.get(Calendar.DAY_OF_WEEK) != (week.ordinal + 1)) {
