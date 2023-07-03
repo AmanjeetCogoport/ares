@@ -195,13 +195,15 @@ open class DunningServiceImpl(
 
         if (FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME) {
             createDunningCycleRequest.scheduleRule.oneTimeDate = Timestamp(
-                createDunningCycleRequest.scheduleRule.oneTimeDate!!.time.minus(
+                createDunningCycleRequest.scheduleRule.oneTimeDate!!.time.plus(
                     AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
                         AresConstants.TimeZone.valueOf(createDunningCycleRequest.scheduleRule.scheduleTimeZone)
                     ) ?: throw AresException(AresError.ERR_1002, "")
-                )
+                )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
             )
         }
+
+        println("************** oneTimeDate : ${createDunningCycleRequest.scheduleRule.oneTimeDate} **************")
 
         val dunningCycleResponse = dunningCycleRepo.save(
             DunningCycle(
@@ -1026,13 +1028,17 @@ open class DunningServiceImpl(
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-//        val localTimestampWRTZone = System.currentTimeMillis().minus(
-//            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-//                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-//            ) ?: throw AresException(AresError.ERR_1002, "")
-//        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        var localTimestampWRTZone = System.currentTimeMillis().minus(
+            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
+                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
+            ) ?: throw AresException(AresError.ERR_1002, "")
+        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
-        val localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        println("************** localTimestampWRTZone1 : $localTimestampWRTZone **************")
+
+        localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+
+        println("************** localTimestampWRTZone2 : $localTimestampWRTZone **************")
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
