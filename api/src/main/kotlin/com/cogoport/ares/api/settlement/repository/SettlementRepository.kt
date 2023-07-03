@@ -548,8 +548,10 @@ ORDER BY
                 aau.entity_code,
                 s.deleted_at,
                 aau.deleted_at,
-                aau.acc_type AS source_acc_type,
-                aau1.acc_type AS destination_acc_type
+                aau1.acc_type AS source_acc_type,
+                aau.acc_type AS destination_acc_type,
+                s.source_id,
+                s.destination_id
             FROM
                 settlements s
                 LEFT JOIN account_utilizations aau
@@ -589,7 +591,13 @@ ORDER BY
             amount,
             led_amount,
             currency,
-            led_currency
+            led_currency,
+            source_acc_type,
+            destination_acc_type,
+            '' as source_irn_number,
+            '' as destination_irn_number,
+            source_id,
+            destination_id
             FROM
             z
             WHERE

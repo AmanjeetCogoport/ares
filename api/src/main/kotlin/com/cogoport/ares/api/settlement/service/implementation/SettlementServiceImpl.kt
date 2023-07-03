@@ -2895,6 +2895,22 @@ open class SettlementServiceImpl : SettlementService {
             request.sortType
         )
 
+        val irnNumberDocList = listOf(AccountType.SINV, AccountType.SCN)
+
+        settlementDocs.filter { it.sourceAccType in irnNumberDocList }.forEach { doc ->
+            val irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(doc.sourceId, "IrnNumber")?.value
+            if (irnNumber != null) {
+                doc.sourceIrnNumber = irnNumber.toString()
+            }
+        }
+
+        settlementDocs.filter { it.destinationAccType in irnNumberDocList }.forEach { doc ->
+            val irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(doc.destinationId, "IrnNumber")?.value
+            if (irnNumber != null) {
+                doc.destinationIrnNumber = irnNumber.toString()
+            }
+        }
+
         val totalRecords = settlementRepository.getSettlementCount(
             request.orgId!!,
             possibleAccTypes,
