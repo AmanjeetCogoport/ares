@@ -304,9 +304,9 @@ object AresConstants {
         "suhas.latelwar@cogoport.com"
     )
 
-    val DUNNING_SEVERITY_LEVEL : Map<SeverityEnum, Int> = mapOf(
-            SeverityEnum.LOW to 1,
-            SeverityEnum.MEDIUM to 2,
-            SeverityEnum.HIGH to 3
+    val DUNNING_SEVERITY_LEVEL: Map<SeverityEnum, Int> = mapOf(
+        SeverityEnum.LOW to 1,
+        SeverityEnum.MEDIUM to 2,
+        SeverityEnum.HIGH to 3
     )
 }
