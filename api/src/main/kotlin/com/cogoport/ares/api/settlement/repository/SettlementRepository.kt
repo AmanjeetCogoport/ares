@@ -588,7 +588,7 @@ ORDER BY
             END 
             Asc
             )
-            SELECT DISTINCT
+            SELECT
             id,
             source_document_value,
             destination_document_value,

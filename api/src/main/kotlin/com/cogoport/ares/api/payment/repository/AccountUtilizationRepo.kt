@@ -703,7 +703,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)
@@ -712,6 +712,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
                     AND deleted_at is null  and is_void = false
+                    AND document_status != 'DELETED'::document_status
+                    AND settlement_enabled = true
                     AND 
                     (
                         :documentPaymentStatus is null OR 
