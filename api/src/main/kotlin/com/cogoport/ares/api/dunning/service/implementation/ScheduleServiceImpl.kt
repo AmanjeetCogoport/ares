@@ -30,8 +30,11 @@ import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CommunicationRequest
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
@@ -39,6 +42,7 @@ import com.cogoport.ares.model.payment.response.SupplyAgent
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.invoice.response.DunningPdfs
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Singleton
 import org.json.JSONException
@@ -62,7 +66,8 @@ class ScheduleServiceImpl(
     private val accountUtilizationRepo: AccountUtilizationRepo,
     private val plutusClient: PlutusClient,
     private val dunningCycleRepo: DunningCycleRepo,
-    private val aresMessagePublisher: AresMessagePublisher
+    private val aresMessagePublisher: AresMessagePublisher,
+    private val thirdPartyApiAuditService: ThirdPartyApiAuditService
 ) : ScheduleService {
 
     override suspend fun processCycleExecution(request: CycleExecutionProcessReq) {
@@ -116,157 +121,217 @@ class ScheduleServiceImpl(
     }
 
     override suspend fun sendPaymentReminderToTradeParty(request: PaymentReminderReq) {
-        val executionId = request.cycleExecutionId
-        val tradePartyDetailId = request.tradePartyDetailId
-        logger().info("mail sending process started for execution $executionId and customer $tradePartyDetailId")
-        val cycleExecution = dunningExecutionRepo.findById(executionId)
-        val entityCode = TAGGED_ENTITY_ID_MAPPINGS[cycleExecution?.filters?.cogoEntityId.toString()]
-        val templateData = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list
-        if (templateData.isEmpty()) {
-            createDunningAudit(executionId, tradePartyDetailId, null, false, "could not get template")
-            return
-        }
-        val templateName = templateData.firstOrNull()?.get("name").toString()
-        if (!DUNNING_VALID_TEMPLATE_NAMES.contains(templateName)) {
-            createDunningAudit(executionId, tradePartyDetailId, null, false, "template name is not valid")
-            return
-        }
-        // remember to consider logic ,in case of 101 or 301 , data from both indexes i.e 101_301
-        val outstandingData = outstandingService.listCustomerDetails(
-            CustomerOutstandingRequest(
-                tradePartyDetailId = tradePartyDetailId,
-                entityCode = entityCode
-            )
-        )
-        if (outstandingData.list.isEmpty()) {
-            createDunningAudit(executionId, tradePartyDetailId, null, false, "outstanding not found")
-            return
-        }
-        val outstanding = outstandingData.list[0]
-        // logic to get list of not fully utilized payments on this trade party detail id
-        // logic to get list of invoices
-        val paymentDocuments = accountUtilizationRepo.getPaymentsForDunning(
-            entityCode = entityCode!!,
-            tradePartyDetailId = tradePartyDetailId
-        )
-        var invoiceDocuments: List<DunningInvoices>? = null
-        invoiceDocuments = if (templateName == DUNNING_NEW_INVOICE_GENERATION_TEMPLATE) {
-            accountUtilizationRepo.getInvoicesForDunning(
-                entityCode = entityCode,
-                tradePartyDetailId = tradePartyDetailId,
-                transactionDateStart = Date.from(LocalDate.now().minusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant()),
-                transactionDateEnd = Date.from(LocalDate.now().minusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()),
-                sortType = "DESC"
-            )
-        } else {
-            accountUtilizationRepo.getInvoicesForDunning(
-                entityCode = entityCode,
-                tradePartyDetailId = tradePartyDetailId,
-                limit = 50
-            )
-        }
-
-        if (invoiceDocuments.isEmpty()) {
-            createDunningAudit(executionId, tradePartyDetailId, null, false, "invoices not found")
-            return
-        }
-        val invoiceIds = invoiceDocuments.map { it.documentNo }
-
-        val pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
-
-        invoiceDocuments.forEach { t ->
-            val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
-            t.pdfUrl = data?.invoicePdfUrl
-            t.jobNumber = data?.jobNumber
-        }
-
-        val creditControllerData = outstandingData.list[0]?.creditController
-            ?: getCollectionAgencyData().takeUnless { EXCLUDED_CREDIT_CONTROLLERS.contains(it.id.toString()) }
-
-        // From Manual Dunning user Emails come to and if they do we need to consider them only
-        var userList = getUsersData(executionId, tradePartyDetailId, outstanding!!)
-
-        var emailUsers = mutableListOf<UserData>()
-
-        if (outstanding.tradePartyType?.contains("self") == true) {
-            for (scopes in DUNNING_WORK_SCOPES) {
-                emailUsers = try {
-                    userList.filter { it.workScopes!!.contains(scopes) } as MutableList<UserData>
-                } catch (err: Exception) {
-                    mutableListOf()
-                }
-                if (userList.isNotEmpty()) break
-            }
-        }
-
-        val tempOrgUsers = userList.filter { t ->
-            t.workScopes?.toSet()?.intersect(DUNNING_EXCLUDE_WORK_SCOPES.toSet()).isNullOrEmpty() &&
-                t.workScopes?.isNotEmpty() == true
-        }
-
-        if (tempOrgUsers.isNotEmpty()) {
-            userList = tempOrgUsers.toMutableList()
-        }
-        if (emailUsers.isEmpty()) {
-            emailUsers = userList
-        }
-        if (emailUsers.isEmpty()) {
-            createDunningAudit(executionId, tradePartyDetailId, null, false, "no user found")
-            return
-        }
-        val bankDetails = DUNNING_BANK_DETAILS[entityCode]
-
-        val ccEmail: MutableList<String> = mutableListOf()
-        outstanding.salesAgent?.email?.let { ccEmail.add(it) }
-
-        val toUserEmail = emailUsers.firstOrNull()?.email
-        userList.toSet().forEach {
-            if (it.email != toUserEmail) {
-                it.email?.let { it1 -> ccEmail.add(it1) }
-            }
-        }
-        val severityTemplate =
-            when (dunningCycleRepo.getSeverityTemplate(cycleExecution.dunningCycleId)) {
-                1 -> SeverityEnum.LOW.severity
-                2 -> SeverityEnum.MEDIUM.severity
-                3 -> SeverityEnum.HIGH.severity
-                else -> throw Error("Severity is Invalid")
-            }
-
-        // for tagged state collectionAgency we need to alter cc and recipient in future
-
-        val variables = when (templateName) {
-            DUNNING_NEW_INVOICE_GENERATION_TEMPLATE -> {
-                getInvoiceGenerationVariables(outstanding, invoiceDocuments, creditControllerData?.name, bankDetails!!, paymentDocuments, creditControllerData?.mobileNumber.toString())
-            }
-            DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE -> {
-                getBalanceConfirmationVariables(outstanding, invoiceDocuments, creditControllerData?.name, bankDetails!!, paymentDocuments, creditControllerData?.mobileNumber.toString())
-            }
-            else -> {
-                getSoaVariables(outstanding, invoiceDocuments, creditControllerData?.name, bankDetails!!, paymentDocuments, creditControllerData?.mobileNumber.toString(), severityTemplate)
-            }
-        }
-
-        var communicationRequest = CommunicationRequest(
-            recipient = toUserEmail,
-            type = "email",
-            service = "dunning_cycle",
-            serviceId = "6e2e9f36-34ca-435d-ab77-2d2851231844",
-            templateName = templateName,
-            sender = creditControllerData?.email,
-            ccMails = ccEmail,
-            organizationId = outstanding.tradePartyId,
-            notifyOnBounce = true,
-            replyToMessageId = getReplyToMessageId(toUserEmail!!),
-            variables = variables
-        )
-        var communicationId: UUID? = null
         try {
-            communicationId = railsClient.createCommunication(communicationRequest)
-            logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
-            createDunningAudit(executionId, tradePartyDetailId, communicationId, true, "")
+            val executionId = request.cycleExecutionId
+            val tradePartyDetailId = request.tradePartyDetailId
+            logger().info("mail sending process started for execution $executionId and customer $tradePartyDetailId")
+            val cycleExecution = dunningExecutionRepo.findById(executionId)
+            val entityCode = TAGGED_ENTITY_ID_MAPPINGS[cycleExecution?.filters?.cogoEntityId.toString()]
+            var templateData: ArrayList<HashMap<String, Any?>>? = null
+            try {
+                templateData = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(executionId, cycleExecution?.templateId.toString(), err.toString(), "list communication template", tradePartyDetailId.toString())
+                throw err
+            }
+            if (templateData.isEmpty()) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "could not get template")
+                throw Exception("could not get template")
+            }
+            val templateName = templateData.firstOrNull()?.get("name").toString()
+            if (!DUNNING_VALID_TEMPLATE_NAMES.contains(templateName)) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "template name is not valid")
+                throw Exception("template name is not valid")
+            }
+            // remember to consider logic ,in case of 101 or 301 , data from both indexes i.e 101_301
+            val outstandingData: ResponseList<CustomerOutstandingDocumentResponse?>
+            try {
+                val request = CustomerOutstandingRequest(
+                    tradePartyDetailId = tradePartyDetailId,
+                    entityCode = entityCode
+                )
+                outstandingData = outstandingService.listCustomerDetails(
+                    request
+                )
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(executionId, request.toString(), err.toString(), "list customer outstanding", tradePartyDetailId.toString())
+                throw err
+            }
+
+            if (outstandingData.list.isEmpty()) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "outstanding not found")
+                throw Exception("outstanding not found")
+            }
+            val outstanding = outstandingData.list[0]
+            // logic to get list of not fully utilized payments on this trade party detail id
+            // logic to get list of invoices
+            val paymentDocuments = accountUtilizationRepo.getPaymentsForDunning(
+                entityCode = entityCode!!,
+                tradePartyDetailId = tradePartyDetailId
+            )
+            var invoiceDocuments: List<DunningInvoices>? = null
+            invoiceDocuments = if (templateName == DUNNING_NEW_INVOICE_GENERATION_TEMPLATE) {
+                accountUtilizationRepo.getInvoicesForDunning(
+                    entityCode = entityCode,
+                    tradePartyDetailId = tradePartyDetailId,
+                    transactionDateStart = Date.from(
+                        LocalDate.now().minusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    ),
+                    transactionDateEnd = Date.from(
+                        LocalDate.now().minusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    ),
+                    sortType = "DESC"
+                )
+            } else {
+                accountUtilizationRepo.getInvoicesForDunning(
+                    entityCode = entityCode,
+                    tradePartyDetailId = tradePartyDetailId,
+                    limit = 50
+                )
+            }
+
+            if (invoiceDocuments.isEmpty()) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "invoices not found")
+                return
+            }
+            val invoiceIds = invoiceDocuments.map { it.documentNo }
+
+            var pdfAndSids: List<DunningPdfs>? = null
+
+            try {
+                pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list sids and pdfs from plutus", tradePartyDetailId.toString())
+                throw err
+            }
+
+            invoiceDocuments.forEach { t ->
+                val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
+                t.pdfUrl = data?.invoicePdfUrl
+                t.jobNumber = data?.jobNumber
+            }
+
+            val creditControllerData = outstandingData.list[0]?.creditController
+                ?: getCollectionAgencyData().takeUnless { EXCLUDED_CREDIT_CONTROLLERS.contains(it.id.toString()) }
+
+            // From Manual Dunning user Emails come to and if they do we need to consider them only
+            var userList: MutableList<UserData>? = null
+            try {
+                userList = getUsersData(executionId, tradePartyDetailId, outstanding!!)
+            } catch (err: Exception) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "could not get userData")
+                throw err
+            }
+
+            var emailUsers = mutableListOf<UserData>()
+
+            if (outstanding.tradePartyType?.contains("self") == true) {
+                for (scopes in DUNNING_WORK_SCOPES) {
+                    emailUsers = try {
+                        userList.filter { it.workScopes!!.contains(scopes) } as MutableList<UserData>
+                    } catch (err: Exception) {
+                        mutableListOf()
+                    }
+                    if (userList.isNotEmpty()) break
+                }
+            }
+
+            val tempOrgUsers = userList.filter { t ->
+                t.workScopes?.toSet()?.intersect(DUNNING_EXCLUDE_WORK_SCOPES.toSet()).isNullOrEmpty() &&
+                    t.workScopes?.isNotEmpty() == true
+            }
+
+            if (tempOrgUsers.isNotEmpty()) {
+                userList = tempOrgUsers.toMutableList()
+            }
+            if (emailUsers.isEmpty()) {
+                emailUsers = userList
+            }
+            if (emailUsers.isEmpty()) {
+                createDunningAudit(executionId, tradePartyDetailId, null, false, "no user found")
+                throw Exception("no user found")
+            }
+            val bankDetails = DUNNING_BANK_DETAILS[entityCode]
+
+            val ccEmail: MutableList<String> = mutableListOf()
+            outstanding.salesAgent?.email?.let { ccEmail.add(it) }
+
+            val toUserEmail = emailUsers.firstOrNull()?.email
+            userList.toSet().forEach {
+                if (it.email != toUserEmail) {
+                    it.email?.let { it1 -> ccEmail.add(it1) }
+                }
+            }
+            val severityTemplate =
+                when (dunningCycleRepo.getSeverityTemplate(cycleExecution.dunningCycleId)) {
+                    1 -> SeverityEnum.LOW.severity
+                    2 -> SeverityEnum.MEDIUM.severity
+                    3 -> SeverityEnum.HIGH.severity
+                    else -> throw Error("Severity is Invalid")
+                }
+
+            // for tagged state collectionAgency we need to alter cc and recipient in future
+
+            val variables = when (templateName) {
+                DUNNING_NEW_INVOICE_GENERATION_TEMPLATE -> {
+                    getInvoiceGenerationVariables(
+                        outstanding,
+                        invoiceDocuments,
+                        creditControllerData?.name,
+                        bankDetails!!,
+                        paymentDocuments,
+                        creditControllerData?.mobileNumber.toString()
+                    )
+                }
+
+                DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE -> {
+                    getBalanceConfirmationVariables(
+                        outstanding,
+                        invoiceDocuments,
+                        creditControllerData?.name,
+                        bankDetails!!,
+                        paymentDocuments,
+                        creditControllerData?.mobileNumber.toString()
+                    )
+                }
+
+                else -> {
+                    getSoaVariables(
+                        outstanding,
+                        invoiceDocuments,
+                        creditControllerData?.name,
+                        bankDetails!!,
+                        paymentDocuments,
+                        creditControllerData?.mobileNumber.toString(),
+                        severityTemplate
+                    )
+                }
+            }
+            var communicationRequest = CommunicationRequest(
+                recipient = toUserEmail,
+                type = "email",
+                service = "dunning_cycle",
+                serviceId = "6e2e9f36-34ca-435d-ab77-2d2851231844",
+                templateName = templateName,
+                sender = creditControllerData?.email,
+                ccMails = ccEmail,
+                organizationId = outstanding.tradePartyId,
+                notifyOnBounce = true,
+                replyToMessageId = getReplyToMessageId(toUserEmail!!),
+                variables = variables
+            )
+            var communicationId: UUID? = null
+            try {
+                communicationId = railsClient.createCommunication(communicationRequest)
+                logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
+                createDunningAudit(executionId, tradePartyDetailId, communicationId, true, "")
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(executionId, communicationRequest.toString(), err.toString(), "create communication", tradePartyDetailId.toString())
+                throw err
+            }
         } catch (err: Exception) {
-            createDunningAudit(executionId, tradePartyDetailId, communicationId, false, "something went wrong with create communication$err")
+            logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId}")
+            createDunningAudit(request.cycleExecutionId, request.tradePartyDetailId, null, false, "something went wrong for processing dunning $err")
         }
     }
 
@@ -412,18 +477,34 @@ class ScheduleServiceImpl(
             try {
                 partnerData = railsClient.listPartners(organizationId)
             } catch (err: Error) {
-                createDunningAudit(executionId, tradePartyDetailId, null, false, "could not get partner data")
+                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list partners", tradePartyDetailId.toString())
             }
-            userList = if (partnerData?.list?.isEmpty() == false) {
+            if (partnerData?.list?.isEmpty() == false) {
                 val partnerId = partnerData.list[0]["id"].toString()
-                railsClient.getCpUsers(UUID.fromString(partnerId)).list
+                try {
+                    userList = railsClient.getCpUsers(UUID.fromString(partnerId)).list
+                } catch (err: Exception) {
+                    recordFailedThirdPartyApiAudits(executionId, partnerId, err.toString(), "get channel partner users", tradePartyDetailId.toString())
+                    throw err
+                }
             } else {
-                railsClient.listOrgUsers(organizationId).list
+                try {
+                    userList = railsClient.listOrgUsers(organizationId).list
+                } catch (err: Exception) {
+                    recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "get org users", tradePartyDetailId.toString())
+                    throw err
+                }
             }
         } else if (outstanding.tradePartyType?.contains("self") == false && outstanding.tradePartyType?.contains("paying_party") == true) {
-            val tradePartyDetails = railsClient.listTradeParties(tradePartyDetailId).list
-            userList = tradePartyDetails.flatMap { it["billing_addresses"] as? List<HashMap<String, Any?>> ?: emptyList() }
-                .flatMap { it["organization_pocs"] as? List<HashMap<String, Any>> ?: emptyList() }
+            var tradePartyDetails: ArrayList<HashMap<String, Any?>>? = null
+            try {
+                tradePartyDetails = railsClient.listTradeParties(tradePartyDetailId).list
+                userList = tradePartyDetails.flatMap { it["billing_addresses"] as? List<HashMap<String, Any?>> ?: emptyList() }
+                    .flatMap { it["organization_pocs"] as? List<HashMap<String, Any>> ?: emptyList() }
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list organization trade parties", tradePartyDetailId.toString())
+                throw err
+            }
         }
         val finalUserList = mutableListOf<UserData>()
         userList?.forEach {
@@ -477,6 +558,22 @@ class ScheduleServiceImpl(
                 communicationId = communicationId,
                 isSuccess = isSuccess,
                 errorReason = errorReason,
+            )
+        )
+    }
+
+    private suspend fun recordFailedThirdPartyApiAudits(executionId: Long, request: String, response: String, apiName: String, tradePartyDetailId: String) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                apiName,
+                tradePartyDetailId, // here we will put trade party detail id of customer
+                executionId,
+                "DUNNING",
+                "500",
+                request,
+                response,
+                false
             )
         )
     }
