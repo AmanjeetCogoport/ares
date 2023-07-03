@@ -1822,7 +1822,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     documentUrl = url,
                     documentName = "sage_platform_report",
                     documentType = url.substringAfterLast('.'),
-                    uploadedBy = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                    uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID),
                     createdAt = Timestamp.valueOf(LocalDateTime.now()),
                     updatedAt = Timestamp.valueOf(LocalDateTime.now())
                 )
@@ -1834,7 +1834,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val request = CreateCommunicationRequest(
                 templateName = AresConstants.SAGE_PLATFORM_REPORT,
-                performedByUserId = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
                 performedByUserName = AresConstants.performedByUserNameForMail,
                 recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
                 senderEmail = AresConstants.NO_REPLY,

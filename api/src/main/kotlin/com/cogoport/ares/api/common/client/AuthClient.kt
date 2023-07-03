@@ -42,39 +42,39 @@ interface AuthClient {
     @Get("/list_cogo_banks{?request*}")
     suspend fun getCogoBank(request: CogoEntitiesRequest): CogoBankResponse
 
-    @Get("/get_organization_zone_details{?request*}")
+    @Get("/organization/get_organization_zone_details{?request*}")
     suspend fun getCogoOrganization(request: CogoOrganizationRequest): PlatformOrganizationResponse
 
     /**
      * Takes trade party mapping id and returns its TDS styles.
      * @param: id
      */
-    @Get("/get_organization_trade_party_finance_detail")
+    @Get("/organization/get_organization_trade_party_finance_detail")
     suspend fun getOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
 
     /**
      * Takes trade party mapping id list and returns its TDS styles list.
      * @param: id
      */
-    @Post("/list_organization_trade_party_finance_detail_webhook")
+    @Post("/organization/list_organization_trade_party_finance_detail_webhook")
     suspend fun listOrgTdsStyles(@Body request: ListOrgStylesRequest): List<TdsDataResponse>?
 
     /**
      * Takes trade party detail id and returns TDS styles of corresponding org with mapping type as self.
      */
-    @Get("/get_self_organization_trade_party_finance_detail")
+    @Get("/organization/get_self_organization_trade_party_finance_detail")
     suspend fun getSelfOrgTdsStyles(@QueryValue("id") id: String): TdsDataResponse
 
     @Get("/get_organization_details_by_sage_org_id{?request*}")
     suspend fun getOrgDetailsBySageOrgId(request: GetOrgDetailsRequest): GetOrgDetailsResponse
 
-    @Get("/get_organization_trade_party_zone_details{?request*}")
+    @Get("/organization/get_organization_trade_party_zone_details{?request*}")
     suspend fun getTradePartyDetailInfo(request: TradePartyDetailRequest): TradePartyOrganizationResponse
 
-    @Get("/get_organization_trade_party_zone_info{?request*}")
+    @Get("/organization/get_organization_trade_party_zone_info{?request*}")
     suspend fun getTradePartyInfo(request: MappingIdDetailRequest): TradePartyOrganizationResponse
 
-    @Post("/get_organization_trade_party_mappings")
+    @Post("/organization/get_organization_trade_party_mappings")
     suspend fun getSerialIdDetails(@Body request: SerialIdDetailsRequest): List<SerialIdDetailsResponse?>?
 
     @Get("/validate_trade_party{?request*}")
@@ -83,7 +83,7 @@ interface AuthClient {
     @Post("/list_organization_trade_party_business_finance")
     suspend fun getOrganizationTradePartyDetail(@Body request: GetOrganizationTradePartyDetailRequest): GetOrganizationTradePartyDetailResponse?
 
-    @Post("/get_users")
+    @Post("/user/get_users")
     suspend fun getUsers(@Body request: GetUserRequest): List<GetUserResponse>?
 
     @Get("/get_sage_organization_details{?request*}")

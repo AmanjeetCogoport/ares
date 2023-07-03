@@ -25,15 +25,15 @@ import java.util.UUID
 )
 interface RailsClient {
 
-    @Get("/list_organization_trade_party_details?filters%5Bid%5D={id}")
+    @Get("/organization/list_organization_trade_party_details?filters%5Bid%5D={id}")
     suspend fun getListOrganizationTradePartyDetails(id: UUID): ListOrganizationTradePartyDetailsResponse
 
     @Get("/list_cogo_entities?filters%5Bentity_code%5D={entityCode}")
     suspend fun getCogoEntity(entityCode: String): ListCogoEntities
 
-    @Post("/create_organization_credit_consumption")
+    @Post("/organization/create_organization_credit_consumption")
     suspend fun sendInvoicePaymentKnockOff(@Body request: com.cogoport.plutus.model.invoice.CreditPaymentRequest): String
-    @Get("/get_partner{?request*}")
+    @Get("/partner/get_partner{?request*}")
     suspend fun getPartnerDetails(@QueryValue request: GetPartnerRequest): Any?
 
     @Get("/list_communication_templates?filters%5Bid%5D={id}")
