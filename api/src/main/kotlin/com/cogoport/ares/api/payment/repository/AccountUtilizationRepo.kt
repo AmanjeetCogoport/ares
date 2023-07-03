@@ -563,7 +563,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND (amount_curr - pay_curr) > 0
+                AND (amount_curr - pay_curr) > 1
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
