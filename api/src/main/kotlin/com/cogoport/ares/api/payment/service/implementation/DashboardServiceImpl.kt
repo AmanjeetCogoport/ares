@@ -1440,7 +1440,7 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
-        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page!!, request.pageLimit!!)
+        val ledgerDocuments = accUtilRepo.getLedgerit ForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page!!, request.pageLimit!!)
         if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, request.month, accTypes)

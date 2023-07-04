@@ -1032,16 +1032,16 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-                SELECT tagged_organization_id::VARCHAR, currency,led_currency , sign_flag, amount_curr, pay_curr,amount_loc, pay_loc, transaction_date,due_date,entity_code
+                SELECT organization_id::VARCHAR, currency,led_currency , sign_flag, amount_curr, pay_curr,amount_loc, pay_loc, transaction_date,due_date,entity_code
                 FROM account_utilizations 
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
                 AND acc_code = 321000
                 AND (amount_curr - pay_curr) > 0
-                AND tagged_organization_id IS NOT NULL
+                AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL
-                AND tagged_organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
+                AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
             """
@@ -1051,7 +1051,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """
         SELECT
-            tagged_organization_id,
+            organization_id,
             transaction_date,
             service_type,
             document_value,
@@ -1064,9 +1064,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             account_utilizations
         WHERE
             document_status = 'FINAL'
-            AND tagged_organization_id IS NOT NULL
+            AND organization_id IS NOT NULL
             AND acc_mode = 'AP'
-            AND tagged_organization_id = :orgId::uuid
+            AND organization_id = :orgId::uuid
             AND (:entityCode IS NULL OR entity_code = :entityCode) 
             AND EXTRACT(YEAR FROM transaction_date) = :year
             AND EXTRACT(MONTH FROM transaction_date) = :month
@@ -1088,9 +1088,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             account_utilizations
         WHERE
             document_status = 'FINAL'
-            AND tagged_organization_id IS NOT NULL
+            AND organization_id IS NOT NULL
             AND acc_mode = 'AP'
-            AND tagged_organization_id = :orgId::uuid
+            AND organization_id = :orgId::uuid
             AND (:entityCode IS NULL OR entity_code = :entityCode) 
             AND EXTRACT(YEAR FROM transaction_date) = :year
             AND EXTRACT(MONTH FROM transaction_date) = :month
