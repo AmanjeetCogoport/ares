@@ -82,8 +82,8 @@ dependencies {
     implementation("com.cogoport.loki:loki-model:0.1.45")
 
     //Plutus Client
-    implementation("com.cogoport.plutus:plutus-model:0.1.23.3-beta")
-    implementation("com.cogoport.plutus:plutus-client:0.1.14.7")
+    implementation("com.cogoport.plutus:plutus-model:1.1.1")
+    implementation("com.cogoport.plutus:plutus-client:1.2.1")
 
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:0.1.4.3")

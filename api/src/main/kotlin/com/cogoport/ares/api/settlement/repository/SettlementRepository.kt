@@ -547,9 +547,7 @@ ORDER BY
                 s.source_id,
                 s.destination_id,
                 aau.amount_loc as destination_invoice_amount,
-                (aau.amount_loc - aau.pay_loc) as destination_open_invoice_amount,
-                '' AS source_irn_number,
-                '' AS destination_irn_number
+                (aau.amount_loc - aau.pay_loc) as destination_open_invoice_amount
             FROM
                 settlements s
                 LEFT JOIN account_utilizations aau

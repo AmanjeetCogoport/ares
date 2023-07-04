@@ -17,12 +17,15 @@ data class SettlementListDoc(
     val ledAmount: BigDecimal,
     val currency: String,
     val ledCurrency: String,
-    var sourceIrnNumber: String?,
-    var destinationIrnNumber: String?,
     val sourceAccType: AccountType,
     val destinationAccType: AccountType,
     val sourceId: Long,
     val destinationId: Long,
     val destinationOpenInvoiceAmount: BigDecimal,
     val destinationInvoiceAmount: BigDecimal
-)
+) {
+    @field:javax.persistence.Transient
+    var sourceIrnNumber: String? = null
+    @field:javax.persistence.Transient
+    var destinationIrnNumber: String? = null
+}

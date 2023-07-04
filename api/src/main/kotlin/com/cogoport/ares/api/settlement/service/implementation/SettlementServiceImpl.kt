@@ -1439,7 +1439,7 @@ open class SettlementServiceImpl : SettlementService {
         )
         val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
         updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType, false, true)
-        sendInvoiceDataToDebitConsumption(accUtil)
+//        sendInvoiceDataToDebitConsumption(accUtil)
         emitDashboardAndOutstandingEvent(accUtilObj)
     }
 
@@ -2134,7 +2134,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
+//        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
 
         auditService.createAudit(
             AuditRequest(
@@ -2499,7 +2499,8 @@ open class SettlementServiceImpl : SettlementService {
                         url = invoiceData.invoicePdfUrl
                     )
                 )
-            )
+            ),
+            organizationTradePartyId = destinationDocument.tradePartyMappingId
         )
 
         val objectName = "UNFREEZE_CREDIT"
@@ -2537,7 +2538,8 @@ open class SettlementServiceImpl : SettlementService {
                         url = invoiceData.invoicePdfUrl
                     )
                 )
-            )
+            ),
+            organizationTradePartyId = destinationDocument.tradePartyMappingId
         )
 
         val objectName = "UNFREEZE_CREDIT_DELETED"
@@ -2690,12 +2692,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
             SageOrganizationRequest(
-                serialId.toString(),
-                if (accMode == AccMode.AR) {
-                    "importer_exporter"
-                } else {
-                    "service_provider"
-                }
+                serialId.toString()
             )
         )
 
@@ -2897,17 +2894,34 @@ open class SettlementServiceImpl : SettlementService {
 
         val irnNumberDocList = listOf(AccountType.SINV, AccountType.SCN)
 
-        settlementDocs.filter { it.sourceAccType in irnNumberDocList }.forEach { doc ->
-            val irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(doc.sourceId, "IrnNumber")?.value
-            if (irnNumber != null) {
-                doc.sourceIrnNumber = irnNumber.toString()
+        val invoiceNumberList = mutableListOf<String>()
+        val invoiceIdToAccTypeMap = settlementDocs.associateBy({ it.sourceId }, { it.sourceAccType }) +
+            settlementDocs.associateBy({ it.destinationId }, { it.destinationAccType })
+
+        invoiceIdToAccTypeMap.forEach { (invoiceId, accType) ->
+            if (accType in irnNumberDocList) {
+                invoiceNumberList.add(Hashids.encode(invoiceId))
             }
         }
 
-        settlementDocs.filter { it.destinationAccType in irnNumberDocList }.forEach { doc ->
-            val irnNumber = plutusClient.getInvoiceAdditionalByInvoiceId(doc.destinationId, "IrnNumber")?.value
-            if (irnNumber != null) {
-                doc.destinationIrnNumber = irnNumber.toString()
+        val invoiceAdditionalData = plutusClient.getInvoiceAdditionalList(invoiceNumberList, mutableListOf("IrnNumber"))
+
+        settlementDocs.forEach { doc ->
+            invoiceAdditionalData?.let { data ->
+                val sourceInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
+                val destinationInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
+
+                sourceInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.sourceIrnNumber = it.value.toString()
+                    }
+                }
+
+                destinationInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.destinationIrnNumber = it.value.toString()
+                    }
+                }
             }
         }
 
