@@ -13,7 +13,6 @@ data class SettlementListDoc(
     val sourceDocumentValue: String,
     val destinationDocumentValue: String,
     val settlementDate: Date,
-    val entityCode: Int,
     val amount: BigDecimal,
     val ledAmount: BigDecimal,
     val currency: String,

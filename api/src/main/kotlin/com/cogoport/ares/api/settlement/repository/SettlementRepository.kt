@@ -533,27 +533,23 @@ ORDER BY
     @NewSpan
     @Query(
         """
-        WITH z AS (
-            SELECT
+           SELECT
                 s.id,
                 s.amount,
                 s.led_amount,
-                s.settlement_status,
                 s.currency,
                 s.led_currency,
                 s.settlement_date,
                 aau.document_value AS destination_document_value,
                 aau1.document_value AS source_document_value,
-                aau.organization_id,
-                aau.entity_code,
-                s.deleted_at,
-                aau.deleted_at,
                 aau1.acc_type AS source_acc_type,
                 aau.acc_type AS destination_acc_type,
                 s.source_id,
                 s.destination_id,
                 aau.amount_loc as destination_invoice_amount,
-                (aau.amount_loc - aau.pay_loc) as destination_open_invoice_amount
+                (aau.amount_loc - aau.pay_loc) as destination_open_invoice_amount,
+                '' AS source_irn_number,
+                '' AS destination_irn_number
             FROM
                 settlements s
                 LEFT JOIN account_utilizations aau
@@ -568,6 +564,29 @@ ORDER BY
                 AND aau1.deleted_at IS NULL
                 AND aau.document_status != 'DELETED'::document_status
                 AND aau1.document_status != 'DELETED'::document_status
+                AND (
+                COALESCE(:orgIds) IS NULL
+                OR aau.organization_id IN (:orgIds)
+                OR aau1.organization_id IN (:orgIds)
+                )
+                AND (
+                    :query IS NULL
+                    OR (
+                        aau.document_value ILIKE (:query || '%')
+                        OR aau1.document_value ILIKE (:query || '%')
+                    )
+                )
+                AND (
+                    COALESCE(:entityCode) IS NULL
+                    OR aau.entity_code IN (:entityCode)
+                )
+                AND (
+                    COALESCE(:accTypes) IS NULL
+                    OR (
+                        aau.acc_type::VARCHAR IN (:accTypes)
+                        OR aau1.acc_type::VARCHAR IN (:accTypes)
+                    )
+                )
             ORDER BY
             CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'amount' THEN s.amount
@@ -587,52 +606,8 @@ ORDER BY
                     END        
             END 
             Asc
-            )
-            SELECT
-            id,
-            source_document_value,
-            destination_document_value,
-            settlement_date,
-            entity_code,
-            amount,
-            led_amount,
-            currency,
-            led_currency,
-            source_acc_type,
-            destination_acc_type,
-            '' as source_irn_number,
-            '' as destination_irn_number,
-            source_id,
-            destination_id,
-            destination_invoice_amount,
-            destination_open_invoice_amount
-            FROM
-            z
-            WHERE
-            (
-                COALESCE(:orgIds) IS NULL
-                OR z.organization_id IN (:orgIds)
-            )
-            AND (
-                :query IS NULL
-                OR (
-                    z.source_document_value ILIKE (:query || '%')
-                    OR z.destination_document_value ILIKE (:query || '%')
-                )
-            )
-            AND (
-                COALESCE(:entityCode) IS NULL
-                OR z.entity_code IN (:entityCode)
-            )
-            AND (
-                COALESCE(:accTypes) IS NULL
-                OR (
-                    z.source_acc_type::VARCHAR IN (:accTypes)
-                    OR z.destination_acc_type::VARCHAR IN (:accTypes)
-                )
-            )
             OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize
-            """
+        """
     )
     suspend fun getSettlementList(
         orgIds: List<UUID>,
@@ -648,23 +623,8 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            WITH z AS (
             SELECT
-                s.id,
-                s.amount,
-                s.led_amount,
-                s.settlement_status,
-                s.currency,
-                s.led_currency,
-                s.settlement_date,
-                aau.document_value AS destination_document_value,
-                aau1.document_value AS source_document_value,
-                aau.organization_id,
-                aau.entity_code,
-                s.deleted_at,
-                aau.deleted_at,
-                aau.acc_type AS source_acc_type,
-                aau1.acc_type AS destination_acc_type
+                count(distinct(s.id))
             FROM
                 settlements s
                 LEFT JOIN account_utilizations aau
@@ -679,32 +639,29 @@ ORDER BY
                 AND aau1.deleted_at IS NULL
                 AND aau.document_status != 'DELETED'::document_status
                 AND aau1.document_status != 'DELETED'::document_status
-            )
-            SELECT COUNT(DISTINCT(z.id)) FROM 
-            z
-            WHERE
-            (
-                COALESCE(:orgIds) IS NULL
-                OR z.organization_id IN (:orgIds)
-            )
-            AND (
-                :query IS NULL
-                OR (
-                    z.source_document_value ILIKE (:query || '%')
-                    OR z.destination_document_value ILIKE (:query || '%')
+                AND (
+                    COALESCE(:orgIds) IS NULL
+                    OR aau.organization_id IN (:orgIds)
+                    OR aau1.organization_id IN (:orgIds)
                 )
-            )
-            AND (
-                COALESCE(:entityCode) IS NULL
-                OR z.entity_code IN (:entityCode)
-            )
-            AND (
-                COALESCE(:accTypes) IS NULL
-                OR (
-                    z.source_acc_type::VARCHAR IN (:accTypes)
-                    OR z.destination_acc_type::VARCHAR IN (:accTypes)
+                AND (
+                    :query IS NULL
+                    OR (
+                        aau.document_value ILIKE (:query || '%')
+                        OR aau1.document_value ILIKE (:query || '%')
+                    )
                 )
-            )
+                AND (
+                    COALESCE(:entityCode) IS NULL
+                    OR aau.entity_code IN (:entityCode)
+                )
+                AND (
+                    COALESCE(:accTypes) IS NULL
+                    OR (
+                        aau.acc_type::VARCHAR IN (:accTypes)
+                        OR aau1.acc_type::VARCHAR IN (:accTypes)
+                    )
+                )
         """
     )
     suspend fun getSettlementCount(
