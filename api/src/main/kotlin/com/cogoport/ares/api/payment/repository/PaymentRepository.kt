@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.PaymentRelatedFields
 import com.cogoport.ares.model.payment.PlatformPayment
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
 import com.cogoport.ares.model.payment.response.PaymentResponse
@@ -24,7 +25,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
-             deleted_at
+             deleted_at,
+             pre_migrated_deleted
              from payments where id =:id and deleted_at is null
         """
     )
@@ -53,7 +55,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
-             deleted_at
+             deleted_at, pre_migrated_deleted
              FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null
         """
     )
@@ -153,7 +155,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             deleted_at,
             narration,
             bank_id,
-            pay_mode
+            pay_mode,
+            created_by
             FROM 
             payments
             WHERE 
@@ -277,4 +280,25 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
+
+    @Query(
+        """
+            select payment_num, payment_num_value, payment_code 
+            from payments
+            where acc_mode::varchar = :accMode AND payment_document_status != 'DELETED'::payment_document_status and deleted_at is null and transaction_date < 'Apr 1, 2023'
+            and payment_num_value in (:paymentNumValues)
+        """
+    )
+    suspend fun getPaymentRelatedField(accMode: String, paymentNumValues: List<String>): List<PaymentRelatedFields>
+
+    @NewSpan
+    @Query(
+        """
+            update 
+            payments 
+            set deleted_at = NOW(), pre_migrated_deleted = true
+            where payment_num_value in (:paymentNumValue)
+        """
+    )
+    suspend fun deletingApPayments(paymentNumValue: List<String>)
 }
