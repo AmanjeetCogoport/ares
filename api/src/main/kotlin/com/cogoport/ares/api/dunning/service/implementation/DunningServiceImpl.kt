@@ -193,18 +193,6 @@ open class DunningServiceImpl(
             throw AresException(AresError.ERR_1003, "")
         }
 
-        if (FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME) {
-            createDunningCycleRequest.scheduleRule.oneTimeDate = Timestamp(
-                createDunningCycleRequest.scheduleRule.oneTimeDate!!.time.plus(
-                    AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                        AresConstants.TimeZone.valueOf(createDunningCycleRequest.scheduleRule.scheduleTimeZone)
-                    ) ?: throw AresException(AresError.ERR_1002, "")
-                )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-            )
-        }
-
-        println("************** oneTimeDate : ${createDunningCycleRequest.scheduleRule.oneTimeDate} **************")
-
         val dunningCycleResponse = dunningCycleRepo.save(
             DunningCycle(
                 id = null,
@@ -709,18 +697,6 @@ open class DunningServiceImpl(
             throw AresException(AresError.ERR_1003, "")
         }
 
-        if (FREQUENCY.valueOf(request.scheduleRule.dunningExecutionFrequency) == FREQUENCY.ONE_TIME) {
-            request.scheduleRule.oneTimeDate = Timestamp(
-                request.scheduleRule.oneTimeDate!!.time.plus(
-                    AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                        AresConstants.TimeZone.valueOf(request.scheduleRule.scheduleTimeZone)
-                    ) ?: throw AresException(AresError.ERR_1002, "")
-                )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-            )
-        }
-
-        println("************** UpdateOneTimeDate : ${request.scheduleRule.oneTimeDate} **************")
-
         dunningExecutionRepo.cancelCycleExecution(
             dunningCycleExecution.id!!,
             request.updatedBy,
@@ -1035,8 +1011,11 @@ open class DunningServiceImpl(
     ): Timestamp {
         val scheduleDateCal = Calendar.getInstance()
 
-        scheduleDateCal.timeInMillis = scheduleRule.oneTimeDate!!.time
+        scheduleDateCal.timeInMillis = System.currentTimeMillis()
 
+        scheduleDateCal.set(Calendar.DAY_OF_MONTH, scheduleRule.oneTimeDate!!.slice(0..1).toInt())
+        scheduleDateCal.set(Calendar.MONTH, scheduleRule.oneTimeDate!!.slice(3..4).toInt())
+        scheduleDateCal.set(Calendar.YEAR, scheduleRule.oneTimeDate!!.slice(6..9).toInt())
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
