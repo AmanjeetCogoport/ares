@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.settlement.entity.GlCode
 import com.cogoport.ares.api.settlement.entity.GlCodeMaster
 import com.cogoport.ares.api.settlement.entity.JournalCode
@@ -49,6 +50,7 @@ class ParentJVController {
     @Auth
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<ParentJournalVoucherResponse> {
+        jvListRequest.entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[user?.filters?.get("partner_id")] ?: jvListRequest.entityCode
         return Response<ResponseList<ParentJournalVoucherResponse>>().ok(parentJVService.getJournalVouchers(jvListRequest))
     }
 
