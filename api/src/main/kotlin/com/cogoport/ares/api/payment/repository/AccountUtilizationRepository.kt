@@ -195,55 +195,55 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS total_credit_amount,
             sum(
-                CASE WHEN due_date >= now()::date AND acc_type in('PINV') THEN
+                CASE WHEN due_date >= now()::date AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS not_due_count,
             sum(
-                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS today_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS thirty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS sixty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS ninety_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS oneeighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS threesixtyfive_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PINV') THEN
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PINV') AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS threesixtyfiveplus_count,
             sum(
-                CASE WHEN (acc_type in('PCN')) THEN
+                CASE WHEN (acc_type in('PCN')) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
@@ -258,7 +258,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             AND due_date IS NOT NULL
             AND document_status in('FINAL', 'PROFORMA')
             AND organization_id IS NOT NULL
-            AND amount_curr - pay_curr > 0
             and(:orgId IS NULL
                 OR organization_id = :orgId::uuid)
             AND acc_type in('PINV', 'PCN')
@@ -1182,4 +1181,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun deleteAccountUtilizationByDocumentValueAndAccType(docValue: String?, accType: AccountType?)
+
+    @NewSpan
+    @Query(
+        """
+            update account_utilizations 
+            set 
+            deleted_at = NOW(), 
+            updated_at = NOW(),
+            document_status = 'DELETED'::document_status,
+            settlement_enabled = FALSE
+            where document_value in (:documentValues)
+        """
+    )
+    suspend fun updateAccountUtilizationUsingDocValue(documentValues: List<String>)
 }

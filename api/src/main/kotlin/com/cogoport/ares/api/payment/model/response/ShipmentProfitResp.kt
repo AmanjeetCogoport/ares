@@ -13,5 +13,6 @@ data class ShipmentProfitResp(
     var averageCustomerProfit: BigDecimal? = 0.toBigDecimal(),
     var pageIndex: Int? = 1,
     var pageSize: Int? = 10,
-    var totalRecord: Long? = 0
+    var totalRecord: Long? = 0,
+    var currency: String? = "INR"
 )
