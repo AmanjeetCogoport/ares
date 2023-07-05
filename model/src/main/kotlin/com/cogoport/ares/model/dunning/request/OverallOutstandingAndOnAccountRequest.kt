@@ -5,7 +5,7 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class OverallOutstandingAndOnAccountRequest(
-    var entityCode: List<Int>? = null,
+    var entityCodes: List<Int>? = null,
     var query: String? = null,
     var serviceTypes: List<String>? = null,
     var sortBy: String? = null,

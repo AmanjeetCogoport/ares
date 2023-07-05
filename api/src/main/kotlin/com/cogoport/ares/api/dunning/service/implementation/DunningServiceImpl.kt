@@ -55,6 +55,7 @@ import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
 import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -778,7 +779,7 @@ open class DunningServiceImpl(
 
         val totalCount = accountUtilizationRepo.countOverallOutstandingAndOnAccountPerTradeParty(
             query = query,
-            entityCode = request.entityCode,
+            entityCode = request.entityCodes,
             serviceTypes = request.serviceTypes,
         )
 
@@ -787,7 +788,7 @@ open class DunningServiceImpl(
             pageSize = request.pageSize,
             sortBy = request.sortBy,
             sortType = request.sortType,
-            entityCode = request.entityCode,
+            entityCode = request.entityCodes,
             serviceTypes = request.serviceTypes,
             query = query
         )
@@ -828,7 +829,8 @@ open class DunningServiceImpl(
 
         val response = accountUtilizationRepo.monthWiseStatisticsOfAccountUtilization(
             timestamp = timestamp,
-            serviceTypes = null
+            serviceTypes = request.serviceTypes,
+            entityCodes = request.entityCodes
         )
 
         return response
@@ -1094,5 +1096,18 @@ open class DunningServiceImpl(
         todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
         return Timestamp(todayCal.timeInMillis)
+    }
+
+    override suspend fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
+        isSynchronousCall: Boolean
+    ): String {
+
+        if (isSynchronousCall) {
+            return "We got your request. will sent you mail on ${sendMailOfAllCommunicationToTradePartyReq.userEmail} with report."
+        }
+
+        TODO("write code to send mail")
+        return ""
     }
 }

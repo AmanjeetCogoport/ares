@@ -1291,6 +1291,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             AND acc_type IN ('REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 'SREIMBCN')
             AND deleted_at IS NULL
             AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
+            AND (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
         GROUP BY
             TO_CHAR(transaction_date, 'Mon'),
             TO_CHAR(transaction_date, 'YYYY')
@@ -1300,6 +1301,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun monthWiseStatisticsOfAccountUtilization(
         timestamp: Timestamp,
-        serviceTypes: List<String>?
+        serviceTypes: List<String>?,
+        entityCodes: List<Int>?
     ): List<MonthWiseStatisticsOfAccountUtilizationResponse>
 }

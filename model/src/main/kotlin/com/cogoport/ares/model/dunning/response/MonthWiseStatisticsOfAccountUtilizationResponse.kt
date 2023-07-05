@@ -8,7 +8,7 @@ import java.math.BigDecimal
 @MappedEntity
 data class MonthWiseStatisticsOfAccountUtilizationResponse(
     var month: String,
-    var onAccountAmount: BigDecimal?,
+    var collectedAmount: BigDecimal?,
     var openInvoiceAmount: BigDecimal?,
     var outstandingAmount: BigDecimal?,
     var year: String

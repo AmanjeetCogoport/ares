@@ -14,6 +14,7 @@ import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
 import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -61,4 +62,9 @@ interface DunningService {
     suspend fun listSeverityLevelTemplates(): MutableMap<String, String>
 
     suspend fun saveAndScheduleExecution(dunningCycle: DunningCycle): Long
+
+    suspend fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
+        isSynchronousCall: Boolean
+    ): String
 }

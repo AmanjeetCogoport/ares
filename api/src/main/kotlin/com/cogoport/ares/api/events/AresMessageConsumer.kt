@@ -3,6 +3,7 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
+import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
@@ -22,6 +23,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.common.CreateCommunicationRequest
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -87,6 +89,9 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var scheduleService: ScheduleService
+
+    @Inject
+    lateinit var dunningService: DunningService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -266,5 +271,15 @@ class AresMessageConsumer {
     @Queue("ares-send-dunning-payment-reminder", prefetch = 1)
     fun sendPaymentReminder(request: PaymentReminderReq) = runBlocking {
         scheduleService.sendPaymentReminderToTradeParty(request)
+    }
+
+    @Queue("ares-send-mail-of-all-communication-of-tradeparty", prefetch = 1)
+    fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
+    ) = runBlocking {
+        dunningService.sendMailOfAllCommunicationToTradeParty(
+            sendMailOfAllCommunicationToTradePartyReq,
+            false
+        )
     }
 }

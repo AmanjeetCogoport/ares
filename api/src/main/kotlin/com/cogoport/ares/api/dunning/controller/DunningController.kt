@@ -15,6 +15,7 @@ import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
 import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
@@ -26,6 +27,7 @@ import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtil
 import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.hashids.Hashids
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Delete
@@ -172,5 +174,19 @@ class DunningController(
     @Post("check-schedule-time")
     suspend fun calculateNextScheduleTime(@Body scheduleRule: DunningScheduleRule): Date {
         return dunningService.calculateNextScheduleTime(scheduleRule)
+    }
+
+    @Post("send-mail-of-all-communication-to-trade-party")
+    suspend fun sendMailOfAllCommunicationToTradeParty(
+        @Valid @Body
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
+    ): Response<String> {
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            dunningService.sendMailOfAllCommunicationToTradeParty(
+                sendMailOfAllCommunicationToTradePartyReq,
+                true
+            )
+        )
     }
 }
