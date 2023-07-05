@@ -1351,9 +1351,9 @@ class DashboardServiceImpl : DashboardService {
                     request.endDate = localDate.toString()
                     request.startDate = (now().minusDays(7)).toString()
                 }
-                "fifteen" -> {
+                "month" -> {
                     request.endDate = localDate.toString()
-                    request.startDate = (now().minusDays(14)).toString()
+                    request.startDate = (now().minusDays(30)).toString()
                 }
                 "thirty" -> {
                     request.startDate = lastMonth.withDayOfMonth(1).toString()
