@@ -236,4 +236,19 @@ object AresConstants {
     )
 
     const val BUSINESS_FINANCE_TECH_TEAM = "649f3792-b28f-4862-9683-5d5af2c574b4"
+
+    val MONTH = mapOf(
+        "January" to 1,
+        "February" to 2,
+        "March" to 3,
+        "April" to 4,
+        "May" to 5,
+        "June" to 6,
+        "July" to 7,
+        "August" to 8,
+        "September" to 9,
+        "October" to 10,
+        "November" to 11,
+        "December" to 12
+    )
 }

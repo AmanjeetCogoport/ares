@@ -6,7 +6,7 @@ import io.micronaut.core.annotation.Introspected
 data class LSPLedgerRequest(
     val orgId: String,
     val year: Int,
-    val month: Int,
+    val month: String,
     var entityCode: Int? = null,
     var pageLimit: Int?,
     var page: Int?

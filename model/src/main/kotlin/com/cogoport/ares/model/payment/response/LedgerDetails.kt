@@ -9,7 +9,7 @@ import java.util.UUID
 @Introspected
 @MappedEntity
 data class LedgerDetails(
-    val taggedOrganizationId: UUID,
+    val organizationId: UUID,
     val transactionDate: Date,
     val ledgerCurrency: String,
     val serviceType: String,

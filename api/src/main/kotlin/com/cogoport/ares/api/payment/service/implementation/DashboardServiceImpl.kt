@@ -1440,13 +1440,18 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
-        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page!!, request.pageLimit!!)
-        if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+        val month = AresConstants.MONTH[request.month]
+        val ledgerDocumentsByPagination = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
+        if (ledgerDocumentsByPagination.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
 
-        val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, request.month, accTypes)
+        val allLedgerDocs = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month, accTypes, null, null)
+        val openingBalance = allLedgerDocs?.get(0)?.debit?.minus(allLedgerDocs[0].credit) ?: BigDecimal.ZERO
+        val closingBalance = allLedgerDocs?.sumOf { it.debit.minus(it.credit) } ?: BigDecimal.ZERO
+
+        val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
         val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
 
-        val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
+        val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocumentsByPagination)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
         val nonPaymentDocumentNos = ledgerDocs.filter { doc -> doc.type in listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PREIMB.name) }.map { it.documentNo }
         val sids = unifiedDBRepo.getJobNumbersByDocumentNos(nonPaymentDocumentNos)
@@ -1476,11 +1481,12 @@ class DashboardServiceImpl : DashboardService {
                 BigDecimal.ZERO
             }
         }
+
         val totalPages = Utilities.getTotalPages(totalCount, request.pageLimit!!)
         return LSPLedgerResponse(
             ledgerCurrency = ledgerDocs[0].ledgerCurrency,
-            openingBalance = ledgerDocs[0].balance!!,
-            closingBalance = balance,
+            openingBalance = openingBalance,
+            closingBalance = closingBalance,
             ledgerDocuments = ledgerDocs,
             totalPages = totalPages,
             page = request.page,
@@ -1490,7 +1496,8 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
-        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, request.month, accTypes, request.page, request.pageLimit)
+        val month = AresConstants.MONTH[request.month]
+        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
         if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
         val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
 
