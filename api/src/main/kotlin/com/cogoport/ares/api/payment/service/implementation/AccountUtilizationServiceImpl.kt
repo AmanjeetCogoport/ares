@@ -21,6 +21,7 @@ import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.InvoiceBalanceAmountReq
 import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -526,7 +527,10 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
         Client.removeDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, id.toString())
     }
 
-    override suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>): List<InvoiceBalanceResponse>? {
-        return accUtilRepository.getInvoiceBalanceAmount(invoiceNumbers)
+    override suspend fun getInvoiceBalanceAmount(requests: InvoiceBalanceAmountReq): List<InvoiceBalanceResponse>? {
+        return accUtilRepository.getInvoiceBalanceAmount(
+            requests.invoiceNumbers!!,
+            requests.accMode!!
+        )
     }
 }

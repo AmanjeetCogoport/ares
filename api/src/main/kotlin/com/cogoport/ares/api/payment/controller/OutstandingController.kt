@@ -10,6 +10,8 @@ import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TradePartyOutstandingReq
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -162,5 +164,10 @@ class OutstandingController {
     @Get("/customer-monthly-payment{?request*}")
     suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
         return Response<CustomerMonthlyPayment>().ok(outStandingService.getCustomerMonthlyPayment(request))
+    }
+
+    @Get("/trade-party-outstanding{?request*}")
+    suspend fun getTradePartyOutstanding(@Valid request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
+        return outStandingService.getTradePartyOutstanding(request)
     }
 }

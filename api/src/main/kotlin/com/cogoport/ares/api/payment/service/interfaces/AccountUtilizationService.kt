@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.model.common.InvoiceBalanceAmountReq
 import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.event.UpdateInvoiceRequest
@@ -20,5 +21,5 @@ interface AccountUtilizationService {
     suspend fun getInvoicesAmountMismatch(): List<Long>?
     suspend fun deleteInvoicesNotPresentInPlutus(id: Long)
 
-    suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>): List<InvoiceBalanceResponse>?
+    suspend fun getInvoiceBalanceAmount(requests: InvoiceBalanceAmountReq): List<InvoiceBalanceResponse>?
 }

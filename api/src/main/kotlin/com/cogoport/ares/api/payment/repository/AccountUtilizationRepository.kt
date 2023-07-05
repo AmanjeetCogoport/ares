@@ -1189,13 +1189,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
             SELECT
                 document_value,
-                amount_curr,
-                pay_curr
+                COALESCE(amount_loc - pay_loc, 0) AS led_balance_amount,
+                COALESCE(amount_curr - pay_curr, 0) AS balance_amount
             FROM
                 account_utilizations
             where
                 document_value in (:invoiceNumbers)
+                AND acc_mode = :accMode::account_mode
         """
     )
-    suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>): List<InvoiceBalanceResponse>?
+    suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>, accMode: AccMode): List<InvoiceBalanceResponse>?
 }

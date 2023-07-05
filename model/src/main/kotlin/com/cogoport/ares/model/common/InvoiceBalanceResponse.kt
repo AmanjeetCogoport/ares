@@ -8,6 +8,6 @@ import java.math.BigDecimal
 data class InvoiceBalanceResponse(
     @MappedProperty("document_value")
     var invoiceNumber: String,
-    var amountCurr: BigDecimal,
-    var payCurr: BigDecimal
+    var ledBalanceAmount: BigDecimal,
+    var balanceAmount: BigDecimal
 )
