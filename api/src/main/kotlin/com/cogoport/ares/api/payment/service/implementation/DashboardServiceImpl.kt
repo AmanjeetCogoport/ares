@@ -1390,7 +1390,7 @@ class DashboardServiceImpl : DashboardService {
                         currencyList.add(doc.currency)
                     }
                 }
-                transactionDates = transactionDates.distinct() as ArrayList<Date>
+                transactionDates = ArrayList(transactionDates.distinct())
                 currencyList = ArrayList(currencyList.distinct())
                 val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, arrayListOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
                 documentsForDue.forEach { doc ->
@@ -1418,7 +1418,7 @@ class DashboardServiceImpl : DashboardService {
                         currencyList.add(doc.currency)
                     }
                 }
-                transactionDates = transactionDates.distinct() as ArrayList<Date>
+                transactionDates = ArrayList(transactionDates.distinct())
                 currencyList = ArrayList(currencyList.distinct())
                 val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
                 documentsForOnAccount.forEach { doc ->
