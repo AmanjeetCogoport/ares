@@ -211,7 +211,8 @@ open class ParentJVServiceImpl : ParentJVService {
             parentJVRepository.countDocument(
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
-                query
+                query,
+                entityCodes
             )
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
