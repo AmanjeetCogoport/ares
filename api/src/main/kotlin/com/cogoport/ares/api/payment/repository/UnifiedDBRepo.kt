@@ -598,15 +598,15 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                     ) 
                     SELECT
                       array_agg(distinct
-                        case when stakeholder_id in (:stakeHolderIds)
+                        case when stakeholder_id in (:stakeholderIds)
                         then u.name else rm_u.name end
                     ) kam_owners, a.organization_id
                 from a
                 INNER JOIN users u on u.id = a.stakeholder_id
                 INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
                 WHERE (
-                    stakeholder_id in (:stakeHolderIds)
-                    or stakeholder_rm_id in (:stakeHolderIds)
+                    stakeholder_id in (:stakeholderIds)
+                    or stakeholder_rm_id in (:stakeholderIds)
                 )
                 GROUP BY a.organization_id
                 ) b on b.organization_id = os.organization_id
@@ -625,7 +625,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             LIMIT 10
         """
     )
-    fun getKamWiseOutstanding(entityCode: Int?, serviceType: ServiceType?, companyType: List<String>?, defaultersOrgIds: List<UUID>?, stakeHolderIds: List<UUID>?): List<KamWiseOutstanding>?
+    fun getKamWiseOutstanding(entityCode: Int?, serviceType: ServiceType?, companyType: List<String>?, defaultersOrgIds: List<UUID>?, stakeholderIds: List<UUID>?): List<KamWiseOutstanding>?
 
     @NewSpan
     @Query(

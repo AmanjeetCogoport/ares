@@ -827,9 +827,9 @@ class DashboardServiceImpl : DashboardService {
         val defaultersOrgIds = getDefaultersOrgIds()
         val updatedCompanyType = getCompanyType(companyType)
 
-        val stakeHolderIds = AresConstants.KAM_OWNERS_LIST_ENTITY_CODE_MAPPING[entityCode]?.map { UUID.fromString(it) }
+        val stakeholderIds = AresConstants.KAM_OWNERS_LIST_ENTITY_CODE_MAPPING[entityCode]?.map { UUID.fromString(it) }
 
-        val kamWiseData = unifiedDBRepo.getKamWiseOutstanding(entityCode, serviceType, updatedCompanyType, defaultersOrgIds, stakeHolderIds)
+        val kamWiseData = unifiedDBRepo.getKamWiseOutstanding(entityCode, serviceType, updatedCompanyType, defaultersOrgIds, stakeholderIds)
 
         if (!kamWiseData.isNullOrEmpty()) {
             kamWiseData.map {
