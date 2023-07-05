@@ -1330,7 +1330,8 @@ class DashboardServiceImpl : DashboardService {
         return SupplierReceivables(
             totalReceivables = AmountAndCount(totalReceivableAmount, documents.size),
             unpaidReceivables = AmountAndCount(unpaidReceivableAmount, unpaidDocuments.size),
-            partialPaidReceivables = AmountAndCount(partialPaidReceivableAmount, partialPaidDocuments.size)
+            partialPaidReceivables = AmountAndCount(partialPaidReceivableAmount, partialPaidDocuments.size),
+            currency = request.currency
         )
     }
 
@@ -1434,7 +1435,8 @@ class DashboardServiceImpl : DashboardService {
 
         return SupplierStatistics(
             invoicesDue = invoiceDueStats,
-            onAccountPayment = onAccountPayment
+            onAccountPayment = onAccountPayment,
+            currency = request.currency
         )
     }
 
