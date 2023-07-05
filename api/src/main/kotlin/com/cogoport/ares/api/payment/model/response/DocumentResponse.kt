@@ -8,7 +8,7 @@ import java.util.Date
 @Introspected
 @MappedEntity
 data class DocumentResponse(
-    val taggedOrganizationId: String,
+    val organizationId: String,
     val currency: String,
     val ledCurrency: String,
     val signFlag: Short,
