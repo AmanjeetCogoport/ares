@@ -32,7 +32,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
-import java.util.UUID
 
 @Singleton
 class Scheduler(
@@ -141,7 +140,7 @@ class Scheduler(
                 aresMessagePublisher.emitPostPaymentToSage(
                     PostPaymentToSage(
                         it,
-                        UUID.fromString(AresConstants.ARES_USER_ID)
+                        AresConstants.ARES_USER_ID
                     )
                 )
             }
@@ -155,12 +154,12 @@ class Scheduler(
         val date = Timestamp.valueOf("2023-05-16 00:00:00")
         val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
         if (!settlementsIds.isNullOrEmpty()) {
-            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
+            settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
         }
     }
 
     @Scheduled(cron = "30 19 * * *")
-    suspend fun settlementMatchingFailedOnSageEmail() {
+    fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
         val settlementsNotPosted = runBlocking {
@@ -176,9 +175,11 @@ class Scheduler(
             documentUrl = url.toString(),
             documentName = "failed_settlement_matching",
             documentType = "xlsx",
-            uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID)
+            uploadedBy = AresConstants.ARES_USER_ID
         )
-        val saveUrl = aresDocumentRepository.save(aresDocument)
+        val saveUrl = runBlocking {
+            aresDocumentRepository.save(aresDocument)
+        }
         val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
         runBlocking {
             settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)

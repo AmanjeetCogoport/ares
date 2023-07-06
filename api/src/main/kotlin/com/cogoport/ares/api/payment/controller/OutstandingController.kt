@@ -31,6 +31,7 @@ import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -128,8 +129,9 @@ class OutstandingController {
     }
 
     @Put("/customer-outstanding-migrate")
-    suspend fun migrateCustomerOutstanding() {
-        return scheduler.updateCustomerOutstandingOnOpenSearch()
+    suspend fun migrateCustomerOutstanding(): HttpResponse<Map<String, String>> {
+        scheduler.updateCustomerOutstandingOnOpenSearch()
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 
     @Auth

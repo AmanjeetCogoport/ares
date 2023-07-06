@@ -5,9 +5,11 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.IsoFields
+import java.util.UUID
 
 object AresConstants {
-    val ARES_USER_ID = "d815466f-f39f-414e-a799-5cd178da57ce"
+    val ARES_USER_ID: UUID = UUID.fromString("d815466f-f39f-414e-a799-5cd178da57ce")
+    val BLUETIDE_OTPD_ID: UUID = UUID.fromString("8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8")
 
     val CURR_QUARTER = LocalDate.now().get(IsoFields.QUARTER_OF_YEAR)
     val CURR_YEAR = LocalDate.now().year
@@ -90,7 +92,8 @@ object AresConstants {
         "get_payments_service_discovery_plutus_reachability",
         "get_payments_service_discovery_hades_reachability",
         "get_payments_service_discovery_kuber_reachability",
-        "get_payments_download"
+        "get_payments_download",
+        "get_payments_report_download_by_id"
     )
 
     val ENTITY_ID = mapOf(
@@ -233,5 +236,35 @@ object AresConstants {
         "vivek.garg@cogoport.com",
         "shikhar.tyagi@cogoport.com",
         "suhas.latelwar@cogoport.com"
+    )
+
+    private val INDIAN_KAM_OWNERS_IDS = listOf(
+        "0849d0ab-5a2f-40e7-b110-971572a86192",
+        "0ccfc574-f942-4fb4-971d-a34c7ae691c3",
+        "f8347fff-f447-4adc-a9e4-fd785e16f4c2",
+        "8c22817f-4246-43ef-a7f5-fdf77e37ca72",
+        "ff4de18f-22ff-4b37-a201-8834c0caca19",
+        "b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85",
+        "2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61",
+        "7f6f97fd-c17b-4760-a09f-d70b6ad963e8",
+        "1313fb1c-7203-4010-afdd-529cd32a2308",
+        "56673bb5-872f-4750-b322-2ee98d326300",
+        "308c9961-dacb-4929-acee-89b3d9ce5163"
+    )
+
+    private val VIETNAM_KAM_OWNERS_IDS = listOf(
+        "065c7e26-69f7-4ceb-8f36-1e666b89de94",
+        "657a8463-b3d5-4a97-9f38-3ff8259fde12",
+        "67450d7b-cb27-4550-840d-89e8d6582110",
+        "7d5b07b7-c2b3-4225-ace4-f28b0d4f769e",
+        "c29058ae-4360-4dd2-b06f-a1f085ea3602",
+        "c632ef94-0253-4f53-9173-cd2c0a4102e4",
+        "e38fe18c-7880-4989-8769-35b095f25b7e"
+    )
+
+    val KAM_OWNERS_LIST_ENTITY_CODE_MAPPING = mapOf(
+        301 to INDIAN_KAM_OWNERS_IDS,
+        101 to INDIAN_KAM_OWNERS_IDS,
+        501 to VIETNAM_KAM_OWNERS_IDS
     )
 }

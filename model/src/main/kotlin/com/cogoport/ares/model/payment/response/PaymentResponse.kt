@@ -101,4 +101,7 @@ data class PaymentResponse(
 
     @JsonProperty("payMode")
     var payMode: PayMode?,
+
+    @JsonProperty("createdBy")
+    var createdBy: UUID?,
 )

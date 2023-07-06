@@ -46,6 +46,8 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
                 ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
             AND
                 pjv.deleted_at is NULL
+            AND
+                (coalesce(:entityCodes) is null OR pjv.entity_code IN (:entityCodes))
             ORDER BY
                 CASE WHEN :sortType = 'Desc' THEN
                     CASE WHEN :sortBy = 'createdAt' THEN pjv.created_at                         
@@ -67,6 +69,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         category: String?,
         query: String?,
         page: Int,
+        entityCodes: List<Int>?,
         pageLimit: Int,
         sortType: String?,
         sortBy: String?
@@ -84,9 +87,13 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             (:category IS NULL OR  category = :category::VARCHAR) 
         AND
             jv_num ILIKE :query
+        AND 
+            (coalesce(:entityCodes) is null OR entity_code IN (:entityCodes))
+        AND
+            deleted_at is NULL
         """
     )
-    fun countDocument(status: JVStatus?, category: String?, query: String?): Long
+    fun countDocument(status: JVStatus?, category: String?, query: String?, entityCodes: List<Int>?): Long
 
     @NewSpan
     @Query(
