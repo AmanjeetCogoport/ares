@@ -1189,8 +1189,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
             SELECT
                 document_value,
-                COALESCE(amount_loc - pay_loc, 0) AS led_balance_amount,
-                COALESCE(amount_curr - pay_curr, 0) AS balance_amount
+                COALESCE(sign_flag * (amount_loc - pay_loc), 0) AS led_balance_amount,
+                COALESCE(sign_flag * (amount_curr - pay_curr), 0) AS balance_amount
             FROM
                 account_utilizations
             where
