@@ -519,4 +519,13 @@ ORDER BY
         """
     )
     suspend fun getPaymentsCorrespondingDocumentNos(destinationId: Long?, sourceId: Long?): MutableList<TaggedInvoiceSettlementInfo?>
+
+    @NewSpan
+    @Query(
+        """
+            update settlements set deleted_at = NOW(), updated_at = NOW(), settlement_status = 'DELETED'::settlement_status
+            where source_id in (:sourceIds) and source_type::varchar in (:sourceTypes)
+        """
+    )
+    suspend fun markingSettlementAsDeleted(sourceIds: List<Long>, sourceTypes: List<String>)
 }

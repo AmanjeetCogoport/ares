@@ -655,7 +655,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC", "PAY"))
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
@@ -676,7 +676,7 @@ class DashboardServiceImpl : DashboardService {
             else -> BigDecimal.ZERO
         }
 
-        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount!!)
+        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount?.multiply(BigDecimal(-1))!!)
 
         openSearchData.outstandingServiceWise = mapData
         openSearchData.overallStats = OverallStats(
@@ -994,8 +994,8 @@ class DashboardServiceImpl : DashboardService {
                 request.endDate, request.tradeType, request.entityCode,
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate, true)
         } else {
             val defaultOrgIds = getDefaultersOrgIds()
             val customerTypes = mapOf(
@@ -1009,16 +1009,16 @@ class DashboardServiceImpl : DashboardService {
                 defaultOrgIds
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate, true)
         }
         var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
         if (request.accountMode == AccMode.AP) {
             totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
             receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
         }
-        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
-        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val totalOutStanding = totalReceivableOrPayable?.plus(onAccountPayment!!)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.plus(onAccountTillYesterday ?: 0.toBigDecimal())
         val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
         val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
         response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {

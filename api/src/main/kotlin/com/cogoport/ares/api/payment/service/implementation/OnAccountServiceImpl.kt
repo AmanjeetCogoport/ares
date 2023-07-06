@@ -201,7 +201,7 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
-    @Value("\${micronaut.server.base-url}") // application-prod.yml path
+    @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     /**
@@ -243,7 +243,7 @@ open class OnAccountServiceImpl : OnAccountService {
         )
 
         val updatedByIds = paymentsData
-            ?.mapNotNull { it.updatedBy?.toString() }
+            ?.mapNotNull { it.createdBy?.toString() }
             ?.filterNot { it.isEmpty() }
             ?.distinct()
             ?.let { ArrayList(it) }
@@ -456,17 +456,17 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
-        if (receivableRequest.transactionDate!! > Date()) {
+        if (receivableRequest.transactionDate != null && receivableRequest.transactionDate!! > Date()) {
             throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
         }
 
 //        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
 
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
-        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "Payment")
 
         if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) throw AresException(AresError.ERR_1010, "")
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "Account Utilization")
         return updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
     }
 
@@ -1261,6 +1261,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId)
+            if (paymentDetails.organizationId == AresConstants.BLUETIDE_OTPD_ID) {
+                return false
+            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 thirdPartyApiAuditService.createAudit(
@@ -1760,7 +1763,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         paymentModel.updatedBy = req.performedBy.toString()
         val updatedPayment = updatePaymentEntry(paymentModel)
-        if (updatedPayment.isSuccess) {
+        if (updatedPayment.isSuccess && paymentModel.organizationId != AresConstants.BLUETIDE_OTPD_ID) {
             directFinalPostToSage(
                 PostPaymentToSage(
                     req.paymentId,
@@ -1827,7 +1830,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     documentUrl = url,
                     documentName = "sage_platform_report",
                     documentType = url.substringAfterLast('.'),
-                    uploadedBy = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                    uploadedBy = AresConstants.ARES_USER_ID,
                     createdAt = Timestamp.valueOf(LocalDateTime.now()),
                     updatedAt = Timestamp.valueOf(LocalDateTime.now())
                 )
@@ -1839,7 +1842,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val request = CreateCommunicationRequest(
                 templateName = AresConstants.SAGE_PLATFORM_REPORT,
-                performedByUserId = UUID.fromString(AresConstants.BUSINESS_FINANCE_TECH_TEAM),
+                performedByUserId = AresConstants.ARES_USER_ID,
                 performedByUserName = AresConstants.performedByUserNameForMail,
                 recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
                 senderEmail = AresConstants.NO_REPLY,
@@ -1848,6 +1851,23 @@ open class OnAccountServiceImpl : OnAccountService {
             )
 
             aresMessagePublisher.sendEmail(request)
+        }
+    }
+
+    override suspend fun deletingApPayments(paymentNumValues: List<String>) {
+        val paymentsData = paymentRepository.getPaymentRelatedField(AccMode.AP.name, paymentNumValues)
+
+        if (paymentsData.isNotEmpty()) {
+            val docValues = paymentsData.map { it.paymentNumValue!! }
+
+            // deleting payments
+            paymentRepository.deletingApPayments(docValues)
+
+            // marking account utilization deleted
+            accountUtilizationRepository.updateAccountUtilizationUsingDocValue(docValues)
+
+            // marking settlement deleted for utilized payments
+            settlementRepository.markingSettlementAsDeleted(paymentsData.map { it.paymentNum!! }, paymentsData.map { it.paymentCode.toString() })
         }
     }
 }
