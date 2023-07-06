@@ -69,7 +69,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         category: String?,
         query: String?,
         page: Int,
-        entityCodes: List<Int>?,
+        entityCodes: List<Int?>?,
         pageLimit: Int,
         sortType: String?,
         sortBy: String?
@@ -93,7 +93,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             deleted_at is NULL
         """
     )
-    fun countDocument(status: JVStatus?, category: String?, query: String?, entityCodes: List<Int>?): Long
+    fun countDocument(status: JVStatus?, category: String?, query: String?, entityCodes: List<Int?>?): Long
 
     @NewSpan
     @Query(
