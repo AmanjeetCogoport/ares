@@ -6,8 +6,10 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
+import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.reports.services.interfaces.ReportService
 import com.cogoport.ares.model.payment.SupplierOutstandingReportResponse
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.excel.ExcelSheetBuilder
@@ -17,14 +19,16 @@ import com.cogoport.brahma.excel.model.Style
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.io.File
 import java.net.URLDecoder
 import java.nio.file.Files
 import java.sql.Timestamp
-import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
 
 @Singleton
 class ReportServiceImpl(
@@ -34,6 +38,9 @@ class ReportServiceImpl(
 
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
+
+    @Inject
+    lateinit var onAccountService: OnAccountService
 
     override suspend fun outstandingReportDownload(request: SupplierOutstandingRequest): String {
         request.limit = AresConstants.LIMIT
@@ -75,12 +82,12 @@ class ReportServiceImpl(
     override suspend fun downloadOutstandingReport(id: Long): File {
         val url = URLDecoder.decode(aresDocumentRepository.getSupplierOutstandingUrl(id), "UTF-8")
         val inputStreamFile = s3Client.download(url)
-        val excelFile = File("/tmp/Supplier_Outstanding_Report_${Hashids.encode(id)}_${Instant.now()}.xlsx")
+        val excelFile = File("/tmp/$inputStreamFile")
         Files.copy(inputStreamFile.inputStream(), excelFile.toPath())
         return excelFile
     }
 
-    private fun writeIntoExcel(outstandingList: MutableList<SupplierOutstandingReportResponse>, excelName: String): File {
+    private fun <T : Any> writeIntoExcel(list: MutableList<T>, excelName: String): File {
         val file = ExcelSheetBuilder.Builder()
             .filename(excelName)
             .sheetName("")
@@ -91,7 +98,7 @@ class ReportServiceImpl(
                     fontColor = Color.BLACK,
                     background = Color.YELLOW
                 )
-            ).data(outstandingList).build()
+            ).data(list).build()
         return file
     }
     private fun getSupplierOutstandingReportResponse(supplier: SupplierOutstandingDocument): SupplierOutstandingReportResponse {
@@ -133,5 +140,27 @@ class ReportServiceImpl(
             threeSixtyFiveAmount = supplier.threeSixtyFiveAmount,
             threeSixtyFivePlusAmount = supplier.threeSixtyFivePlusAmount
         )
+    }
+
+    override suspend fun getARLedgerReport(req: LedgerSummaryRequest): String {
+        val report = onAccountService.getARLedgerOrganizationAndEntityWise(req)
+        val startDate = Date(req.startDate?.time!!).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val endDate = Date(req.endDate?.time!!).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val orgName = req.orgName?.replace(" ", "_")
+        val excelName = "AR_Ledger_${orgName}_from_${startDate}_to_$endDate"
+        val file = writeIntoExcel(report.toMutableList(), excelName)
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file).toString()
+        val result = aresDocumentRepository.save(
+            AresDocument(
+                id = null,
+                documentUrl = url,
+                documentName = "AR_Ledger_Report",
+                documentType = url.substringAfterLast('.'),
+                uploadedBy = req.requestedBy!!,
+                createdAt = Timestamp.valueOf(LocalDateTime.now()),
+                updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            )
+        )
+        return Hashids.encode(result.id!!)
     }
 }
