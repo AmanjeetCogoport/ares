@@ -1270,7 +1270,7 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
-        val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name)
+        val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
         if (documents.isEmpty()) {
             return SupplierReceivables(
@@ -1351,8 +1351,11 @@ class DashboardServiceImpl : DashboardService {
         var invoicesDueAmount = BigDecimal.ZERO
         var onAccountAmount = BigDecimal.ZERO
 
-        val accountTypesForDue = listOf(AccountType.PINV.name, AccountType.PREIMB.name)
-        val accountTypesForOnAccount = listOf(AccountType.PAY.name, AccountType.BANK.name, AccountType.MISC.name)
+        val accountTypesForDue = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
+        val accountTypesForOnAccount = listOf(
+            AccountType.PAY.name, AccountType.BANK.name, AccountType.MISC.name,
+            AccountType.OPDIV.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name
+        )
         if (request.endDate.isNullOrEmpty()) {
             val localDate = now()
             val lastMonth = localDate.minusMonths(1)
@@ -1463,7 +1466,7 @@ class DashboardServiceImpl : DashboardService {
                 openingBalance = BigDecimal.ZERO,
                 closingBalance = BigDecimal.ZERO,
                 ledgerCurrency = "",
-                ledgerDocuments = listOf()
+                ledgerDocuments = emptyList()
             )
         }
 
