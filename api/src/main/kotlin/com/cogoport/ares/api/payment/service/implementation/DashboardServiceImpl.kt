@@ -1302,34 +1302,37 @@ class DashboardServiceImpl : DashboardService {
             val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
             documents.forEach { doc ->
                 val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                totalReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
+                totalReceivableAmount += exchangeRate
+                    ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    unpaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
+                    unpaidReceivableAmount += exchangeRate
+                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    partialPaidReceivableAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
+                    partialPaidReceivableAmount += exchangeRate
+                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             }
         } else {
             documents.forEach {
-                totalReceivableAmount += (it?.amountLoc!! - it.payLoc)
+                totalReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach {
-                    unpaidReceivableAmount += (it?.amountLoc!! - it.payLoc)
+                    unpaidReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach {
-                    partialPaidReceivableAmount += (it?.amountLoc!! - it.payLoc)
+                    partialPaidReceivableAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
                 }
             }
         }
@@ -1402,11 +1405,12 @@ class DashboardServiceImpl : DashboardService {
                 val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, arrayListOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
                 documentsForDue.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
-                    invoicesDueAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr))
+                    invoicesDueAmount += exchangeRate
+                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             } else {
                 documentsForDue.forEach {
-                    invoicesDueAmount += (it?.amountLoc!! - it.payLoc)
+                    invoicesDueAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
                 }
             }
             invoiceDueStats = AmountAndCount(invoicesDueAmount, documentsForDue.size)
@@ -1448,7 +1452,10 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
-        val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
+        val accTypes = listOf(
+            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name,
+            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name
+        )
         val month = AresConstants.MONTH[request.month]
         val ledgerDocumentsByPagination = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
         if (ledgerDocumentsByPagination.isNullOrEmpty()) {
@@ -1465,7 +1472,7 @@ class DashboardServiceImpl : DashboardService {
         val closingBalance = allLedgerDocs?.sumOf { it.debit.minus(it.credit) } ?: BigDecimal.ZERO
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
-        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
+        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous")
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocumentsByPagination)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
@@ -1485,7 +1492,7 @@ class DashboardServiceImpl : DashboardService {
 
         var balance = BigDecimal.ZERO
         ledgerDocs.forEach {
-            it.type = description[it.type].toString()
+            it.type = description[it.type] ?: it.type
             it.documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue
             it.shipmentId = documentSIDMap[it.documentNo] ?: "NA"
             balance += (it.debit - it.credit)

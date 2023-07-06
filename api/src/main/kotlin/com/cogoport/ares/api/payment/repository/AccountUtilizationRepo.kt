@@ -841,14 +841,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             service_type,
             document_value,
             document_no,
-            CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN (amount_loc - pay_loc) ELSE 0 END as debit,
-            CASE WHEN acc_type IN ('PAY','MISC') AND acc_code = 321000 THEN (amount_loc - pay_loc) ELSE 0 END as credit,
+            CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END as debit,
+            CASE WHEN acc_type IN ('PAY','MISC','OPDIV','BANK','INTER','CONTR','MTCCV') AND acc_code = 321000 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END as credit,
             led_currency as ledger_currency,
             acc_type::text as type
         FROM
             account_utilizations
         WHERE
-            document_status = 'FINAL'
+            document_status IN ('FINAL','PROFORMA')
             AND organization_id IS NOT NULL
             AND acc_mode = 'AP'
             AND organization_id = :orgId::uuid

@@ -308,10 +308,10 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
             SELECT payment_num, trans_ref_number FROM payments 
             WHERE payment_num IN (:paymentNums) AND acc_mode::varchar = :accMode
-            AND tagged_organization_id = :taggedOrgId::uuid
+            AND organization_id = :orgId::uuid
             AND payment_code::varchar = :paymentCode
             AND deleted_at is null
         """
     )
-    suspend fun findTransRefNumByPaymentNums(paymentNums: List<Long>, accMode: String, taggedOrgId: String, paymentCode: String): List<TransRefNumberResponse>
+    suspend fun findTransRefNumByPaymentNums(paymentNums: List<Long>, accMode: String, orgId: String, paymentCode: String): List<TransRefNumberResponse>
 }
