@@ -482,47 +482,151 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            SELECT
-                COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
-                SUM(COALESCE(open_invoice_amount,0)) open_invoice_amount,
-                (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount,
-                -- ,array_agg(distinct so.registration_number) registration_numbers
-                so.cogo_entity as entity_code
-                from snapshot_organization_outstandings so
-                LEFT JOIN (
-                  with a as(
+            WITH y as (
+            SELECT 
+                DISTINCT
+                aau.id,
+                aau.amount_loc,
+                aau.pay_loc,
+                aau.sign_flag,
+                aau.acc_type,
+                b.kam_owners
+                FROM ares.account_utilizations aau
+                INNER JOIN (
+                with x as
+              (
+              SELECT 
+              s.registration_number,
+              CASE WHEN self_kyc_org_id IS NOT NULL THEN self_kyc_org_id
+                    WHEN self_org_id IS NOT NULL THEN self_org_id
+                    WHEN self_kyc_sp_org_id IS NOT NULL THEN self_kyc_sp_org_id
+                    WHEN self_sp_org_id IS NOT NULL THEN self_sp_org_id
+                    ELSE paying_org_id
+              END organization_id,
+              CASE WHEN  (self_kyc_org_id IS NOT NULL or self_org_id IS NOT NULL or self_kyc_sp_org_id IS NOT NULL or self_sp_org_id IS NOT NULL) then 'self'
+              ELSE 'paying_party'
+              END trade_party_type,
+              s.trade_name,
+              trade_party_details_id
+              FROM (
+                  SELECT DISTINCT otpd.registration_number registration_number
+                    ,otpd.id trade_party_details_id
+                    ,otsk.id self_kyc_org_id
+                    ,ots.id self_org_id
+                    ,otsk_sp.id self_kyc_sp_org_id
+                    ,ots_sp.id self_sp_org_id
+                    ,otp.id paying_org_id, otsk.trade_name trade_name
+                  FROM organization_trade_party_details otpd
+                  LEFT JOIN (
+                      SELECT skorg.id id
+                      ,otpsk.organization_trade_party_detail_id organization_trade_party_detail_id,
+                      skorg.trade_name trade_name
+                      FROM organization_trade_parties otpsk
+                      INNER JOIN organizations skorg ON skorg.id = otpsk.organization_id
+                      WHERE skorg.account_type = 'importer_exporter'
+                        AND skorg.kyc_status = 'verified'
+                        AND skorg.id IS NOT NULL
+                        AND otpsk.trade_party_type = 'self'
+                        AND otpsk.STATUS = 'active'
+                      ) otsk ON otsk.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT sorg.id id
+                      ,otps.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otps
+                      INNER JOIN organizations sorg ON sorg.id = otps.organization_id
+                      WHERE sorg.account_type = 'importer_exporter'
+                        AND sorg.id IS NOT NULL
+                        AND otps.trade_party_type = 'self'
+                        AND otps.STATUS = 'active'
+                      ) ots ON ots.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT skorg.id id
+                      ,otpsk.organization_trade_party_detail_id organization_trade_party_detail_id,
+                      skorg.trade_name trade_name
+                      FROM organization_trade_parties otpsk
+                      INNER JOIN organizations skorg ON skorg.id = otpsk.organization_id
+                      WHERE skorg.account_type = 'service_provider'
+                        AND skorg.kyc_status = 'verified'
+                        AND skorg.id IS NOT NULL
+                        AND otpsk.trade_party_type = 'self'
+                        AND otpsk.STATUS = 'active'
+                      ) otsk_sp ON otsk_sp.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT sorg.id id
+                      ,otps.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otps
+                      INNER JOIN organizations sorg ON sorg.id = otps.organization_id
+                      WHERE sorg.account_type = 'service_provider'
+                        AND sorg.id IS NOT NULL
+                        AND otps.trade_party_type = 'self'
+                        AND otps.STATUS = 'active'
+                      ) ots_sp ON ots_sp.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT max(DISTINCT porg.id::TEXT)::uuid id
+                      ,otpp.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otpp
+                      INNER JOIN organizations porg ON porg.id = otpp.organization_id
+                      WHERE porg.kyc_status = 'verified'
+                        AND porg.account_type = 'importer_exporter'
+                        AND porg.STATUS = 'active'
+                        AND porg.id IS NOT NULL
+                        AND otpp.trade_party_type = 'paying_party'
+                        AND otpp.STATUS = 'active'
+                        GROUP BY otpp.organization_trade_party_detail_id
+                  ) otp ON otp.organization_trade_party_detail_id = otpd.id
+                ) s
+              )
+              SELECT x.registration_number
+                ,MAX(x.organization_id::text)::uuid organization_id
+                ,MAX(x.trade_party_type) trade_party_type
+                ,MAX(x.trade_name) trade_name
+                ,MAX(o.business_name) business_name
+                ,MAX(x.trade_party_details_id::text)::uuid trade_party_details_id
+              from x
+              INNER JOIN organizations o on o.id = x.organization_id
+              LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+              WHERE (COALESCE(:companyType) is null OR los.id is null OR los.segment in (:companyType))
+              GROUP BY x.registration_number) os on os.trade_party_details_id = aau.organization_id
+            inner join (
+                with a as
+                    (
+                        SELECT
+                          unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, os.organization_id
+                        from organization_stakeholders os
+                        LEFT JOIN (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
+                        WHERE status='active'
+                        AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
+                    ) 
                     SELECT
-                      unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, organization_id
-                    from organization_stakeholders os
-                    LEFT JOIN (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
-                    WHERE status='active'
-                    AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
-                  ) SELECT
                       array_agg(distinct
-                        case when stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
+                        case when stakeholder_id in (:stakeholderIds)
                         then u.name else rm_u.name end
-                  ) kam_owners, organization_id
-                  from a
-                  INNER JOIN users u on u.id = a.stakeholder_id
-                  INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
-                  WHERE (
-                        stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
-                        or stakeholder_rm_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
-                    )
-                  GROUP BY organization_id
-                ) os on os.organization_id = so.organization_id
-                LEFT JOIN outstanding_account_taggings oat on oat.registration_number = so.registration_number and oat.status='active'
-                WHERE
-                so.registration_number IS NOT NULL
-                AND TRIM(so.registration_number) != ''
-                AND is_precovid = 'NO'
-                AND ( so.cogo_entity = :entityCode::varchar)
-                GROUP BY kam_owners, so.cogo_entity
-                order by total_outstanding_amount desc
-                limit 10
+                    ) kam_owners, a.organization_id
+                from a
+                INNER JOIN users u on u.id = a.stakeholder_id
+                INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
+                WHERE (
+                    stakeholder_id in (:stakeholderIds)
+                    or stakeholder_rm_id in (:stakeholderIds)
+                )
+                GROUP BY a.organization_id
+                ) b on b.organization_id = os.organization_id
+                WHERE aau.entity_code = :entityCode
+                AND (:serviceType is null OR aau.service_type = :serviceType)
+                AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
+                and document_status = 'FINAL' and aau.deleted_at is null
+            ) 
+            SELECT
+            COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
+            COALESCE(sum(case when acc_type in ('SINV','SCN','SREIMB', 'SREIMBCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+            COALESCE(sum(case when acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount
+            FROM y
+            GROUP BY kam_owners
+            ORDER BY total_outstanding_amount DESC
+            LIMIT 10
         """
     )
-    fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>?
+    fun getKamWiseOutstanding(entityCode: Int?, serviceType: ServiceType?, companyType: List<String>?, defaultersOrgIds: List<UUID>?, stakeholderIds: List<UUID>?): List<KamWiseOutstanding>?
 
     @NewSpan
     @Query(
