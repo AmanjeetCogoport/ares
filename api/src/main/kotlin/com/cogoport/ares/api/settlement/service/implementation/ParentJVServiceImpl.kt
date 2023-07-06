@@ -191,11 +191,18 @@ open class ParentJVServiceImpl : ParentJVService {
         val query = util.toQueryString(jvListRequest.query)
         val sortType = jvListRequest.sortType ?: "DESC"
         val sortBy = jvListRequest.sortBy ?: "createdAt"
+        val entityCode = jvListRequest.entityCode
+        val entityCodes = if (entityCode != null) {
+            listOf(entityCode)
+        } else {
+            null
+        }
         val documentEntity = parentJVRepository.getListVouchers(
             jvListRequest.status,
             if (jvListRequest.category != null) jvListRequest.category!! else null,
             query,
             jvListRequest.page,
+            entityCodes,
             jvListRequest.pageLimit,
             sortType,
             sortBy
@@ -204,7 +211,8 @@ open class ParentJVServiceImpl : ParentJVService {
             parentJVRepository.countDocument(
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
-                query
+                query,
+                entityCodes
             )
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
@@ -239,17 +247,9 @@ open class ParentJVServiceImpl : ParentJVService {
 
     private fun getSignFlag(type: String): Short {
         return when (type.uppercase()) {
-            "CREDIT" -> {
-                -1
-            }
-
-            "DEBIT" -> {
-                1
-            }
-
-            else -> {
-                throw AresException(AresError.ERR_1009, "JV type")
-            }
+            "CREDIT" -> -1
+            "DEBIT" -> 1
+            else -> throw AresException(AresError.ERR_1009, "JV type")
         }
     }
 
@@ -343,7 +343,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
             auditService.createAudit(
                 AuditRequest(
-                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                     objectId = parentJvId,
                     actionName = AresConstants.DELETE,
                     data = mapOf("id" to id, "status" to "DELETED"),
@@ -474,7 +474,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun postJVToSage(parentJVId: Long, performedBy: UUID): Boolean {
         try {
-            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "")
+            val parentJVDetails = parentJVRepository.findById(parentJVId) ?: throw AresException(AresError.ERR_1002, "JV")
             val jvLineItems = journalVoucherRepository.getJournalVoucherByParentJVId(parentJVId)
 
             if (parentJVDetails.entityCode == 501) {
@@ -496,22 +496,41 @@ open class ParentJVServiceImpl : ParentJVService {
                         throw AresException(AresError.ERR_1530, "")
                     }
 
-                    sageOrganization = authClient.getSageOrganization(
-                        SageOrganizationRequest(
-                            organization.list[0]["serial_id"]!!.toString(),
-                            if (lineItem.accMode == AccMode.AP) "service_provider" else "importer_exporter"
-                        )
-                    )
-
-                    val sageOrganizationQuery = "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
+                    val sageOrganizationQuery = if (lineItem.accMode == AccMode.AR) "Select BPCNUM_0 from $sageDatabase.BPCUSTOMER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'" else "Select BPSNUM_0 from $sageDatabase.BPSUPPLIER where XX1P4PANNO_0='${organization.list[0]["registration_number"]}'"
                     val resultFromSageOrganizationQuery = Client.sqlQuery(sageOrganizationQuery)
                     val recordsForSageOrganization = ObjectMapper().readValue(resultFromSageOrganizationQuery, SageCustomerRecord::class.java)
-                    val sageOrganizationFromSageId = recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId
 
-                    if (sageOrganization?.sageOrganizationId.isNullOrEmpty()) {
+                    if (recordsForSageOrganization.recordSet.isNullOrEmpty()) {
                         parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
                         journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
 
+                        thirdPartyApiAuditService.createAudit(
+                            ThirdPartyApiAudit(
+                                null,
+                                "PostJVToSage",
+                                "Journal Voucher",
+                                parentJVId,
+                                "JOURNAL_VOUCHER",
+                                "500",
+                                "Registration Number: ${organization.list[0]["registration_number"]}",
+                                "Not Found BPR",
+                                false
+                            )
+                        )
+                        return false
+                    }
+
+                    val sageOrganizationFromSageId = if (lineItem.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
+
+                    sageOrganization = authClient.getSageOrganization(
+                        SageOrganizationRequest(
+                            organization.list[0]["serial_id"]!!.toString()
+                        )
+                    )
+
+                    if (sageOrganization!!.sageOrganizationId.isNullOrEmpty()) {
+                        parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
+                        journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
                         thirdPartyApiAuditService.createAudit(
                             ThirdPartyApiAudit(
                                 null,
@@ -528,7 +547,7 @@ open class ParentJVServiceImpl : ParentJVService {
                         return false
                     }
 
-                    if (sageOrganization?.sageOrganizationId != sageOrganizationFromSageId) {
+                    if (sageOrganization!!.sageOrganizationId != sageOrganizationFromSageId) {
                         parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
                         journalVoucherRepository.updateStatus(lineItem.id!!, JVStatus.POSTING_FAILED, performedBy)
 
@@ -540,8 +559,8 @@ open class ParentJVServiceImpl : ParentJVService {
                                 parentJVId,
                                 "JOURNAL_VOUCHER",
                                 "500",
-                                sageOrganization.toString(),
-                                "Sage organization not present",
+                                """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganization!!.sageOrganizationId}""",
+                                "sage serial organization id different on Sage and Cogoport Platform",
                                 false
                             )
                         )
@@ -565,6 +584,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     parentJVDetails.jvNum!!,
                     parentJVDetails.transactionDate!!,
                     parentJVDetails.description!!,
+                    parentJVDetails.exchangeRate!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     jvLineItemsDetails
                 )
             )

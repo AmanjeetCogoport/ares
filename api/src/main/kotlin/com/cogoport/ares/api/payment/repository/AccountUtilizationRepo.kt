@@ -4,9 +4,11 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -106,7 +108,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             WHERE (:query IS NULL OR au.document_value LIKE :query 
                     OR p.sage_ref_number LIKE :query)
                 AND au.organization_id = :organizationId
-                AND au.acc_type = 'REC'
+                AND au.acc_type in ('REC', 'CTDS')
                 AND au.entity_code = :entityCode
         ) subquery
         WHERE
@@ -153,153 +155,153 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 currency,
                 max(organization_name) as organization_name,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(due_date >= now()::date) THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 0 AND 30 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS thirty_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 31 AND 45 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS forty_five_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 46 AND 60 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS sixty_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS ninety_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) > 180 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type THEN
-                        amount_loc - pay_loc
+                    CASE WHEN acc_type::varchar IN (:accType) THEN
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS total_led_outstanding,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(due_date >= now()::date) THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS not_due_curr_amount,      
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 0 AND 30 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS thirty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 31 AND 45 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS forty_five_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 46 AND 60 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS sixty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 61 AND 90 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS ninety_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 91 AND 180 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS one_eighty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type
+                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) > 180 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
-                    CASE WHEN acc_type = :accType::account_type THEN
-                        amount_curr - pay_curr
+                    CASE WHEN acc_type::varchar IN (:accType) THEN
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS total_curr_outstanding,
                 sum(
-                    CASE WHEN due_date >= now()::date AND acc_type = :accType::account_type THEN
+                    CASE WHEN due_date >= now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS not_due_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 0 AND 30 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 0 AND 30 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS thirty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS sixty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS ninety_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS one_eighty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) > 180 AND acc_type = :accType::account_type THEN
+                    CASE WHEN (now()::date - due_date) > 180 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -311,16 +313,15 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND due_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND amount_curr - pay_curr > 0
                 AND entity_code = :entityCode
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
-                AND acc_type = :accType::account_type
+                AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
             GROUP BY
                 organization_id, entity_code, currency 
         """
     )
-    suspend fun getInvoicesOutstandingAgeingBucket(entityCode: Int, accType: AccountType, orgId: String?): List<CustomerOutstandingAgeing>
+    suspend fun getOutstandingAgeingBucket(entityCode: Int, accType: List<String>, orgId: String?): List<CustomerOutstandingAgeing>
 
     @NewSpan
     @Query(
@@ -331,153 +332,153 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 currency,
                 max(organization_name) as organization_name,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(transaction_date >= now()::date) THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 0 AND 30 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS thirty_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 31 AND 45 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS forty_five_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS sixty_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS ninety_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) > 180 THEN
-                        amount_loc - pay_loc
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC' THEN
-                        amount_loc - pay_loc
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') THEN
+                        sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS total_led_outstanding,
                 sum(
-                    CASE WHEN (acc_type = 'REC'
-                        and(transaction_date >= now()::date)) THEN
-                        amount_curr - pay_curr
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+                        and(transaction_date >= now()::date) THEN
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS not_due_curr_amount,      
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 0 AND 30 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS thirty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 31 AND 45 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS forty_five_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS sixty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS ninety_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS one_eighty_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC'
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                         and(now()::date - transaction_date) > 180 THEN
-                        amount_curr - pay_curr
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
-                    CASE WHEN acc_type = 'REC' THEN
-                        amount_curr - pay_curr
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') THEN
+                        sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS total_curr_outstanding,
                 sum(
-                    CASE WHEN transaction_date >= now()::date AND acc_type = 'REC' THEN
+                    CASE WHEN transaction_date >= now()::date AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS not_due_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS thirty_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS sixty_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS ninety_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS one_eighty_count,
                 sum(
-                    CASE WHEN (now()::date - transaction_date) > 180 AND acc_type = 'REC' THEN
+                    CASE WHEN (now()::date - transaction_date) > 180 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -489,13 +490,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND transaction_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND amount_curr - pay_curr > 0
                 AND entity_code = :entityCode
                 AND (:orgId IS NULL OR organization_id = :orgId::uuid)
-                AND acc_type = 'REC'
+                AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
                 AND deleted_at IS NULL
             GROUP BY
-                organization_id, entity_code, currency 
+                organization_id, entity_code, currency
         """
     )
     suspend fun getInvoicesOnAccountAgeingBucket(entityCode: Int, orgId: String?): List<CustomerOutstandingAgeing>
@@ -564,7 +564,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND (amount_curr - pay_curr) > 0
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
@@ -704,7 +704,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)
@@ -713,6 +713,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
                     AND deleted_at is null  and is_void = false
+                    AND document_status != 'DELETED'::document_status
+                    AND settlement_enabled = true
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -756,4 +758,76 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         newDocValue: String,
         newDocNo: Long
     ): Int
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+            led_currency as ledger_currency,
+            sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-01-01')::DATE
+			    AND CONCAT(:year, '-01-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS january,
+	        sum(
+                CASE WHEN transaction_date BETWEEN CONCAT(:year, '-02-01')::DATE
+			    AND CONCAT(:year, CASE WHEN :isLeapYear = TRUE THEN '-02-29' ELSE '-02-28' END)::DATE THEN sign_flag * amount_loc ELSE 0 END) AS february,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-03-01')::DATE
+			    AND CONCAT(:year, '-03-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS march,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-04-01')::DATE
+			    AND CONCAT(:year, '-04-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS april,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-05-01')::DATE
+			    AND CONCAT(:year, '-05-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS may,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-06-01')::DATE
+			    AND CONCAT(:year, '-06-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS june,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-07-01')::DATE
+			    AND CONCAT(:year, '-07-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS july,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-08-01')::DATE
+			    AND CONCAT(:year, '-08-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS august,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-09-01')::DATE
+			    AND CONCAT(:year, '-09-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS september,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-10-01')::DATE
+			    AND CONCAT(:year, '-10-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS october,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-11-01')::DATE
+			    AND CONCAT(:year, '-11-30')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS november,
+	        sum(
+		        CASE WHEN transaction_date BETWEEN CONCAT(:year, '-12-01')::DATE
+			    AND CONCAT(:year, '-12-31')::DATE THEN sign_flag * amount_loc ELSE 0 END) AS december
+            FROM
+	            account_utilizations
+            WHERE
+                acc_mode = 'AR'
+                AND organization_id = :orgId::UUID
+                AND acc_type IN ('REC','BANK','MISC')
+                AND acc_code = 223000
+                AND document_status = 'FINAL'
+                AND deleted_at IS NULL
+                AND entity_code = :entityCode
+            group by organization_id, led_currency
+        """
+    )
+    suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean, entityCode: Int): CustomerMonthlyPayment?
+
+    @NewSpan
+    @Query(
+        """
+            select organization_id::varchar,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc)  else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' AND due_date < now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as overdue_open_invoices_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN', 'REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'PAY') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY') and acc_mode = 'AR' and document_status = 'FINAL'  
+            and organization_id IN (:orgIds) and entity_code IN (:entityCodes) and deleted_at is null
+            group by organization_id
+        """
+    )
+    suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
 }

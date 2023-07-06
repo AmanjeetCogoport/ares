@@ -20,6 +20,7 @@ import com.cogoport.ares.api.payment.entity.TodayPurchaseStats
 import com.cogoport.ares.api.payment.entity.TodaySalesStat
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.PaymentDetailsAtPlatform
 import com.cogoport.ares.model.payment.ServiceType
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -104,12 +105,12 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-        SELECT coalesce(sum((amount_loc-pay_loc)),0) as amount
+        SELECT coalesce(sum(sign_flag * (amount_loc-pay_loc)),0) as amount
         FROM ares.account_utilizations aau
         WHERE document_status = 'FINAL'
         AND (COALESCE(:entityCode) is null or aau.entity_code IN (:entityCode))
         AND aau.transaction_date < NOW() 
-        AND (acc_type = :accType)
+        AND (COALESCE(:accType) is null OR acc_type IN (:accType))
         AND (acc_mode = :accMode)
         AND (CASE WHEN :isTillYesterday = TRUE THEN aau.transaction_date < now()::DATE ELSE TRUE END)
         AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -123,7 +124,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         entityCode: MutableList<Int>?,
         defaultersOrgIds: List<UUID>? = null,
         accMode: String,
-        accType: String,
+        accType: List<String>?,
         serviceTypes: List<ServiceType>? = null,
         startDate: String? = null,
         endDate: String? = null,
@@ -151,7 +152,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             INNER JOIN loki.jobs lj on lj.id = pinv.job_id
             WHERE
             acc_mode = 'AR'
-            AND acc_type in ('SINV', 'SCN', 'SREIMB', 'SREIMBCN)
+            AND acc_type in ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
             AND aau.document_status = 'FINAL'
             AND aau.due_date IS NOT NULL
             AND aau.transaction_date::date <= Now()
@@ -171,7 +172,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE document_status = 'FINAL'
             AND (:entityCode is null OR aau.entity_code = :entityCode)
             AND aau.transaction_date < NOW() 
-            AND acc_type = 'REC'
+            AND acc_type IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
             AND (acc_mode = 'AR')
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND deleted_at is null
@@ -191,7 +192,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             date_trunc('day', aau.transaction_date) > date_trunc('day', NOW():: date - '7 day'::interval)
             AND aau.acc_mode ='AR'
             AND document_status = 'FINAL'
-            AND acc_type in ('SINV','SCN')
+            AND acc_type in ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
             AND (aau.entity_code = :entityCode)
             AND (COALESCE(:defaultersOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultersOrgIds))
             AND (amount_loc-pay_loc) > 0
@@ -480,77 +481,195 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @NewSpan
     @Query(
         """
-            SELECT
-                COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
-                SUM(COALESCE(open_invoice_amount,0)) open_invoice_amount,
-                (SUM(COALESCE(open_invoice_amount,0)) + SUM(COALESCE(on_account_amount,0))) total_outstanding_amount
-                -- ,array_agg(distinct so.registration_number) registration_numbers
-                from snapshot_organization_outstandings so
-                LEFT JOIN (
-                  with a as(
+            WITH y as (
+            SELECT 
+                DISTINCT
+                aau.id,
+                aau.amount_loc,
+                aau.pay_loc,
+                aau.sign_flag,
+                aau.acc_type,
+                b.kam_owners
+                FROM ares.account_utilizations aau
+                INNER JOIN (
+                with x as
+              (
+              SELECT 
+              s.registration_number,
+              CASE WHEN self_kyc_org_id IS NOT NULL THEN self_kyc_org_id
+                    WHEN self_org_id IS NOT NULL THEN self_org_id
+                    WHEN self_kyc_sp_org_id IS NOT NULL THEN self_kyc_sp_org_id
+                    WHEN self_sp_org_id IS NOT NULL THEN self_sp_org_id
+                    ELSE paying_org_id
+              END organization_id,
+              CASE WHEN  (self_kyc_org_id IS NOT NULL or self_org_id IS NOT NULL or self_kyc_sp_org_id IS NOT NULL or self_sp_org_id IS NOT NULL) then 'self'
+              ELSE 'paying_party'
+              END trade_party_type,
+              s.trade_name,
+              trade_party_details_id
+              FROM (
+                  SELECT DISTINCT otpd.registration_number registration_number
+                    ,otpd.id trade_party_details_id
+                    ,otsk.id self_kyc_org_id
+                    ,ots.id self_org_id
+                    ,otsk_sp.id self_kyc_sp_org_id
+                    ,ots_sp.id self_sp_org_id
+                    ,otp.id paying_org_id, otsk.trade_name trade_name
+                  FROM organization_trade_party_details otpd
+                  LEFT JOIN (
+                      SELECT skorg.id id
+                      ,otpsk.organization_trade_party_detail_id organization_trade_party_detail_id,
+                      skorg.trade_name trade_name
+                      FROM organization_trade_parties otpsk
+                      INNER JOIN organizations skorg ON skorg.id = otpsk.organization_id
+                      WHERE skorg.account_type = 'importer_exporter'
+                        AND skorg.kyc_status = 'verified'
+                        AND skorg.id IS NOT NULL
+                        AND otpsk.trade_party_type = 'self'
+                        AND otpsk.STATUS = 'active'
+                      ) otsk ON otsk.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT sorg.id id
+                      ,otps.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otps
+                      INNER JOIN organizations sorg ON sorg.id = otps.organization_id
+                      WHERE sorg.account_type = 'importer_exporter'
+                        AND sorg.id IS NOT NULL
+                        AND otps.trade_party_type = 'self'
+                        AND otps.STATUS = 'active'
+                      ) ots ON ots.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT skorg.id id
+                      ,otpsk.organization_trade_party_detail_id organization_trade_party_detail_id,
+                      skorg.trade_name trade_name
+                      FROM organization_trade_parties otpsk
+                      INNER JOIN organizations skorg ON skorg.id = otpsk.organization_id
+                      WHERE skorg.account_type = 'service_provider'
+                        AND skorg.kyc_status = 'verified'
+                        AND skorg.id IS NOT NULL
+                        AND otpsk.trade_party_type = 'self'
+                        AND otpsk.STATUS = 'active'
+                      ) otsk_sp ON otsk_sp.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT sorg.id id
+                      ,otps.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otps
+                      INNER JOIN organizations sorg ON sorg.id = otps.organization_id
+                      WHERE sorg.account_type = 'service_provider'
+                        AND sorg.id IS NOT NULL
+                        AND otps.trade_party_type = 'self'
+                        AND otps.STATUS = 'active'
+                      ) ots_sp ON ots_sp.organization_trade_party_detail_id = otpd.id
+                  LEFT JOIN (
+                      SELECT max(DISTINCT porg.id::TEXT)::uuid id
+                      ,otpp.organization_trade_party_detail_id organization_trade_party_detail_id
+                      FROM organization_trade_parties otpp
+                      INNER JOIN organizations porg ON porg.id = otpp.organization_id
+                      WHERE porg.kyc_status = 'verified'
+                        AND porg.account_type = 'importer_exporter'
+                        AND porg.STATUS = 'active'
+                        AND porg.id IS NOT NULL
+                        AND otpp.trade_party_type = 'paying_party'
+                        AND otpp.STATUS = 'active'
+                        GROUP BY otpp.organization_trade_party_detail_id
+                  ) otp ON otp.organization_trade_party_detail_id = otpd.id
+                ) s
+              )
+              SELECT x.registration_number
+                ,MAX(x.organization_id::text)::uuid organization_id
+                ,MAX(x.trade_party_type) trade_party_type
+                ,MAX(x.trade_name) trade_name
+                ,MAX(o.business_name) business_name
+                ,MAX(x.trade_party_details_id::text)::uuid trade_party_details_id
+              from x
+              INNER JOIN organizations o on o.id = x.organization_id
+              LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+              WHERE (COALESCE(:companyType) is null OR los.id is null OR los.segment in (:companyType))
+              GROUP BY x.registration_number) os on os.trade_party_details_id = aau.organization_id
+            inner join (
+                with a as
+                    (
+                        SELECT
+                          unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, os.organization_id
+                        from organization_stakeholders os
+                        LEFT JOIN (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
+                        WHERE status='active'
+                        AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
+                    ) 
                     SELECT
-                      unnest(purm.stakeholder_rm_ids) stakeholder_rm_id, stakeholder_id, organization_id
-                    from organization_stakeholders os
-                    LEFT JOIN (select distinct user_id, array_agg(reporting_manager_id) stakeholder_rm_ids from partner_user_rm_mappings where status = 'active' group by user_id) purm on os.stakeholder_id = purm.user_id
-                    WHERE status='active'
-                    AND os.stakeholder_type IN ('sales_agent', 'entity_manager')
-                  ) SELECT
                       array_agg(distinct
-                        case when stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
+                        case when stakeholder_id in (:stakeholderIds)
                         then u.name else rm_u.name end
-                  ) kam_owners, organization_id
-                  from a
-                  INNER JOIN users u on u.id = a.stakeholder_id
-                  INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
-                  WHERE (
-                        stakeholder_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
-                        or stakeholder_rm_id in ('0849d0ab-5a2f-40e7-b110-971572a86192','0ccfc574-f942-4fb4-971d-a34c7ae691c3','f8347fff-f447-4adc-a9e4-fd785e16f4c2','8c22817f-4246-43ef-a7f5-fdf77e37ca72','ff4de18f-22ff-4b37-a201-8834c0caca19','b8dc5862-b7c0-4304-95e0-9d8a2b4c5c85','2eef6d5c-9ab0-4b97-8e5c-e9e8f57b8e61','7f6f97fd-c17b-4760-a09f-d70b6ad963e8','1313fb1c-7203-4010-afdd-529cd32a2308','56673bb5-872f-4750-b322-2ee98d326300','308c9961-dacb-4929-acee-89b3d9ce5163')
-                    )
-                  GROUP BY organization_id
-                ) os on os.organization_id = so.organization_id
-                LEFT JOIN outstanding_account_taggings oat on oat.registration_number = so.registration_number and oat.status='active'
-                WHERE
-                so.registration_number IS NOT NULL
-                AND TRIM(so.registration_number) != ''
-                AND is_precovid = 'NO'
-                GROUP BY kam_owners
-                order by total_outstanding_amount desc
-                limit 10
+                    ) kam_owners, a.organization_id
+                from a
+                INNER JOIN users u on u.id = a.stakeholder_id
+                INNER JOIN users rm_u on rm_u.id = a.stakeholder_rm_id
+                WHERE (
+                    stakeholder_id in (:stakeholderIds)
+                    or stakeholder_rm_id in (:stakeholderIds)
+                )
+                GROUP BY a.organization_id
+                ) b on b.organization_id = os.organization_id
+                WHERE aau.entity_code = :entityCode
+                AND (:serviceType is null OR aau.service_type = :serviceType)
+                AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
+                and document_status = 'FINAL' and aau.deleted_at is null
+            ) 
+            SELECT
+            COALESCE(ARRAY_TO_STRING(kam_owners,', '),'Others') kam_owners,
+            COALESCE(sum(case when acc_type in ('SINV','SCN','SREIMB', 'SREIMBCN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+            COALESCE(sum(case when acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount
+            FROM y
+            GROUP BY kam_owners
+            ORDER BY total_outstanding_amount DESC
+            LIMIT 10
         """
     )
-    fun getKamWiseOutstanding(): List<KamWiseOutstanding>?
+    fun getKamWiseOutstanding(entityCode: Int?, serviceType: ServiceType?, companyType: List<String>?, defaultersOrgIds: List<UUID>?, stakeholderIds: List<UUID>?): List<KamWiseOutstanding>?
 
     @NewSpan
     @Query(
         """
-            select coalesce(
-                case 
-                WHEN due_date >= now()::date then 'Not Due'
-                WHEN (now()::date - due_date) between 1 AND 30 then '1-30'
-                WHEN (now()::date - due_date) between 31 AND 60 then '31-60'
-                WHEN (now()::date - due_date) between 61 AND 90 then '61-90'
-                WHEN (now()::date - due_date) between 91 AND 180 then '91-180'
-                WHEN (now()::date - due_date) between 181 AND 365 then '181-365'
-                WHEN (now()::date - due_date) > 365 then '>365' 
-                end
-            ) as ageing_duration, 
-            sum(sign_flag * (amount_loc- pay_loc)) as amount,
+            WITH z AS (
+                  SELECT 
+                    distinct 
+                    aau.id,
+                    aau.amount_loc,
+                    aau.pay_loc,
+                    aau.sign_flag,
+                    aau.led_currency,
+                    aau.due_date
+                    FROM ares.account_utilizations aau
+                  INNER JOIN organization_trade_party_details otpd on otpd.id = aau.organization_id
+                  INNER JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id
+                  INNER JOIN organizations o ON o.id = otp.organization_id
+                  LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id and CASE WHEN COALESCE(:companyType) IS NULL THEN false ELSE true END
+                  WHERE
+                    due_date is not null 
+                    AND acc_mode = 'AR' 
+                    AND acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                    AND document_status in ('FINAL') 
+                    AND deleted_at is null
+                    AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
+                    AND (COALESCE(:companyType) is null OR los.id is null OR los.segment in (:companyType))
+                    AND (:serviceType is null OR aau.service_type = :serviceType)
+                    AND ( aau.entity_code = :entityCode)
+                  )
+            SELECT 
+            coalesce(
+                    case 
+                    WHEN due_date >= now()::date then 'Not Due'
+                    WHEN (now()::date - due_date) between 1 AND 30 then '1-30'
+                    WHEN (now()::date - due_date) between 31 AND 60 then '31-60'
+                    WHEN (now()::date - due_date) between 61 AND 90 then '61-90'
+                    WHEN (now()::date - due_date) between 91 AND 180 then '91-180'
+                    WHEN (now()::date - due_date) between 181 AND 365 then '181-365'
+                    WHEN (now()::date - due_date) > 365 then '>365' 
+                    end
+            ) as ageing_duration,
+            sum(sign_flag*(amount_loc-pay_loc)) as amount,
             led_currency as dashboard_currency
-            from ares.account_utilizations aau
-            INNER JOIN organization_trade_parties otp on otp.id = aau.trade_party_mapping_id
-            INNER JOIN organizations o on o.id = otp.organization_id
-            LEFT JOIN lead_organization_segmentations los on los.lead_organization_id = o.lead_organization_id
-            WHERE 
-            due_date is not null 
-            AND acc_mode = 'AR' 
-            AND 
-            acc_type in ('SINV','SDN') 
-            AND document_status in ('FINAL') 
-            AND deleted_at is null
-            AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
-            AND ((:companyType) is null OR los.id is null OR los.segment in (:companyType))
-            AND (:serviceType is null OR aau.service_type = :serviceType)
-            AND ( aau.entity_code = :entityCode)
+            FROM z
             GROUP BY ageing_duration, dashboard_currency
             ORDER BY ageing_duration
         """
@@ -562,9 +681,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
         """
         SELECT 
         EXTRACT(MONTH FROM transaction_date) AS month,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as outstandings,
-        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN', 'SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+        coalesce(sum(case when aau.acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as outstandings,
+        coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'SREIMB', 'SREIMBCN') then sign_flag*amount_loc end),0) as total_sales,
         0 as days,
         0 as value,
         '' as dashboard_currency
@@ -594,9 +713,9 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
     @Query(
         """
             SELECT to_char(date_trunc('quarter',aau.transaction_date),'Q')::int as duration,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'REC', 'OPDIV', 'MISC', 'BANK', 'INTER') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount,
-            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN') then sign_flag*amount_loc end),0) as total_sales,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN', 'SREIMB') then sign_flag*(amount_loc - pay_loc) else 0 end),0) as open_invoice_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') then sign_flag*(amount_loc - pay_loc) else 0 end))  as total_outstanding_amount,
+            coalesce(sum(case when aau.acc_type in ('SINV','SDN','SCN', 'SREIMB', 'SREIMBCN') then sign_flag*amount_loc end),0) as total_sales,
             '' as dashboard_currency
             from ares.account_utilizations aau
             INNER JOIN organization_trade_party_details otpd on aau.organization_id::UUID = otpd.id
@@ -763,7 +882,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
 		AND au.document_status in('FINAL')
         AND (COALESCE(:customerTypes) is null OR los.segment in(:customerTypes))
 		AND au.deleted_at IS NULL
-		AND au.acc_type IN ('SINV','SCN','SREIMB', 'SREIMBCN)
+		AND au.acc_type IN ('SINV','SCN','SREIMB', 'SREIMBCN')
         AND (COALESCE(:serviceTypes) is null or au.service_type in (:serviceTypes)) 
         AND (COALESCE(:entityCode) is null or au.entity_code IN (:entityCode))
         AND (:startDate is null or :endDate is null or iv.invoice_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
@@ -1562,4 +1681,28 @@ WHERE
     """
     )
     suspend fun getPurchaseAmountMismatchInJobs(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            p.payment_num_value, 
+            p.sage_ref_number, p.payment_document_status, soim.sage_organization_id,
+            p.acc_code, p.currency, p.entity_code, p.amount, p.organization_name, 
+            otpd.registration_number AS pan_number,
+            p.acc_mode,
+            p.trans_ref_number as utr,
+            p.payment_code,
+            p.transaction_date
+            FROM ares.payments p
+            LEFT JOIN sage_organization_id_mappings soim ON p.org_serial_id::varchar = soim.sage_organization_id::varchar
+            LEFT JOIN organization_trade_party_details otpd ON otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar and otpd.status = 'active'
+            WHERE soim.status = 'active' AND
+            ((p.acc_mode = 'AR' AND soim.account_type = 'importer_exporter') OR (p.acc_mode = 'AP' AND soim.account_type = 'service_provider')) AND
+            p.payment_document_status IN ('POSTED', 'FINAL_POSTED')
+            AND (:startDate IS NULL OR p.updated_at::VARCHAR >= :startDate)
+            AND (:endDate IS NULL OR p.updated_at::VARCHAR <= :endDate)
+        """
+    )
+    suspend fun getPaymentsByTransactionDate(startDate: String?, endDate: String?): List<PaymentDetailsAtPlatform>?
 }

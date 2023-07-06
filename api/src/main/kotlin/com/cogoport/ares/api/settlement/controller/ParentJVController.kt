@@ -49,6 +49,7 @@ class ParentJVController {
     @Auth
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<ParentJournalVoucherResponse> {
+        jvListRequest.entityCode = null
         return Response<ResponseList<ParentJournalVoucherResponse>>().ok(parentJVService.getJournalVouchers(jvListRequest))
     }
 

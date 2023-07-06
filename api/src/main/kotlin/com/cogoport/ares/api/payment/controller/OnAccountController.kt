@@ -106,6 +106,11 @@ class OnAccountController {
         )
     }
 
+    @Post("/bulk-post-to-sage")
+    suspend fun bulkPostPaymentToSage(ids: List<Long>, performedBy: UUID) {
+        return (onAccountService.bulkPostPaymentToSage(ids, performedBy))
+    }
+
     @Post("/post-from-sage")
     suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         return onAccountService.postPaymentFromSage(paymentIds, performedBy)
@@ -119,5 +124,15 @@ class OnAccountController {
     @Post("payment/final-post-sage-info")
     suspend fun finalPostSageCheck(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo? {
         return sageService.getPaymentPostSageInfo(paymentNumValue, entityCode, accMode)
+    }
+
+    @Get("/download-sage-platform-report")
+    suspend fun downloadSagePlatformReport(startDate: String, endDate: String) {
+        return onAccountService.downloadSagePlatformReport(startDate, endDate)
+    }
+
+    @Delete("/delete-payments")
+    suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
+        return onAccountService.deletingApPayments(paymentNumValues)
     }
 }

@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.controller
 
 import com.cogoport.ares.api.common.service.interfaces.DownloadService
+import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.MutableHttpResponse
@@ -18,7 +19,7 @@ class DownloadController {
 
     @Get
     suspend fun download(@QueryValue("id") id: String): MutableHttpResponse<File> {
-        val file = downloadService.downloadDocument(id.toLong())
+        val file = downloadService.downloadDocument(Hashids.decode(id)[0])
         return HttpResponse
             .ok(file)
             .header("Content-Disposition", "attachment; filename=" + file.name)

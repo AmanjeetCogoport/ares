@@ -8,5 +8,6 @@ import java.time.Month
 data class BfIncomeExpenseResponse(
     var month: Month,
     var income: BigDecimal? = 0.toBigDecimal(),
-    var expense: BigDecimal? = 0.toBigDecimal()
+    var expense: BigDecimal? = 0.toBigDecimal(),
+    var currency: String? = "INR"
 )

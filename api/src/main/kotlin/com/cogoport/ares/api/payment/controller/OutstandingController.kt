@@ -10,23 +10,28 @@ import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TradePartyOutstandingReq
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
+import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -124,8 +129,9 @@ class OutstandingController {
     }
 
     @Put("/customer-outstanding-migrate")
-    suspend fun migrateCustomerOutstanding() {
-        return scheduler.updateCustomerOutstandingOnOpenSearch()
+    suspend fun migrateCustomerOutstanding(): HttpResponse<Map<String, String>> {
+        scheduler.updateCustomerOutstandingOnOpenSearch()
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 
     @Auth
@@ -155,5 +161,15 @@ class OutstandingController {
     @Get("/account-payables-for-org{?request*}")
     suspend fun getApOfOrganization(@Valid request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
         return Response<List<AccPayablesOfOrgRes>>().ok(outStandingService.getPayableOfOrganization(request))
+    }
+
+    @Get("/customer-monthly-payment{?request*}")
+    suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
+        return Response<CustomerMonthlyPayment>().ok(outStandingService.getCustomerMonthlyPayment(request))
+    }
+
+    @Get("/trade-party-outstanding{?request*}")
+    suspend fun getTradePartyOutstanding(@Valid request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
+        return outStandingService.getTradePartyOutstanding(request)
     }
 }
