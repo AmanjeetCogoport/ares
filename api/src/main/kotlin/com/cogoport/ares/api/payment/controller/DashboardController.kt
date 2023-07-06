@@ -23,12 +23,14 @@ import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.ExchangeRateForPeriodRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
@@ -199,9 +201,14 @@ class DashboardController {
     }
     @Auth
     @Get("/kam-wise-outstanding")
-    suspend fun getKamWiseOutstanding(@QueryValue("entityCode") entityCode: Int? = 301, user: AuthResponse?): List<KamWiseOutstanding>? {
+    suspend fun getKamWiseOutstanding(
+        @QueryValue("entityCode") entityCode: Int? = 301,
+        @QueryValue("companyType") companyType: CompanyType?,
+        @QueryValue("serviceType") serviceType: ServiceType?,
+        user: AuthResponse?
+    ): List<KamWiseOutstanding>? {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
-        return dashboardService.getKamWiseOutstanding(updatedEntityCode)
+        return dashboardService.getKamWiseOutstanding(updatedEntityCode, companyType, serviceType)
     }
 
     @Auth
