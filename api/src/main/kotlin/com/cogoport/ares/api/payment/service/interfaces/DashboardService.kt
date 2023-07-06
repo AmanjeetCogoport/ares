@@ -98,5 +98,5 @@ interface DashboardService {
 
     suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse
 
-    suspend fun downloadLSPLedger(request: LSPLedgerRequest): String
+    suspend fun downloadLSPLedger(request: LSPLedgerRequest): String?
 }

@@ -1272,7 +1272,14 @@ class DashboardServiceImpl : DashboardService {
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
-        if (documents.isEmpty()) throw AresException(AresError.ERR_1005, "")
+        if (documents.isEmpty()) {
+            return SupplierReceivables(
+                currency = request.currency,
+                totalReceivables = AmountAndCount(BigDecimal.ZERO, 0),
+                unpaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
+                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0)
+            )
+        }
         var transactionDates = mutableListOf<Date>()
         var currencyList = mutableListOf<String>()
         var totalReceivableAmount = BigDecimal.ZERO
@@ -1444,7 +1451,14 @@ class DashboardServiceImpl : DashboardService {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
         val month = AresConstants.MONTH[request.month]
         val ledgerDocumentsByPagination = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
-        if (ledgerDocumentsByPagination.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+        if (ledgerDocumentsByPagination.isNullOrEmpty()) {
+            return LSPLedgerResponse(
+                openingBalance = BigDecimal.ZERO,
+                closingBalance = BigDecimal.ZERO,
+                ledgerCurrency = "",
+                ledgerDocuments = listOf()
+            )
+        }
 
         val allLedgerDocs = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month, accTypes, null, null)
         val openingBalance = allLedgerDocs?.get(0)?.debit?.minus(allLedgerDocs[0].credit) ?: BigDecimal.ZERO
@@ -1496,11 +1510,13 @@ class DashboardServiceImpl : DashboardService {
         )
     }
 
-    override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String {
+    override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String? {
         val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
         val month = AresConstants.MONTH[request.month]
-        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
-        if (ledgerDocuments.isNullOrEmpty()) throw AresException(AresError.ERR_1005, "")
+        val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, null, null)
+        if (ledgerDocuments.isNullOrEmpty()) {
+            return null
+        }
         val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
