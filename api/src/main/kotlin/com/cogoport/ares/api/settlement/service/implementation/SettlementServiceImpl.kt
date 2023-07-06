@@ -32,6 +32,7 @@ import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
@@ -45,6 +46,7 @@ import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AresModelConstants
@@ -74,7 +76,6 @@ import com.cogoport.ares.model.settlement.HistoryDocument
 import com.cogoport.ares.model.settlement.OrgSummaryResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementHistoryRequest
-import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryRequest
@@ -214,6 +215,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var util: Util
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1439,7 +1443,6 @@ open class SettlementServiceImpl : SettlementService {
         )
         val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
         updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType, false, true)
-//        sendInvoiceDataToDebitConsumption(accUtil)
         emitDashboardAndOutstandingEvent(accUtilObj)
     }
 
@@ -2880,31 +2883,60 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun getSettlementList(request: SettlementHistoryRequest): ResponseList<SettlementListDoc?> {
         val possibleAccTypes = stringAccountTypes(request)
+        val query = util.toQueryString(request.query)
+
+        val entityCodes = when (request.entityCode != null) {
+            true -> when (request.entityCode) {
+                AresConstants.ENTITY_101 -> listOf(AresConstants.ENTITY_101, AresConstants.ENTITY_201, AresConstants.ENTITY_301, AresConstants.ENTITY_401)
+                else -> listOf(request.entityCode)
+            }
+            else -> null
+        }
 
         val settlementDocs = settlementRepository.getSettlementList(
             request.orgId!!,
             possibleAccTypes,
             request.page,
             request.pageLimit,
-            request.query,
-            request.entityCode?.let { listOf(it) },
+            query,
+            entityCodes,
             request.sortBy,
             request.sortType
         )
 
-        val irnNumberDocList = listOf(AccountType.SINV, AccountType.SCN)
+        if (settlementDocs.isNullOrEmpty()) return ResponseList()
+
+        val validAccTypeForIRN = listOf(AccountType.SINV, AccountType.SCN)
 
         val invoiceNumberList = mutableListOf<String>()
         val invoiceIdToAccTypeMap = settlementDocs.associateBy({ it.sourceId }, { it.sourceAccType }) +
             settlementDocs.associateBy({ it.destinationId }, { it.destinationAccType })
 
         invoiceIdToAccTypeMap.forEach { (invoiceId, accType) ->
-            if (accType in irnNumberDocList) {
+            if (accType in validAccTypeForIRN) {
                 invoiceNumberList.add(Hashids.encode(invoiceId))
             }
         }
 
-        val invoiceAdditionalData = plutusClient.getInvoiceAdditionalList(invoiceNumberList, mutableListOf("IrnNumber"))
+        val updatedSettlementDocs = getInvoiceAdditionalData(invoiceNumberList, mutableListOf("IrnNumber"), settlementDocs)
+
+        val totalRecords = settlementRepository.getSettlementCount(
+            request.orgId!!,
+            possibleAccTypes,
+            query,
+            entityCodes
+        )
+
+        return ResponseList(
+            list = updatedSettlementDocs,
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
+            totalRecords,
+            pageNo = request.page
+        )
+    }
+
+    private suspend fun getInvoiceAdditionalData(invoiceIds: MutableList<String>, keys: MutableList<String>, settlementDocs: List<SettlementListDoc>): List<SettlementListDoc> {
+        val invoiceAdditionalData = plutusClient.getInvoiceAdditionalList(invoiceIds, keys)
 
         settlementDocs.forEach { doc ->
             invoiceAdditionalData?.let { data ->
@@ -2925,18 +2957,6 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
 
-        val totalRecords = settlementRepository.getSettlementCount(
-            request.orgId!!,
-            possibleAccTypes,
-            request.query,
-            request.entityCode?.let { listOf(it) }
-        )
-
-        return ResponseList(
-            list = settlementDocs,
-            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
-            totalRecords,
-            pageNo = request.page
-        )
+        return settlementDocs
     }
 }

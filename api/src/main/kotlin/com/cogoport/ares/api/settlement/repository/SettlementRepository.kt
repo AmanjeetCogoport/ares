@@ -2,10 +2,10 @@ package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.SettlementNumInfo
 import com.cogoport.ares.api.settlement.model.TaggedInvoiceSettlementInfo
-import com.cogoport.ares.model.settlement.SettlementListDoc
 import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
@@ -568,15 +568,12 @@ ORDER BY
                 OR aau1.organization_id IN (:orgIds)
                 )
                 AND (
-                    :query IS NULL
-                    OR (
-                        aau.document_value ILIKE (:query || '%')
-                        OR aau1.document_value ILIKE (:query || '%')
+                        aau.document_value ILIKE :query
+                        OR aau1.document_value ILIKE :query
                     )
-                )
                 AND (
-                    COALESCE(:entityCode) IS NULL
-                    OR aau.entity_code IN (:entityCode)
+                    COALESCE(:entityCodes) IS NULL
+                    OR aau.entity_code IN (:entityCodes)
                 )
                 AND (
                     COALESCE(:accTypes) IS NULL
@@ -613,7 +610,7 @@ ORDER BY
         pageIndex: Int?,
         pageSize: Int?,
         query: String?,
-        entityCode: List<Int>?,
+        entityCodes: List<Int?>?,
         sortBy: String?,
         sortType: String?
     ): List<SettlementListDoc>
@@ -638,20 +635,19 @@ ORDER BY
                 AND aau.document_status != 'DELETED'::document_status
                 AND aau1.document_status != 'DELETED'::document_status
                 AND (
-                    COALESCE(:orgIds) IS NULL
-                    OR aau.organization_id IN (:orgIds)
+                    aau.organization_id IN (:orgIds)
                     OR aau1.organization_id IN (:orgIds)
                 )
                 AND (
                     :query IS NULL
                     OR (
-                        aau.document_value ILIKE (:query || '%')
-                        OR aau1.document_value ILIKE (:query || '%')
+                        aau.document_value ILIKE :query
+                        OR aau1.document_value ILIKE :query
                     )
                 )
                 AND (
-                    COALESCE(:entityCode) IS NULL
-                    OR aau.entity_code IN (:entityCode)
+                    COALESCE(:entityCodes) IS NULL
+                    OR aau.entity_code IN (:entityCodes)
                 )
                 AND (
                     COALESCE(:accTypes) IS NULL
@@ -666,6 +662,6 @@ ORDER BY
         orgIds: List<UUID>,
         accTypes: List<String>,
         query: String?,
-        entityCode: List<Int>?
+        entityCodes: List<Int?>?
     ): Long
 }

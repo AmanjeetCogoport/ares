@@ -1,4 +1,4 @@
-package com.cogoport.ares.model.settlement
+package com.cogoport.ares.api.settlement.entity
 
 import com.cogoport.ares.model.payment.AccountType
 import io.micronaut.core.annotation.Introspected

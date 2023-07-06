@@ -237,4 +237,10 @@ object AresConstants {
         "shikhar.tyagi@cogoport.com",
         "suhas.latelwar@cogoport.com"
     )
+
+    const val ENTITY_101 = 101
+    const val ENTITY_201 = 201
+    const val ENTITY_301 = 301
+    const val ENTITY_401 = 401
+    const val ENTITY_501 = 501
 }
