@@ -1342,12 +1342,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val sageOrganization = authClient.getSageOrganization(
                 SageOrganizationRequest(
-                    paymentDetails.orgSerialId.toString(),
-                    if (paymentDetails.accMode == AccMode.AP) {
-                        "service_provider"
-                    } else {
-                        "importer_exporter"
-                    }
+                    paymentDetails.orgSerialId.toString()
                 )
             )
 
