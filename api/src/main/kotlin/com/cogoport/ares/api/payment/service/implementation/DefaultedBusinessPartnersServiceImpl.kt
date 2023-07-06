@@ -37,7 +37,6 @@ open class DefaultedBusinessPartnersServiceImpl : DefaultedBusinessPartnersServi
             sageOrganization = cogoClient.getSageOrganization(
                 SageOrganizationRequest(
                     request.tradePartyDetailSerialId.toString(),
-                    "importer_exporter"
                 )
             )
         } catch (e: Exception) {
