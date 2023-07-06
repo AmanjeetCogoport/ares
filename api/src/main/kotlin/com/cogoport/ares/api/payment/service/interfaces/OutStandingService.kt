@@ -4,6 +4,8 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TradePartyOutstandingReq
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -56,4 +58,6 @@ interface OutStandingService {
     suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes>
 
     suspend fun getCustomerMonthlyPayment(request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment
+
+    suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>?
 }
