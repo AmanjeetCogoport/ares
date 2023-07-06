@@ -1474,8 +1474,8 @@ class DashboardServiceImpl : DashboardService {
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
         val accTypes = listOf(
-            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name,
-            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name
+            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.MTC.name,
+            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name, AccountType.ROFF.name
         )
         val month = AresConstants.MONTH[request.month]
         val ledgerDocumentsByPagination = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
@@ -1493,7 +1493,10 @@ class DashboardServiceImpl : DashboardService {
         val closingBalance = allLedgerDocs?.sumOf { it.debit.minus(it.credit) } ?: BigDecimal.ZERO
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
-        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous")
+        val description = mapOf(
+            "PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous",
+            "ROFF" to "Round Off JV", "BANK" to "Bank"
+        )
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocumentsByPagination)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
@@ -1539,13 +1542,19 @@ class DashboardServiceImpl : DashboardService {
     }
 
     override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String? {
-        val accTypes = listOf(AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name)
+        val accTypes = listOf(
+            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.MTC.name,
+            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name, AccountType.ROFF.name
+        )
         val month = AresConstants.MONTH[request.month]
         val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, null, null)
         if (ledgerDocuments.isNullOrEmpty()) {
             return null
         }
-        val description = mapOf("PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank")
+        val description = mapOf(
+            "PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous",
+            "ROFF" to "Round Off JV", "BANK" to "Bank"
+        )
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocuments)
         val documentNos = ledgerDocs.filter { doc -> doc.type == AccountType.PAY.name }.map { it.documentNo }
@@ -1579,7 +1588,7 @@ class DashboardServiceImpl : DashboardService {
                 transactionDate = it.transactionDate.toString(),
                 ledgerCurrency = it.ledgerCurrency,
                 shipmentId = documentSIDMap[it.documentNo] ?: "NA",
-                type = description[it.type].toString(),
+                type = description[it.type] ?: it.type,
                 documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue,
                 balance = it.balance,
                 debitBalance = it.debitBalance,
