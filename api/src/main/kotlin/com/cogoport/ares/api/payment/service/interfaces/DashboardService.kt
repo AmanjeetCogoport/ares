@@ -12,15 +12,11 @@ import com.cogoport.ares.api.payment.model.requests.BfProfitabilityReq
 import com.cogoport.ares.api.payment.model.requests.BfServiceWiseOverdueReq
 import com.cogoport.ares.api.payment.model.requests.BfTodayStatReq
 import com.cogoport.ares.api.payment.model.requests.ServiceWiseRecPayReq
-import com.cogoport.ares.api.payment.model.requests.SupplierPaymentStatsRequest
-import com.cogoport.ares.api.payment.model.requests.SupplierReceivableRequest
 import com.cogoport.ares.api.payment.model.response.BfIncomeExpenseResponse
 import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
-import com.cogoport.ares.api.payment.model.response.SupplierReceivables
-import com.cogoport.ares.api.payment.model.response.SupplierStatistics
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -33,14 +29,12 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
-import com.cogoport.ares.model.payment.request.LSPLedgerRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingAgeingRequest
 import com.cogoport.ares.model.payment.request.QuarterlyOutstandingRequest
 import com.cogoport.ares.model.payment.request.SalesFunnelRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
-import com.cogoport.ares.model.payment.response.LSPLedgerResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallAgeingStatsResponse
@@ -93,12 +87,4 @@ interface DashboardService {
     suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp>
 
     suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp
-
-    suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables
-
-    suspend fun getPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics
-
-    suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse
-
-    suspend fun downloadLSPLedger(request: LSPLedgerRequest): String?
 }
