@@ -13,6 +13,7 @@ import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.balances.GetOpeningBalances
+import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -1195,4 +1196,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun updateAccountUtilizationUsingDocValue(documentValues: List<String>)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                document_value,
+                COALESCE(sign_flag * (amount_loc - pay_loc), 0) AS led_balance_amount,
+                COALESCE(sign_flag * (amount_curr - pay_curr), 0) AS balance_amount
+            FROM
+                account_utilizations
+            where
+                document_value in (:invoiceNumbers)
+                AND acc_mode = :accMode::account_mode
+        """
+    )
+    suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>, accMode: AccMode): List<InvoiceBalanceResponse>?
 }

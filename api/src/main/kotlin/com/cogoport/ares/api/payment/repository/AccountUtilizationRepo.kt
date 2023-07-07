@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
@@ -703,7 +704,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND (amount_curr - pay_curr) > 0
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)
@@ -712,6 +713,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
                     AND deleted_at is null  and is_void = false
+                    AND document_status != 'DELETED'::document_status
+                    AND settlement_enabled = true
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -811,4 +814,20 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getCustomerMonthlyPayment(orgId: String, year: String, isLeapYear: Boolean, entityCode: Int): CustomerMonthlyPayment?
+
+    @NewSpan
+    @Query(
+        """
+            select organization_id::varchar,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc)  else 0 end) as open_invoices_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' AND due_date < now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as overdue_open_invoices_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN', 'REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'PAY') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            from account_utilizations
+            where acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY') and acc_mode = 'AR' and document_status = 'FINAL'  
+            and organization_id IN (:orgIds) and entity_code IN (:entityCodes) and deleted_at is null
+            group by organization_id
+        """
+    )
+    suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
 }

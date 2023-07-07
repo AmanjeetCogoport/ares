@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.GlCodeMaster
 import com.cogoport.ares.api.settlement.entity.JournalCode
 import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
@@ -41,6 +42,9 @@ class ParentJVController {
     @Inject
     lateinit var parentJVService: ParentJVService
 
+    @Inject
+    lateinit var util: Util
+
     @Post
     suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String?> {
         return Response<String?>().ok("Journal Voucher Created Successfully", parentJVService.createJournalVoucher(request))
@@ -49,7 +53,7 @@ class ParentJVController {
     @Auth
     @Get("/list{?jvListRequest*}")
     suspend fun getJournalVouchers(@Valid jvListRequest: JvListRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<ParentJournalVoucherResponse> {
-        jvListRequest.entityCode = null
+        jvListRequest.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: jvListRequest.entityCode
         return Response<ResponseList<ParentJournalVoucherResponse>>().ok(parentJVService.getJournalVouchers(jvListRequest))
     }
 

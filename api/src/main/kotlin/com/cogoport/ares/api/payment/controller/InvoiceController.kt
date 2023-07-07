@@ -2,6 +2,8 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
+import com.cogoport.ares.model.common.InvoiceBalanceAmountReq
+import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.event.DeleteInvoiceRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.InvoicePaymentRequest
@@ -60,5 +62,10 @@ class InvoiceController {
     @Put("/scheduler/delete-from-ares")
     suspend fun updateInvoicesAmountMismatch() {
         return scheduler.deleteInvoicesNotPresentInPlutus()
+    }
+
+    @Get("/balance-amount{?requests*}")
+    suspend fun getInvoiceBalanceAmount(@Valid requests: InvoiceBalanceAmountReq): List<InvoiceBalanceResponse>? {
+        return accUtilService.getInvoiceBalanceAmount(requests)
     }
 }
