@@ -238,6 +238,21 @@ object AresConstants {
         "suhas.latelwar@cogoport.com"
     )
 
+    val MONTH = mapOf(
+        "January" to 1,
+        "February" to 2,
+        "March" to 3,
+        "April" to 4,
+        "May" to 5,
+        "June" to 6,
+        "July" to 7,
+        "August" to 8,
+        "September" to 9,
+        "October" to 10,
+        "November" to 11,
+        "December" to 12
+    )
+
     private val INDIAN_KAM_OWNERS_IDS = listOf(
         "0849d0ab-5a2f-40e7-b110-971572a86192",
         "0ccfc574-f942-4fb4-971d-a34c7ae691c3",
