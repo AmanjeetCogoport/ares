@@ -841,7 +841,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
-                AND acc_code = 321000
                 AND (amount_curr - pay_curr) > 0
                 AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL

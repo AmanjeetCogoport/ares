@@ -21,12 +21,12 @@ class LSPDashboardController {
     lateinit var lspDashboardService: LSPDashboardService
 
     @Get("/receivable-stats{?request*}")
-    suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
+    suspend fun getReceivableStatsForSupplier(@Valid request: SupplierReceivableRequest): SupplierReceivables {
         return lspDashboardService.getReceivableStatsForSupplier(request)
     }
 
     @Get("/payment-stats{?request*}")
-    suspend fun getOnAccountPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
+    suspend fun getOnAccountPaymentStatsForSupplier(@Valid request: SupplierPaymentStatsRequest): SupplierStatistics {
         return lspDashboardService.getPaymentStatsForSupplier(request)
     }
 
@@ -36,7 +36,7 @@ class LSPDashboardController {
     }
 
     @Get("/ledger-download{?request*}")
-    suspend fun downloadLedger(request: LSPLedgerRequest): String? {
+    suspend fun downloadLedger(@Valid request: LSPLedgerRequest): String? {
         return lspDashboardService.downloadLSPLedger(request)
     }
 }

@@ -17,6 +17,7 @@ import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.ExchangeRateRequest
+import com.cogoport.ares.model.common.ExchangeRateResponseByDate
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.request.LSPLedgerRequest
@@ -70,8 +71,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0)
             )
         }
-        var transactionDates = mutableListOf<Date>()
-        var currencyList = mutableListOf<String>()
+
         var totalReceivableAmount = BigDecimal.ZERO
         var unpaidReceivableAmount = BigDecimal.ZERO
         var partialPaidReceivableAmount = BigDecimal.ZERO
@@ -80,16 +80,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val partialPaidDocuments: List<DocumentResponse?> = documents.filter { (it?.amountCurr!! - it.payCurr) > BigDecimal.ZERO && it.payCurr != BigDecimal.ZERO }
 
         if (request.currency != documents[0]?.ledCurrency) {
-            documents.forEach { doc ->
-                if (doc?.currency != request.currency) {
-                    transactionDates.add(doc?.transactionDate!!)
-                    currencyList.add(doc.currency)
-                }
-            }
-            currencyList = ArrayList(currencyList.distinct())
-            transactionDates = ArrayList(transactionDates.distinct())
-
-            val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
+            val exchangeRateResponse = getExchangeRate(documents, request.currency)
             documents.forEach { doc ->
                 val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                 totalReceivableAmount += exchangeRate
@@ -183,19 +174,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (documentsForDue.isEmpty()) {
             invoiceDueStats = AmountAndCount(BigDecimal.ZERO, 0)
         } else {
-            var transactionDates = arrayListOf<Date>()
-            var currencyList = arrayListOf<String>()
-
             if (request.currency != documentsForDue[0]?.ledCurrency) {
-                documentsForDue.forEach { doc ->
-                    if (doc?.currency != request.currency) {
-                        transactionDates.add(doc?.transactionDate!!)
-                        currencyList.add(doc.currency)
-                    }
-                }
-                transactionDates = ArrayList(transactionDates.distinct())
-                currencyList = ArrayList(currencyList.distinct())
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, arrayListOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
+                val exchangeRateResponse = getExchangeRate(documentsForDue, request.currency)
                 documentsForDue.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                     invoicesDueAmount += exchangeRate
@@ -212,19 +192,9 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (documentsForOnAccount.isEmpty()) {
             onAccountPayment = AmountAndCount(BigDecimal.ZERO, 0)
         } else {
-            var transactionDates = mutableListOf<Date>()
-            var currencyList = mutableListOf<String>()
 
-            if (request.currency != documentsForDue[0]?.ledCurrency) {
-                documentsForOnAccount.forEach { doc ->
-                    if (doc?.currency != request.currency) {
-                        transactionDates.add(doc?.transactionDate!!)
-                        currencyList.add(doc.currency)
-                    }
-                }
-                transactionDates = ArrayList(transactionDates.distinct())
-                currencyList = ArrayList(currencyList.distinct())
-                val exchangeRateResponse = exchangeClient.getExchangeRates(ExchangeRateRequest(currencyList, listOf(request.currency), transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }))
+            if (request.currency != documentsForOnAccount[0]?.ledCurrency) {
+                val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
                 documentsForOnAccount.forEach { doc ->
                     val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
                     onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
@@ -375,5 +345,25 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val file = ExcelUtils.writeIntoExcel(ledgerExcelList, excelName, "Ledger Sheet")
         val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file).toString()
         return url
+    }
+
+    private suspend fun getExchangeRate(documents: List<DocumentResponse?>, toCurrency: String): MutableList<ExchangeRateResponseByDate> {
+        var transactionDates = mutableListOf<Date>()
+        var currencyList = mutableListOf<String>()
+        documents.forEach { doc ->
+            if (doc?.currency != toCurrency) {
+                transactionDates.add(doc?.transactionDate!!)
+                currencyList.add(doc.currency)
+            }
+        }
+        currencyList = ArrayList(currencyList.distinct())
+        transactionDates = ArrayList(transactionDates.distinct())
+
+        return exchangeClient.getExchangeRates(
+            ExchangeRateRequest(
+                currencyList, listOf(toCurrency),
+                transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }
+            )
+        )
     }
 }
