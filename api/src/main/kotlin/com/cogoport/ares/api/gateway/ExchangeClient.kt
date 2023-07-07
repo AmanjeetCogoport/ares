@@ -4,6 +4,8 @@ import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.common.models.ExchangeRequestPeriod
 import com.cogoport.ares.api.common.models.ExchangeResponse
 import com.cogoport.ares.api.common.models.ExchangeResponseForPeriod
+import com.cogoport.ares.model.common.ExchangeRateRequest
+import com.cogoport.ares.model.common.ExchangeRateResponseByDate
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Get
@@ -11,6 +13,7 @@ import io.micronaut.http.annotation.Header
 import io.micronaut.http.annotation.Headers
 import io.micronaut.http.annotation.Post
 import io.micronaut.http.client.annotation.Client
+import javax.validation.Valid
 
 @Client(value = "\${cogoport.exchange_api.url}")
 @Headers(
@@ -25,4 +28,7 @@ interface ExchangeClient {
 
     @Post("/avg-rate")
     suspend fun getExchangeRateForPeriod(@Body request: HashMap<String, List<ExchangeRequestPeriod>>): ArrayList<ExchangeResponseForPeriod>
+
+    @Post("/rates_list")
+    suspend fun getExchangeRates(@Valid @Body request: ExchangeRateRequest): MutableList<ExchangeRateResponseByDate>
 }
