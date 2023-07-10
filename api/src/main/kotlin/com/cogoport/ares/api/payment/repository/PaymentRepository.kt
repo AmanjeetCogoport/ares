@@ -110,10 +110,17 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id
+            UPDATE 
+                payments 
+            SET 
+                sage_ref_number = :sageRefNumber, 
+                payment_document_status = 'POSTED'::payment_document_status,
+                updated_at = NOW(), updated_by = :performedBy 
+            WHERE 
+                id = :id
         """
     )
-    suspend fun updateSagePaymentNumValue(id: Long, sageRefNumber: String)
+    suspend fun updateSagePaymentNumValue(id: Long, sageRefNumber: String, performedBy: UUID)
 
     @NewSpan
     @Query(
