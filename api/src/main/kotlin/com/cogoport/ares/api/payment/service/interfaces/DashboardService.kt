@@ -18,12 +18,14 @@ import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
 import com.cogoport.ares.model.payment.DailySalesOutstanding
 import com.cogoport.ares.model.payment.DsoRequest
 import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
@@ -66,7 +68,7 @@ interface DashboardService {
 
     suspend fun getOutstanding(entityCode: Int?): OutstandingOpensearchResponse?
 
-    suspend fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>?
+    suspend fun getKamWiseOutstanding(entityCode: Int?, companyType: CompanyType?, serviceType: ServiceType?): List<KamWiseOutstanding>?
 
     suspend fun getLineGraphViewDailyStats(req: DailyStatsRequest): HashMap<String, ArrayList<DailySalesStats>>
 

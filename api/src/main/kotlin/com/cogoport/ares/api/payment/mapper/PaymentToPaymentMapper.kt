@@ -11,6 +11,7 @@ interface PaymentToPaymentMapper {
     @Mapping(source = "remarks", target = "narration")
     @Mapping(source = "utr", target = "transRefNumber")
     @Mapping(source = "bankAccountNumber", target = "cogoAccountNo")
+    @Mapping(target = "preMigratedDeleted", expression = "java(false)")
     fun convertToEntity(payment: com.cogoport.ares.model.payment.Payment): Payment
 
     @Mapping(source = "entityCode", target = "entityType")

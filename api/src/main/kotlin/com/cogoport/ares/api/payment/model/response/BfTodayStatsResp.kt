@@ -20,4 +20,7 @@ data class BfTodayStatsResp(
 
     @field:javax.persistence.Transient
     var cashFlowDiffFromYesterday: BigDecimal? = null
+
+    @field:javax.persistence.Transient
+    var currency: String? = "INR"
 }

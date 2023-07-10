@@ -31,6 +31,7 @@ import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
@@ -44,6 +45,7 @@ import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AresModelConstants
@@ -212,6 +214,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var paymentRepository: PaymentRepository
+
+    @Inject
+    lateinit var util: Util
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -621,7 +626,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 accMode,
                 request.sortBy,
                 request.sortType,
@@ -638,7 +643,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "${request.query}%",
+                "%${request.query}%",
                 request.documentPaymentStatus
             )
 
@@ -1024,6 +1029,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun getCanSettleFlag(stack: List<CheckDocument>): Boolean {
         var canSettle = true
         stack.forEach {
+            if (it.balanceAmount < BigDecimal.ZERO) canSettle = false
             if (it.nostroAmount?.compareTo(BigDecimal.ZERO) != 0) canSettle = false
         }
         return canSettle
@@ -1298,6 +1304,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
                 SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+                SettlementType.VTDS -> listOf(SettlementType.VTDS)
+                SettlementType.CTDS -> listOf(SettlementType.CTDS)
                 else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
@@ -1434,7 +1442,6 @@ open class SettlementServiceImpl : SettlementService {
         )
         val paidTds = (tdsPaid ?: BigDecimal.ZERO) * (-1).toBigDecimal()
         updateExternalSystemInvoice(accUtilObj, paidTds, updatedBy, updatedByUserType, false, true)
-        sendInvoiceDataToDebitConsumption(accUtil)
         emitDashboardAndOutstandingEvent(accUtilObj)
     }
 
@@ -1562,7 +1569,8 @@ open class SettlementServiceImpl : SettlementService {
                         createdBy = request.createdBy,
                         createdByUserType = request.createdByUserType,
                         supportingDocUrl = request.supportingDocUrl,
-                        exchangeRate = payment.exchangeRate
+                        exchangeRate = payment.exchangeRate,
+                        paymentTransactionDate = payment.transactionDate
                     )
                     payment.settledTds += payment.tds!!
                 }
@@ -1745,7 +1753,8 @@ open class SettlementServiceImpl : SettlementService {
                 createdBy = request.createdBy,
                 createdByUserType = request.createdByUserType,
                 supportingDocUrl = request.supportingDocUrl,
-                exchangeRate = invoice.exchangeRate
+                exchangeRate = invoice.exchangeRate,
+                paymentTransactionDate = payment.transactionDate
             )
             invoice.settledTds += invoiceTds
         }
@@ -1840,7 +1849,8 @@ open class SettlementServiceImpl : SettlementService {
         createdBy: UUID?,
         createdByUserType: String?,
         supportingDocUrl: String?,
-        exchangeRate: BigDecimal?
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
         val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
@@ -1860,7 +1870,8 @@ open class SettlementServiceImpl : SettlementService {
             createdByUserType,
             tdsType,
             invoiceAndBillData,
-            exchangeRate
+            exchangeRate,
+            paymentTransactionDate
         )
 
         createSettlement(
@@ -2095,6 +2106,12 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         supportingDocUrl: String?
     ) {
+        val settlementStatus = if (listOf(SettlementType.SECH, SettlementType.PECH).contains(sourceType)) {
+            SettlementStatus.POSTED
+        } else {
+            SettlementStatus.CREATED
+        }
+
         val settledDoc =
             Settlement(
                 null,
@@ -2115,11 +2132,11 @@ open class SettlementServiceImpl : SettlementService {
                 supportingDocUrl,
                 false,
                 sequenceGeneratorImpl.getSettlementNumber(),
-                SettlementStatus.CREATED
+                settlementStatus
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
+//        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
 
         auditService.createAudit(
             AuditRequest(
@@ -2484,7 +2501,8 @@ open class SettlementServiceImpl : SettlementService {
                         url = invoiceData.invoicePdfUrl
                     )
                 )
-            )
+            ),
+            organizationTradePartyId = destinationDocument.tradePartyMappingId
         )
 
         val objectName = "UNFREEZE_CREDIT"
@@ -2522,7 +2540,8 @@ open class SettlementServiceImpl : SettlementService {
                         url = invoiceData.invoicePdfUrl
                     )
                 )
-            )
+            ),
+            organizationTradePartyId = destinationDocument.tradePartyMappingId
         )
 
         val objectName = "UNFREEZE_CREDIT_DELETED"
@@ -2564,7 +2583,6 @@ open class SettlementServiceImpl : SettlementService {
         }
     }
 
-    @Transactional
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
         val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
@@ -2599,18 +2617,19 @@ open class SettlementServiceImpl : SettlementService {
 
             if (destinationPresentOnSage == null || sourcePresentOnSage == null) {
                 recordAudits(settlementId, """$nullDoc""", "Documents must be posted on Sage", false)
+                settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
                 return false
             }
 
             val matchingSettlementOnSageRequest: MutableList<SageSettlementRequest>? = mutableListOf()
             var flag = if (listOfRecOrPayCode.contains(sourceDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(sourcePresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             flag = if (listOfRecOrPayCode.contains(destinationDocument.accType)) "P" else ""
             matchingSettlementOnSageRequest?.add(
-                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount.toString(), flag)
+                SageSettlementRequest(destinationPresentOnSage, sageOrganizationResponse[0]!!, settlement.amount?.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.DOWN).toString(), flag)
             )
 
             val result = SageClient.postSettlementToSage(matchingSettlementOnSageRequest!!)
@@ -2675,12 +2694,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val sageOrganizationResponse = cogoClient.getSageOrganization(
             SageOrganizationRequest(
-                serialId.toString(),
-                if (accMode == AccMode.AR) {
-                    "importer_exporter"
-                } else {
-                    "service_provider"
-                }
+                serialId.toString()
             )
         )
 
@@ -2690,7 +2704,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         if (sageOrganizationResponse.sageOrganizationId != sageOrganizationFromSageId) {
-            recordAudits(settlementId, sageOrganizationResponse.toString(), "sage serial organization id different in sage db and cogoport db", false)
+            recordAudits(settlementId, """Sage: $sageOrganizationFromSageId and Platform: ${sageOrganizationResponse.sageOrganizationId}""", "sage serial organization id different in sage db and cogoport db", false)
             throw AresException(AresError.ERR_1532, "sage serial organization id different in sage db and cogoport db")
         }
 
@@ -2709,7 +2723,8 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         tdsType: SettlementType?,
         invoiceAndBillData: AccountUtilization?,
-        exchangeRate: BigDecimal?
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date
     ): Long? {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         val accCodeAndSignFlag = when (invoiceAndBillData?.accMode) {
@@ -2759,7 +2774,7 @@ open class SettlementServiceImpl : SettlementService {
             paymentCode = PaymentCode.valueOf(tdsType?.name!!),
             payMode = PayMode.BANK,
             docType = DocType.TDS,
-            transactionDate = invoiceAndBillData?.transactionDate,
+            transactionDate = paymentTransactionDate,
             exchangeRate = exchangeRate
         )
 
@@ -2854,7 +2869,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val request = CreateCommunicationRequest(
             templateName = AresConstants.FAILED_SETTLEMENTS_MATCHING_ON_SAGE_TEMPLATE,
-            performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+            performedByUserId = AresConstants.ARES_USER_ID,
             performedByUserName = "Ares",
             recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_AUTO_GENERATION_SETTLEMENTS_MATCHING_FAILED_EMAIL,
             senderEmail = AresConstants.NO_REPLY,
@@ -2863,5 +2878,84 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         aresMessagePublisher.sendEmail(request)
+    }
+
+    override suspend fun getSettlementList(request: SettlementHistoryRequest): ResponseList<SettlementListDoc?> {
+        val possibleAccTypes = stringAccountTypes(request)
+        val query = util.toQueryString(request.query)
+
+        val entityCodes = when (request.entityCode != null) {
+            true -> when (request.entityCode) {
+                AresConstants.ENTITY_101 -> listOf(AresConstants.ENTITY_101, AresConstants.ENTITY_201, AresConstants.ENTITY_301, AresConstants.ENTITY_401)
+                else -> listOf(request.entityCode)
+            }
+            else -> null
+        }
+
+        val settlementDocs = settlementRepository.getSettlementList(
+            request.orgId!!,
+            possibleAccTypes,
+            request.page,
+            request.pageLimit,
+            query,
+            entityCodes,
+            request.sortBy,
+            request.sortType
+        )
+
+        if (settlementDocs.isNullOrEmpty()) return ResponseList()
+
+        val validAccTypeForIRN = listOf(AccountType.SINV, AccountType.SCN)
+
+        val invoiceNumberList = mutableListOf<String>()
+        val invoiceIdToAccTypeMap = settlementDocs.associateBy({ it.sourceId }, { it.sourceAccType }) +
+            settlementDocs.associateBy({ it.destinationId }, { it.destinationAccType })
+
+        invoiceIdToAccTypeMap.forEach { (invoiceId, accType) ->
+            if (accType in validAccTypeForIRN) {
+                invoiceNumberList.add(Hashids.encode(invoiceId))
+            }
+        }
+
+        val updatedSettlementDocs = getInvoiceAdditionalData(invoiceNumberList, mutableListOf("IrnNumber"), settlementDocs)
+
+        val totalRecords = settlementRepository.getSettlementCount(
+            request.orgId!!,
+            possibleAccTypes,
+            query,
+            entityCodes
+        )
+
+        return ResponseList(
+            list = updatedSettlementDocs,
+            totalPages = Utilities.getTotalPages(totalRecords, request.pageLimit),
+            totalRecords,
+            pageNo = request.page
+        )
+    }
+
+    private suspend fun getInvoiceAdditionalData(invoiceIds: MutableList<String>, keys: MutableList<String>, settlementDocs: List<SettlementListDoc>): List<SettlementListDoc> {
+        val invoiceAdditionalData = plutusClient.getInvoiceAdditionalList(invoiceIds, keys)
+
+        settlementDocs.forEach { doc ->
+            invoiceAdditionalData?.let { data ->
+                val sourceInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
+                val destinationInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
+
+                sourceInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.sourceIrnNumber = it.value.toString()
+                    }
+                }
+
+                destinationInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.destinationIrnNumber = it.value.toString()
+                    }
+                }
+            }
+        }
+
+        return settlementDocs
     }
 }

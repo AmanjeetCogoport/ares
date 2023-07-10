@@ -52,6 +52,7 @@ import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
@@ -609,7 +610,7 @@ class DashboardServiceImpl : DashboardService {
             return openSearchData
         }
 
-        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", "REC")
+        val onAccountAmount = unifiedDBRepo.getOnAccountAmount(mutableListOf(updatedEntityCode), defaultersOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC", "PAY"))
         val onAccountAmountForPastSevenDays = unifiedDBRepo.getOnAccountAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
         val openInvoiceAmountForPastSevenDays = unifiedDBRepo.getOutstandingAmountForPastSevenDays(updatedEntityCode, defaultersOrgIds)
 
@@ -630,7 +631,7 @@ class DashboardServiceImpl : DashboardService {
             else -> BigDecimal.ZERO
         }
 
-        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount!!)
+        val totalOutstandingAmount = data.sumOf { it.openInvoiceAmount }.minus(onAccountAmount?.multiply(BigDecimal(-1))!!)
 
         openSearchData.outstandingServiceWise = mapData
         openSearchData.overallStats = OverallStats(
@@ -819,8 +820,25 @@ class DashboardServiceImpl : DashboardService {
         return hashMap
     }
 
-    override suspend fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>? {
-        return unifiedDBRepo.getKamWiseOutstanding(entityCode)
+    override suspend fun getKamWiseOutstanding(entityCode: Int?, companyType: CompanyType?, serviceType: ServiceType?): List<KamWiseOutstanding>? {
+        if (entityCode in listOf(201, 401)) {
+            return listOf()
+        }
+        val defaultersOrgIds = getDefaultersOrgIds()
+        val updatedCompanyType = getCompanyType(companyType)
+
+        val stakeholderIds = AresConstants.KAM_OWNERS_LIST_ENTITY_CODE_MAPPING[entityCode]?.map { UUID.fromString(it) }
+
+        val kamWiseData = unifiedDBRepo.getKamWiseOutstanding(entityCode, serviceType, updatedCompanyType, defaultersOrgIds, stakeholderIds)
+
+        if (!kamWiseData.isNullOrEmpty()) {
+            kamWiseData.map {
+                it.dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
+                it.entityCode = entityCode
+            }
+        }
+
+        return kamWiseData
     }
 
     private fun generateMonthKeyIndex(month: Int): String {
@@ -948,8 +966,8 @@ class DashboardServiceImpl : DashboardService {
                 request.endDate, request.tradeType, request.entityCode,
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", "PAY", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, null, "AP", listOf("PAY"), request.serviceTypes, request.startDate, request.endDate, true)
         } else {
             val defaultOrgIds = getDefaultersOrgIds()
             val customerTypes = mapOf(
@@ -963,16 +981,16 @@ class DashboardServiceImpl : DashboardService {
                 defaultOrgIds
             )
             receivableOrPayableTillYesterday = response.tillYesterdayTotalOutstanding
-            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate)
-            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", "REC", request.serviceTypes, request.startDate, request.endDate, true)
+            onAccountPayment = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate)
+            onAccountTillYesterday = unifiedDBRepo.getOnAccountAmount(request.entityCode, defaultOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC"), request.serviceTypes, request.startDate, request.endDate, true)
         }
         var totalReceivableOrPayable = response.overdueAmount?.plus(response.nonOverdueAmount!!)
         if (request.accountMode == AccMode.AP) {
             totalReceivableOrPayable = totalReceivableOrPayable?.times((-1).toBigDecimal())
             receivableOrPayableTillYesterday = receivableOrPayableTillYesterday?.times((-1).toBigDecimal())
         }
-        val totalOutStanding = totalReceivableOrPayable?.minus(onAccountPayment!!)
-        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.minus(onAccountTillYesterday ?: 0.toBigDecimal())
+        val totalOutStanding = totalReceivableOrPayable?.plus(onAccountPayment!!)
+        val totalOutStandingTillYesterday = receivableOrPayableTillYesterday?.plus(onAccountTillYesterday ?: 0.toBigDecimal())
         val onAccountPaymentChangeFromYesterday = onAccountPayment?.minus(onAccountTillYesterday!!)
         val totalOutStandingChangeFromYesterday = totalOutStanding?.minus(totalOutStandingTillYesterday!!)
         response.onAccountChangeFromYesterday = onAccountPaymentChangeFromYesterday?.let {

@@ -18,6 +18,8 @@ import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TradePartyOutstandingReq
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
@@ -980,5 +982,9 @@ class OutStandingServiceImpl : OutStandingService {
             )
         }
         return response
+    }
+
+    override suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
+        return accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, request.entities!!)
     }
 }

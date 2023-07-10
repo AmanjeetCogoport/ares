@@ -148,5 +148,8 @@ data class Payment(
     val docType: DocType? = DocType.PAYMENT,
 
     @JsonProperty("sageRefNumber")
-    var sageRefNumber: String? = null
+    var sageRefNumber: String? = null,
+
+    @JsonProperty("preMigratedDeleted")
+    var preMigratedDeleted: Boolean? = false
 )
