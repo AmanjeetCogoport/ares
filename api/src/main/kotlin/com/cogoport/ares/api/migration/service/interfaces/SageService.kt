@@ -39,4 +39,6 @@ interface SageService {
     suspend fun getPaymentPostSageInfo(paymentNumValue: String, entityCode: Long?, accMode: AccMode): PaymentDetailsInfo?
 
     suspend fun getSagePaymentNum(sageRefNumber: List<String>): ArrayList<SagePaymentNumMigrationResponse>
+
+    suspend fun getMTCJVDetails(startDate: String?, endDate: String?): List<JVParentDetails>
 }

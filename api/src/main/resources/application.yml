@@ -42,7 +42,7 @@ r2dbc:
 services:
   service:
     - id: bf-rails
-      url: https://api-spark2.dev.cogoport.io
+      url: https://api-enigma3.dev.cogoport.io
       enabledLocally: true
   staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
@@ -66,8 +66,8 @@ sentry:
 cogoport:
   api_url: ${COGOPORT_API_URL:https://api-mustangs3.dev.cogoport.io}
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
-  bearer_token_new: 0c320283-6f34-42d0-ac1d-e3390049fe65
-  auth_scope_id: 0c320283-6f34-42d0-ac1d-e3390049fe65
+  bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
+  auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
   internal_url: ${INTERNAL_URL:`https://api-mustangs5.dev.cogoport.io`}
   exchange_api:
     url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://api.cogoport.com/athena`}
@@ -82,9 +82,9 @@ sage:
   soapUrl: http://13.126.196.22:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
   user: admin
   password: admin@2
-  queryClientUrl: https://47tol5ixceub6n2jv7smwnxerm0qgmoq.lambda-url.ap-south-1.on.aws/
-  queryClientPassword: 80D705BDB766333C658206B381C969FE
-  databaseName: 'COGO4'
+  queryClientUrl: https://gozaf35uzpkokesxfgw3g2ribi0hddzk.lambda-url.ap-south-1.on.aws
+  queryClientPassword: KjjzzU2qneGMtzQQyFJ9QwEiPMFYZgut
+  databaseName: 'COGO2'
   loginUrl: ${ SAGE_LOGIN_URL:`http://13.126.196.22/` }
   username: ${ SAGE_REST_API_USER:`rajveer.singh@cogoport.com` }
   userpassword: ${ SAGE_REST_API_PASSWORD:`Abcd@12345` }
