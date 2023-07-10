@@ -327,7 +327,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 BigDecimal.ZERO
             }
             val ledgerExcelResponse = LedgerExcelResponse(
-                transactionDate = it.transactionDate.toString(),
+                transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it.transactionDate),
                 ledgerCurrency = it.ledgerCurrency,
                 shipmentId = documentSIDMap[it.documentNo] ?: "NA",
                 type = description[it.type] ?: it.type,
