@@ -25,7 +25,7 @@ class ReportController {
         return reportService.outstandingReportDownload(request)
     }
     @Get("/download/{id}")
-    suspend fun downloadAnyReport(@PathVariable("id") id: String): MutableHttpResponse<File>? {
+    suspend fun downloadReport(@PathVariable("id") id: String): MutableHttpResponse<File>? {
         val file: File = reportService.downloadOutstandingReport(Hashids.decode(id)[0])
         return HttpResponse.ok(file).header("Content-Disposition", "filename=${file.name}")
     }

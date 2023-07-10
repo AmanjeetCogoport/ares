@@ -1875,8 +1875,8 @@ open class OnAccountServiceImpl : OnAccountService {
             req.startDate!!,
             req.endDate!!
         )
-        val previousLedger =
-            accountUtilizationRepository.getPreviousARLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!)
-        return previousLedger + ledgerSelectedDateWise
+        val previousLedger = accountUtilizationRepository.getPreviousARLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, "Opening Balance")
+        val currentLedger = accountUtilizationRepository.getPreviousARLedger(AccMode.AR, req.orgId, req.entityCodes!!, null, "Closing Balance")
+        return previousLedger + ledgerSelectedDateWise + currentLedger
     }
 }

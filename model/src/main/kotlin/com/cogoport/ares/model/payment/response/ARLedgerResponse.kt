@@ -19,7 +19,7 @@ data class ARLedgerResponse(
     @ExcelColumn("Transaction Ref Number")
     val transactionRefNumber: String?,
     @ExcelColumn("Ledger Currency")
-    val ledgerCurrency: String,
+    val ledgerCurrency: String?,
     @ExcelColumn("Debit")
     val debit: BigDecimal,
     @ExcelColumn("Credit")

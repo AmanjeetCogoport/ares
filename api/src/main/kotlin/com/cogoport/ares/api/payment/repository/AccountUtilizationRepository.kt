@@ -1217,7 +1217,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            SELECT au.transaction_date::varchar,
+            SELECT au.transaction_date::varchar AS transaction_date,
             au.document_no::varchar AS document_number,
             au.document_value,
             p.trans_ref_number AS transaction_ref_number,
@@ -1229,7 +1229,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             LEFT JOIN payments p ON p.payment_num = au.document_no
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date
         """
     )
     suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: Timestamp, endDate: Timestamp): List<ARLedgerResponse>
@@ -1237,19 +1237,18 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-            SELECT '-' AS transaction_date,
-            'open document' AS document_number,
-            'open document' AS document_value,
-            '-' AS transaction_ref_number,
+            SELECT NULL AS transaction_date,
+            NULL AS document_number,
+            :commonRow AS document_value,
+            NULL AS transaction_ref_number,
             (array_agg(led_currency))[1] AS ledger_currency,
             COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END), 0) AS debit,
             COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END), 0) AS credit,
             COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
-            AND au.transaction_date >= :startDate::DATE AND au.entity_code IN (:entityCodes)
-            ORDER BY transaction_date DESC
+            AND (:date IS NULL OR au.transaction_date <= :date::DATE) AND au.entity_code IN (:entityCodes)
         """
     )
-    suspend fun getPreviousARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: Timestamp): List<ARLedgerResponse>
+    suspend fun getPreviousARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
 }
