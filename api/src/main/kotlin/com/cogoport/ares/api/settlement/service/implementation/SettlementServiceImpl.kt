@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
-import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
@@ -692,11 +691,11 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
         var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        var tdsStylesFromClient: List<TdsDataResponse>? = null
+        var tdsStylesFromClient: List<TdsStylesResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))
-        } catch (_: Exception) {
-            null
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))?.data!!
+        } catch (e: Exception) {
+            logger().error(e.toString())
         }
         tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
 
@@ -711,10 +710,10 @@ open class SettlementServiceImpl : SettlementService {
     private fun assignClientResponse(
         tdsStylesResponse: MutableList<TdsStylesResponse>,
         tradePartyMappingIds: List<String>,
-        tdsStylesFromClient: List<TdsDataResponse>?
+        tdsStylesFromClient: List<TdsStylesResponse>?
     ): MutableList<TdsStylesResponse> {
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient?.find { it.data.id.toString() == tradePartyMapping }?.data
+            val tdsElement = tdsStylesFromClient?.find { it.id.toString() == tradePartyMapping }
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
