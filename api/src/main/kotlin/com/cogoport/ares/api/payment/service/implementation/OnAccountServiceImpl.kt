@@ -216,6 +216,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val pageLimit = request.pageLimit
         val page = request.page
 
+        val entityCodes = when (request.entityType != null) {
+            true -> when (request.entityType) {
+                AresConstants.ENTITY_101 -> listOf(AresConstants.ENTITY_101, AresConstants.ENTITY_201, AresConstants.ENTITY_301, AresConstants.ENTITY_401)
+                else -> listOf(request.entityType)
+            }
+            else -> null
+        }
+
         val documentTypes = when (request.docType != null) {
             true -> {
                 when (request.docType) {
@@ -229,7 +237,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val paymentsData = paymentRepository.getOnAccountList(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,
@@ -262,7 +270,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val totalRecords = paymentRepository.getOnAccountListCount(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,

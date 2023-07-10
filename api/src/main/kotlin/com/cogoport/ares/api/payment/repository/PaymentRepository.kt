@@ -171,7 +171,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             AND
             (:currencyType IS NULL OR currency = :currencyType)
             AND 
-            (:entityType IS NULL OR entity_code = :entityType)
+            (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
             AND
             (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
             AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
@@ -200,7 +200,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun getOnAccountList(
         currencyType: String?,
-        entityType: Int?,
+        entityCodes: List<Int?>?,
         accMode: AccMode?,
         startDate: String?,
         endDate: String?,
@@ -224,7 +224,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
           AND
           (:currencyType IS NULL OR currency = :currencyType)
           AND 
-          (:entityType IS NULL OR entity_code = :entityType)
+          (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
           AND
           (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
           AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
@@ -236,7 +236,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun getOnAccountListCount(
         currencyType: String?,
-        entityType: Int?,
+        entityCodes: List<Int?>?,
         accMode: AccMode?,
         startDate: String?,
         endDate: String?,

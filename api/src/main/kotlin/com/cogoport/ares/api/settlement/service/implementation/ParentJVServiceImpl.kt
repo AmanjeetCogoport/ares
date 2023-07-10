@@ -597,9 +597,9 @@ open class ParentJVServiceImpl : ParentJVService {
             val status = getStatus(processedResponse)
 
             if (status == 1) {
-                val paymentNumOnSage = "Select NUM_0 from $sageDatabase.GACCENTRY where NUM_0 = '${parentJVDetails.jvNum}'"
-                val resultForPaymentNumOnSageQuery = Client.sqlQuery(paymentNumOnSage)
-                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+                val jvNumOnSage = "Select NUM_0 from $sageDatabase.GACCENTRY where NUM_0 = '${parentJVDetails.jvNum}'"
+                val resultForJVNumOnSageQuery = Client.sqlQuery(jvNumOnSage)
+                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForJVNumOnSageQuery)
                 val records = mappedResponse["recordset"] as? ArrayList<*>
                 if (records?.size != 0) {
                     parentJVRepository.updateStatus(parentJVId, JVStatus.POSTED, performedBy)
