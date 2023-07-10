@@ -82,21 +82,21 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (request.currency != documents[0]?.ledCurrency) {
             val exchangeRateResponse = getExchangeRate(documents, request.currency)
             documents.forEach { doc ->
-                val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
                 totalReceivableAmount += exchangeRate
                     ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
                     unpaidReceivableAmount += exchangeRate
                         ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
                     partialPaidReceivableAmount += exchangeRate
                         ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
@@ -177,7 +177,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             if (request.currency != documentsForDue[0]?.ledCurrency) {
                 val exchangeRateResponse = getExchangeRate(documentsForDue, request.currency)
                 documentsForDue.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
                     invoicesDueAmount += exchangeRate
                         ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
@@ -196,7 +196,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             if (request.currency != documentsForOnAccount[0]?.ledCurrency) {
                 val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
                 documentsForOnAccount.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }.firstOrNull()?.exchangeRate
+                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
                     onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
                 }
             } else {
@@ -327,7 +327,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 BigDecimal.ZERO
             }
             val ledgerExcelResponse = LedgerExcelResponse(
-                transactionDate = it.transactionDate.toString(),
+                transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it.transactionDate),
                 ledgerCurrency = it.ledgerCurrency,
                 shipmentId = documentSIDMap[it.documentNo] ?: "NA",
                 type = description[it.type] ?: it.type,
@@ -347,7 +347,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         return url
     }
 
-    private suspend fun getExchangeRate(documents: List<DocumentResponse?>, toCurrency: String): MutableList<ExchangeRateResponseByDate> {
+    private suspend fun getExchangeRate(documents: List<DocumentResponse?>, toCurrency: String): MutableList<ExchangeRateResponseByDate>? {
         var transactionDates = mutableListOf<Date>()
         var currencyList = mutableListOf<String>()
         documents.forEach { doc ->
@@ -358,12 +358,15 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         }
         currencyList = ArrayList(currencyList.distinct())
         transactionDates = ArrayList(transactionDates.distinct())
-
-        return exchangeClient.getExchangeRates(
-            ExchangeRateRequest(
-                currencyList, listOf(toCurrency),
-                transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }
+        return if (!currencyList.isNullOrEmpty()) {
+            exchangeClient.getExchangeRates(
+                ExchangeRateRequest(
+                    currencyList, listOf(toCurrency),
+                    transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }
+                )
             )
-        )
+        } else {
+            null
+        }
     }
 }
