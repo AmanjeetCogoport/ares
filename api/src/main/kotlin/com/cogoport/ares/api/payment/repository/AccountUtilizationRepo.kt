@@ -3,12 +3,14 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
+import com.cogoport.ares.model.payment.response.LedgerDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -830,4 +832,75 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
+
+    @NewSpan
+    @Query(
+        """
+                SELECT organization_id::VARCHAR, currency,led_currency , sign_flag, amount_curr, pay_curr,amount_loc, pay_loc, transaction_date,due_date,entity_code
+                FROM account_utilizations 
+                WHERE acc_type::varchar in (:accType)
+                AND acc_mode = 'AP'
+                AND document_status in ('FINAL', 'PROFORMA')
+                AND abs(amount_curr - pay_curr) > 0
+                AND organization_id IS NOT NULL
+                AND due_date IS NOT NULL
+                AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
+                AND (:entityCode IS NULL OR entity_code = :entityCode)
+                AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+            """
+    )
+    suspend fun getDocumentsForLSP(orgId: String, entityCode: Int?, startDate: String?, endDate: String?, accType: List<String>): List<DocumentResponse?>
+
+    @Query(
+        """
+        SELECT
+            organization_id,
+            transaction_date,
+            service_type,
+            document_value,
+            document_no,
+            CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN sign_flag * amount_loc ELSE 0 END as debit,
+            CASE WHEN acc_type IN ('PAY','MISC','OPDIV','BANK','INTER','CONTR','MTCCV','ROFF','MTC') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
+            led_currency as ledger_currency,
+            acc_type::text as type
+        FROM
+            account_utilizations
+        WHERE
+            document_status IN ('FINAL','PROFORMA')
+            AND organization_id IS NOT NULL
+            AND acc_mode = 'AP'
+            AND organization_id = :orgId::uuid
+            AND (:entityCode IS NULL OR entity_code = :entityCode) 
+            AND EXTRACT(YEAR FROM transaction_date) = :year
+            AND EXTRACT(MONTH FROM transaction_date) = :month
+            AND acc_type::varchar IN (:accTypes)
+            AND deleted_at IS NULL
+            AND is_void = false
+        ORDER BY transaction_date
+        OFFSET GREATEST(0, ((:pageIndex - 1) * :pageLimit))
+        LIMIT :pageLimit
+    """
+    )
+    suspend fun getLedgerForLSP(orgId: String, entityCode: Int?, year: Int, month: Int, accTypes: List<String>, pageIndex: Int?, pageLimit: Int?): List<LedgerDetails>?
+
+    @Query(
+        """
+        SELECT
+            COALESCE(COUNT(*), 0)
+        FROM
+            account_utilizations
+        WHERE
+            document_status = 'FINAL'
+            AND organization_id IS NOT NULL
+            AND acc_mode = 'AP'
+            AND organization_id = :orgId::uuid
+            AND (:entityCode IS NULL OR entity_code = :entityCode) 
+            AND EXTRACT(YEAR FROM transaction_date) = :year
+            AND EXTRACT(MONTH FROM transaction_date) = :month
+            AND acc_type::varchar IN (:accTypes)
+            AND deleted_at IS NULL
+            AND is_void = false
+    """
+    )
+    suspend fun getLedgerForLSPCount(orgId: String, entityCode: Int?, year: Int, month: Int, accTypes: List<String>): Long
 }
