@@ -109,6 +109,7 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.XML
@@ -698,9 +699,9 @@ open class SettlementServiceImpl : SettlementService {
         var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
         var tdsStylesFromClient: List<TdsStylesResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))?.data!!
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))?.data
         } catch (e: Exception) {
-            logger().error(e.toString())
+            Sentry.captureException(e)
         }
         tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
 
@@ -2421,7 +2422,7 @@ open class SettlementServiceImpl : SettlementService {
         return settle(checkRequest)
     }
 
-    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {
+    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
