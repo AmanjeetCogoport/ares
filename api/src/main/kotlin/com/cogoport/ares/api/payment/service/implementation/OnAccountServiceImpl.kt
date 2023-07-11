@@ -217,6 +217,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val pageLimit = request.pageLimit
         val page = request.page
 
+        val entityCodes = when (request.entityType != null) {
+            true -> when (request.entityType) {
+                AresConstants.ENTITY_101 -> listOf(AresConstants.ENTITY_101, AresConstants.ENTITY_201, AresConstants.ENTITY_301, AresConstants.ENTITY_401)
+                else -> listOf(request.entityType)
+            }
+            else -> null
+        }
+
         val documentTypes = when (request.docType != null) {
             true -> {
                 when (request.docType) {
@@ -230,7 +238,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val paymentsData = paymentRepository.getOnAccountList(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,
@@ -263,7 +271,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val totalRecords = paymentRepository.getOnAccountListCount(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,
@@ -1484,15 +1492,15 @@ open class OnAccountServiceImpl : OnAccountService {
             val status = getStatus(processedResponse)
 
             if (status == 1) {
-                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
                 val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
                 val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
                 val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
                 val records = mappedResponse["recordset"] as? ArrayList<*>
                 if (records?.size != 0) {
                     val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
-                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
+                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString(), performedBy)
                 } else {
+                    paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
                     thirdPartyApiAuditService.createAudit(
                         ThirdPartyApiAudit(
                             null,
@@ -1500,14 +1508,14 @@ open class OnAccountServiceImpl : OnAccountService {
                             "Payment",
                             paymentId,
                             "PAYMENT",
-                            "500",
-                            records.toString(),
+                            "404",
+                            "UMRNUM_0: ${paymentDetails.paymentNumValue}",
                             "Sage Payment Num Value not present",
                             false
                         )
                     )
+                    return false
                 }
-
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,

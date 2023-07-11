@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
-import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
@@ -110,6 +109,7 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.XML
@@ -635,7 +635,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
-        val documentModel = calculatingTds(documentEntity)
+        val documentModel = calculatingTds(documentEntity, request.entityCode)
 
         val total =
             accutilizationRepo.getDocumentCount(
@@ -697,11 +697,11 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
         var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        var tdsStylesFromClient: List<TdsDataResponse>? = null
+        var tdsStylesFromClient: List<TdsStylesResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))
-        } catch (_: Exception) {
-            null
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))?.data
+        } catch (e: Exception) {
+            Sentry.captureException(e)
         }
         tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
 
@@ -716,10 +716,10 @@ open class SettlementServiceImpl : SettlementService {
     private fun assignClientResponse(
         tdsStylesResponse: MutableList<TdsStylesResponse>,
         tradePartyMappingIds: List<String>,
-        tdsStylesFromClient: List<TdsDataResponse>?
+        tdsStylesFromClient: List<TdsStylesResponse>?
     ): MutableList<TdsStylesResponse> {
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient?.find { it.data.id.toString() == tradePartyMapping }?.data
+            val tdsElement = tdsStylesFromClient?.find { it.id.toString() == tradePartyMapping }
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
@@ -2422,7 +2422,7 @@ open class SettlementServiceImpl : SettlementService {
         return settle(checkRequest)
     }
 
-    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<Document> {
+    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
@@ -2438,7 +2438,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
