@@ -502,7 +502,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
             taggedBillId = null,
-            settlementEnabled = receivableRequest.accountType !in listOf("MTCCV", "MTC")
+            settlementEnabled = true
         )
     }
 
@@ -838,8 +838,7 @@ class PaymentMigrationImpl : PaymentMigration {
                         description = jvParentDetail.description,
                         jvCodeNum = jvParentDetail.jvCodeNum,
                         entityCode = jvRecords.firstOrNull()?.entityCode,
-                        transactionDate = jvParentDetail.validityDate,
-                        isUtilized = jvParentDetail.jvType in listOf("MTCCV", "MTC")
+                        transactionDate = jvParentDetail.validityDate
                     )
                 )
                 parentJVId = jvParentRecord.id!!

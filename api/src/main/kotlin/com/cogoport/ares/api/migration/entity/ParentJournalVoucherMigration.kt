@@ -31,6 +31,5 @@ data class ParentJournalVoucherMigration(
     var migrated: Boolean? = false,
     var jvCodeNum: String?,
     var entityCode: Int?,
-    var transactionDate: Date?,
-    var isUtilized: Boolean? = false
+    var transactionDate: Date?
 )
