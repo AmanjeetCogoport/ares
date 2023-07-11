@@ -413,4 +413,15 @@ open class PaymentMigrationWrapperImpl(
         }
         return sagePaymentNum.size
     }
+
+    override suspend fun migrateMTCCVJV(
+        startDate: String?,
+        endDate: String?
+    ): Int {
+        val jvParentRecords = sageService.getMTCJVDetails(startDate, endDate)
+        jvParentRecords.forEach {
+            aresMessagePublisher.emitJournalVoucherMigration(it)
+        }
+        return jvParentRecords.size
+    }
 }

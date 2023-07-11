@@ -15,6 +15,7 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.Date
 import javax.validation.Valid
 
 @Validated
@@ -24,6 +25,7 @@ class MigratePaymentsController {
     @Inject lateinit var paymentMigration: PaymentMigrationWrapper
 
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
+
     @Get("/migrate")
     suspend fun migratePayments(
         @QueryValue startDate: String,
@@ -219,5 +221,17 @@ class MigratePaymentsController {
             aresMessagePublisher.emitPartialPaymentMismatchDocument(it.toString())
         }
         return Response<String>().ok(HttpStatus.OK.name, "Documents Added in RabbitMq")
+    }
+
+    @Get("/migrate-mtccv-jv")
+    suspend fun migrateMTCCVJV(
+        @QueryValue startDate: Date?,
+        @QueryValue endDate: Date?
+    ): Response<String> {
+        val size = paymentMigration.migrateMTCCVJV(startDate.toString(), endDate.toString())
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for mtccv jv migration received, total number of parent jv to migrate is $size"
+        )
     }
 }
