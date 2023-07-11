@@ -2,6 +2,8 @@
 package com.cogoport.ares.api.settlement.mapper
 
 import com.cogoport.ares.api.settlement.entity.Document
+import com.cogoport.ares.model.payment.response.LSPLedgerDocuments
+import com.cogoport.ares.model.payment.response.LedgerDetails
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.Invoice
 import com.cogoport.ares.model.settlement.InvoiceDocumentResponse
@@ -40,4 +42,6 @@ interface DocumentMapper {
     //    fun convertToModel(document: Document): com.cogoport.ares.model.settlement.Document
 
     fun convertToIncidentModel(document: CheckDocument): com.cogoport.hades.model.incident.request.CheckDocument
+
+    fun convertLedgerDetailsToLSPLedgerDocuments(request: List<LedgerDetails>): MutableList<LSPLedgerDocuments>
 }
