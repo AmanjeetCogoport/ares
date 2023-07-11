@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.service.implementation
 import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
@@ -46,7 +47,8 @@ class Scheduler(
     private var aresMessagePublisher: AresMessagePublisher,
     private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client,
-    private var onAccountService: OnAccountService
+    private var onAccountService: OnAccountService,
+    private var paymentMigration: PaymentMigrationWrapper
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -192,5 +194,16 @@ class Scheduler(
         val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
 
         onAccountService.downloadSagePlatformReport(startDate, endDate)
+    }
+
+    @Scheduled(cron = "30 20 * * *")
+    fun migrateMTCCVJV() {
+        val endDate: String = LocalDate.now().toString()
+        val startDate: String = LocalDate.now().minusDays(1).toString()
+        logger().info("Scheduler has been initiated to migrate MTCCV JV for the date range : $endDate - $startDate")
+        val size = runBlocking {
+            paymentMigration.migrateMTCCVJV(startDate, endDate)
+        }
+        logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
     }
 }
