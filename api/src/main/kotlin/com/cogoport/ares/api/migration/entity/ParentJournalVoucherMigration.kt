@@ -14,23 +14,23 @@ import java.util.UUID
 @Introspected
 @MappedEntity(value = "parent_journal_vouchers")
 data class ParentJournalVoucherMigration(
-        @field:Id @GeneratedValue
+    @field:Id @GeneratedValue
     var id: Long?,
-        var status: JVStatus,
-        var category: String,
-        var jvNum: String?,
-        var validityDate: Date?,
-        var createdBy: UUID?,
-        var updatedBy: UUID?,
-        var createdAt: Timestamp? = Timestamp.from(Instant.now()),
-        var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
-        var currency: String?,
-        var ledCurrency: String?,
-        var exchangeRate: BigDecimal,
-        var description: String?,
-        var migrated: Boolean? = false,
-        var jvCodeNum: String?,
-        var entityCode: Int?,
-        var transactionDate: Date?,
-        var isUtilized: Boolean? = false
+    var status: JVStatus,
+    var category: String,
+    var jvNum: String?,
+    var validityDate: Date?,
+    var createdBy: UUID?,
+    var updatedBy: UUID?,
+    var createdAt: Timestamp? = Timestamp.from(Instant.now()),
+    var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
+    var currency: String?,
+    var ledCurrency: String?,
+    var exchangeRate: BigDecimal,
+    var description: String?,
+    var migrated: Boolean? = false,
+    var jvCodeNum: String?,
+    var entityCode: Int?,
+    var transactionDate: Date?,
+    var isUtilized: Boolean? = false
 )

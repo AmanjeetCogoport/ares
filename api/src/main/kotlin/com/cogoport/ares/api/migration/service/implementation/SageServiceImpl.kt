@@ -99,9 +99,9 @@ class SageServiceImpl : SageService {
     }
 
     override suspend fun getJournalVoucherFromSage(
-            startDate: String?,
-            endDate: String?,
-            jvNums: String?
+        startDate: String?,
+        endDate: String?,
+        jvNums: String?
     ): ArrayList<JournalVoucherRecord> {
         var sqlQuery = """
          SELECT G.FCY_0 as entity_code 
@@ -156,7 +156,7 @@ class SageServiceImpl : SageService {
 
     override suspend fun migratePaymentsByDate(startDate: String?, endDate: String?, updatedAt: String?): ArrayList<PaymentRecord> {
         var sqlQuery =
-                """
+            """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
             ,P.NUM_0 as sage_ref_number
@@ -267,10 +267,10 @@ class SageServiceImpl : SageService {
     }
 
     override suspend fun getSettlementDataFromSage(
-            startDate: String,
-            endDate: String,
-            source: String?,
-            destination: String?
+        startDate: String,
+        endDate: String,
+        source: String?,
+        destination: String?
     ): ArrayList<SettlementRecord> {
         var sqlQuery = """
             SELECT  P.FCYLIN_0 as entity_code
@@ -299,10 +299,10 @@ class SageServiceImpl : SageService {
     }
 
     override suspend fun getInvoicesPayLocDetails(
-            startDate: String?,
-            endDate: String?,
-            updatedAt: String?,
-            invoiceNumbers: String?
+        startDate: String?,
+        endDate: String?,
+        updatedAt: String?,
+        invoiceNumbers: String?
     ): ArrayList<InvoiceDetails> {
         var sqlQuery = """
                 select case when si.GTE_0 in('ZSINV','ZSDN','ZDN') then 'INVOICE' else 'CREDIT_NOTE' end  as invoiceType
@@ -406,10 +406,10 @@ class SageServiceImpl : SageService {
     }
 
     override suspend fun getJournalVoucherFromSageCorrected(
-            startDate: String?,
-            endDate: String?,
-            jvNums: String?,
-            jvType: String?
+        startDate: String?,
+        endDate: String?,
+        jvNums: String?,
+        jvType: String?
     ): ArrayList<JournalVoucherRecord> {
         var sqlQuery = """
          SELECT G.FCY_0 as entity_code 
@@ -463,7 +463,7 @@ class SageServiceImpl : SageService {
 
     override suspend fun getPaymentsForScheduler(startDate: String, endDate: String): ArrayList<PaymentRecord> {
         var sqlQuery =
-                """
+            """
             SELECT  P.FCY_0 as entity_code 
             ,P.BPR_0 as sage_organization_id 
             ,P.NUM_0 as sage_ref_number
@@ -605,9 +605,9 @@ class SageServiceImpl : SageService {
     }
 
     override suspend fun getPaymentPostSageInfo(
-            paymentNumValue: String,
-            entityCode: Long?,
-            accMode: AccMode
+        paymentNumValue: String,
+        entityCode: Long?,
+        accMode: AccMode
     ): PaymentDetailsInfo? {
         val platformPaymentDetails = paymentRepository.getPaymentByPaymentNumValue(paymentNumValue, entityCode, accMode)
 
@@ -615,15 +615,15 @@ class SageServiceImpl : SageService {
             throw AresException(AresError.ERR_1539, "")
         }
         val paymentDetails = PlatformPostPaymentDetails(
-                sagePaymentNum = platformPaymentDetails.sageRefNumber ?: " ",
-                platformPaymentNum = platformPaymentDetails.paymentNumValue,
-                bprNumber = platformPaymentDetails.sageOrganizationId,
-                glCode = platformPaymentDetails.accCode,
-                currency = platformPaymentDetails.currency!!,
-                entityCode = platformPaymentDetails.entityCode!!.toLong(),
-                amount = platformPaymentDetails.amount,
-                status = platformPaymentDetails.paymentDocumentStatus.toString(),
-                organizationName = platformPaymentDetails.organizationName
+            sagePaymentNum = platformPaymentDetails.sageRefNumber ?: " ",
+            platformPaymentNum = platformPaymentDetails.paymentNumValue,
+            bprNumber = platformPaymentDetails.sageOrganizationId,
+            glCode = platformPaymentDetails.accCode,
+            currency = platformPaymentDetails.currency!!,
+            entityCode = platformPaymentDetails.entityCode!!.toLong(),
+            amount = platformPaymentDetails.amount,
+            status = platformPaymentDetails.paymentDocumentStatus.toString(),
+            organizationName = platformPaymentDetails.organizationName
         )
 
         var accountMode = accMode.name
@@ -637,8 +637,8 @@ class SageServiceImpl : SageService {
         }
 
         return PaymentDetailsInfo(
-                sagePaymentInfo = sagePaymentDetails,
-                platformPaymentInfo = paymentDetails
+            sagePaymentInfo = sagePaymentDetails,
+            platformPaymentInfo = paymentDetails
         )
     }
 

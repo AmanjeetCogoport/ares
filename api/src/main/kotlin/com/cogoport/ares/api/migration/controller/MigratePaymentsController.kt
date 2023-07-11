@@ -223,12 +223,13 @@ class MigratePaymentsController {
 
     @Get("/migrate-mtccv-jv")
     suspend fun migrateMTCCVJV(
-            @QueryValue startDate: String?,
-            @QueryValue endDate: String?): Response<String> {
+        @QueryValue startDate: String?,
+        @QueryValue endDate: String?
+    ): Response<String> {
         val size = paymentMigration.migrateMTCCVJV(startDate, endDate)
         return Response<String>().ok(
-                HttpStatus.OK.name,
-                "Request for mtccv jv migration received, total number of jv to migrate is $size"
+            HttpStatus.OK.name,
+            "Request for mtccv jv migration received, total number of jv to migrate is $size"
         )
     }
 }
