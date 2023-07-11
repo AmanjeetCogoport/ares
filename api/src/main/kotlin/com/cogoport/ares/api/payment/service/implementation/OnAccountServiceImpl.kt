@@ -201,7 +201,7 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
-    @Value("\${micronaut.server.base-url}") // application-prod.yml path
+    @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
     /**

@@ -72,7 +72,6 @@ import com.cogoport.brahma.opensearch.Client
 import com.cogoport.kuber.client.KuberClient
 import io.sentry.Sentry
 import jakarta.inject.Inject
-import java.lang.Math.min
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -176,7 +175,7 @@ class PaymentMigrationImpl : PaymentMigration {
             var jvResponse: JvResponse? = null
             if (jvId != null) {
                 jvResponse = paymentMigrationRepository.checkJVExists(
-                    journalVoucherRecord.paymentNum!!,
+                    journalVoucherRecord.paymentNum,
                     jvId
                 )
             }
@@ -503,7 +502,7 @@ class PaymentMigrationImpl : PaymentMigration {
             taxableAmount = BigDecimal.ZERO,
             migrated = true,
             taggedBillId = null,
-            settlementEnabled = true
+            settlementEnabled = receivableRequest.accountType !in listOf("MTCCV", "MTC")
         )
     }
 
@@ -834,10 +833,13 @@ class PaymentMigrationImpl : PaymentMigration {
                         updatedBy = MigrationConstants.createdUpdatedBy,
                         migrated = true,
                         currency = jvParentDetail.currency,
-                        led_currency = jvParentDetail.ledgerCurrency,
+                        ledCurrency = jvParentDetail.ledgerCurrency,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
-                        jvCodeNum = jvParentDetail.jvCodeNum
+                        jvCodeNum = jvParentDetail.jvCodeNum,
+                        entityCode = jvRecords.firstOrNull()?.entityCode,
+                        transactionDate = jvParentDetail.validityDate,
+                        isUtilized = jvParentDetail.jvType in listOf("MTCCV", "MTC")
                     )
                 )
                 parentJVId = jvParentRecord.id!!
@@ -874,7 +876,7 @@ class PaymentMigrationImpl : PaymentMigration {
                         entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
                         entityCode = it.entityCode.toInt(),
                         jvNum = it.jvNum,
-                        type = "",
+                        type = if (it.signFlag.toInt() == 1) AresConstants.DEBIT else AresConstants.CREDIT,
                         category = AccountTypeMapping.getAccountType(it.type),
                         validityDate = it.validityDate,
                         amount = it.amount,

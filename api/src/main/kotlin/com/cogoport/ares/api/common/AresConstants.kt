@@ -50,6 +50,8 @@ object AresConstants {
     const val MODE = "AR"
     const val ORGANIZATION_ID = "organizationId"
     const val TRANSACTION_DATE = "transactionDate"
+    const val DEBIT = "debit"
+    const val CREDIT = "credit"
 
     const val DEFAULT_TDS_RATE = 2
     const val DECIMAL_NUMBER_UPTO = 12
