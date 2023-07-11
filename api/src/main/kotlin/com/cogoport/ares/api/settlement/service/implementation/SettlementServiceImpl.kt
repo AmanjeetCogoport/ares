@@ -634,7 +634,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
-        val documentModel = calculatingTds(documentEntity)
+        val documentModel = calculatingTds(documentEntity, request.entityCode)
 
         val total =
             accutilizationRepo.getDocumentCount(
@@ -2421,7 +2421,7 @@ open class SettlementServiceImpl : SettlementService {
         return settle(checkRequest)
     }
 
-    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<Document> {
+    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
@@ -2437,7 +2437,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
