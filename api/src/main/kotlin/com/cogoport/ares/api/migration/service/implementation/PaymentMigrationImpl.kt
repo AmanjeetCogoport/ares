@@ -876,7 +876,7 @@ class PaymentMigrationImpl : PaymentMigration {
                         entityId = EntityCodeMapping.getByEntityCode(it.entityCode!!),
                         entityCode = it.entityCode.toInt(),
                         jvNum = it.jvNum,
-                        type = if (it.signFlag.toInt() == 1) AresConstants.DEBIT else AresConstants.CREDIT,
+                        type = "",
                         category = AccountTypeMapping.getAccountType(it.type),
                         validityDate = it.validityDate,
                         amount = it.amount,

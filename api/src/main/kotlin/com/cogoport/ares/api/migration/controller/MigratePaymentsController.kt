@@ -15,6 +15,7 @@ import io.micronaut.http.annotation.Put
 import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
+import java.util.Date
 import javax.validation.Valid
 
 @Validated
@@ -223,13 +224,13 @@ class MigratePaymentsController {
 
     @Get("/migrate-mtccv-jv")
     suspend fun migrateMTCCVJV(
-        @QueryValue startDate: String?,
-        @QueryValue endDate: String?
+        @QueryValue startDate: Date?,
+        @QueryValue endDate: Date?
     ): Response<String> {
-        val size = paymentMigration.migrateMTCCVJV(startDate, endDate)
+        val size = paymentMigration.migrateMTCCVJV(startDate.toString(), endDate.toString())
         return Response<String>().ok(
             HttpStatus.OK.name,
-            "Request for mtccv jv migration received, total number of jv to migrate is $size"
+            "Request for mtccv jv migration received, total number of parent jv to migrate is $size"
         )
     }
 }
