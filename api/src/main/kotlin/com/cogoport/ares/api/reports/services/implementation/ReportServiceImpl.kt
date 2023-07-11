@@ -38,6 +38,7 @@ import java.math.RoundingMode
 import java.net.URLDecoder
 import java.nio.file.Files
 import java.sql.Timestamp
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -97,7 +98,7 @@ class ReportServiceImpl(
     override suspend fun downloadOutstandingReport(id: Long): File {
         val url = URLDecoder.decode(aresDocumentRepository.getSupplierOutstandingUrl(id), "UTF-8")
         val inputStreamFile = s3Client.download(url)
-        val excelFile = File("/tmp/${url.substringAfterLast("/")}")
+        val excelFile = File("/tmp/${url.substringAfterLast("/")}_${Instant.now()}")
         Files.copy(inputStreamFile, excelFile.toPath())
         return excelFile
     }
