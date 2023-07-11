@@ -252,7 +252,7 @@ class ReportServiceImpl(
 
                 values.forEach { row ->
                     s.row { r: RowDefinition ->
-                        if ((row == values[0] || row == values[values.lastIndex]) && (row[2] == "Opening Balance" || row[2] == "Closing Balance")) {
+                        if (row[2] == "Opening Balance" || row[2] == "Closing Balance") {
                             r.cell { c ->
                                 c.value(row[2])
                                 c.colspan(4)

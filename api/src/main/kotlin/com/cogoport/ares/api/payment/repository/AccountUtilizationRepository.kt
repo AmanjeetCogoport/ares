@@ -1247,8 +1247,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
-            AND (:date IS NULL OR au.transaction_date <= :date::DATE) AND au.entity_code IN (:entityCodes)
+            AND (:date IS NULL OR au.transaction_date < :date::DATE) AND au.entity_code IN (:entityCodes)
         """
     )
-    suspend fun getPreviousARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
+    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
 }

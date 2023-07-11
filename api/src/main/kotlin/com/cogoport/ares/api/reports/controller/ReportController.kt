@@ -29,8 +29,8 @@ class ReportController {
         val file: File = reportService.downloadOutstandingReport(Hashids.decode(id)[0])
         return HttpResponse.ok(file).header("Content-Disposition", "filename=${file.name}")
     }
-    @Get("/ar-ledger{?req*}")
-    suspend fun getARLedgerReport(req: LedgerSummaryRequest): String {
-        return reportService.getARLedgerReport(req)
+    @Get("/ar-ledger{?request*}")
+    suspend fun getARLedgerReport(@Valid request: LedgerSummaryRequest): String {
+        return reportService.getARLedgerReport(request)
     }
 }
