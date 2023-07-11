@@ -18,6 +18,7 @@ import com.cogoport.ares.api.payment.entity.ProfitCountResp
 import com.cogoport.ares.api.payment.entity.ServiceWiseCardData
 import com.cogoport.ares.api.payment.entity.TodayPurchaseStats
 import com.cogoport.ares.api.payment.entity.TodaySalesStat
+import com.cogoport.ares.api.payment.model.response.BillIdAndJobNumberResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.PaymentDetailsAtPlatform
@@ -1705,4 +1706,16 @@ WHERE
         """
     )
     suspend fun getPaymentsByTransactionDate(startDate: String?, endDate: String?): List<PaymentDetailsAtPlatform>?
+
+    @NewSpan
+    @Query(
+        """
+                SELECT
+                b.id, j.job_number
+                FROM loki.jobs j LEFT JOIN kuber.bills b
+                ON j.id = b.job_id
+                WHERE b.id IN (:ids)
+            """
+    )
+    suspend fun getJobNumbersByDocumentNos(ids: List<Long>): List<BillIdAndJobNumberResponse>
 }
