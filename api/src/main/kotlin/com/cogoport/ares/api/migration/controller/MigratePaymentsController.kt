@@ -1,11 +1,13 @@
 package com.cogoport.ares.api.migration.controller
 
+import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -25,6 +27,9 @@ class MigratePaymentsController {
     @Inject lateinit var paymentMigration: PaymentMigrationWrapper
 
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
+
+    @Inject
+    lateinit var scheduler: Scheduler
     @Get("/migrate")
     suspend fun migratePayments(
         @QueryValue startDate: String,
@@ -232,5 +237,11 @@ class MigratePaymentsController {
             HttpStatus.OK.name,
             "Request for mtccv jv migration received, total number of parent jv to migrate is $size"
         )
+    }
+
+    @Get("/migrate-mtccv-jv-scheduler")
+    suspend fun cronMigrateMTCCVJV(): HttpResponse<Map<String, String>> {
+        scheduler.migrateMTCCVJV()
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 }
