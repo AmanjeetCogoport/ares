@@ -52,6 +52,7 @@ import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.PayableAgeingBucket
 import com.cogoport.ares.model.payment.QuarterlyOutstanding
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.DailyStatsRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequestForTradeParty
 import com.cogoport.ares.model.payment.request.InvoiceTatStatsRequest
@@ -819,8 +820,25 @@ class DashboardServiceImpl : DashboardService {
         return hashMap
     }
 
-    override suspend fun getKamWiseOutstanding(entityCode: Int?): List<KamWiseOutstanding>? {
-        return unifiedDBRepo.getKamWiseOutstanding(entityCode)
+    override suspend fun getKamWiseOutstanding(entityCode: Int?, companyType: CompanyType?, serviceType: ServiceType?): List<KamWiseOutstanding>? {
+        if (entityCode in listOf(201, 401)) {
+            return listOf()
+        }
+        val defaultersOrgIds = getDefaultersOrgIds()
+        val updatedCompanyType = getCompanyType(companyType)
+
+        val stakeholderIds = AresConstants.KAM_OWNERS_LIST_ENTITY_CODE_MAPPING[entityCode]?.map { UUID.fromString(it) }
+
+        val kamWiseData = unifiedDBRepo.getKamWiseOutstanding(entityCode, serviceType, updatedCompanyType, defaultersOrgIds, stakeholderIds)
+
+        if (!kamWiseData.isNullOrEmpty()) {
+            kamWiseData.map {
+                it.dashboardCurrency = AresConstants.LEDGER_CURRENCY[entityCode]
+                it.entityCode = entityCode
+            }
+        }
+
+        return kamWiseData
     }
 
     private fun generateMonthKeyIndex(month: Int): String {
