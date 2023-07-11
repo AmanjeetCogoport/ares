@@ -227,7 +227,7 @@ class ReportServiceImpl(
                         }
                         r.cell(v)
                     }
-                    if (k == "Document Date") {
+                    if (k == AresConstants.DOCUMENT_DATE) {
                         s.row()
                     }
                 }
@@ -252,7 +252,7 @@ class ReportServiceImpl(
 
                 values.forEach { row ->
                     s.row { r: RowDefinition ->
-                        if (row[2] == "Opening Balance" || row[2] == "Closing Balance") {
+                        if (row[2] == AresConstants.OPENING_BALANCE || row[2] == AresConstants.CLOSING_BALANCE) {
                             r.cell { c ->
                                 c.value(row[2])
                                 c.colspan(4)
