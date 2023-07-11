@@ -25,9 +25,11 @@ data class ParentJournalVoucherMigration(
     var createdAt: Timestamp? = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp? = Timestamp.from(Instant.now()),
     var currency: String?,
-    var led_currency: String?,
+    var ledCurrency: String?,
     var exchangeRate: BigDecimal,
     var description: String?,
     var migrated: Boolean? = false,
-    var jvCodeNum: String?
+    var jvCodeNum: String?,
+    var entityCode: Int?,
+    var transactionDate: Date?
 )

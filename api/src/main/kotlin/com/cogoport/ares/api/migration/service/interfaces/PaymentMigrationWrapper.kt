@@ -35,4 +35,6 @@ interface PaymentMigrationWrapper {
     suspend fun paymentStatusSyncMigration(paymentStatusSyncMigrationReq: PaymentStatusSyncMigrationReq): Int
 
     suspend fun migrateSagePaymentNum(sageRefNumber: List<String>): Int
+
+    suspend fun migrateMTCCVJV(startDate: String?, endDate: String?): Int
 }
