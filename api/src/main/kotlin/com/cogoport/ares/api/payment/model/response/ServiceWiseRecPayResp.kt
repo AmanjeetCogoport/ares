@@ -7,5 +7,6 @@ import java.math.BigDecimal
 data class ServiceWiseRecPayResp(
     var service: String,
     var accountRec: BigDecimal? = 0.toBigDecimal(),
-    var accountPay: BigDecimal? = 0.toBigDecimal()
+    var accountPay: BigDecimal? = 0.toBigDecimal(),
+    var currency: String? = "INR"
 )

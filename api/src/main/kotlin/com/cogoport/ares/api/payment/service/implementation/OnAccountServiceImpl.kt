@@ -216,6 +216,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val pageLimit = request.pageLimit
         val page = request.page
 
+        val entityCodes = when (request.entityType != null) {
+            true -> when (request.entityType) {
+                AresConstants.ENTITY_101 -> listOf(AresConstants.ENTITY_101, AresConstants.ENTITY_201, AresConstants.ENTITY_301, AresConstants.ENTITY_401)
+                else -> listOf(request.entityType)
+            }
+            else -> null
+        }
+
         val documentTypes = when (request.docType != null) {
             true -> {
                 when (request.docType) {
@@ -229,7 +237,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val paymentsData = paymentRepository.getOnAccountList(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,
@@ -243,7 +251,7 @@ open class OnAccountServiceImpl : OnAccountService {
         )
 
         val updatedByIds = paymentsData
-            ?.mapNotNull { it.updatedBy?.toString() }
+            ?.mapNotNull { it.createdBy?.toString() }
             ?.filterNot { it.isEmpty() }
             ?.distinct()
             ?.let { ArrayList(it) }
@@ -262,7 +270,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
         val totalRecords = paymentRepository.getOnAccountListCount(
             request.currencyType,
-            request.entityType,
+            entityCodes,
             request.accMode,
             request.startDate,
             request.endDate,
@@ -456,17 +464,17 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updatePaymentEntry(receivableRequest: Payment): OnAccountApiCommonResponse {
         val accMode = receivableRequest.accMode?.name ?: throw AresException(AresError.ERR_1003, "accMode")
 
-        if (receivableRequest.transactionDate!! > Date()) {
+        if (receivableRequest.transactionDate != null && receivableRequest.transactionDate!! > Date()) {
             throw AresException(AresError.ERR_1009, "Transaction date can't be of future")
         }
 
 //        receivableRequest.updatedBy ?: throw AresException(AresError.ERR_1003, "updatedBy")
 
         val accType = receivableRequest.paymentCode?.name ?: throw AresException(AresError.ERR_1003, "paymentCode")
-        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "")
+        val payment = receivableRequest.id?.let { paymentRepository.findByPaymentId(it) } ?: throw AresException(AresError.ERR_1002, "Payment")
 
         if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) throw AresException(AresError.ERR_1010, "")
-        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "")
+        val accountUtilization = accountUtilizationRepository.findRecord(payment.paymentNum!!, accType, accMode) ?: throw AresException(AresError.ERR_1002, "Account Utilization")
         return updateNonSuspensePayment(receivableRequest, accountUtilization, payment)
     }
 
@@ -1261,6 +1269,9 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun postPaymentToSage(paymentId: Long, performedBy: UUID): Boolean {
         try {
             val paymentDetails = paymentRepository.findByPaymentId(paymentId)
+            if (paymentDetails.organizationId == AresConstants.BLUETIDE_OTPD_ID) {
+                return false
+            }
 
             if (paymentDetails.paymentDocumentStatus == PaymentDocumentStatus.POSTED) {
                 thirdPartyApiAuditService.createAudit(
@@ -1480,15 +1491,15 @@ open class OnAccountServiceImpl : OnAccountService {
             val status = getStatus(processedResponse)
 
             if (status == 1) {
-                paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTED, performedBy)
                 val paymentNumOnSage = "Select NUM_0 from $sageDatabase.PAYMENTH where UMRNUM_0 = '${paymentDetails.paymentNumValue!!}'"
                 val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
                 val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
                 val records = mappedResponse["recordset"] as? ArrayList<*>
                 if (records?.size != 0) {
                     val queryResult = (records?.get(0) as LinkedHashMap<*, *>).get("NUM_0")
-                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString())
+                    paymentRepository.updateSagePaymentNumValue(paymentId, queryResult.toString(), performedBy)
                 } else {
+                    paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
                     thirdPartyApiAuditService.createAudit(
                         ThirdPartyApiAudit(
                             null,
@@ -1496,14 +1507,14 @@ open class OnAccountServiceImpl : OnAccountService {
                             "Payment",
                             paymentId,
                             "PAYMENT",
-                            "500",
-                            records.toString(),
+                            "404",
+                            "UMRNUM_0: ${paymentDetails.paymentNumValue}",
                             "Sage Payment Num Value not present",
                             false
                         )
                     )
+                    return false
                 }
-
                 thirdPartyApiAuditService.createAudit(
                     ThirdPartyApiAudit(
                         null,
@@ -1755,7 +1766,7 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         paymentModel.updatedBy = req.performedBy.toString()
         val updatedPayment = updatePaymentEntry(paymentModel)
-        if (updatedPayment.isSuccess) {
+        if (updatedPayment.isSuccess && paymentModel.organizationId != AresConstants.BLUETIDE_OTPD_ID) {
             directFinalPostToSage(
                 PostPaymentToSage(
                     req.paymentId,
@@ -1822,7 +1833,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     documentUrl = url,
                     documentName = "sage_platform_report",
                     documentType = url.substringAfterLast('.'),
-                    uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                    uploadedBy = AresConstants.ARES_USER_ID,
                     createdAt = Timestamp.valueOf(LocalDateTime.now()),
                     updatedAt = Timestamp.valueOf(LocalDateTime.now())
                 )
@@ -1834,7 +1845,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
             val request = CreateCommunicationRequest(
                 templateName = AresConstants.SAGE_PLATFORM_REPORT,
-                performedByUserId = UUID.fromString(AresConstants.ARES_USER_ID),
+                performedByUserId = AresConstants.ARES_USER_ID,
                 performedByUserName = AresConstants.performedByUserNameForMail,
                 recipientEmail = AresConstants.RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT,
                 senderEmail = AresConstants.NO_REPLY,
@@ -1843,6 +1854,23 @@ open class OnAccountServiceImpl : OnAccountService {
             )
 
             aresMessagePublisher.sendEmail(request)
+        }
+    }
+
+    override suspend fun deletingApPayments(paymentNumValues: List<String>) {
+        val paymentsData = paymentRepository.getPaymentRelatedField(AccMode.AP.name, paymentNumValues)
+
+        if (paymentsData.isNotEmpty()) {
+            val docValues = paymentsData.map { it.paymentNumValue!! }
+
+            // deleting payments
+            paymentRepository.deletingApPayments(docValues)
+
+            // marking account utilization deleted
+            accountUtilizationRepository.updateAccountUtilizationUsingDocValue(docValues)
+
+            // marking settlement deleted for utilized payments
+            settlementRepository.markingSettlementAsDeleted(paymentsData.map { it.paymentNum!! }, paymentsData.map { it.paymentCode.toString() })
         }
     }
 }

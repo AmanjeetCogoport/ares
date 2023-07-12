@@ -10,5 +10,5 @@ data class BfIncomeExpenseReq(
     var financeYearEnd: String? = null,
     var serviceTypes: List<ServiceType>? = null,
     var isPostTax: Boolean? = true,
-    var entityCode: MutableList<Int>? = null
+    var entityCode: MutableList<Int>? = mutableListOf(101, 301)
 )

@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.controller
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
@@ -22,6 +23,9 @@ import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.brahma.authentication.Auth
+import com.cogoport.brahma.authentication.AuthResponse
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -44,8 +48,13 @@ class OnAccountController {
 
     @Inject lateinit var sageService: SageService
 
+    @Inject
+    lateinit var util: Util
+
+    @Auth
     @Get("{?request*}")
-    suspend fun getOnAccountCollections(request: AccountCollectionRequest): AccountCollectionResponse {
+    suspend fun getOnAccountCollections(request: AccountCollectionRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): AccountCollectionResponse {
+        request.entityType = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityType
         return Response<AccountCollectionResponse>().ok(onAccountService.getOnAccountCollections(request))
     }
 
@@ -129,5 +138,10 @@ class OnAccountController {
     @Get("/download-sage-platform-report")
     suspend fun downloadSagePlatformReport(startDate: String, endDate: String) {
         return onAccountService.downloadSagePlatformReport(startDate, endDate)
+    }
+
+    @Delete("/delete-payments")
+    suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
+        return onAccountService.deletingApPayments(paymentNumValues)
     }
 }
