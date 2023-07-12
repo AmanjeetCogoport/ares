@@ -76,6 +76,7 @@ schedule_rule 		JSONB,
 frequency    		FREQUENCY 			NOT NULL,
 scheduled_at 		TIMESTAMP 				NOT NULL,
 trigger_type 		TRIGGER_TYPE 			NOT NULL,
+service_id          UUID,
 deleted_at 			TIMESTAMP 				DEFAULT NULL,
 created_by 			UUID 					NOT NULL,
 updated_by 			UUID 					NOT NULL,
@@ -94,12 +95,13 @@ organization_segment 	ORGANIZATION_SEGMENT,
 credit_days 			INTEGER             NOT NULL DEFAULT 0,
 credit_amount 			DECIMAL(14,4)             NOT NULL DEFAULT 0,
 is_active 				BOOLEAN 			NOT NULL DEFAULT TRUE,
+entity_code             INTEGER             NOT NULL,
 deleted_at 				TIMESTAMP 			DEFAULT NULL,
 created_at 				TIMESTAMP 			DEFAULT CURRENT_TIMESTAMP,
 updated_at 				TIMESTAMP 			DEFAULT CURRENT_TIMESTAMP,
 created_by 				UUID 				NOT NULL,
 updated_by 				UUID 				NOT NULL,
-CONSTRAINT constraint_name UNIQUE (registration_number, deleted_at)
+CONSTRAINT registration_number_deleted_at_unique UNIQUE (registration_number, deleted_at)
 );
 
 
@@ -113,7 +115,7 @@ created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 updated_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 created_by 				UUID 		NOT NULL,
 updated_by 				UUID 		NOT NULL,
-CONSTRAINT constraint_name UNIQUE (registration_number, dunning_cycle_id, deleted_at)
+CONSTRAINT registration_number_dunning_cycle_id_deleted_at_unique UNIQUE (registration_number, dunning_cycle_id, deleted_at)
 );
 
 

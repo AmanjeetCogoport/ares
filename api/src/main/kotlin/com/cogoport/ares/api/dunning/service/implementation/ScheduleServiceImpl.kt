@@ -307,11 +307,12 @@ class ScheduleServiceImpl(
                     )
                 }
             }
-            var communicationRequest = CommunicationRequest(
+            val serviceId = UUID.randomUUID().toString()
+            val communicationRequest = CommunicationRequest(
                 recipient = toUserEmail,
                 type = "email",
-                service = "dunning_cycle",
-                serviceId = "6e2e9f36-34ca-435d-ab77-2d2851231844",
+                service = "dunning_cycle_bf",
+                serviceId = serviceId,
                 templateName = templateName,
                 sender = creditControllerData?.email,
                 ccMails = ccEmail,
@@ -324,6 +325,7 @@ class ScheduleServiceImpl(
             try {
                 communicationId = railsClient.createCommunication(communicationRequest)
                 logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
+                dunningExecutionRepo.updateServiceId(executionId, serviceId)
                 createDunningAudit(executionId, tradePartyDetailId, communicationId, true, "")
             } catch (err: Exception) {
                 recordFailedThirdPartyApiAudits(executionId, communicationRequest.toString(), err.toString(), "create communication", tradePartyDetailId.toString())

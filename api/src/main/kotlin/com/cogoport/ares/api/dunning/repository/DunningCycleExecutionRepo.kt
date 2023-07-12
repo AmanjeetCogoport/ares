@@ -104,4 +104,12 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         """
     )
     suspend fun updateStatus(id: Long, status: String)
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE dunning_cycle_executions SET service_id = :serviceId where id = :id
+        """
+    )
+    suspend fun updateServiceId(id: Long, serviceId: String)
 }

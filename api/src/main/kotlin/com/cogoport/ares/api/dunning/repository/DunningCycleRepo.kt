@@ -32,7 +32,10 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 id,
                 name,
                 schedule_rule,
+                filters,
+                frequency,
                 cycle_type::varchar,
+                trigger_type,
                 created_at::timestamp,
                 updated_at::timestamp
             FROM
@@ -106,67 +109,22 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     @Query(
         """
             SELECT
-                dc.name AS name,
-                dc.is_active AS is_dunning_cycle_active,
-                dc.cycle_type AS dunning_cycle_type,
-                dce.id AS id,
-                dce.dunning_cycle_id AS dunning_cycle_id,
-                dce.status AS status,
-                dce.filters AS filters,
-                dce.schedule_rule AS schedule_rule,
-                dce.frequency AS frequency,
-                dce.scheduled_at AS scheduled_at,
-                dce.trigger_type AS trigger_type,
-                dce.deleted_at AS deleted_at,
-                dce.created_by AS created_by,
-                dce.updated_by AS updated_by,
-                dce.created_at AS created_at,
-                dce.updated_at AS updated_at
-            FROM
-                dunning_cycles dc
-            LEFT JOIN LATERAL (
-                SELECT *
-                FROM dunning_cycle_executions dce_inner
-                WHERE dce_inner.dunning_cycle_id = dc.id
-                ORDER BY dce_inner.updated_at desc
-                LIMIT 1
-            ) dce ON true                
-            WHERE
-                dce.deleted_at IS NUll
-                AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
-                AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
-                AND (:query IS NULL OR dc.name ILIKE :query)
-                AND (:frequency IS NULL OR dc.frequency::VARCHAR = :frequency)
-            ORDER BY
-            CASE WHEN :sortType = 'desc' THEN
-                    CASE 
-                         WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
-                         WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
-                    END  
-            END 
-            Desc,
-            CASE WHEN :sortType = 'asc' THEN
-                    CASE 
-                        WHEN :sortBy = 'createdAt' THEN EXTRACT(epoch FROM dce.created_at)::numeric
-                        WHEN :sortBy ='updatedAt' THEN EXTRACT(epoch FROM dce.updated_at)::numeric 
-                    END       
-            END 
-            Asc
-            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
-            LIMIT :pageSize
-                
+                id,
+                dunning_cycle_id,
+                status,
+                filters,
+                schedule_rule,
+                frequency,
+                scheduled_at,
+                trigger_type,
+                created_at AS created_at
+            FROM dunning_cycle_executions
+            WHERE dunning_cycle_id = :dunningCycleId
+            ORDER BY created_at DESC       
         """
     )
     suspend fun listDunningCycleExecution(
-        frequency: String?,
-        query: String?,
-        status: MutableList<String>,
-        dunningCycleType: MutableList<String>,
-        serviceType: String?,
-        sortBy: String? = "updatedAt",
-        sortType: String? = "desc",
-        pageIndex: Int? = 1,
-        pageSize: Int? = 10
+        dunningCycleId: Long
     ): List<DunningCycleExecutionResponse>
 
     @NewSpan
@@ -175,27 +133,12 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             SELECT
                 count(*)
             FROM
-                dunning_cycles dc
-            LEFT JOIN LATERAL (
-                SELECT *
-                FROM dunning_cycle_executions dce_inner
-                WHERE dce_inner.dunning_cycle_id = dc.id
-                ORDER BY dce_inner.updated_at desc
-                LIMIT 1
-            ) dce ON true                
+                dunning_cycle_executions               
             WHERE
-                dce.deleted_at IS NUll
-                AND (COALESCE(:status) IS NULL OR dce.status::VARCHAR IN (:status))
-                AND (COALESCE(:dunningCycleType) IS NULL OR dc.cycle_type::VARCHAR IN (:dunningCycleType))
-                AND (:query IS NULL OR dc.name ILIKE :query)
-                AND (:frequency IS NULL OR dc.frequency::VARCHAR = :frequency)
+                dunning_cycle_id = :dunningCycleId
         """
     )
     suspend fun totalCountDunningCycleExecution(
-        query: String?,
-        status: MutableList<String>,
-        dunningCycleType: MutableList<String>,
-        serviceType: String?,
-        frequency: String?,
+        dunningCycleId: Long
     ): Long
 }

@@ -19,6 +19,7 @@ data class MasterExceptions(
     val creditDays: Long? = null,
     val creditAmount: Long? = null,
     val isActive: Boolean?,
+    val entityCode: Long,
     val deletedAt: Timestamp? = null,
     @DateCreated
     val createdAt: Timestamp? = Timestamp.from(Instant.now()),

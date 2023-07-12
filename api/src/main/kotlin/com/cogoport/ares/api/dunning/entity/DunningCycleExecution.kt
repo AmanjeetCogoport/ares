@@ -28,6 +28,7 @@ data class DunningCycleExecution(
     var frequency: String,
     var scheduledAt: Timestamp,
     var triggerType: String,
+    var serviceId: UUID?,
     var deletedAt: Timestamp?,
     @DateCreated
     var createdAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),

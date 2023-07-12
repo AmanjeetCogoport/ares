@@ -11,6 +11,7 @@ data class CreateDunningException(
     var excludedRegistrationNos: MutableList<String>? = mutableListOf(),
     @NotNull var exceptionType: DunningExceptionType,
     @NotNull var createdBy: UUID,
+    var entityCode: Long?,
     var cycleId: String? = null,
     var actionType: String?
 )
