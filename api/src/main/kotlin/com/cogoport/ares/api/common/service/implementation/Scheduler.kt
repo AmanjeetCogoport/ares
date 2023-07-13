@@ -132,22 +132,22 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 
-    @Scheduled(cron = "0 18 * * *")
-    fun bulkPaymentPostToSage() = runBlocking {
-        val yesterday = now().minus(1, ChronoUnit.DAYS)
-        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
-        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
-        if (!paymentIds.isNullOrEmpty()) {
-            paymentIds.forEach {
-                aresMessagePublisher.emitPostPaymentToSage(
-                    PostPaymentToSage(
-                        it,
-                        AresConstants.ARES_USER_ID
-                    )
-                )
-            }
-        }
-    }
+//    @Scheduled(cron = "0 18 * * *")
+//    fun bulkPaymentPostToSage() = runBlocking {
+//        val yesterday = now().minus(1, ChronoUnit.DAYS)
+//        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
+//        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
+//        if (!paymentIds.isNullOrEmpty()) {
+//            paymentIds.forEach {
+//                aresMessagePublisher.emitPostPaymentToSage(
+//                    PostPaymentToSage(
+//                        it,
+//                        AresConstants.ARES_USER_ID
+//                    )
+//                )
+//            }
+//        }
+//    }
 
     @Scheduled(cron = "0 17 * * *")
     fun bulkMatchingSettlement() = runBlocking {
