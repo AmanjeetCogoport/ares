@@ -42,7 +42,8 @@ class SageServiceImpl : SageService {
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
-    @Inject lateinit var paymentRepository: PaymentRepository
+    @Inject
+    lateinit var paymentRepository: PaymentRepository
 
     override suspend fun getPaymentDataFromSage(startDate: String?, endDate: String?, bpr: String, mode: String): ArrayList<PaymentRecord> {
         val sqlQuery = """
@@ -640,6 +641,7 @@ class SageServiceImpl : SageService {
             platformPaymentInfo = paymentDetails
         )
     }
+
     private fun getPaymentSageInfo(paymentNumValue: String, entityCode: Long?, accMode: String): SagePostPaymentDetails? {
         val sqlQuery = """
             select NUM_0 as sage_payment_num, UMRNUM_0 as platform_payment_num, 
@@ -695,5 +697,20 @@ class SageServiceImpl : SageService {
         val paymentRecords = ObjectMapper().readValue(result, PaymentNumInfo::class.java)
 
         return paymentRecords.recordSets!![0]
+    }
+
+    override suspend fun getMTCJVDetails(startDate: String?, endDate: String?): List<JVParentDetails> {
+        var sqlQuery = """
+            select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, CURLED_0 as ledger_currency
+            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from $sageDatabase.GACCENTRY where TYP_0 in ('MTC','MTCCV')
+        """.trimIndent()
+        sqlQuery += if (startDate != null && endDate != null) {
+            """ and CREDAT_0 between '$startDate' and '$endDate'"""
+        } else {
+            """ and CREDAT_0 between now() - INTERVAL '1 day' and now()"""
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val parentDetails = ObjectMapper().readValue(result, JVParentRecordManger::class.java)
+        return parentDetails.recordSets!![0]
     }
 }
