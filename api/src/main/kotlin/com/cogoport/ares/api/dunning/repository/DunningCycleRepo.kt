@@ -119,12 +119,15 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 trigger_type,
                 created_at AS created_at
             FROM dunning_cycle_executions
-            WHERE dunning_cycle_id = :dunningCycleId
+            WHERE 
+            (:dunningCycleId IS NULL OR dunning_cycle_id = :dunningCycleId)
+            AND (:serviceId IS NULL OR service_id::uuid = :serviceId)
             ORDER BY created_at DESC       
         """
     )
     suspend fun listDunningCycleExecution(
-        dunningCycleId: Long
+        dunningCycleId: Long? = null,
+        serviceId: UUID? = null
     ): List<DunningCycleExecutionResponse>
 
     @NewSpan
@@ -135,10 +138,12 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             FROM
                 dunning_cycle_executions               
             WHERE
-                dunning_cycle_id = :dunningCycleId
+                (:dunningCycleId IS NULL OR dunning_cycle_id = :dunningCycleId)
+                AND (:serviceId IS NULL OR service_id::uuid = :serviceId)
         """
     )
     suspend fun totalCountDunningCycleExecution(
-        dunningCycleId: Long
+        dunningCycleId: Long? = null,
+        serviceId: UUID? = null
     ): Long
 }
