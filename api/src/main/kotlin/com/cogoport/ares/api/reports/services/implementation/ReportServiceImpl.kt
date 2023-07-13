@@ -98,7 +98,7 @@ class ReportServiceImpl(
     override suspend fun downloadOutstandingReport(id: Long): File {
         val url = URLDecoder.decode(aresDocumentRepository.getSupplierOutstandingUrl(id), "UTF-8")
         val inputStreamFile = s3Client.download(url)
-        val excelFile = File("/tmp/${url.substringAfterLast("/")}_${Instant.now()}")
+        val excelFile = File("/tmp/${url.substringAfterLast("/").substringBefore(".xlsx")}_${Instant.now()}.xlsx")
         Files.copy(inputStreamFile, excelFile.toPath())
         return excelFile
     }
@@ -189,7 +189,7 @@ class ReportServiceImpl(
                 updatedAt = Timestamp.valueOf(LocalDateTime.now())
             )
         )
-        return Hashids.encode(result.id!!)
+        return url
     }
 
     private fun writeHeaderIntoExcel(
