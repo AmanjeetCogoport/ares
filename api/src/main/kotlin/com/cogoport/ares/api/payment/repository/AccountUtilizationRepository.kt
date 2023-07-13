@@ -17,6 +17,7 @@ import com.cogoport.ares.model.common.InvoiceBalanceResponse
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
@@ -1212,4 +1213,42 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>, accMode: AccMode): List<InvoiceBalanceResponse>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT au.transaction_date::varchar AS transaction_date,
+            au.document_no::varchar AS document_number,
+            au.document_value,
+            p.trans_ref_number AS transaction_ref_number,
+            au.led_currency AS ledger_currency,
+            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS debit,
+            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS credit,
+            au.sign_flag * au.amount_loc AS balance 
+            FROM account_utilizations au 
+            LEFT JOIN payments p ON p.payment_num = au.document_no
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
+            AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
+            ORDER BY transaction_date
+        """
+    )
+    suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: Timestamp, endDate: Timestamp): List<ARLedgerResponse>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT NULL AS transaction_date,
+            NULL AS document_number,
+            :commonRow AS document_value,
+            NULL AS transaction_ref_number,
+            (array_agg(led_currency))[1] AS ledger_currency,
+            COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END), 0) AS debit,
+            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END), 0) AS credit,
+            COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
+            FROM account_utilizations au 
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
+            AND (:date IS NULL OR au.transaction_date < :date::DATE) AND au.entity_code IN (:entityCodes)
+        """
+    )
+    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
 }
