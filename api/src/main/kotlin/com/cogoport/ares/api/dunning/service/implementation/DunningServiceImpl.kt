@@ -606,12 +606,12 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): ResponseList<DunningCycleExecutionResponse> {
-        if(request.dunningCycleId == null && request.serviceId == null){
-            throw AresException(AresError.ERR_1003,"dunning cycle id")
+        if (request.dunningCycleId == null && request.serviceId == null) {
+            throw AresException(AresError.ERR_1003, "dunning cycle id")
         }
         var dunningCycleId: Long? = null
-        if(request.dunningCycleId != null){
-             dunningCycleId = Hashids.decode(request.dunningCycleId!!)[0]
+        if (request.dunningCycleId != null) {
+            dunningCycleId = Hashids.decode(request.dunningCycleId!!)[0]
         }
         val response = dunningCycleRepo.listDunningCycleExecution(
             dunningCycleId = dunningCycleId,
