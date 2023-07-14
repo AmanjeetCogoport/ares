@@ -1299,16 +1299,22 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
 
-        val sourceType =
-            when (settlementType) {
-                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.VTDS -> listOf(SettlementType.VTDS)
-                SettlementType.CTDS -> listOf(SettlementType.CTDS)
-                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+        val sourceType = when (settlementType) {
+            SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.VTDS -> listOf(SettlementType.VTDS)
+            SettlementType.CTDS -> listOf(SettlementType.CTDS)
+            else -> if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(settlementType)) {
+                settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList().apply {
+                    addAll(listOf(SettlementType.SINV, SettlementType.SCN, SettlementType.PINV, SettlementType.PCN))
+                }
+            } else {
+                listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
+        }
+
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
@@ -1956,7 +1962,7 @@ open class SettlementServiceImpl : SettlementService {
             journalVoucherService.updateJournalVoucherStatus(
                 id = accountUtilization.documentNo,
                 documentValue = accountUtilization.documentValue,
-                isUtilized = true,
+                isUtilized = accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType
             )
