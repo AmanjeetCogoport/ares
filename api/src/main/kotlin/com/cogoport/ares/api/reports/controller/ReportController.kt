@@ -2,6 +2,7 @@ package com.cogoport.ares.api.reports.controller
 
 import com.cogoport.ares.api.reports.services.interfaces.ReportService
 import com.cogoport.ares.api.utils.Util
+import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
@@ -33,8 +34,12 @@ class ReportController {
         return reportService.outstandingReportDownload(request)
     }
     @Get("/download/{id}")
-    suspend fun billReportDownload(@PathVariable("id") id: String): MutableHttpResponse<File>? {
+    suspend fun downloadReport(@PathVariable("id") id: String): MutableHttpResponse<File>? {
         val file: File = reportService.downloadOutstandingReport(Hashids.decode(id)[0])
         return HttpResponse.ok(file).header("Content-Disposition", "filename=${file.name}")
+    }
+    @Get("/ar-ledger{?request*}")
+    suspend fun getARLedgerReport(@Valid request: LedgerSummaryRequest): String {
+        return reportService.getARLedgerReport(request)
     }
 }
