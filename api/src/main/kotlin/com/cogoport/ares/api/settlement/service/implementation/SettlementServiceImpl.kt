@@ -1836,7 +1836,7 @@ open class SettlementServiceImpl : SettlementService {
             utilizedTdsOfPaymentDoc = BigDecimal.ZERO
             invoiceTds = BigDecimal.ZERO
         }
-        val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
+        val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
         updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
