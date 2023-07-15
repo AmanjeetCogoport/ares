@@ -1081,7 +1081,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @Query(
         """
             select organization_id::varchar, currency,
-            sum(case when acc_type in ('SINV', 'SREIMB') and abs(amount_curr - pay_curr) <> 0.001 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when acc_type in ('SINV', 'SREIMB') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
             sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as open_invoices_amount,
             sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as open_invoices_led_amount,
             sum(case when acc_type in ('SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
