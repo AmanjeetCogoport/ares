@@ -267,43 +267,37 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS total_curr_outstanding,
                 sum(
-                    CASE WHEN due_date >= now()::date AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN due_date >= now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS not_due_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 0 AND 30 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 0 AND 30 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS thirty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 45 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS sixty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS ninety_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS one_eighty_count,
-                sum(
-                    CASE WHEN (now()::date - due_date) > 180 AND acc_type::varchar IN (:accType) AND abs(amount_curr - pay_curr) <> 0.001 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
