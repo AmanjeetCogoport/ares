@@ -301,6 +301,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         1
                     ELSE
                         0
+                    END) AS one_eighty_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) > 180 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                        1
+                    ELSE
+                        0
                     END) AS one_eighty_plus_count
             FROM
                 account_utilizations
