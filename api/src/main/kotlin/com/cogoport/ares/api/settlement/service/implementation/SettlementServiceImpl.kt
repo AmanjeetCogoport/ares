@@ -1836,7 +1836,7 @@ open class SettlementServiceImpl : SettlementService {
             utilizedTdsOfPaymentDoc = BigDecimal.ZERO
             invoiceTds = BigDecimal.ZERO
         }
-        val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
+        val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
         updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
@@ -1921,6 +1921,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
+
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         if (paymentUtilization.accMode == AccMode.AR) {
@@ -1928,6 +1929,14 @@ open class SettlementServiceImpl : SettlementService {
             paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
         }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        if (paymentUtilization.amountCurr.subtract(paymentUtilization.payCurr).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payCurr = paymentUtilization.amountCurr
+        }
+
+        if (paymentUtilization.amountLoc.subtract(paymentUtilization.payLoc).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payLoc = paymentUtilization.amountLoc
+        }
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
 
