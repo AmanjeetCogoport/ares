@@ -41,6 +41,14 @@ repositories {
         }
     }
 
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/heimdall")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+
     maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
 
     maven {
@@ -133,6 +141,10 @@ dependencies {
     implementation("io.micronaut:micronaut-tracing:3.3.0-M1")
     runtimeOnly("io.jaegertracing:jaeger-thrift:1.8.1")
     implementation("io.micronaut.tracing:micronaut-tracing-core:4.5.0")
+
+    //heimdall dependencies
+    implementation("com.cogoport.heimdall:heimdall-model:1.0.6")
+    implementation("com.cogoport.heimdall:heimdall-client:1.0.0")
 }
 
 tasks.named("optimizedDockerBuildNative") {
