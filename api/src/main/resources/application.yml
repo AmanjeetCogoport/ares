@@ -29,9 +29,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST:`localhost`}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
-      username: ${DB_USER:mustangs2}
-      password: ${DB_PASSWORD:DI8E64c5clAyWuAz0Tqm4pgeUj12KZ}
+      url: r2dbc:postgresql://${DB_HOST:`rds-cluster.stage.cogoport.io`}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      username: ${DB_USER:postgres}
+      password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
       dialect: POSTGRES
     dms:
       url: r2dbc:postgresql://${UNIFIEDDB_HOST:`52.66.190.93`}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME:dms}?preparedStatementCacheQueries=0
@@ -49,6 +49,9 @@ services:
       enabledLocally: true
     - id: plutus
       url: http://localhost:8083
+      enabledLocally: true
+    - id: cogo-care
+      url: https://tickets.stage.cogoport.io
       enabledLocally: true
   staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
@@ -75,6 +78,8 @@ cogoport:
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
   internal_url: ${INTERNAL_URL:`https://api-mustangs2.dev.cogoport.io`}
+  org_base_url: ${ORG_BASE_URL:`https://app-staging.dev.cogoport.io`}
+  partner_base_url: ${partner_base_url:`https://admin-spark5.dev.cogoport.io`}
   exchange_api:
     url: ${EXCHANGE_CLIENT_LAMBDA_URL:`https://api.cogoport.com/athena`}
     version: v1

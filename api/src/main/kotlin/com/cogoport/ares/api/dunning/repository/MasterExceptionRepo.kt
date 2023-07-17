@@ -25,6 +25,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             me.registration_number,
             me.organization_segment::VARCHAR AS org_segment,
             me.credit_days,
+            me.entity_code,
             me.credit_amount,
             COALESCE(SUM((amount_loc - pay_loc) * sign_flag), 0) AS total_due_amount,
             COALESCE((array_agg(led_currency))[1], 'INR') AS currency
@@ -41,6 +42,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
      WHERE
          (:query IS NULL OR name ILIKE :query OR registration_number ILIKE :query)
          AND (:segment IS NULL OR org_segment::VARCHAR = :segment)
+         AND (COALESCE(:entities) IS NULL OR entity_code IN (:entities))
          AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
     ORDER BY
     CASE WHEN :sortType = 'ASC' AND :sortBy = 'dueAmount' THEN total_due_amount END ASC,
@@ -54,6 +56,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
     )
     suspend fun listMasterException(
         query: String?,
+        entities: List<Long>?,
         segment: String?,
         pageIndex: Int,
         pageSize: Int,
@@ -74,13 +77,14 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
                 deleted_at IS NULL
                 AND (:query IS NULL OR trade_party_name ILIKE :query OR registration_number ILIKE :query)
                 AND (:segment IS NULL OR organization_segment::VARCHAR = :segment)
+                AND (COALESCE(:entities) IS NULL OR entity_code IN (:entities))
                 AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
 
         """
     )
-
     suspend fun listMasterExceptionTotalCount(
         query: String?,
+        entities: List<Long>?,
         segment: String?,
         creditDateFrom: Long?,
         creditDaysTo: Long?

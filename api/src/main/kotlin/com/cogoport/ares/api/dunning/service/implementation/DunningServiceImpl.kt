@@ -118,8 +118,8 @@ open class DunningServiceImpl(
                 organizationId = syncOrgStakeholderRequest.organizationId!!,
                 organizationSegment = OrganizationSegment.valueOf(organizationSegment).toString(),
                 organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
-                createdBy = UUID.fromString(AresConstants.ARES_USER_ID),
-                updatedBy = UUID.fromString(AresConstants.ARES_USER_ID),
+                createdBy = AresConstants.ARES_USER_ID,
+                updatedBy = AresConstants.ARES_USER_ID,
                 createdAt = null,
                 updatedAt = null
             )
@@ -283,7 +283,8 @@ open class DunningServiceImpl(
                 createdBy = dunningCycle.createdBy,
                 updatedBy = dunningCycle.updatedBy,
                 createdAt = null,
-                updatedAt = null
+                updatedAt = null,
+                serviceId = null
             )
         )
         val request = ObjectMapper().writeValueAsString(
@@ -473,6 +474,7 @@ open class DunningServiceImpl(
         }
         val responseList = masterExceptionRepo.listMasterException(
             q,
+            request.entities,
             request.segmentation,
             request.pageIndex,
             request.pageSize,
@@ -486,6 +488,7 @@ open class DunningServiceImpl(
         }
         val totalCount = masterExceptionRepo.listMasterExceptionTotalCount(
             q,
+            request.entities,
             request.segmentation,
             creditDaysFrom,
             creditDaysTo
@@ -593,7 +596,8 @@ open class DunningServiceImpl(
                     createdBy = dunningCycle.createdBy,
                     updatedBy = dunningCycle.updatedBy,
                     createdAt = null,
-                    updatedAt = null
+                    updatedAt = null,
+                    serviceId = null
                 )
             )
         }
@@ -602,62 +606,28 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listDunningCycleExecution(request: ListDunningCycleExecutionReq): ResponseList<DunningCycleExecutionResponse> {
-        val status: MutableList<String> = mutableListOf()
-        if (request.cycleStatus == null || request.cycleStatus!!.size == null) {
-            CycleExecutionStatus.values().forEach {
-                status.add(it.toString())
-            }
-        } else {
-            request.cycleStatus!!.forEach { it ->
-                status.add(CycleExecutionStatus.valueOf(it).toString())
-            }
+        if (request.dunningCycleId == null && request.serviceId == null) {
+            throw AresException(AresError.ERR_1003, "dunning cycle id")
         }
-
-        val dunningCycleType: MutableList<String> = mutableListOf()
-        if (request.dunningCycleType == null || request.dunningCycleType!!.size == 0) {
-            DunningCycleType.values().forEach {
-                dunningCycleType.add(it.toString())
-            }
-        } else {
-            request.dunningCycleType!!.forEach { it ->
-                dunningCycleType.add(DunningCycleType.valueOf(it).toString())
-            }
+        var dunningCycleId: Long? = null
+        if (request.dunningCycleId != null) {
+            dunningCycleId = Hashids.decode(request.dunningCycleId!!)[0]
         }
-
-        var frequency: String? = null
-        if (request.frequency != null) {
-            frequency = DunningExecutionFrequency.valueOf(request.frequency!!).toString()
-        }
-
-        var query: String? = null
-        if (request.query != null)
-            query = "%${request.query}%"
-
         val response = dunningCycleRepo.listDunningCycleExecution(
-            query = query,
-            status = status,
-            dunningCycleType = dunningCycleType,
-            serviceType = request.serviceType,
-            sortBy = request.sortBy,
-            sortType = request.sortType,
-            pageIndex = request.pageIndex,
-            pageSize = request.pageSize,
-            frequency = frequency
+            dunningCycleId = dunningCycleId,
+            serviceId = request.serviceId
         )
 
         val totalCount = dunningCycleRepo.totalCountDunningCycleExecution(
-            query = query,
-            status = status,
-            dunningCycleType = dunningCycleType,
-            serviceType = request.serviceType,
-            frequency = frequency
+            dunningCycleId = dunningCycleId,
+            serviceId = request.serviceId
         )
 
         response.forEach {
-            it.id = Hashids.encode(it.id?.toLong()!!)
+            it.id = Hashids.encode(it.id.toLong())
         }
 
-        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize!!)
+        val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
         val responseList = ResponseList<DunningCycleExecutionResponse>()
         responseList.list = response
         responseList.totalRecords = totalCount
@@ -850,12 +820,16 @@ open class DunningServiceImpl(
         if (request.exceptionType == DunningExceptionType.CYCLE_WISE && request.cycleId.isNullOrEmpty()) {
             throw AresException(AresError.ERR_1003, "cycle id")
         }
+        if (request.exceptionType == DunningExceptionType.MASTER && request.entityCode == null) {
+            throw AresException(AresError.ERR_1003, "entity code is mandatory for Master Exception Creation")
+        }
         if (request.exceptionType == DunningExceptionType.CYCLE_WISE && request.actionType.isNullOrEmpty()) {
             throw AresException(AresError.ERR_1003, "action type")
         }
         if (request.exceptionFile.isNullOrEmpty() && request.excludedRegistrationNos.isNullOrEmpty()) {
             throw AresException(AresError.ERR_1003, "file and exclusion list both can not be empty")
         }
+
         val finalExcludedPans: MutableList<String> = if (!request.exceptionFile.isNullOrEmpty()) {
             handleExceptionFile(request)
         } else {
@@ -933,6 +907,7 @@ open class DunningServiceImpl(
                         creditDays = 0,
                         creditAmount = 0,
                         isActive = true,
+                        entityCode = request.entityCode!!,
                         createdBy = request.createdBy,
                         updatedBy = request.createdBy
                     )

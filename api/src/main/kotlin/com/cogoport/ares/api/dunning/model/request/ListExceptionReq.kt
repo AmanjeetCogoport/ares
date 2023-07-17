@@ -10,5 +10,6 @@ data class ListExceptionReq(
     var creditDays: Long? = null,
     var sortType: String? = "Desc",
     var sortBy: String? = "dueAmount",
+    var entities: List<Long>?,
     var cycleId: String? = null
 ) : Pagination()

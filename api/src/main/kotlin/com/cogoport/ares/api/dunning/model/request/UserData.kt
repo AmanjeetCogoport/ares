@@ -24,5 +24,7 @@ data class UserData(
     @JsonProperty("mobile_country_code")
     var mobileCountryCode: String? = null,
     @JsonProperty("work_scopes")
-    var workScopes: MutableList<String>? = mutableListOf()
+    var workScopes: MutableList<String>? = mutableListOf(),
+    @JsonProperty("isPartnerUser")
+    var isPartnerUser: Boolean? = false
 )

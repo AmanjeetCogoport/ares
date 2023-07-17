@@ -4,9 +4,11 @@ import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.PaymentRelatedFields
 import com.cogoport.ares.model.payment.PlatformPayment
 import com.cogoport.ares.model.payment.response.PaymentDocumentStatusForPayments
 import com.cogoport.ares.model.payment.response.PaymentResponse
+import com.cogoport.ares.model.payment.response.TransRefNumberResponse
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -24,7 +26,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
-             deleted_at
+             deleted_at,
+             pre_migrated_deleted
              from payments where id =:id and deleted_at is null
         """
     )
@@ -53,7 +56,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
              tagged_organization_id, trade_party_mapping_id, acc_code,acc_mode,sign_flag,currency,amount,led_currency,led_amount,pay_mode,narration,
              trans_ref_number,ref_payment_id,transaction_date::timestamp as transaction_date,created_at,updated_at,
              cogo_account_no,ref_account_no,payment_code,bank_name,payment_num,payment_num_value,exchange_rate,bank_id, migrated,bank_pay_amount, payment_document_status, created_by, updated_by, sage_ref_number,
-             deleted_at
+             deleted_at, pre_migrated_deleted
              FROM payments WHERE trans_ref_number = :transRefNumber and deleted_at is null
         """
     )
@@ -108,10 +111,17 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE payments SET sage_ref_number = :sageRefNumber WHERE id = :id
+            UPDATE 
+                payments 
+            SET 
+                sage_ref_number = :sageRefNumber, 
+                payment_document_status = 'POSTED'::payment_document_status,
+                updated_at = NOW(), updated_by = :performedBy 
+            WHERE 
+                id = :id
         """
     )
-    suspend fun updateSagePaymentNumValue(id: Long, sageRefNumber: String)
+    suspend fun updateSagePaymentNumValue(id: Long, sageRefNumber: String, performedBy: UUID)
 
     @NewSpan
     @Query(
@@ -153,7 +163,8 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             deleted_at,
             narration,
             bank_id,
-            pay_mode
+            pay_mode,
+            created_by
             FROM 
             payments
             WHERE 
@@ -161,7 +172,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             AND
             (:currencyType IS NULL OR currency = :currencyType)
             AND 
-            (:entityType IS NULL OR entity_code = :entityType)
+            (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
             AND
             (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
             AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
@@ -190,7 +201,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun getOnAccountList(
         currencyType: String?,
-        entityType: Int?,
+        entityCodes: List<Int?>?,
         accMode: AccMode?,
         startDate: String?,
         endDate: String?,
@@ -214,7 +225,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
           AND
           (:currencyType IS NULL OR currency = :currencyType)
           AND 
-          (:entityType IS NULL OR entity_code = :entityType)
+          (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
           AND
           (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
           AND (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
@@ -226,7 +237,7 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     )
     suspend fun getOnAccountListCount(
         currencyType: String?,
-        entityType: Int?,
+        entityCodes: List<Int?>?,
         accMode: AccMode?,
         startDate: String?,
         endDate: String?,
@@ -277,4 +288,37 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
+
+    @Query(
+        """
+            select payment_num, payment_num_value, payment_code 
+            from payments
+            where acc_mode::varchar = :accMode AND payment_document_status != 'DELETED'::payment_document_status and deleted_at is null and transaction_date < 'Apr 1, 2023'
+            and payment_num_value in (:paymentNumValues)
+        """
+    )
+    suspend fun getPaymentRelatedField(accMode: String, paymentNumValues: List<String>): List<PaymentRelatedFields>
+
+    @NewSpan
+    @Query(
+        """
+            update 
+            payments 
+            set deleted_at = NOW(), pre_migrated_deleted = true
+            where payment_num_value in (:paymentNumValue)
+        """
+    )
+    suspend fun deletingApPayments(paymentNumValue: List<String>)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT payment_num, trans_ref_number FROM payments 
+            WHERE payment_num IN (:paymentNums) AND acc_mode::varchar = :accMode
+            AND organization_id = :orgId::uuid
+            AND payment_code::varchar = :paymentCode
+            AND deleted_at is null
+        """
+    )
+    suspend fun findTransRefNumByPaymentNums(paymentNums: List<Long>, accMode: String, orgId: String, paymentCode: String): List<TransRefNumberResponse>
 }

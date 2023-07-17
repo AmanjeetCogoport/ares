@@ -19,6 +19,8 @@ CREATE TYPE TRIGGER_TYPE AS ENUM ('ONE_TIME', 'PERIODIC');
 CREATE TYPE FREQUENCY AS ENUM ('ONE_TIME', 'DAILY', 'MONTHLY', 'WEEKLY', 'BI_WEEKLY');
 CREATE TYPE CYCLE_EXECUTION_STATUS AS ENUM ('SCHEDULED','CANCELLED','COMPLETED','IN_PROGRESS','FAILED');
 CREATE TYPE CATEGORY AS ENUM ('CYCLE','MANUAL');
+CREATE TYPE OBJECT_TYPE AS ENUM ('DUNNING');
+CREATE TYPE TOKEN_TYPE AS ENUM ('RELEVANT_USER', 'DUNNING_PAYMENT');
 
 
  CREATE CAST (varchar AS ORGANIZATION_SEGMENT) WITH INOUT AS IMPLICIT;
@@ -28,6 +30,9 @@ CREATE TYPE CATEGORY AS ENUM ('CYCLE','MANUAL');
  CREATE CAST (VARCHAR AS FREQUENCY) WITH INOUT AS IMPLICIT;
  CREATE CAST (VARCHAR AS CYCLE_EXECUTION_STATUS) WITH INOUT AS IMPLICIT;
  CREATE CAST (VARCHAR AS CATEGORY) WITH INOUT AS IMPLICIT;
+ CREATE CAST (VARCHAR AS OBJECT_TYPE) WITH INOUT AS IMPLICIT;
+ CREATE CAST (VARCHAR AS TOKEN_TYPE) WITH INOUT AS IMPLICIT;
+
 
  CREATE TABLE public.organization_stakeholders (
  	id                                bigserial               NOT NULL,
@@ -76,6 +81,7 @@ schedule_rule 		JSONB,
 frequency    		FREQUENCY 			NOT NULL,
 scheduled_at 		TIMESTAMP 				NOT NULL,
 trigger_type 		TRIGGER_TYPE 			NOT NULL,
+service_id          UUID,
 deleted_at 			TIMESTAMP 				DEFAULT NULL,
 created_by 			UUID 					NOT NULL,
 updated_by 			UUID 					NOT NULL,
@@ -94,12 +100,13 @@ organization_segment 	ORGANIZATION_SEGMENT,
 credit_days 			INTEGER             NOT NULL DEFAULT 0,
 credit_amount 			DECIMAL(14,4)             NOT NULL DEFAULT 0,
 is_active 				BOOLEAN 			NOT NULL DEFAULT TRUE,
+entity_code             INTEGER             NOT NULL,
 deleted_at 				TIMESTAMP 			DEFAULT NULL,
 created_at 				TIMESTAMP 			DEFAULT CURRENT_TIMESTAMP,
 updated_at 				TIMESTAMP 			DEFAULT CURRENT_TIMESTAMP,
 created_by 				UUID 				NOT NULL,
 updated_by 				UUID 				NOT NULL,
-CONSTRAINT constraint_name UNIQUE (registration_number, deleted_at)
+CONSTRAINT registration_number_deleted_at_unique UNIQUE (registration_number, deleted_at)
 );
 
 
@@ -113,7 +120,7 @@ created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 updated_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP,
 created_by 				UUID 		NOT NULL,
 updated_by 				UUID 		NOT NULL,
-CONSTRAINT constraint_name UNIQUE (registration_number, dunning_cycle_id, deleted_at)
+CONSTRAINT registration_number_dunning_cycle_id_deleted_at_unique UNIQUE (registration_number, dunning_cycle_id, deleted_at)
 );
 
 
@@ -121,8 +128,24 @@ CREATE TABLE dunning_email_audits (
 id  					BIGSERIAL 	NOT NULL PRIMARY KEY,
 execution_id 			BIGINT 		NOT NULL REFERENCES dunning_cycle_executions (id) ON DELETE CASCADE,
 communication_id 		UUID,
+email_recipients        VARCHAR(20),
+user_id                 UUID,
 trade_party_detail_id 	UUID 		NOT NULL,
+organization_id         UUID,
 is_success              BOOLEAN     NOT NULL,
 error_reason            VARCHAR(100),
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE ares_tokens (
+id  					BIGSERIAL 		NOT NULL PRIMARY KEY,
+object_id 				BIGINT 			NOT NULL,
+object_type				OBJECT_TYPE		NOT NULL,
+token_type				TOKEN_TYPE 	    NOT NULL,
+token 					VARCHAR(100)	NOT NULL,
+data 					JSONB,
+expiry_time				TIMESTAMP,
+created_at 				TIMESTAMP 		DEFAULT CURRENT_TIMESTAMP,
+updated_at 				TIMESTAMP   	DEFAULT CURRENT_TIMESTAMP
+);
+

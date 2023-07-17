@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.service.implementation
 import com.cogoport.ares.api.balances.service.implementation.LedgerBalanceServiceImpl
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
@@ -32,7 +33,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
-import java.util.UUID
 
 @Singleton
 class Scheduler(
@@ -47,7 +47,8 @@ class Scheduler(
     private var aresMessagePublisher: AresMessagePublisher,
     private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client,
-    private var onAccountService: OnAccountService
+    private var onAccountService: OnAccountService,
+    private var paymentMigration: PaymentMigrationWrapper
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -141,7 +142,7 @@ class Scheduler(
                 aresMessagePublisher.emitPostPaymentToSage(
                     PostPaymentToSage(
                         it,
-                        UUID.fromString(AresConstants.ARES_USER_ID)
+                        AresConstants.ARES_USER_ID
                     )
                 )
             }
@@ -155,12 +156,12 @@ class Scheduler(
         val date = Timestamp.valueOf("2023-05-16 00:00:00")
         val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
         if (!settlementsIds.isNullOrEmpty()) {
-            settlementService.bulkMatchingSettlementOnSage(settlementsIds, UUID.fromString(AresConstants.ARES_USER_ID))
+            settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
         }
     }
 
     @Scheduled(cron = "30 19 * * *")
-    suspend fun settlementMatchingFailedOnSageEmail() {
+    fun settlementMatchingFailedOnSageEmail() {
         val today = now()
         logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
         val settlementsNotPosted = runBlocking {
@@ -176,9 +177,11 @@ class Scheduler(
             documentUrl = url.toString(),
             documentName = "failed_settlement_matching",
             documentType = "xlsx",
-            uploadedBy = UUID.fromString(AresConstants.ARES_USER_ID)
+            uploadedBy = AresConstants.ARES_USER_ID
         )
-        val saveUrl = aresDocumentRepository.save(aresDocument)
+        val saveUrl = runBlocking {
+            aresDocumentRepository.save(aresDocument)
+        }
         val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
         runBlocking {
             settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
@@ -191,5 +194,16 @@ class Scheduler(
         val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
 
         onAccountService.downloadSagePlatformReport(startDate, endDate)
+    }
+
+    @Scheduled(cron = "30 20 * * *")
+    fun migrateMTCCVJV() {
+        val endDate: String = LocalDate.now().toString()
+        val startDate: String = LocalDate.now().minusDays(1).toString()
+        logger().info("Scheduler has been initiated to migrate MTCCV JV for the date range : $endDate - $startDate")
+        val size = runBlocking {
+            paymentMigration.migrateMTCCVJV(startDate, endDate)
+        }
+        logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
     }
 }

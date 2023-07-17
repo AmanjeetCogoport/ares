@@ -3,6 +3,7 @@ package com.cogoport.ares.api.common.client
 import com.cogoport.ares.api.common.models.CogoBankResponse
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsDataResponse
+import com.cogoport.ares.api.common.models.TdsDataResponseList
 import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
 import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
 import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
@@ -57,7 +58,7 @@ interface AuthClient {
      * @param: id
      */
     @Post("/organization/list_organization_trade_party_finance_detail_webhook")
-    suspend fun listOrgTdsStyles(@Body request: ListOrgStylesRequest): List<TdsDataResponse>?
+    suspend fun listOrgTdsStyles(@Body request: ListOrgStylesRequest): TdsDataResponseList?
 
     /**
      * Takes trade party detail id and returns TDS styles of corresponding org with mapping type as self.

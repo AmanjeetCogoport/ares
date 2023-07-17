@@ -10,6 +10,8 @@ import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
+import com.cogoport.ares.model.common.TradePartyOutstandingReq
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -29,6 +31,7 @@ import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -126,8 +129,9 @@ class OutstandingController {
     }
 
     @Put("/customer-outstanding-migrate")
-    suspend fun migrateCustomerOutstanding() {
-        return scheduler.updateCustomerOutstandingOnOpenSearch()
+    suspend fun migrateCustomerOutstanding(): HttpResponse<Map<String, String>> {
+        scheduler.updateCustomerOutstandingOnOpenSearch()
+        return HttpResponse.ok(mapOf("status" to "ok"))
     }
 
     @Auth
@@ -162,5 +166,10 @@ class OutstandingController {
     @Get("/customer-monthly-payment{?request*}")
     suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment {
         return Response<CustomerMonthlyPayment>().ok(outStandingService.getCustomerMonthlyPayment(request))
+    }
+
+    @Get("/trade-party-outstanding{?request*}")
+    suspend fun getTradePartyOutstanding(@Valid request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
+        return outStandingService.getTradePartyOutstanding(request)
     }
 }

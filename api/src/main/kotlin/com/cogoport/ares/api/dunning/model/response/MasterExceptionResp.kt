@@ -12,6 +12,7 @@ data class MasterExceptionResp(
     val isActive: Boolean,
     val registrationNumber: String,
     val orgSegment: String?,
+    val entityCode: Long,
     val creditDays: Long?,
     val creditAmount: BigDecimal?,
     val totalDueAmount: BigDecimal?,
