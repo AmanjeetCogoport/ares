@@ -8,6 +8,7 @@ import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
+import com.cogoport.ares.model.dunning.request.CreateUserRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
@@ -67,4 +68,8 @@ interface DunningService {
         sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
         isSynchronousCall: Boolean
     ): String
+
+    suspend fun createDunningPaymentLink(token: String): String
+
+    suspend fun createRelevantUser(request: CreateUserRequest): String?
 }

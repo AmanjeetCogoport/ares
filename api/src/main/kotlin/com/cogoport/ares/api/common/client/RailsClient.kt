@@ -2,6 +2,7 @@ package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.model.common.CommunicationRequest
 import com.cogoport.ares.model.common.GetPartnerRequest
+import com.cogoport.ares.model.dunning.request.UserInvitationRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.http.HttpHeaders
@@ -56,4 +57,7 @@ interface RailsClient {
 
     @Post("/create_communication")
     suspend fun createCommunication(@Body communicationRequest: CommunicationRequest?): UUID?
+
+    @Post("/create_organization_user_invitation")
+    suspend fun createOrgUserInvitation(@Body request: UserInvitationRequest): HashMap<String, String>?
 }

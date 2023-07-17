@@ -9,6 +9,7 @@ import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
+import com.cogoport.ares.model.dunning.request.CreateUserRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
@@ -188,5 +189,15 @@ class DunningController(
                 true
             )
         )
+    }
+
+    @Get("create-dunning-payment-link")
+    suspend fun createDunningPaymentLink(@QueryValue("token") token: String): String {
+        return dunningService.createDunningPaymentLink(token)
+    }
+
+    @Post("create-dunning-relevant-user")
+    suspend fun createRelevantUser(@Body request: CreateUserRequest): String? {
+        return dunningService.createRelevantUser(request)
     }
 }

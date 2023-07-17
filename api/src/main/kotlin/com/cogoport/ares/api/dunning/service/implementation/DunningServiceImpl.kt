@@ -5,11 +5,14 @@ import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
+import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.TokenTypes
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
 import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.MasterExceptions
 import com.cogoport.ares.api.dunning.entity.OrganizationStakeholder
+import com.cogoport.ares.api.dunning.mapper.DunningMapper
 import com.cogoport.ares.api.dunning.model.DunningExceptionType
 import com.cogoport.ares.api.dunning.model.SeverityEnum
 import com.cogoport.ares.api.dunning.model.request.CreateDunningException
@@ -18,9 +21,11 @@ import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
+import com.cogoport.ares.api.dunning.repository.AresTokenRepo
 import com.cogoport.ares.api.dunning.repository.CycleExceptionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
+import com.cogoport.ares.api.dunning.repository.DunningEmailAuditRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.repository.OrganizationStakeholderRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
@@ -29,6 +34,8 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AuditRepository
+import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
+import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
@@ -48,6 +55,7 @@ import com.cogoport.ares.model.dunning.enum.OrganizationSegment
 import com.cogoport.ares.model.dunning.enum.OrganizationStakeholderType
 import com.cogoport.ares.model.dunning.enum.TriggerType
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
+import com.cogoport.ares.model.dunning.request.CreateUserRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
@@ -59,6 +67,7 @@ import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTrade
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
+import com.cogoport.ares.model.dunning.request.UserInvitationRequest
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
@@ -74,6 +83,7 @@ import jakarta.inject.Singleton
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
+import java.time.Instant
 import java.util.Calendar
 import java.util.Date
 import java.util.UUID
@@ -91,7 +101,12 @@ open class DunningServiceImpl(
     private val cycleExceptionRepo: CycleExceptionRepo,
     private val util: Util,
     private val authClient: AuthClient,
-    private val rabbitMq: RabbitmqService
+    private val rabbitMq: RabbitmqService,
+    private val aresTokenRepo: AresTokenRepo,
+    private val railsClient: RailsClient,
+    private val dunningEmailAuditRepo: DunningEmailAuditRepo,
+    private val dunningMapper: DunningMapper,
+    private val thirdPartyApiAuditService: ThirdPartyApiAuditService
 ) : DunningService {
 
     @Transactional
@@ -311,9 +326,6 @@ open class DunningServiceImpl(
             )
         )
         return dunningCycleExecutionResponse.id!!
-    }
-
-    private fun pushDunningInDelay(timeToProcess: Date) {
     }
 
     override suspend fun getCustomersOutstandingAndOnAccount(request: DunningCycleFilters): ResponseList<CustomerOutstandingAndOnAccountResponse> {
@@ -1071,6 +1083,58 @@ open class DunningServiceImpl(
         todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
         return Timestamp(todayCal.timeInMillis)
+    }
+
+    override suspend fun createDunningPaymentLink(token: String): String {
+        val tokenDetails = aresTokenRepo.findByTokens(token, TokenTypes.DUNNING_PAYMENT.name) ?: throw AresException(AresError.ERR_1002, "Link is not valid")
+
+        if (tokenDetails.expiryTime!! <= Timestamp.from(Instant.now())) {
+            throw AresException(AresError.ERR_1002, "payment link is expired")
+        }
+        return ""
+    }
+
+    override suspend fun createRelevantUser(request: CreateUserRequest): String? {
+        val tokenDetails = aresTokenRepo.findByTokens(request.userToken, TokenTypes.RELEVANT_USER.name) ?: throw AresException(AresError.ERR_1002, "Link is not valid")
+
+        if (tokenDetails.expiryTime!! <= Timestamp.from(Instant.now())) {
+            throw AresException(AresError.ERR_1002, "user invitation link is expired")
+        }
+        if (tokenDetails.data?.dunningUserInviteData?.userInvitationId != null) {
+            throw AresException(AresError.ERR_1002, "user already invited with this link")
+        }
+        val additionalData = dunningEmailAuditRepo.findById(tokenDetails.objectId)
+        val orgUserDetails = dunningMapper.convertUserRequestToUserInvitationRequest(request)
+        val request = UserInvitationRequest(
+            performedById = additionalData?.userId.toString(),
+            performedByType = "user",
+            orgId = additionalData?.organizationId.toString(),
+            orgUserDetails = mutableListOf(orgUserDetails)
+        )
+
+        var userInvitationId: String? = null
+        try {
+            userInvitationId = railsClient.createOrgUserInvitation(request)?.get("id")
+        } catch (err: Exception) {
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    id = null,
+                    apiName = "create_organization_user_invitation",
+                    apiType = "organization",
+                    objectId = additionalData?.id,
+                    objectName = "dunning_user_invitation",
+                    httpResponseCode = "500",
+                    requestParams = request.toString(),
+                    response = err.toString(),
+                    isSuccess = false
+                )
+            )
+            throw err
+        }
+        tokenDetails.data?.dunningUserInviteData?.userInvitationId = UUID.fromString(userInvitationId)
+        aresTokenRepo.update(tokenDetails)
+//        aresMessagePublisher.emitUserInvitationSendPlatformNotification(additionalData) // in future we can send platform notification to kams
+        return userInvitationId
     }
 
     override suspend fun sendMailOfAllCommunicationToTradeParty(
