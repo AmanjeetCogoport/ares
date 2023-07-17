@@ -7,6 +7,7 @@ data class LSPLedgerRequest(
     val orgId: String,
     val year: Int,
     val month: String,
+    val currency: String,
     var entityCode: Int? = null,
     var pageLimit: Int?,
     var page: Int?
