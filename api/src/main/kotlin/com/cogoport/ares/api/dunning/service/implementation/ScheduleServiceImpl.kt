@@ -521,7 +521,7 @@ class ScheduleServiceImpl(
             "contactDetails" to contactDetails,
             "add_user_url" to if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
             "invoice_url" to if (isPartnerUser == true) partnerUrl else orgUrl,
-            "feedback_url" to "feedback_url", // dummy
+            "feedback_url" to "",
             "ticket_url" to ticketUrl
         )
     }
@@ -568,7 +568,7 @@ class ScheduleServiceImpl(
             "add_user_url" to if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
             "invoice_url" to if (isPartnerUser == true) partnerUrl else orgUrl,
             "payment_url" to if (outstanding.entityCode == ENTITY_101) getPaymentLink(paymentUrl) else "",
-            "feedback_url" to "feedback_url", // dummy
+            "feedback_url" to "",
             "ticket_url" to ticketUrl
         )
     }

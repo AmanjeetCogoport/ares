@@ -3,6 +3,7 @@ package com.cogoport.ares.api.dunning.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
+import com.cogoport.ares.api.common.AresConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
@@ -949,8 +950,9 @@ open class DunningServiceImpl(
     override suspend fun calculateNextScheduleTime(
         scheduleRule: DunningScheduleRule
     ): Date {
-        val scheduleHour = extractHourAndMinute(scheduleRule.scheduleTime).get("hour")!!
-        val scheduleMinute = extractHourAndMinute(scheduleRule.scheduleTime).get("minute")!!
+        val extractTime = extractHourAndMinute(scheduleRule.scheduleTime)
+        val scheduleHour = extractTime["hour"]!!
+        val scheduleMinute = extractTime["minute"]!!
 
         val scheduleTimeStampInGMT: Timestamp = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
             DunningExecutionFrequency.ONE_TIME -> calculateNextScheduleTimeForOneTime(scheduleRule, scheduleHour, scheduleMinute)
@@ -960,14 +962,13 @@ open class DunningServiceImpl(
             else -> throw AresException(AresError.ERR_1002, "")
         }
 
-        val actiualTimestampInRespectiveTimeZone = scheduleTimeStampInGMT.time?.minus(
-            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-            ) ?: throw AresException(AresError.ERR_1002, "")
+        val actualTimestampInRespectiveTimeZone = scheduleTimeStampInGMT.time.minus(
+            TIME_ZONE_DIFFERENCE_FROM_GMT[AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]
+                ?: throw AresException(AresError.ERR_1002, "")
         )
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        val formattedDate = dateFormat.format(actiualTimestampInRespectiveTimeZone)
+        val formattedDate = dateFormat.format(actualTimestampInRespectiveTimeZone)
         return dateFormat.parse(formattedDate)
     }
 
@@ -985,7 +986,7 @@ open class DunningServiceImpl(
         )
     }
 
-    private suspend fun calculateNextScheduleTimeForOneTime(
+    private fun calculateNextScheduleTimeForOneTime(
         scheduleRule: DunningScheduleRule,
         scheduleHour: String,
         scheduleMinute: String
@@ -995,18 +996,12 @@ open class DunningServiceImpl(
         scheduleDateCal.timeInMillis = System.currentTimeMillis()
 
         scheduleDateCal.set(Calendar.DAY_OF_MONTH, scheduleRule.oneTimeDate!!.slice(0..1).toInt())
-        scheduleDateCal.set(Calendar.MONTH, scheduleRule.oneTimeDate!!.slice(3..4).toInt())
+        scheduleDateCal.set(Calendar.MONTH, (scheduleRule.oneTimeDate!!.slice(3..4).toInt()).minus(1))
         scheduleDateCal.set(Calendar.YEAR, scheduleRule.oneTimeDate!!.slice(6..9).toInt())
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-        var localTimestampWRTZone = System.currentTimeMillis().minus(
-            AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-                AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-            ) ?: throw AresException(AresError.ERR_1002, "")
-        )?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-
-        localTimestampWRTZone = System.currentTimeMillis()?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        val localTimestampWRTZone: Long = System.currentTimeMillis().plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
@@ -1015,29 +1010,24 @@ open class DunningServiceImpl(
         return Timestamp(scheduleDateCal.timeInMillis)
     }
 
-    private suspend fun calculateNextScheduleTimeForDaily(
+    private fun calculateNextScheduleTimeForDaily(
         scheduleRule: DunningScheduleRule,
         scheduleHour: String,
         scheduleMinute: String
     ): Timestamp {
         val todayCal = Calendar.getInstance()
-        todayCal.timeInMillis = AresConstants.TIME_ZONE_DIFFENRENCE_FROM_GMT.get(
-            AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)
-        )?.plus(System.currentTimeMillis())!!?.plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        todayCal.timeInMillis = TIME_ZONE_DIFFERENCE_FROM_GMT[AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]?.plus(System.currentTimeMillis())!!
 
-        if (
-            todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()
-        ) {
+        if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()) {
             todayCal.add(Calendar.DAY_OF_MONTH, 1)
         }
-
         todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
         return Timestamp(todayCal.timeInMillis)
     }
 
-    private suspend fun calculateScheduleTimeForWeekly(week: DayOfWeek, scheduleHour: String, scheduleMinute: String): Timestamp {
+    private fun calculateScheduleTimeForWeekly(week: DayOfWeek, scheduleHour: String, scheduleMinute: String): Timestamp {
         val todayCal = Calendar.getInstance()
         todayCal.timeInMillis = System.currentTimeMillis()
 
@@ -1058,7 +1048,7 @@ open class DunningServiceImpl(
         return Timestamp(todayCal.timeInMillis)
     }
 
-    private suspend fun calculateScheduleTimeForMonthly(dayOfMonth: Int, scheduleHour: String, scheduleMinute: String): Timestamp {
+    private fun calculateScheduleTimeForMonthly(dayOfMonth: Int, scheduleHour: String, scheduleMinute: String): Timestamp {
         val todayCal = Calendar.getInstance()
         todayCal.timeInMillis = System.currentTimeMillis()
 

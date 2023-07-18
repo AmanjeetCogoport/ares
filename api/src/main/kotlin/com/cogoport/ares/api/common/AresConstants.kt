@@ -212,14 +212,14 @@ object AresConstants {
         UTC
     }
 
-    var TIME_ZONE_DIFFENRENCE_FROM_GMT = mapOf<TimeZone, Long>(
+    var TIME_ZONE_DIFFERENCE_FROM_GMT = mapOf(
         TimeZone.GMT to 0.toLong(),
         TimeZone.IST to 19800000.toLong(),
         TimeZone.UTC to 28800000.toLong(),
         TimeZone.VNM to 25200000.toLong()
     )
 
-    val EXTRA_TIME_TO_PROCESS_DATA_DUNNING = 3600
+    const val EXTRA_TIME_TO_PROCESS_DATA_DUNNING = 3600
 
     const val MAX_DAY_IN_MONTH_FOR_DUNNING: Int = 28
 
