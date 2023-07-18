@@ -1299,16 +1299,22 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
 
-        val sourceType =
-            when (settlementType) {
-                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.VTDS -> listOf(SettlementType.VTDS)
-                SettlementType.CTDS -> listOf(SettlementType.CTDS)
-                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+        val sourceType = when (settlementType) {
+            SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.VTDS -> listOf(SettlementType.VTDS)
+            SettlementType.CTDS -> listOf(SettlementType.CTDS)
+            else -> if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(settlementType)) {
+                settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList().apply {
+                    addAll(listOf(SettlementType.SINV, SettlementType.SCN, SettlementType.PINV, SettlementType.PCN))
+                }
+            } else {
+                listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
+        }
+
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
@@ -1830,7 +1836,7 @@ open class SettlementServiceImpl : SettlementService {
             utilizedTdsOfPaymentDoc = BigDecimal.ZERO
             invoiceTds = BigDecimal.ZERO
         }
-        val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
+        val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
         updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
@@ -1915,6 +1921,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
+
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         if (paymentUtilization.accMode == AccMode.AR) {
@@ -1922,6 +1929,14 @@ open class SettlementServiceImpl : SettlementService {
             paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
         }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        if (paymentUtilization.amountCurr.subtract(paymentUtilization.payCurr).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payCurr = paymentUtilization.amountCurr
+        }
+
+        if (paymentUtilization.amountLoc.subtract(paymentUtilization.payLoc).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payLoc = paymentUtilization.amountLoc
+        }
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
 
@@ -1956,7 +1971,7 @@ open class SettlementServiceImpl : SettlementService {
             journalVoucherService.updateJournalVoucherStatus(
                 id = accountUtilization.documentNo,
                 documentValue = accountUtilization.documentValue,
-                isUtilized = true,
+                isUtilized = accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType
             )
