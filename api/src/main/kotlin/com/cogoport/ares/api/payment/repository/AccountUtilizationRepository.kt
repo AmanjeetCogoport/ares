@@ -1227,8 +1227,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.sign_flag * au.amount_loc AS balance 
             FROM account_utilizations au 
             LEFT JOIN payments p ON p.payment_num = au.document_no
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
+            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
             ORDER BY transaction_date
         """
     )
@@ -1246,8 +1247,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END), 0) AS credit,
             COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
             FROM account_utilizations au 
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
-            AND (:date IS NULL OR au.transaction_date < :date::DATE) AND au.entity_code IN (:entityCodes)
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
+            AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
