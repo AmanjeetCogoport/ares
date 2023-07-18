@@ -169,7 +169,6 @@ open class DunningServiceImpl(
         }
 
         return organizationStakeholder.id!!
-
     }
 
     @Transactional
