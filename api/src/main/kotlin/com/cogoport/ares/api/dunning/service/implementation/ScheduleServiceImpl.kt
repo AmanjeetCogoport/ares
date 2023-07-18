@@ -168,10 +168,9 @@ class ScheduleServiceImpl(
                 throw err
             }
             if (outstandingData.list.isEmpty()) {
-
                 dunningEmailAuditObject.errorReason = "outstanding not found"
                 createDunningAudit(dunningEmailAuditObject)
-                throw Exception("outstanding not found")
+                return
             }
             val outstanding = outstandingData.list[0]
             dunningEmailAuditObject.organizationId = UUID.fromString(outstanding?.tradePartyId)
@@ -185,13 +184,13 @@ class ScheduleServiceImpl(
             if (templateData.isEmpty()) {
                 dunningEmailAuditObject.errorReason = "could not get template"
                 createDunningAudit(dunningEmailAuditObject)
-                throw Exception("could not get template")
+                return
             }
             val templateName = templateData.firstOrNull()?.get("name").toString()
             if (!DUNNING_VALID_TEMPLATE_NAMES.contains(templateName)) {
                 dunningEmailAuditObject.errorReason = "template name is not valid"
                 createDunningAudit(dunningEmailAuditObject)
-                throw Exception("template name is not valid")
+                return
             }
             // logic to get list of not fully utilized payments on this trade party detail id
             // logic to get list of invoices
@@ -222,6 +221,7 @@ class ScheduleServiceImpl(
 
             if (invoiceDocuments.isEmpty()) {
                 dunningEmailAuditObject.errorReason = "invoices not found"
+                createDunningAudit(dunningEmailAuditObject)
                 return
             }
             val invoiceIds = invoiceDocuments.map { it.documentNo }
@@ -232,13 +232,13 @@ class ScheduleServiceImpl(
                 pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
             } catch (err: Exception) {
                 recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list_sids_and_pdfs_from_plutus")
-                throw err
+//                throw err
             }
 
             invoiceDocuments.forEach { t ->
-                val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
-                t.pdfUrl = data?.invoicePdfUrl
-                t.jobNumber = data?.jobNumber
+                val data = pdfAndSids?.firstOrNull { it.invoiceId == t.documentNo }
+                t.pdfUrl = data?.invoicePdfUrl ?: "abc"
+                t.jobNumber = data?.jobNumber ?: "123"
             }
 
             val creditControllerData = outstandingData.list[0]?.creditController
