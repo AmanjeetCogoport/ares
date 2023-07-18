@@ -89,3 +89,7 @@ tracing:
 rabbitmq:
   uri: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_IP}:${RABBITMQ_PORT}
   consumer-executor: rabbit
+
+
+coming_soon:
+  enabled: true

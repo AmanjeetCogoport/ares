@@ -61,6 +61,9 @@ class LSPDashboardServiceImpl : LSPDashboardService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
+    @Value("\${coming_soon.enabled}")
+    private var isComingSoonEnabled: Boolean = true
+
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
@@ -69,7 +72,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 currency = request.currency,
                 totalReceivables = AmountAndCount(BigDecimal.ZERO, 0),
                 unpaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
-                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0)
+                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
+                isComingSoonEnabled = isComingSoonEnabled
             )
         }
 
@@ -120,7 +124,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             totalReceivables = AmountAndCount(totalReceivableAmount, documents.size),
             unpaidReceivables = AmountAndCount(unpaidReceivableAmount, unpaidDocuments.size),
             partialPaidReceivables = AmountAndCount(partialPaidReceivableAmount, partialPaidDocuments.size),
-            currency = request.currency
+            currency = request.currency,
+            isComingSoonEnabled = isComingSoonEnabled
         )
     }
 
@@ -204,7 +209,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         return SupplierStatistics(
             invoicesDue = invoiceDueStats,
             onAccountPayment = onAccountPayment,
-            currency = request.currency
+            currency = request.currency,
+            isComingSoonEnabled = isComingSoonEnabled
         )
     }
 
