@@ -7,6 +7,5 @@ data class SupplierStatistics(
     val currency: String,
     var invoicesDue: AmountAndCount,
     var onAccountPayment: AmountAndCount,
-    var disputes: AmountAndCount? = null,
-    var isComingSoonEnabled: Boolean
+    var disputes: AmountAndCount? = null
 )

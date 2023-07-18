@@ -61,7 +61,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
-    @Value("\${coming_soon.enabled}")
+    @Value("\${lsp.coming_soon_banner.enabled}")
     private var isComingSoonEnabled: Boolean = true
 
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
@@ -209,8 +209,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         return SupplierStatistics(
             invoicesDue = invoiceDueStats,
             onAccountPayment = onAccountPayment,
-            currency = request.currency,
-            isComingSoonEnabled = isComingSoonEnabled
+            currency = request.currency
         )
     }
 

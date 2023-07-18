@@ -89,5 +89,6 @@ rabbitmq:
   consumer-executor: rabbit
 
 
-coming_soon:
-  enabled: false
+lsp:
+  coming_soon_banner:
+    enabled: false
