@@ -22,6 +22,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.request.LSPLedgerRequest
 import com.cogoport.ares.model.payment.response.LSPLedgerResponse
+import com.cogoport.ares.model.payment.response.LedgerDetails
 import com.cogoport.ares.model.payment.response.LedgerExcelResponse
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Value
@@ -60,6 +61,9 @@ class LSPDashboardServiceImpl : LSPDashboardService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
+    @Value("\${lsp.coming_soon_banner.enabled}")
+    private var isComingSoonEnabled: Boolean = true
+
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
@@ -68,7 +72,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 currency = request.currency,
                 totalReceivables = AmountAndCount(BigDecimal.ZERO, 0),
                 unpaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
-                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0)
+                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
+                isComingSoonEnabled = isComingSoonEnabled
             )
         }
 
@@ -82,23 +87,20 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (request.currency != documents[0]?.ledCurrency) {
             val exchangeRateResponse = getExchangeRate(documents, request.currency)
             documents.forEach { doc ->
-                val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
-                totalReceivableAmount += exchangeRate
-                    ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                totalReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
-                    unpaidReceivableAmount += exchangeRate
-                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                    val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                    unpaidReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
-                    partialPaidReceivableAmount += exchangeRate
-                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
+                    val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                    partialPaidReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
                 }
             }
         } else {
@@ -122,12 +124,13 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             totalReceivables = AmountAndCount(totalReceivableAmount, documents.size),
             unpaidReceivables = AmountAndCount(unpaidReceivableAmount, unpaidDocuments.size),
             partialPaidReceivables = AmountAndCount(partialPaidReceivableAmount, partialPaidDocuments.size),
-            currency = request.currency
+            currency = request.currency,
+            isComingSoonEnabled = isComingSoonEnabled
         )
     }
 
     override suspend fun getPaymentStatsForSupplier(request: SupplierPaymentStatsRequest): SupplierStatistics {
-        val invoiceDueStats: AmountAndCount
+        var invoiceDueStats: AmountAndCount
         val onAccountPayment: AmountAndCount
         var invoicesDueAmount = BigDecimal.ZERO
         var onAccountAmount = BigDecimal.ZERO
@@ -173,36 +176,32 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val documentsForDue = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, request.startDate, request.endDate, accountTypesForDue)
         if (documentsForDue.isEmpty()) {
             invoiceDueStats = AmountAndCount(BigDecimal.ZERO, 0)
+        } else if (request.currency != documentsForDue[0]?.ledCurrency) {
+            val exchangeRateResponse = getExchangeRate(documentsForDue, request.currency)
+            documentsForDue.forEach { doc ->
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                invoicesDueAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+            }
+            invoiceDueStats = AmountAndCount(invoicesDueAmount, documentsForDue.size)
         } else {
-            if (request.currency != documentsForDue[0]?.ledCurrency) {
-                val exchangeRateResponse = getExchangeRate(documentsForDue, request.currency)
-                documentsForDue.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
-                    invoicesDueAmount += exchangeRate
-                        ?: (BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr)) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
-                }
-            } else {
-                documentsForDue.forEach {
-                    invoicesDueAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
-                }
+            documentsForDue.forEach {
+                invoicesDueAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
             }
             invoiceDueStats = AmountAndCount(invoicesDueAmount, documentsForDue.size)
         }
 
         if (documentsForOnAccount.isEmpty()) {
             onAccountPayment = AmountAndCount(BigDecimal.ZERO, 0)
+        } else if (request.currency != documentsForOnAccount[0]?.ledCurrency) {
+            val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
+            documentsForOnAccount.forEach { doc ->
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                onAccountAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+            }
+            onAccountPayment = AmountAndCount(onAccountAmount, documentsForOnAccount.size)
         } else {
-
-            if (request.currency != documentsForOnAccount[0]?.ledCurrency) {
-                val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
-                documentsForOnAccount.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate
-                    onAccountAmount += exchangeRate ?: BigDecimal.ONE.multiply((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0))
-                }
-            } else {
-                documentsForOnAccount.forEach {
-                    onAccountAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
-                }
+            documentsForOnAccount.forEach {
+                onAccountAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
             }
             onAccountPayment = AmountAndCount(onAccountAmount, documentsForOnAccount.size)
         }
@@ -230,9 +229,22 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             )
         }
 
+        var exchangeRateResponse = mutableListOf<ExchangeRateResponseByDate>()
+        var openingBalance = BigDecimal.ZERO
+        var closingBalance = BigDecimal.ZERO
         val allLedgerDocs = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month, accTypes, null, null)
-        val openingBalance = allLedgerDocs?.get(0)?.debit?.minus(allLedgerDocs[0].credit) ?: BigDecimal.ZERO
-        val closingBalance = allLedgerDocs?.sumOf { it.debit.minus(it.credit) } ?: BigDecimal.ZERO
+        if (request.currency != allLedgerDocs!![0].ledgerCurrency) {
+            exchangeRateResponse = getExchangeRateForLedgerDocs(allLedgerDocs, request.currency)
+            val exchangeRateForOpeningBalance = getExchangeRateByDate(allLedgerDocs.get(0).transactionDate, allLedgerDocs.get(0).ledgerCurrency, exchangeRateResponse)
+            openingBalance = exchangeRateForOpeningBalance * allLedgerDocs.get(0).debit.minus(allLedgerDocs[0].credit)
+            allLedgerDocs.forEach { doc ->
+                val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
+                closingBalance += exchangeRate * (doc.debit.minus(doc.credit))
+            }
+        } else {
+            openingBalance = allLedgerDocs.get(0).debit.minus(allLedgerDocs[0].credit)
+            closingBalance = allLedgerDocs.sumOf { it.debit.minus(it.credit) }
+        }
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
         val description = mapOf(
@@ -257,23 +269,26 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         }
 
         var balance = BigDecimal.ZERO
-        ledgerDocs.forEach {
-            it.type = description[it.type] ?: it.type
-            it.documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue
-            it.shipmentId = documentSIDMap[it.documentNo] ?: "NA"
-            balance += (it.debit - it.credit)
-            it.balance = balance
-            it.debitBalance = if (it.balance!! > BigDecimal.ZERO) { it.balance } else {
+        ledgerDocs.forEach { doc ->
+            val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
+            doc.type = description[doc.type] ?: doc.type
+            doc.ledgerCurrency = request.currency
+            doc.documentValue = documentUTRNoMap[doc.documentNo] ?: doc.documentValue
+            doc.shipmentId = documentSIDMap[doc.documentNo] ?: "NA"
+            doc.debit = exchangeRate * doc.debit
+            doc.credit = exchangeRate * doc.credit
+            balance += (doc.debit - doc.credit)
+            doc.balance = balance
+            doc.debitBalance = if (doc.balance!! > BigDecimal.ZERO) { doc.balance } else {
                 BigDecimal.ZERO
             }
-            it.creditBalance = if (it.balance!! < BigDecimal.ZERO) { it.balance!!.negate() } else {
+            doc.creditBalance = if (doc.balance!! < BigDecimal.ZERO) { doc.balance!!.negate() } else {
                 BigDecimal.ZERO
             }
         }
-
         val totalPages = Utilities.getTotalPages(totalCount, request.pageLimit!!)
         return LSPLedgerResponse(
-            ledgerCurrency = ledgerDocs[0].ledgerCurrency,
+            ledgerCurrency = request.currency,
             openingBalance = openingBalance,
             closingBalance = closingBalance,
             ledgerDocuments = ledgerDocs,
@@ -292,6 +307,14 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, null, null)
         if (ledgerDocuments.isNullOrEmpty()) {
             return null
+        }
+        if (request.currency != ledgerDocuments[0].ledgerCurrency) {
+            val exchangeRateResponse = getExchangeRateForLedgerDocs(ledgerDocuments, request.currency)
+            ledgerDocuments.forEach { doc ->
+                val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
+                doc.debit = doc.debit * exchangeRate
+                doc.credit = doc.credit * exchangeRate
+            }
         }
         val description = mapOf(
             "PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous",
@@ -328,7 +351,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             }
             val ledgerExcelResponse = LedgerExcelResponse(
                 transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it.transactionDate),
-                ledgerCurrency = it.ledgerCurrency,
+                ledgerCurrency = request.currency,
                 shipmentId = documentSIDMap[it.documentNo] ?: "NA",
                 type = description[it.type] ?: it.type,
                 documentValue = documentUTRNoMap[it.documentNo] ?: it.documentValue,
@@ -368,5 +391,24 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         } else {
             null
         }
+    }
+
+    private suspend fun getExchangeRateForLedgerDocs(ledgerDocs: List<LedgerDetails>?, toCurrency: String): MutableList<ExchangeRateResponseByDate> {
+        var transactionDates = mutableListOf<Date>()
+        ledgerDocs?.forEach { doc ->
+            transactionDates.add(doc.transactionDate)
+        }
+        transactionDates = ArrayList(transactionDates.distinct())
+        return exchangeClient.getExchangeRates(
+            ExchangeRateRequest(
+                listOf(ledgerDocs!![0].ledgerCurrency), listOf(toCurrency),
+                transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }
+            )
+        )
+    }
+
+    private fun getExchangeRateByDate(transactionDate: Date, currency: String, exchangeRateResponse: MutableList<ExchangeRateResponseByDate>?): BigDecimal {
+        return exchangeRateResponse?.firstOrNull { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(transactionDate) && it.fromCurrency == currency }?.exchangeRate
+            ?: BigDecimal.ONE
     }
 }
