@@ -17,7 +17,6 @@ import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
-import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Value
@@ -30,7 +29,6 @@ import java.time.LocalDate
 import java.time.LocalDate.now
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
 
