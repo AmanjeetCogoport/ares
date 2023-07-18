@@ -213,7 +213,7 @@ open class DunningServiceImpl(
             DunningCycle(
                 id = null,
                 name = createDunningCycleRequest.name,
-                cycle_type = DunningCycleType.valueOf(createDunningCycleRequest.cycle_type).toString(),
+                cycleType = DunningCycleType.valueOf(createDunningCycleRequest.cycleType).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
                 frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
                 severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL[SeverityEnum.valueOf(createDunningCycleRequest.severityLevel)]!!,

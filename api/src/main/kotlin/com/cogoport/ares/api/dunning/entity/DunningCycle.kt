@@ -21,7 +21,7 @@ data class DunningCycle(
     @field:Id @GeneratedValue
     var id: Long?,
     var name: String,
-    var cycle_type: String,
+    var cycleType: String,
     var triggerType: String,
     var frequency: String,
     var severityLevel: Int,

@@ -7,7 +7,7 @@ import java.util.UUID
 @Introspected
 data class CreateDunningCycleRequest(
     var name: String,
-    var cycle_type: String,
+    var cycleType: String,
     var triggerType: String,
     var frequency: String,
     var severityLevel: String,
