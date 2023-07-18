@@ -1229,7 +1229,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             LEFT JOIN payments p ON p.payment_num = au.document_no
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND deleted_at is null
+            AND deleted_at IS NULL
             ORDER BY transaction_date
         """
     )
@@ -1248,7 +1248,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND deleted_at is null
+            AND au.entity_code IN (:entityCodes) AND deleted_at IS NULL
             AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
         """
     )
