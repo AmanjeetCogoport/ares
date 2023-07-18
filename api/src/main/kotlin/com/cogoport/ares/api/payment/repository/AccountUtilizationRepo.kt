@@ -825,11 +825,11 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             FROM account_utilizations WHERE 
             organization_id::uuid = :tradePartyDetailId
             AND entity_code = :entityCode
-            AND acc_mode = 'AR' AND acc_type in ('REC','MISC') AND document_status = 'FINAL'
+            AND acc_mode = 'AR' AND acc_type in ('PAY','REC','MISC','OPDIV','BANK','MTCCV') AND document_status = 'FINAL'
             AND deleted_at IS NULL
             AND amount_loc - pay_loc > 0
             ORDER BY transaction_date DESC
-            LIMIT 10
+            LIMIT 50
         """
     )
     suspend fun getPaymentsForDunning(entityCode: Int, tradePartyDetailId: UUID): List<DunningPayments>

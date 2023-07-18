@@ -142,7 +142,7 @@ class ScheduleServiceImpl(
     }
 
     override suspend fun sendPaymentReminderToTradeParty(request: PaymentReminderReq) {
-        var dunningEmailAuditObject = DunningEmailAudit(id = null)
+        val dunningEmailAuditObject = DunningEmailAudit(id = null)
         try {
             val executionId = request.cycleExecutionId
             val tradePartyDetailId = request.tradePartyDetailId
@@ -164,7 +164,7 @@ class ScheduleServiceImpl(
                     request
                 )
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, request.toString(), err.toString(), "list customer outstanding", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, request.toString(), err.toString(), "list_customer_outstanding")
                 throw err
             }
             if (outstandingData.list.isEmpty()) {
@@ -179,7 +179,7 @@ class ScheduleServiceImpl(
             try {
                 templateData = railsClient.listCommunicationTemplate(cycleExecution!!.templateId).list
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, cycleExecution?.templateId.toString(), err.toString(), "list communication template", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, cycleExecution?.templateId.toString(), err.toString(), "list_communication_template")
                 throw err
             }
             if (templateData.isEmpty()) {
@@ -231,7 +231,7 @@ class ScheduleServiceImpl(
             try {
                 pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list sids and pdfs from plutus", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list_sids_and_pdfs_from_plutus")
                 throw err
             }
 
@@ -322,7 +322,7 @@ class ScheduleServiceImpl(
             try {
                 ticketToken = cogoCareClient.getTicketToken(ticketTokenReq)?.ticketToken
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, ticketTokenReq.toString(), err.toString(), "cogo care token generation", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, ticketTokenReq.toString(), err.toString(), "cogo_care_token_generation")
             }
 
             val variables = when (templateName) {
@@ -392,7 +392,7 @@ class ScheduleServiceImpl(
                 }
                 logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, communicationRequest.toString(), err.toString(), "create communication", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, communicationRequest.toString(), err.toString(), "create_communication")
                 throw err
             }
             try {
@@ -616,7 +616,7 @@ class ScheduleServiceImpl(
             try {
                 partnerData = railsClient.listPartners(organizationId)
             } catch (err: Error) {
-                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list partners", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list_partners")
             }
             if (partnerData?.list?.isEmpty() == false) {
                 isPartnerTagPresent = true
@@ -624,14 +624,14 @@ class ScheduleServiceImpl(
                 try {
                     userList = railsClient.getCpUsers(UUID.fromString(partnerId)).list
                 } catch (err: Exception) {
-                    recordFailedThirdPartyApiAudits(executionId, partnerId, err.toString(), "get channel partner users", tradePartyDetailId.toString())
+                    recordFailedThirdPartyApiAudits(executionId, partnerId, err.toString(), "get_channel_partner_users")
                     throw err
                 }
             } else {
                 try {
                     userList = railsClient.listOrgUsers(organizationId).list
                 } catch (err: Exception) {
-                    recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "get org users", tradePartyDetailId.toString())
+                    recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "get_org_users")
                     throw err
                 }
             }
@@ -642,7 +642,7 @@ class ScheduleServiceImpl(
                 userList = tradePartyDetails.flatMap { it["billing_addresses"] as? List<HashMap<String, Any?>> ?: emptyList() }
                     .flatMap { it["organization_pocs"] as? List<HashMap<String, Any>> ?: emptyList() }
             } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list organization trade parties", tradePartyDetailId.toString())
+                recordFailedThirdPartyApiAudits(executionId, organizationId.toString(), err.toString(), "list_organization_trade_parties")
                 throw err
             }
         }
@@ -702,14 +702,14 @@ class ScheduleServiceImpl(
         return dunningEmailAudit.id!!
     }
 
-    private suspend fun recordFailedThirdPartyApiAudits(executionId: Long, request: String, response: String, apiName: String, tradePartyDetailId: String) {
+    private suspend fun recordFailedThirdPartyApiAudits(executionId: Long, request: String, response: String, apiName: String) {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(
                 null,
                 apiName,
-                tradePartyDetailId, // here we will put trade party detail id of customer
+                "dunning", // here we will put trade party detail id of customer
                 executionId,
-                "DUNNING",
+                "DUNNING_EXECUTION",
                 "500",
                 request,
                 response,

@@ -112,27 +112,27 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
         val organizationStakeholderType = OrganizationStakeholderType.valueOf(
-            syncOrgStakeholderRequest.organizationStakeholderType!!
-                .replace("_", " ").toUpperCase().replace(" ", "_")
+            syncOrgStakeholderRequest.organizationStakeholderType
+                .replace("_", " ").uppercase().replace(" ", "_")
         ).toString()
 
         var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
-            organizationId = syncOrgStakeholderRequest.organizationId!!,
+            organizationId = syncOrgStakeholderRequest.organizationId,
             organizationStakeholderType = organizationStakeholderType
         )
 
         if (organizationStakeholder == null) {
 
             val organizationSegment = syncOrgStakeholderRequest.organizationSegment!!
-                .replace("_", " ").toUpperCase().replace(" ", "_")
+                .replace("_", " ").uppercase().replace(" ", "_")
 
             val organizationStakeholderEntity = OrganizationStakeholder(
                 id = null,
                 organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
                 organizationStakeholderType = organizationStakeholderType,
-                organizationId = syncOrgStakeholderRequest.organizationId!!,
+                organizationId = syncOrgStakeholderRequest.organizationId,
                 organizationSegment = OrganizationSegment.valueOf(organizationSegment).toString(),
-                organizationStakeholderId = syncOrgStakeholderRequest.organizationId!!,
+                organizationStakeholderId = syncOrgStakeholderRequest.organizationId,
                 createdBy = AresConstants.ARES_USER_ID,
                 updatedBy = AresConstants.ARES_USER_ID,
                 createdAt = null,
@@ -144,7 +144,7 @@ open class DunningServiceImpl(
             if (syncOrgStakeholderRequest.organizationSegment != null) {
                 organizationSegment = OrganizationSegment.valueOf(
                     syncOrgStakeholderRequest.organizationSegment!!
-                        .replace("_", " ").toUpperCase().replace(" ", "_")
+                        .replace("_", " ").uppercase().replace(" ", "_")
                 ).toString()
             }
 
@@ -190,7 +190,7 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.MONTHLY &&
-            createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
+            DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
             != DunningExecutionFrequency.MONTHLY &&
             createDunningCycleRequest.scheduleRule.dayOfMonth == null &&
             createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 &&
@@ -202,7 +202,7 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.WEEKLY &&
-            createDunningCycleRequest.scheduleRule.dunningExecutionFrequency?.let { DunningExecutionFrequency.valueOf(it) }
+            DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
             != DunningExecutionFrequency.WEEKLY &&
             createDunningCycleRequest.scheduleRule.week == null
         ) {
@@ -216,7 +216,7 @@ open class DunningServiceImpl(
                 cycle_type = DunningCycleType.valueOf(createDunningCycleRequest.cycle_type).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
                 frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
-                severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL.get(SeverityEnum.valueOf(createDunningCycleRequest.severityLevel))!!,
+                severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL[SeverityEnum.valueOf(createDunningCycleRequest.severityLevel)]!!,
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
@@ -233,32 +233,28 @@ open class DunningServiceImpl(
 
         if (!createDunningCycleRequest.exceptionTradePartyDetailIds.isNullOrEmpty()) {
             var organizationTradePartyDetailResponse: GetOrganizationTradePartyDetailResponse? = null
+            val request = GetOrganizationTradePartyDetailRequest(organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!)
             try {
-                organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(
-                    GetOrganizationTradePartyDetailRequest(
-                        organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!
-                    )
-                )
-            } catch (e: Exception) {
+                organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(request)
+            } catch (err: Exception) {
+                recordFailedThirdPartyApiAudits(dunningCycleResponse.id!!, request.toString(), err.toString(), "list_organization_trade_party_business_finance", "dunning_cycle", "organization")
             }
 
             val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
-            if (organizationTradePartyDetailResponse != null) {
-                organizationTradePartyDetailResponse.list.forEach { organizationTradePartyDetail ->
-                    dunningCycleExceptionList.add(
-                        CycleExceptions(
-                            id = null,
-                            dunningCycleId = dunningCycleResponse.id!!,
-                            tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
-                            registrationNumber = organizationTradePartyDetail.registrationNumber!!,
-                            deletedAt = null,
-                            createdBy = dunningCycleResponse.createdBy,
-                            updatedBy = dunningCycleResponse.updatedBy,
-                            createdAt = null,
-                            updatedAt = null
-                        )
+            organizationTradePartyDetailResponse?.list?.forEach { organizationTradePartyDetail ->
+                dunningCycleExceptionList.add(
+                    CycleExceptions(
+                        id = null,
+                        dunningCycleId = dunningCycleResponse.id!!,
+                        tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
+                        registrationNumber = organizationTradePartyDetail.registrationNumber!!,
+                        deletedAt = null,
+                        createdBy = dunningCycleResponse.createdBy,
+                        updatedBy = dunningCycleResponse.updatedBy,
+                        createdAt = null,
+                        updatedAt = null
                     )
-                }
+                )
             }
             cycleExceptionRepo.saveAll(dunningCycleExceptionList)
         }
@@ -336,7 +332,7 @@ open class DunningServiceImpl(
         }
 
         var taggedOrganizationIds: List<UUID>? = listOf()
-        if (! (request.organizationStakeholderIds == null)) {
+        if (request.organizationStakeholderIds != null) {
             taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnorganizationStakeholderIds(
                 organizationStakeholderIds = request.organizationStakeholderIds
             )
@@ -346,7 +342,7 @@ open class DunningServiceImpl(
         if (request.query != null)
             query = "%${request.query}%"
 
-        val response = listOnAccountAndOutstandingBasedOnDunninCycleFilters(
+        return listOnAccountAndOutstandingBasedOnDunningCycleFilters(
             DunningCycleFilterRequest(
                 query = query,
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[request.cogoEntityId.toString()]!!,
@@ -360,11 +356,9 @@ open class DunningServiceImpl(
                 pageIndexData = request.pageIndex
             )
         )
-
-        return response
     }
 
-    open suspend fun listOnAccountAndOutstandingBasedOnDunninCycleFilters(
+    open suspend fun listOnAccountAndOutstandingBasedOnDunningCycleFilters(
         dunningCycleFilterRequest: DunningCycleFilterRequest
     ): ResponseList<CustomerOutstandingAndOnAccountResponse> {
 
@@ -408,9 +402,7 @@ open class DunningServiceImpl(
             exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
         )
 
-        var responseList = listOf<CustomerOutstandingAndOnAccountResponse>()
-
-        responseList = if (dunningCycleFilterRequest.exceptionTradePartyDetailId != null) {
+        val responseList: List<CustomerOutstandingAndOnAccountResponse> = if (dunningCycleFilterRequest.exceptionTradePartyDetailId != null) {
             val customerToRemove = dunningCycleFilterRequest.exceptionTradePartyDetailId!!.map { it }
             response.filter { customer -> customer.tradePartyDetailId !in customerToRemove }
         } else {
@@ -440,29 +432,29 @@ open class DunningServiceImpl(
 
     private fun getServiceType(serviceType: ServiceType): List<ServiceType> {
         return when (serviceType) {
-            ServiceType.FCL_FREIGHT -> listOf<ServiceType>(
+            ServiceType.FCL_FREIGHT -> listOf(
                 ServiceType.FCL_FREIGHT, ServiceType.FCL_CUSTOMS, ServiceType.FCL_FREIGHT_LOCAL,
                 ServiceType.FCL_CUSTOMS, ServiceType.FCL_CFS
             )
 
-            ServiceType.LCL_FREIGHT -> listOf<ServiceType>(
+            ServiceType.LCL_FREIGHT -> listOf(
                 ServiceType.LCL_FREIGHT, ServiceType.LCL_CUSTOMS, ServiceType.LCL_CUSTOMS_FREIGHT
             )
 
-            ServiceType.LTL_FREIGHT -> listOf<ServiceType>(
+            ServiceType.LTL_FREIGHT -> listOf(
                 ServiceType.LTL_FREIGHT
             )
 
-            ServiceType.AIR_FREIGHT -> listOf<ServiceType>(
+            ServiceType.AIR_FREIGHT -> listOf(
                 ServiceType.AIR_FREIGHT, ServiceType.AIR_CUSTOMS_FREIGHT, ServiceType.AIR_CUSTOMS,
                 ServiceType.AIR_FREIGHT_LOCAL, ServiceType.DOMESTIC_AIR_FREIGHT
             )
 
-            ServiceType.FTL_FREIGHT -> listOf<ServiceType>(
+            ServiceType.FTL_FREIGHT -> listOf(
                 ServiceType.FTL_FREIGHT
             )
 
-            ServiceType.HAULAGE_FREIGHT -> listOf<ServiceType>(
+            ServiceType.HAULAGE_FREIGHT -> listOf(
                 ServiceType.HAULAGE_FREIGHT
             )
 
@@ -1116,25 +1108,29 @@ open class DunningServiceImpl(
         try {
             userInvitationId = railsClient.createOrgUserInvitation(request)?.get("id")
         } catch (err: Exception) {
-            thirdPartyApiAuditService.createAudit(
-                ThirdPartyApiAudit(
-                    id = null,
-                    apiName = "create_organization_user_invitation",
-                    apiType = "organization",
-                    objectId = additionalData?.id,
-                    objectName = "dunning_user_invitation",
-                    httpResponseCode = "500",
-                    requestParams = request.toString(),
-                    response = err.toString(),
-                    isSuccess = false
-                )
-            )
+            recordFailedThirdPartyApiAudits(additionalData?.id!!, request.toString(), err.toString(), "create_organization_user_invitation", "dunning_user_invitation", "organization")
             throw err
         }
         tokenDetails.data?.dunningUserInviteData?.userInvitationId = UUID.fromString(userInvitationId)
         aresTokenRepo.update(tokenDetails)
 //        aresMessagePublisher.emitUserInvitationSendPlatformNotification(additionalData) // in future we can send platform notification to kams
         return userInvitationId
+    }
+
+    private suspend fun recordFailedThirdPartyApiAudits(objectId: Long, request: String, response: String, apiName: String, objectName: String, apiType: String) {
+        thirdPartyApiAuditService.createAudit(
+            ThirdPartyApiAudit(
+                null,
+                apiName,
+                apiType,
+                objectId,
+                objectName,
+                "500",
+                request,
+                response,
+                false
+            )
+        )
     }
 
     override suspend fun sendMailOfAllCommunicationToTradeParty(

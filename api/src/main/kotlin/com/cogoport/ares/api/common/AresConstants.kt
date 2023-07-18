@@ -358,7 +358,7 @@ object AresConstants {
     const val ENTITY_401 = 401
     const val ENTITY_501 = 501
 
-    val DUNNING_SEVERITY_LEVEL: Map<SeverityEnum, Int> = mapOf(
+    val DUNNING_SEVERITY_LEVEL = mapOf(
         SeverityEnum.LOW to 1,
         SeverityEnum.MEDIUM to 2,
         SeverityEnum.HIGH to 3

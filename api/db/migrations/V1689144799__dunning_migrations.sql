@@ -51,7 +51,7 @@ CREATE TYPE TOKEN_TYPE AS ENUM ('RELEVANT_USER', 'DUNNING_PAYMENT');
 
 CREATE TABLE dunning_cycles (
 id 				BIGSERIAL 		NOT NULL PRIMARY KEY,
-name 			VARCHAR(500) 	NOT NULL UNIQUE,
+name 			VARCHAR(300) 	NOT NULL UNIQUE,
 cycle_type 		CYCLE_TYPE 		NOT NULL,
 trigger_type 	TRIGGER_TYPE 	NOT NULL,
 entity_code     INTEGER         NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE dunning_email_audits (
 id  					BIGSERIAL 	NOT NULL PRIMARY KEY,
 execution_id 			BIGINT 		NOT NULL REFERENCES dunning_cycle_executions (id) ON DELETE CASCADE,
 communication_id 		UUID,
-email_recipients        VARCHAR(20),
+email_recipients        VARCHAR(50),
 user_id                 UUID,
 trade_party_detail_id 	UUID 		NOT NULL,
 organization_id         UUID,
