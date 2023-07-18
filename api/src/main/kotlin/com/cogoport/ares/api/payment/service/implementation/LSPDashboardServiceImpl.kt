@@ -61,6 +61,9 @@ class LSPDashboardServiceImpl : LSPDashboardService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
+    @Value("\${lsp.coming_soon_banner.enabled}")
+    private var isComingSoonEnabled: Boolean = true
+
     override suspend fun getReceivableStatsForSupplier(request: SupplierReceivableRequest): SupplierReceivables {
         val accountTypes = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
         val documents = accUtilRepo.getDocumentsForLSP(request.orgId, request.entityCode, null, null, accountTypes)
@@ -69,7 +72,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 currency = request.currency,
                 totalReceivables = AmountAndCount(BigDecimal.ZERO, 0),
                 unpaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
-                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0)
+                partialPaidReceivables = AmountAndCount(BigDecimal.ZERO, 0),
+                isComingSoonEnabled = isComingSoonEnabled
             )
         }
 
@@ -83,20 +87,20 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (request.currency != documents[0]?.ledCurrency) {
             val exchangeRateResponse = getExchangeRate(documents, request.currency)
             documents.forEach { doc ->
-                val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
-                totalReceivableAmount += ((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                totalReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
             }
 
             if (unpaidDocuments.isNotEmpty()) {
                 unpaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
-                    unpaidReceivableAmount += ((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                    val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                    unpaidReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
                 }
             }
             if (partialPaidDocuments.isNotEmpty()) {
                 partialPaidDocuments.forEach { doc ->
-                    val exchangeRate = exchangeRateResponse?.filter { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) && it.fromCurrency == doc?.currency }?.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
-                    partialPaidReceivableAmount += ((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                    val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                    partialPaidReceivableAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
                 }
             }
         } else {
@@ -120,7 +124,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             totalReceivables = AmountAndCount(totalReceivableAmount, documents.size),
             unpaidReceivables = AmountAndCount(unpaidReceivableAmount, unpaidDocuments.size),
             partialPaidReceivables = AmountAndCount(partialPaidReceivableAmount, partialPaidDocuments.size),
-            currency = request.currency
+            currency = request.currency,
+            isComingSoonEnabled = isComingSoonEnabled
         )
     }
 
@@ -174,11 +179,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         } else if (request.currency != documentsForDue[0]?.ledCurrency) {
             val exchangeRateResponse = getExchangeRate(documentsForDue, request.currency)
             documentsForDue.forEach { doc ->
-                val exchangeRate = exchangeRateResponse?.filter {
-                    it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) &&
-                        it.fromCurrency == doc?.currency
-                }?.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
-                invoicesDueAmount += ((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                invoicesDueAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
             }
             invoiceDueStats = AmountAndCount(invoicesDueAmount, documentsForDue.size)
         } else {
@@ -193,11 +195,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         } else if (request.currency != documentsForOnAccount[0]?.ledCurrency) {
             val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
             documentsForOnAccount.forEach { doc ->
-                val exchangeRate = exchangeRateResponse?.filter {
-                    it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc?.transactionDate) &&
-                        it.fromCurrency == doc?.currency
-                }?.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
-                onAccountAmount += ((doc?.amountCurr!! - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
+                onAccountAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
             }
             onAccountPayment = AmountAndCount(onAccountAmount, documentsForOnAccount.size)
         } else {
@@ -236,16 +235,10 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val allLedgerDocs = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month, accTypes, null, null)
         if (request.currency != allLedgerDocs!![0].ledgerCurrency) {
             exchangeRateResponse = getExchangeRateForLedgerDocs(allLedgerDocs, request.currency)
-            val exchangeRateForOpeningBalance = exchangeRateResponse.firstOrNull {
-                it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(allLedgerDocs.get(0).transactionDate) &&
-                    it.fromCurrency == allLedgerDocs.get(0).ledgerCurrency
-            }?.exchangeRate ?: BigDecimal.ONE
+            val exchangeRateForOpeningBalance = getExchangeRateByDate(allLedgerDocs.get(0).transactionDate, allLedgerDocs.get(0).ledgerCurrency, exchangeRateResponse)
             openingBalance = exchangeRateForOpeningBalance * allLedgerDocs.get(0).debit.minus(allLedgerDocs[0].credit)
             allLedgerDocs.forEach { doc ->
-                val exchangeRate = exchangeRateResponse.filter {
-                    it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.transactionDate) &&
-                        it.fromCurrency == doc.ledgerCurrency
-                }.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
+                val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
                 closingBalance += exchangeRate * (doc.debit.minus(doc.credit))
             }
         } else {
@@ -277,10 +270,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
 
         var balance = BigDecimal.ZERO
         ledgerDocs.forEach { doc ->
-            val exchangeRate = exchangeRateResponse.filter {
-                it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.transactionDate) &&
-                    it.fromCurrency == doc.ledgerCurrency
-            }.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
+            val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
             doc.type = description[doc.type] ?: doc.type
             doc.ledgerCurrency = request.currency
             doc.documentValue = documentUTRNoMap[doc.documentNo] ?: doc.documentValue
@@ -321,10 +311,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (request.currency != ledgerDocuments[0].ledgerCurrency) {
             val exchangeRateResponse = getExchangeRateForLedgerDocs(ledgerDocuments, request.currency)
             ledgerDocuments.forEach { doc ->
-                val exchangeRate = exchangeRateResponse.filter {
-                    it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(doc.transactionDate) &&
-                        it.fromCurrency == doc.ledgerCurrency
-                }.firstOrNull()?.exchangeRate ?: BigDecimal.ONE
+                val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
                 doc.debit = doc.debit * exchangeRate
                 doc.credit = doc.credit * exchangeRate
             }
@@ -418,5 +405,10 @@ class LSPDashboardServiceImpl : LSPDashboardService {
                 transactionDates.map { SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(it) }
             )
         )
+    }
+
+    private fun getExchangeRateByDate(transactionDate: Date, currency: String, exchangeRateResponse: MutableList<ExchangeRateResponseByDate>?): BigDecimal {
+        return exchangeRateResponse?.firstOrNull { it.exchangeRateDate == SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(transactionDate) && it.fromCurrency == currency }?.exchangeRate
+            ?: BigDecimal.ONE
     }
 }
