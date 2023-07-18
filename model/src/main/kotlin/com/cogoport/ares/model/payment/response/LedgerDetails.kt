@@ -16,6 +16,6 @@ data class LedgerDetails(
     val documentValue: String,
     val documentNo: Long,
     val type: String,
-    val debit: BigDecimal,
-    val credit: BigDecimal
+    var debit: BigDecimal,
+    var credit: BigDecimal
 )
