@@ -405,10 +405,10 @@ class ScheduleServiceImpl(
                 logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId but after operation could not happend with communicationId $communicationId")
             }
         } catch (err: Exception) {
-            logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId}")
+            logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId} with $err")
             dunningEmailAuditObject.communicationId = null
             dunningEmailAuditObject.isSuccess = false
-            dunningEmailAuditObject.errorReason = "something went wrong for processing dunning $err"
+            dunningEmailAuditObject.errorReason = "dunning could'nt process"
             createDunningAudit(dunningEmailAuditObject)
         }
     }

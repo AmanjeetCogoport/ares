@@ -48,7 +48,7 @@ services:
       url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - id: plutus
-      url: http://localhost:8083
+      url: https://api.stage.cogoport.io
       enabledLocally: true
     - id: cogo-care
       url: https://tickets.stage.cogoport.io

@@ -133,7 +133,7 @@ user_id                 UUID,
 trade_party_detail_id 	UUID 		NOT NULL,
 organization_id         UUID,
 is_success              BOOLEAN     NOT NULL,
-error_reason            VARCHAR(100),
+error_reason            TEXT,
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP
 );
 
