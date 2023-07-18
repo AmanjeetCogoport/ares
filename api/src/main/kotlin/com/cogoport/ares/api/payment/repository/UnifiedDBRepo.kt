@@ -652,7 +652,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
                     AND document_status in ('FINAL') 
                     AND deleted_at is null
                     AND ((:defaultersOrgIds) IS NULL OR aau.organization_id::UUID NOT IN (:defaultersOrgIds))
-                    AND (COALESCE(:companyType) is null OR los.id is null OR los.segment in (:companyType))
+                     AND (COALESCE(:companyType) is null OR COALESCE(los.segment, 'others') in (:companyType))
                     AND (:serviceType is null OR aau.service_type = :serviceType)
                     AND ( aau.entity_code = :entityCode)
                   )
