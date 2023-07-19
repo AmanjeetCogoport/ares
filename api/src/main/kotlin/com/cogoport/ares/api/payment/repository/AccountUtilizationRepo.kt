@@ -443,48 +443,83 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     ELSE
                         0
                     END) AS total_curr_outstanding,
-                sum(
-                    CASE WHEN transaction_date >= now()::date AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS not_due_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS thirty_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS forty_five_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS sixty_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS ninety_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS one_eighty_count,
-                sum(
-                    CASE WHEN (now()::date - transaction_date) > 180 AND acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS one_eighty_plus_count
+                SUM(
+                    CASE 
+                        WHEN transaction_date >= now()::date 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN transaction_date >= now()::date 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                )  AS not_due_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS thirty_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS forty_five_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS sixty_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS ninety_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS one_eighty_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) > 180
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) > 180
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS one_eighty_plus_count
             FROM
                 account_utilizations
             WHERE
@@ -614,6 +649,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             au.led_currency, 
             au.sign_flag,
             au.acc_mode,
+            au.migrated,
             CASE WHEN 
             	au.id in (select id from MAPPINGS) 
         	THEN
@@ -841,12 +877,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
-                AND abs(amount_curr - pay_curr) > 0
                 AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL
                 AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+                AND
+                (
+                    CASE 
+                        WHEN acc_type IN ('PINV','PREIMB','PCN') THEN abs(amount_loc - pay_loc) > 0
+                        ELSE amount_loc > 0
+                    END
+                )
             """
     )
     suspend fun getDocumentsForLSP(orgId: String, entityCode: Int?, startDate: String?, endDate: String?, accType: List<String>): List<DocumentResponse?>
@@ -876,7 +918,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             AND acc_type::varchar IN (:accTypes)
             AND deleted_at IS NULL
             AND is_void = false
-        ORDER BY transaction_date
+        ORDER BY transaction_date, document_no
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageLimit))
         LIMIT :pageLimit
     """

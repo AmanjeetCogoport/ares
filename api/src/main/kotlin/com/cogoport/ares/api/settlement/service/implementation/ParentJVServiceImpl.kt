@@ -55,6 +55,7 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
@@ -596,22 +597,45 @@ open class ParentJVServiceImpl : ParentJVService {
             val status = getStatus(processedResponse)
 
             if (status == 1) {
-                parentJVRepository.updateStatus(parentJVId, JVStatus.POSTED, performedBy)
-                journalVoucherRepository.updateStatus(parentJVId, JVStatus.POSTED, performedBy)
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "PostJVToSage",
-                        "Journal Voucher",
-                        parentJVId,
-                        "JOURNAL_VOUCHER",
-                        "200",
-                        result.requestString,
-                        result.response,
-                        true
+                val jvNumOnSage = "Select NUM_0 from $sageDatabase.GACCENTRY where NUM_0 = '${parentJVDetails.jvNum}'"
+                val resultForJVNumOnSageQuery = Client.sqlQuery(jvNumOnSage)
+                val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForJVNumOnSageQuery)
+                val records = mappedResponse["recordset"] as? ArrayList<*>
+                if (records?.size != 0) {
+                    parentJVRepository.updateStatus(parentJVId, JVStatus.POSTED, performedBy)
+                    journalVoucherRepository.updateStatus(parentJVId, JVStatus.POSTED, performedBy)
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            parentJVId,
+                            "JOURNAL_VOUCHER",
+                            "200",
+                            result.requestString,
+                            result.response,
+                            true
+                        )
                     )
-                )
-                return true
+                    return true
+                } else {
+                    parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
+                    journalVoucherRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
+                    thirdPartyApiAuditService.createAudit(
+                        ThirdPartyApiAudit(
+                            null,
+                            "PostJVToSage",
+                            "Journal Voucher",
+                            parentJVId,
+                            "JOURNAL_VOUCHER",
+                            "404",
+                            "NUM_0: ${parentJVDetails.jvNum}",
+                            "Jv not present on sage",
+                            false
+                        )
+                    )
+                    return false
+                }
             } else {
                 parentJVRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)
                 journalVoucherRepository.updateStatus(parentJVId, JVStatus.POSTING_FAILED, performedBy)

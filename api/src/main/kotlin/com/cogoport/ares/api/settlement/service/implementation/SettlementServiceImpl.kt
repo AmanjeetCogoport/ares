@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
-import com.cogoport.ares.api.common.models.TdsDataResponse
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
@@ -110,6 +109,7 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.XML
@@ -635,7 +635,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
-        val documentModel = calculatingTds(documentEntity)
+        val documentModel = calculatingTds(documentEntity, request.entityCode)
 
         val total =
             accutilizationRepo.getDocumentCount(
@@ -697,11 +697,11 @@ open class SettlementServiceImpl : SettlementService {
      */
     private suspend fun listOrgTdsProfile(tradePartyMappingIds: List<String>): List<TdsStylesResponse> {
         var tdsStylesResponse = mutableListOf<TdsStylesResponse>()
-        var tdsStylesFromClient: List<TdsDataResponse>? = null
+        var tdsStylesFromClient: List<TdsStylesResponse>? = null
         try {
-            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))
-        } catch (_: Exception) {
-            null
+            tdsStylesFromClient = cogoClient.listOrgTdsStyles(request = ListOrgStylesRequest(ids = tradePartyMappingIds))?.data
+        } catch (e: Exception) {
+            Sentry.captureException(e)
         }
         tdsStylesResponse = assignClientResponse(tdsStylesResponse, tradePartyMappingIds, tdsStylesFromClient)
 
@@ -716,10 +716,10 @@ open class SettlementServiceImpl : SettlementService {
     private fun assignClientResponse(
         tdsStylesResponse: MutableList<TdsStylesResponse>,
         tradePartyMappingIds: List<String>,
-        tdsStylesFromClient: List<TdsDataResponse>?
+        tdsStylesFromClient: List<TdsStylesResponse>?
     ): MutableList<TdsStylesResponse> {
         for (tradePartyMapping in tradePartyMappingIds) {
-            val tdsElement = tdsStylesFromClient?.find { it.data.id.toString() == tradePartyMapping }?.data
+            val tdsElement = tdsStylesFromClient?.find { it.id.toString() == tradePartyMapping }
             if (tdsElement != null) {
                 tdsStylesResponse.add(tdsElement)
             } else {
@@ -1299,16 +1299,22 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
 
-        val sourceType =
-            when (settlementType) {
-                SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
-                SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
-                SettlementType.VTDS -> listOf(SettlementType.VTDS)
-                SettlementType.CTDS -> listOf(SettlementType.CTDS)
-                else -> listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+        val sourceType = when (settlementType) {
+            SettlementType.REC -> listOf(SettlementType.REC, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.PAY -> listOf(SettlementType.PAY, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SINV -> listOf(SettlementType.SINV, SettlementType.CTDS, SettlementType.VTDS, SettlementType.SECH, SettlementType.PECH, SettlementType.NOSTRO)
+            SettlementType.SCN -> listOf(SettlementType.SCN, SettlementType.CTDS, SettlementType.SECH, SettlementType.NOSTRO)
+            SettlementType.VTDS -> listOf(SettlementType.VTDS)
+            SettlementType.CTDS -> listOf(SettlementType.CTDS)
+            else -> if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(settlementType)) {
+                settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList().apply {
+                    addAll(listOf(SettlementType.SINV, SettlementType.SCN, SettlementType.PINV, SettlementType.PCN))
+                }
+            } else {
+                listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
             }
+        }
+
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
@@ -1830,7 +1836,7 @@ open class SettlementServiceImpl : SettlementService {
             utilizedTdsOfPaymentDoc = BigDecimal.ZERO
             invoiceTds = BigDecimal.ZERO
         }
-        val paymentUtilized = paidAmount + utilizedTdsOfPaymentDoc
+        val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
         updateAccountUtilization(invoice, invoiceUtilized, invoiceTds, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Invoice
@@ -1915,6 +1921,7 @@ open class SettlementServiceImpl : SettlementService {
         } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
+
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
         if (paymentUtilization.accMode == AccMode.AR) {
@@ -1922,6 +1929,14 @@ open class SettlementServiceImpl : SettlementService {
             paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
         }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
+
+        if (paymentUtilization.amountCurr.subtract(paymentUtilization.payCurr).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payCurr = paymentUtilization.amountCurr
+        }
+
+        if (paymentUtilization.amountLoc.subtract(paymentUtilization.payLoc).abs() <= BigDecimal(0.001)) {
+            paymentUtilization.payLoc = paymentUtilization.amountLoc
+        }
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
 
@@ -1956,7 +1971,7 @@ open class SettlementServiceImpl : SettlementService {
             journalVoucherService.updateJournalVoucherStatus(
                 id = accountUtilization.documentNo,
                 documentValue = accountUtilization.documentValue,
-                isUtilized = true,
+                isUtilized = accountUtilization.payCurr.compareTo(BigDecimal.ZERO) != 0,
                 performedBy = performedBy,
                 performedByUserType = performedByUserType
             )
@@ -2373,7 +2388,8 @@ open class SettlementServiceImpl : SettlementService {
                 documentLedBalance = (it.amountLoc - it.payLoc),
                 sourceId = it.documentNo,
                 sourceType = SettlementType.valueOf(it.accType.name),
-                tdsCurrency = it.currency
+                tdsCurrency = it.currency,
+                migrated = it.migrated
             )
         }
 
@@ -2422,7 +2438,7 @@ open class SettlementServiceImpl : SettlementService {
         return settle(checkRequest)
     }
 
-    suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>): List<Document> {
+    private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {
         val documentModel = groupDocumentList(documentEntity).map { documentConverter.convertToModel(it!!) }
         documentModel.forEach {
             it.documentNo = Hashids.encode(it.documentNo.toLong())
@@ -2438,7 +2454,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType == AccountType.SINV.name) {
+                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,

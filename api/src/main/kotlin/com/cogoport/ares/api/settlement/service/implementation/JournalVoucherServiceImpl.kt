@@ -58,7 +58,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                 objectId = id,
                 actionName = AresConstants.UPDATE,
-                data = mapOf("id" to id, "status" to "UTILIZED"),
+                data = if (isUtilized) mapOf("id" to id, "status" to "UTILIZED") else mapOf("id" to id, "status" to "UNUTILIZED"),
                 performedBy = performedBy.toString(),
                 performedByUserType = performedByUserType
             )

@@ -256,7 +256,8 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
                     sourceType = SettlementType.valueOf(doc.accType.name),
                     settledTds = BigDecimal.ZERO,
                     tdsCurrency = doc.currency,
-                    afterTdsAmount = doc.amountCurr
+                    afterTdsAmount = doc.amountCurr,
+                    migrated = doc.migrated
                 )
             }
 
