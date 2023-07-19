@@ -1,7 +1,7 @@
 package com.cogoport.ares.model.payment
 
 enum class CompanyType(val value: String) {
-    MIDSIZE("mid_size"), ENTERPRISE("enterprise"), LONGTAIL("long_tail"), IE("ie"), CP("channel_partner")
+    MIDSIZE("mid_size"), ENTERPRISE("enterprise"), LONGTAIL("long_tail"), IE("ie"), CP("channel_partner"), OTHERS("others")
 }
 
 enum class DocumentType(val value: String) {
