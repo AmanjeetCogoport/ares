@@ -137,7 +137,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
 
         val accountTypesForDue = listOf(AccountType.PINV.name, AccountType.PREIMB.name, AccountType.PCN.name)
         val accountTypesForOnAccount = listOf(
-            AccountType.PAY.name, AccountType.BANK.name, AccountType.MISC.name
+            AccountType.PAY.name, AccountType.BANK.name, AccountType.MISC.name,
+            AccountType.OPDIV.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name
         )
         if (request.endDate.isNullOrEmpty()) {
             val localDate = LocalDate.now()
@@ -214,7 +215,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
 
     override suspend fun getLSPLedger(request: LSPLedgerRequest): LSPLedgerResponse {
         val accTypes = listOf(
-            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.BANK.name
+            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.MTC.name,
+            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name, AccountType.ROFF.name
         )
         val month = AresConstants.MONTH[request.month]
         val ledgerDocumentsByPagination = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, request.page, request.pageLimit)
@@ -246,7 +248,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
         val description = mapOf(
-            "PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous", "BANK" to "Bank"
+            "PAY" to "Payment", "PCN" to "Credit note", "PREIMB" to "Reimbursement", "PINV" to "Invoice", "MISC" to "Miscellaneous",
+            "ROFF" to "Round Off JV", "BANK" to "Bank"
         )
 
         val ledgerDocs = documentMapper.convertLedgerDetailsToLSPLedgerDocuments(ledgerDocumentsByPagination)
@@ -297,7 +300,8 @@ class LSPDashboardServiceImpl : LSPDashboardService {
 
     override suspend fun downloadLSPLedger(request: LSPLedgerRequest): String? {
         val accTypes = listOf(
-            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.BANK.name
+            AccountType.PAY.name, AccountType.PREIMB.name, AccountType.PINV.name, AccountType.MISC.name, AccountType.PCN.name, AccountType.MTC.name,
+            AccountType.OPDIV.name, AccountType.BANK.name, AccountType.INTER.name, AccountType.CONTR.name, AccountType.MTCCV.name, AccountType.ROFF.name
         )
         val month = AresConstants.MONTH[request.month]
         val ledgerDocuments = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month!!, accTypes, null, null)
