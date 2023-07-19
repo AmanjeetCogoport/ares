@@ -17,6 +17,7 @@ import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.context.annotation.Value
@@ -29,6 +30,7 @@ import java.time.LocalDate
 import java.time.LocalDate.now
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -130,22 +132,22 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 
-//    @Scheduled(cron = "0 18 * * *")
-//    fun bulkPaymentPostToSage() = runBlocking {
-//        val yesterday = now().minus(1, ChronoUnit.DAYS)
-//        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
-//        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
-//        if (!paymentIds.isNullOrEmpty()) {
-//            paymentIds.forEach {
-//                aresMessagePublisher.emitPostPaymentToSage(
-//                    PostPaymentToSage(
-//                        it,
-//                        AresConstants.ARES_USER_ID
-//                    )
-//                )
-//            }
-//        }
-//    }
+    @Scheduled(cron = "0 18 * * *")
+    fun bulkPaymentPostToSage() = runBlocking {
+        val yesterday = now().minus(1, ChronoUnit.DAYS)
+        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
+        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
+        if (!paymentIds.isNullOrEmpty()) {
+            paymentIds.forEach {
+                aresMessagePublisher.emitPostPaymentToSage(
+                    PostPaymentToSage(
+                        it,
+                        AresConstants.ARES_USER_ID
+                    )
+                )
+            }
+        }
+    }
 
     @Scheduled(cron = "0 17 * * *")
     fun bulkMatchingSettlement() = runBlocking {
