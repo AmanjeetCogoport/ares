@@ -102,3 +102,7 @@ aws:
 rabbitmq:
   uri: amqp://${RABBITMQ_USER:guest}:${RABBITMQ_PASS:guest}@${RABBITMQ_HOST:localhost}:${RABBITMQ_PORT:5672}
   consumer-executor: rabbit
+
+lsp:
+  coming_soon_banner:
+    enabled: false

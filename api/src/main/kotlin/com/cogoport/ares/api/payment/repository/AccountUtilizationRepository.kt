@@ -1087,11 +1087,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             sum(case when acc_type in ('SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as credit_note_count,
             sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as credit_note_amount,
             sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as credit_note_led_amount,
-            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' and amount_curr - pay_curr <> 0 then 1 else 0 end) as payments_count,
-            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as payments_amount,
-            sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as payments_led_amount,
-            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as outstanding_amount,
-            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'CTDS') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
+            sum(case when acc_type in ('REC', 'CTDS') and abs(amount_curr - pay_curr) > 0.001 and document_status = 'FINAL' then 1 when acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as payments_count,
+            sum(case when acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as payments_amount,
+            sum(case when acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as payments_led_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_curr - pay_curr) else 0 end) as outstanding_amount,
+            sum(case when acc_type in ('SINV', 'SREIMB') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) + sum(case when acc_type in ('SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
             from account_utilizations
             where acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') and acc_mode = 'AR' and document_status = 'FINAL'  
             and organization_id = :orgId::uuid and entity_code = :entityCode and deleted_at is null
@@ -1227,8 +1227,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.sign_flag * au.amount_loc AS balance 
             FROM account_utilizations au 
             LEFT JOIN payments p ON p.payment_num = au.document_no
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
+            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
             ORDER BY transaction_date
         """
     )
@@ -1246,8 +1247,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END), 0) AS credit,
             COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
             FROM account_utilizations au 
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID
-            AND (:date IS NULL OR au.transaction_date < :date::DATE) AND au.entity_code IN (:entityCodes)
+            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
+            AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>

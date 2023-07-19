@@ -7,7 +7,7 @@ import java.util.Date
 @Introspected
 data class LSPLedgerDocuments(
     val transactionDate: Date,
-    val ledgerCurrency: String,
+    var ledgerCurrency: String,
     var shipmentId: String?,
     var documentNo: Long,
     var documentValue: String,
