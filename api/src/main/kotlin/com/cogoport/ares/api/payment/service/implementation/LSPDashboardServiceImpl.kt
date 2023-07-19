@@ -232,6 +232,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         var exchangeRateResponse = mutableListOf<ExchangeRateResponseByDate>()
         var openingBalance = BigDecimal.ZERO
         var closingBalance = BigDecimal.ZERO
+        val documentNoBalanceMap = hashMapOf<Long, BigDecimal>()
         val allLedgerDocs = accUtilRepo.getLedgerForLSP(request.orgId, request.entityCode, request.year, month, accTypes, null, null)
         if (request.currency != allLedgerDocs!![0].ledgerCurrency) {
             exchangeRateResponse = getExchangeRateForLedgerDocs(allLedgerDocs, request.currency)
@@ -240,10 +241,14 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             allLedgerDocs.forEach { doc ->
                 val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
                 closingBalance += exchangeRate * (doc.debit.plus(doc.credit))
+                documentNoBalanceMap[doc.documentNo] = closingBalance
             }
         } else {
             openingBalance = allLedgerDocs.get(0).debit.plus(allLedgerDocs[0].credit)
-            closingBalance = allLedgerDocs.sumOf { it.debit.plus(it.credit) }
+            allLedgerDocs.forEach { doc ->
+                closingBalance += (doc.debit.plus(doc.credit))
+                documentNoBalanceMap[doc.documentNo] = closingBalance
+            }
         }
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
@@ -268,7 +273,6 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             documentSIDMap[it.id] = it.jobNumber
         }
 
-        var balance = BigDecimal.ZERO
         ledgerDocs.forEach { doc ->
             val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
             doc.type = description[doc.type] ?: doc.type
@@ -277,8 +281,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             doc.shipmentId = documentSIDMap[doc.documentNo] ?: "NA"
             doc.debit = exchangeRate * doc.debit
             doc.credit = exchangeRate * doc.credit
-            balance += (doc.debit + doc.credit)
-            doc.balance = balance
+            doc.balance = documentNoBalanceMap[doc.documentNo]
             doc.debitBalance = if (doc.balance!! > BigDecimal.ZERO) { doc.balance } else {
                 BigDecimal.ZERO
             }
