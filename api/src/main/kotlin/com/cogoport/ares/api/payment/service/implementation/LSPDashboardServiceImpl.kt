@@ -196,12 +196,12 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             val exchangeRateResponse = getExchangeRate(documentsForOnAccount, request.currency)
             documentsForOnAccount.forEach { doc ->
                 val exchangeRate = getExchangeRateByDate(doc?.transactionDate!!, doc.currency, exchangeRateResponse)
-                onAccountAmount += ((doc.amountCurr - doc.payCurr) * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
+                onAccountAmount += (doc.amountCurr * BigDecimal.valueOf(doc.signFlag.toLong(), 0)) * exchangeRate
             }
             onAccountPayment = AmountAndCount(onAccountAmount, documentsForOnAccount.size)
         } else {
             documentsForOnAccount.forEach {
-                onAccountAmount += (it?.amountLoc!! - it.payLoc) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
+                onAccountAmount += (it?.amountLoc!!) * BigDecimal.valueOf(it.signFlag.toLong(), 0)
             }
             onAccountPayment = AmountAndCount(onAccountAmount, documentsForOnAccount.size)
         }
@@ -236,14 +236,14 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         if (request.currency != allLedgerDocs!![0].ledgerCurrency) {
             exchangeRateResponse = getExchangeRateForLedgerDocs(allLedgerDocs, request.currency)
             val exchangeRateForOpeningBalance = getExchangeRateByDate(allLedgerDocs.get(0).transactionDate, allLedgerDocs.get(0).ledgerCurrency, exchangeRateResponse)
-            openingBalance = exchangeRateForOpeningBalance * allLedgerDocs.get(0).debit.minus(allLedgerDocs[0].credit)
+            openingBalance = exchangeRateForOpeningBalance * allLedgerDocs.get(0).debit.plus(allLedgerDocs[0].credit)
             allLedgerDocs.forEach { doc ->
                 val exchangeRate = getExchangeRateByDate(doc.transactionDate, doc.ledgerCurrency, exchangeRateResponse)
-                closingBalance += exchangeRate * (doc.debit.minus(doc.credit))
+                closingBalance += exchangeRate * (doc.debit.plus(doc.credit))
             }
         } else {
-            openingBalance = allLedgerDocs.get(0).debit.minus(allLedgerDocs[0].credit)
-            closingBalance = allLedgerDocs.sumOf { it.debit.minus(it.credit) }
+            openingBalance = allLedgerDocs.get(0).debit.plus(allLedgerDocs[0].credit)
+            closingBalance = allLedgerDocs.sumOf { it.debit.plus(it.credit) }
         }
 
         val totalCount = accUtilRepo.getLedgerForLSPCount(request.orgId, request.entityCode, request.year, month, accTypes)
@@ -277,7 +277,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
             doc.shipmentId = documentSIDMap[doc.documentNo] ?: "NA"
             doc.debit = exchangeRate * doc.debit
             doc.credit = exchangeRate * doc.credit
-            balance += (doc.debit - doc.credit)
+            balance += (doc.debit + doc.credit)
             doc.balance = balance
             doc.debitBalance = if (doc.balance!! > BigDecimal.ZERO) { doc.balance } else {
                 BigDecimal.ZERO
@@ -341,7 +341,7 @@ class LSPDashboardServiceImpl : LSPDashboardService {
         val ledgerExcelList = mutableListOf<LedgerExcelResponse>()
         var balance = BigDecimal.ZERO
         ledgerDocs.forEach {
-            balance += (it.debit - it.credit)
+            balance += (it.debit + it.credit)
             it.balance = balance
             it.debitBalance = if (it.balance!! > BigDecimal.ZERO) { it.balance } else {
                 BigDecimal.ZERO
