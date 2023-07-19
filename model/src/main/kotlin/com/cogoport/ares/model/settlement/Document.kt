@@ -40,5 +40,6 @@ data class Document(
     var nostroAmount: BigDecimal,
     var approved: Boolean?,
     var accMode: AccMode,
-    var hasPayrun: Boolean = false
+    var hasPayrun: Boolean = false,
+    var migrated: Boolean?
 )

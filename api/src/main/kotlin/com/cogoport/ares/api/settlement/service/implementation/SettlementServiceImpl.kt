@@ -2388,7 +2388,8 @@ open class SettlementServiceImpl : SettlementService {
                 documentLedBalance = (it.amountLoc - it.payLoc),
                 sourceId = it.documentNo,
                 sourceType = SettlementType.valueOf(it.accType.name),
-                tdsCurrency = it.currency
+                tdsCurrency = it.currency,
+                migrated = it.migrated
             )
         }
 
@@ -2453,7 +2454,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501) {
+                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
