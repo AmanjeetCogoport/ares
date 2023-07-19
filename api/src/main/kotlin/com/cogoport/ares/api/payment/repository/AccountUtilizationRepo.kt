@@ -876,12 +876,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
-                AND abs(amount_curr - pay_curr) > 0
                 AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL
                 AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+                AND
+                (
+                    CASE 
+                        WHEN acc_type IN ('PINV','PREIMB','PCN') THEN abs(amount_curr - pay_curr) > 0
+                        ELSE amount_curr > 0
+                    END
+                )
             """
     )
     suspend fun getDocumentsForLSP(orgId: String, entityCode: Int?, startDate: String?, endDate: String?, accType: List<String>): List<DocumentResponse?>
@@ -895,7 +901,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             document_value,
             document_no,
             CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN sign_flag * amount_loc ELSE 0 END as debit,
-            CASE WHEN acc_type IN ('PAY','MISC','OPDIV','BANK','INTER','CONTR','MTCCV','ROFF','MTC') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
+            CASE WHEN acc_type IN ('PAY','MISC','BANK') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
             led_currency as ledger_currency,
             acc_type::text as type
         FROM
