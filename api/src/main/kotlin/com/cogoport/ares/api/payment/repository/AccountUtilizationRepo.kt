@@ -918,7 +918,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             AND acc_type::varchar IN (:accTypes)
             AND deleted_at IS NULL
             AND is_void = false
-        ORDER BY transaction_date
+        ORDER BY transaction_date, document_no
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageLimit))
         LIMIT :pageLimit
     """
