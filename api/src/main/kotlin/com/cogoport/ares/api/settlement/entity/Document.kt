@@ -35,5 +35,6 @@ data class Document(
     var approved: Boolean?,
     var signFlag: Short,
     var accMode: AccMode,
-    var tds: BigDecimal = BigDecimal.ZERO
+    var tds: BigDecimal = BigDecimal.ZERO,
+    var migrated: Boolean?
 )
