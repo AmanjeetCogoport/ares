@@ -876,12 +876,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
-                AND abs(amount_curr - pay_curr) > 0
                 AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL
                 AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+                AND
+                (
+                    CASE 
+                        WHEN acc_type IN ('PINV','PREIMB','PCN') THEN abs(amount_loc - pay_loc) > 0
+                        ELSE amount_loc > 0
+                    END
+                )
             """
     )
     suspend fun getDocumentsForLSP(orgId: String, entityCode: Int?, startDate: String?, endDate: String?, accType: List<String>): List<DocumentResponse?>
