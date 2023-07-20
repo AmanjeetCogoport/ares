@@ -9,5 +9,6 @@ data class ListDunningCycleReq(
     var query: String? = null,
     var cycleStatus: DunningCycleStatus? = null,
     var sortType: String? = "DESC",
+    var dunningCycleType: String? = null,
     var sortBy: String? = "createdAt",
 ) : Pagination()

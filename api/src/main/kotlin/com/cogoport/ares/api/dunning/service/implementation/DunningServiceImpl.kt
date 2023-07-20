@@ -51,7 +51,6 @@ import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCategory
-import com.cogoport.ares.model.dunning.enum.DunningCycleStatus
 import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
 import com.cogoport.ares.model.dunning.enum.FREQUENCY
@@ -197,11 +196,13 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.MONTHLY &&
-            DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
-            != DunningExecutionFrequency.MONTHLY &&
-            createDunningCycleRequest.scheduleRule.dayOfMonth == null &&
-            createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 &&
-            createDunningCycleRequest.scheduleRule.dayOfMonth!! > AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
+            (
+                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
+                    != DunningExecutionFrequency.MONTHLY ||
+                    createDunningCycleRequest.scheduleRule.dayOfMonth == null ||
+                    createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 ||
+                    createDunningCycleRequest.scheduleRule.dayOfMonth!! > AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
+                )
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -209,9 +210,11 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.WEEKLY &&
-            DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
-            != DunningExecutionFrequency.WEEKLY &&
-            createDunningCycleRequest.scheduleRule.week == null
+            (
+                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
+                    != DunningExecutionFrequency.WEEKLY ||
+                    createDunningCycleRequest.scheduleRule.week == null
+                )
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -610,17 +613,14 @@ open class DunningServiceImpl(
         val dunningCycle = dunningCycleRepo.findById(Hashids.decode(request.id)[0])
             ?: throw AresException(AresError.ERR_1545, "")
 
-        if (dunningCycle.deletedAt != null || dunningCycle.isActive != false
-        ) {
-            throw AresException(AresError.ERR_1546, "")
-        }
-
         if (
             TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.MONTHLY &&
-            request.scheduleRule.dayOfMonth == null &&
-            request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
-            != DunningExecutionFrequency.MONTHLY
+            (
+                request.scheduleRule.dayOfMonth == null ||
+                    request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
+                    != DunningExecutionFrequency.MONTHLY
+                )
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -628,9 +628,11 @@ open class DunningServiceImpl(
         if (
             TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.WEEKLY &&
-            request.scheduleRule.week == null &&
-            request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
-            != DunningExecutionFrequency.WEEKLY
+            (
+                request.scheduleRule.week == null ||
+                    request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
+                    != DunningExecutionFrequency.WEEKLY
+                )
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
@@ -638,7 +640,14 @@ open class DunningServiceImpl(
             dunningCycle.id!!,
             request.updatedBy,
         )
-        return saveAndScheduleExecution(dunningCycle)
+        dunningCycle.triggerType = request.triggerType
+        dunningCycle.updatedBy = request.updatedBy
+        dunningCycle.scheduleRule = request.scheduleRule
+        dunningCycleRepo.update(dunningCycle)
+        if (dunningCycle.isActive == true) {
+            saveAndScheduleExecution(dunningCycle)
+        }
+        return dunningCycle.id!!
     }
 
     override suspend fun listDistinctCreditControllers(request: ListOrganizationStakeholderRequest): List<CreditControllerResponse> {
@@ -654,12 +663,10 @@ open class DunningServiceImpl(
             request.query = util.toQueryString(request.query)
         }
 
-        val status: Boolean = if (request.cycleStatus == null) true else request.cycleStatus == DunningCycleStatus.ACTIVE
-
         val response = dunningCycleRepo.listDunningCycle(
             pageSize = request.pageSize,
             query = request.query,
-            status = status,
+            dunningCycleType = request.dunningCycleType,
             sortBy = request.sortBy,
             sortType = request.sortType,
             pageIndex = request.pageIndex,
@@ -667,7 +674,7 @@ open class DunningServiceImpl(
 
         val totalCount = dunningCycleRepo.totalCountDunningCycle(
             query = request.query,
-            status = status
+            dunningCycleType = request.dunningCycleType
         )
 
         response.forEach {

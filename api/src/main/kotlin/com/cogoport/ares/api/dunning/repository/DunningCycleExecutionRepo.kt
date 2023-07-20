@@ -30,7 +30,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-             UPDATE dunning_cycle_executions SET status = 'CANCELLED'
+             UPDATE dunning_cycle_executions SET status = 'CANCELLED',
              updated_at = now(),
              updated_by = :updatedBy
              WHERE dunning_cycle_id = :dunningId

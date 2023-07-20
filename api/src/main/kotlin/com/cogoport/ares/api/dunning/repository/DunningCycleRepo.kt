@@ -18,7 +18,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             UPDATE 
                 dunning_cycles 
             SET 
-                is_active = :status ,
+                is_active = :status,
                 updated_at = now()
             WHERE
                 id = :id
@@ -45,7 +45,7 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             WHERE
                 deleted_at IS NULL AND
                 (:query IS NULL OR name ILIKE :query) AND
-                (:status IS NULL OR is_active = :status)
+                (:dunningCycleType IS NULL OR cycle_type::varchar = :dunningCycleType)
                  ORDER BY
                  CASE WHEN :sortType = 'ASC' AND :sortBy = 'createdAt' THEN created_at END ASC,
                  CASE WHEN :sortType = 'DESC' AND :sortBy = 'createdAt' THEN created_at END DESC,
@@ -57,9 +57,9 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
     )
     suspend fun listDunningCycle(
         query: String? = null,
-        status: Boolean? = null,
         sortBy: String? = "createdAt",
         sortType: String? = "DESC",
+        dunningCycleType: String?,
         pageIndex: Int? = 1,
         pageSize: Int? = 10
     ): List<DunningCycleResponse>
@@ -74,12 +74,14 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             WHERE
                 (:query IS NULL OR name ILIKE :query) AND
                 (:status IS NULL OR is_active = :status) AND
+                (:dunningCycleType IS NULL OR cycle_type::varchar = :dunningCycleType) AND
                 deleted_at IS NULL
         """
     )
     suspend fun totalCountDunningCycle(
         query: String? = null,
-        status: Boolean? = null,
+        status: Boolean? = false,
+        dunningCycleType: String? = null
     ): Long
 
     @NewSpan
