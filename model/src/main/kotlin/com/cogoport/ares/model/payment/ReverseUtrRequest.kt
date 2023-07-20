@@ -11,5 +11,6 @@ data class ReverseUtrRequest(
     var transactionRef: String,
     var updatedBy: UUID?,
     var performedByType: String?,
-    var paymentUploadAuditId: Long
+    var paymentUploadAuditId: Long,
+    var documentValue: String
 )

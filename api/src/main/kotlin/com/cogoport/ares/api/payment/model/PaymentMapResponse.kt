@@ -10,4 +10,5 @@ data class PaymentMapResponse(
     var mappingType: PaymentInvoiceMappingType,
     var amount: BigDecimal,
     var ledAmount: BigDecimal,
+    var documentNo: Long
 )

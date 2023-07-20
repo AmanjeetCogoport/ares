@@ -78,7 +78,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 and deleted_at is null and document_status != 'DELETED'::document_status
             """
     )
-    suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): AccountUtilization?
+    suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): List<AccountUtilization>?
 
     @NewSpan
     @Query("delete from account_utilizations where id=:id")

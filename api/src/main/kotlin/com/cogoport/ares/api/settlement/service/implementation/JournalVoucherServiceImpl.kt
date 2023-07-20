@@ -109,7 +109,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             updatedAt = Timestamp.from(Instant.now()),
             accCode = accCode,
             migrated = false,
-            settlementEnabled = settlementEnabled
+            settlementEnabled = settlementEnabled,
+            isProforma = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 
