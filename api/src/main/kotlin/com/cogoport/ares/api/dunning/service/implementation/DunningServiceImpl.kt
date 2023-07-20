@@ -2,6 +2,7 @@ package com.cogoport.ares.api.dunning.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
+import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
 import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
 import com.cogoport.ares.api.common.AresConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
 import com.cogoport.ares.api.common.client.AuthClient
@@ -35,6 +36,8 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AuditRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
+import com.cogoport.ares.api.payment.service.implementation.DefaultedBusinessPartnersServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.ExcelUtils
@@ -71,6 +74,7 @@ import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatus
 import com.cogoport.ares.model.dunning.request.UserInvitationRequest
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCardData
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
@@ -107,7 +111,9 @@ open class DunningServiceImpl(
     private val railsClient: RailsClient,
     private val dunningEmailAuditRepo: DunningEmailAuditRepo,
     private val dunningMapper: DunningMapper,
-    private val thirdPartyApiAuditService: ThirdPartyApiAuditService
+    private val thirdPartyApiAuditService: ThirdPartyApiAuditService,
+    private val businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl,
+    private val unifiedDBRepo: UnifiedDBRepo
 ) : DunningService {
 
     @Transactional
@@ -1107,6 +1113,29 @@ open class DunningServiceImpl(
         return userInvitationId
     }
 
+    override suspend fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
+        isSynchronousCall: Boolean
+    ): String {
+
+        if (isSynchronousCall) {
+            return "We got your request. will sent you mail on ${sendMailOfAllCommunicationToTradePartyReq.userEmail} with report."
+        }
+
+        TODO("write code to send mail")
+        return ""
+    }
+
+    override suspend fun dunningCardData(entityCode: MutableList<Int>?): DunningCardData {
+        val defaultedOrgIds = businessPartnersServiceImpl.listTradePartyDetailIds()
+        val response = accountUtilizationRepo.getCustomerWithOutStanding(entityCode, defaultedOrgIds)
+        response.ledgerCurrency = LEDGER_CURRENCY[entityCode?.get(0)] ?: "INR"
+        val onAccount = unifiedDBRepo.getOnAccountAmount(entityCode, defaultedOrgIds, "AR", listOf("REC", "CTDS", "BANK", "CONTR", "ROFF", "MTCCV", "MISC", "INTER", "OPDIV", "MTC", "PAY"))
+        response.totalOutstandingAmount = response.totalOutstandingAmount?.minus(onAccount ?: 0.toBigDecimal())
+        response.activeCycles = dunningCycleRepo.totalCountDunningCycle(status = true)
+        return response
+    }
+
     private suspend fun recordFailedThirdPartyApiAudits(objectId: Long, request: String, response: String, apiName: String, objectName: String, apiType: String) {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(
@@ -1121,18 +1150,5 @@ open class DunningServiceImpl(
                 false
             )
         )
-    }
-
-    override suspend fun sendMailOfAllCommunicationToTradeParty(
-        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
-        isSynchronousCall: Boolean
-    ): String {
-
-        if (isSynchronousCall) {
-            return "We got your request. will sent you mail on ${sendMailOfAllCommunicationToTradePartyReq.userEmail} with report."
-        }
-
-        TODO("write code to send mail")
-        return ""
     }
 }

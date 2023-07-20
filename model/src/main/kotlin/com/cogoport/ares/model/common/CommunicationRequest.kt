@@ -1,13 +1,15 @@
 package com.cogoport.ares.model.common
 
+import com.cogoport.ares.model.dunning.request.CommunicationVariables
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
-import kotlin.collections.HashMap
 
 @Introspected
+@JsonInclude(JsonInclude.Include.ALWAYS)
 data class CommunicationRequest(
     @JsonProperty("variables")
-    var variables: HashMap<String, Any?>,
+    var variables: CommunicationVariables,
     @JsonProperty("reply_to_message_id")
     var replyToMessageId: String?,
     @JsonProperty("organization_id")

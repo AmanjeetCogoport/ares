@@ -21,6 +21,7 @@ import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCardData
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
@@ -72,4 +73,6 @@ interface DunningService {
     suspend fun createDunningPaymentLink(token: String): String
 
     suspend fun createRelevantUser(request: CreateUserRequest): String?
+
+    suspend fun dunningCardData(entityCode: MutableList<Int>?): DunningCardData
 }

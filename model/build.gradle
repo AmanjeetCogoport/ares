@@ -45,6 +45,8 @@ dependencies {
 
     //heimdall dependencies
     implementation("com.cogoport.heimdall:heimdall-model:1.0.6")
+
+    implementation("jakarta.persistence:jakarta.persistence-api:2.2.3")
 }
  publishing {
      repositories {

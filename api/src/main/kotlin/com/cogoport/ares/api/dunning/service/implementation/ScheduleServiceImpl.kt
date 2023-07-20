@@ -42,9 +42,13 @@ import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditSer
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CommunicationRequest
+import com.cogoport.ares.model.common.CommunicationResp
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
+import com.cogoport.ares.model.dunning.request.CommunicationVariables
+import com.cogoport.ares.model.dunning.request.PaymentSummary
 import com.cogoport.ares.model.dunning.request.TicketGenerationReq
+import com.cogoport.ares.model.dunning.request.UnPaidInvoiceSummary
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplyAgent
@@ -59,6 +63,8 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -384,10 +390,10 @@ class ScheduleServiceImpl(
                 replyToMessageId = getReplyToMessageId(toUserEmail!!),
                 variables = variables
             )
-            var communicationId: UUID? = null
+            var communicationResponse: CommunicationResp? = null
             try {
-                communicationId = railsClient.createCommunication(communicationRequest)
-                if (communicationId == null) {
+                communicationResponse = railsClient.createCommunication(communicationRequest)
+                if (communicationResponse?.id == null) {
                     throw Exception("mail could not be sent")
                 }
                 logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
@@ -398,11 +404,11 @@ class ScheduleServiceImpl(
             try {
                 dunningExecutionRepo.updateServiceId(executionId, serviceId)
                 dunningEmailAuditObject.isSuccess = true
-                dunningEmailAuditObject.communicationId = communicationId
+                dunningEmailAuditObject.communicationId = UUID.fromString(communicationResponse.id)
                 val auditId = createDunningAudit(dunningEmailAuditObject)
                 saveTokens(listOf(Pair(addUserToken, TokenTypes.RELEVANT_USER), Pair(paymentToken, TokenTypes.DUNNING_PAYMENT)), auditId)
             } catch (err: Exception) {
-                logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId but after operation could not happend with communicationId $communicationId")
+                logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId but after operation could not happend with communicationId ${communicationResponse.id}")
             }
         } catch (err: Exception) {
             logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId} with $err")
@@ -463,22 +469,21 @@ class ScheduleServiceImpl(
         userToken: String?,
         ticketToken: String?,
         isPartnerUser: Boolean?
-    ): HashMap<String, Any?> {
+    ): CommunicationVariables {
         val addUserUrl = "$orgUrl/add-dunning-relevant-user-v2/$userToken"
         val ticketUrl = "$orgUrl/create-ticket-v2/$ticketToken?source=dunning&type="
-
-        return hashMapOf(
-            "customerName" to outstanding.businessName,
-            "unpaid_invoices_summary" to getUnPaidInvoiceSummary(invoiceDocuments),
-            "signatory" to signatory,
-            "bankDetails" to bankDetails,
-            "payment_summary" to getPaymentSummary(paymentDocuments),
-            "from_date" to LocalDate.now().minusWeeks(1).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-            "to_date" to LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-            "contactDetails" to contactDetails,
-            "add_user_url" to if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
-            "invoice_url" to if (isPartnerUser == true) partnerUrl else orgUrl,
-            "ticket_url" to ticketUrl
+        return CommunicationVariables(
+            customerName = outstanding.businessName,
+            unpaidInvoiceSummary = getUnPaidInvoiceSummary(invoiceDocuments),
+            signatory = signatory,
+            bankDetails = bankDetails,
+            paymentSummary = getPaymentSummary(paymentDocuments),
+            fromDate = LocalDate.now().minusWeeks(1).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+            toDate = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+            contactDetails = contactDetails,
+            addUserUrl = if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
+            invoiceUrl = if (isPartnerUser == true) partnerUrl else orgUrl,
+            ticketUrl = ticketUrl
         )
     }
 
@@ -492,37 +497,37 @@ class ScheduleServiceImpl(
         userToken: String?,
         ticketToken: String?,
         isPartnerUser: Boolean?
-    ): HashMap<String, Any?> {
+    ): CommunicationVariables {
         val addUserUrl = "$orgUrl/add-dunning-relevant-user-v2/$userToken"
         val ticketUrl = "$orgUrl/create-ticket-v2/$ticketToken?source=dunning&type="
 
-        val openInvoiceOne = outstanding.openInvoiceAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("thirty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val onAccountOne = outstanding.onAccountAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("thirty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val openInvoiceTwo = outstanding.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("sixty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val onAccountTwo = outstanding.onAccountAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("sixty")!!.ledgerAmount) ?: 0.toBigDecimal()
+        val openInvoiceOne = outstanding.openInvoiceAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("thirty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val onAccountOne = outstanding.onAccountAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("thirty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val openInvoiceTwo = outstanding.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("sixty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val onAccountTwo = outstanding.onAccountAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("sixty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
         val entityCode = outstanding.entityCode
-        return hashMapOf(
-            "customerName" to outstanding.businessName,
-            "ageing_bracket_I" to formatMoney(openInvoiceOne.plus(onAccountOne))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_II" to formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_III" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_IV" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_V" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
+        return CommunicationVariables(
+            customerName = outstanding.businessName,
+            ageingBucket1 = formatMoney(openInvoiceOne.plus(onAccountOne))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket2 = formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket3 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket4 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             // ageing_bracket_VI is still pending to put here
-            "ageing_bracket_VI" to 123, // dummy data
-            "total_outstanding" to formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount!!))[LEDGER_CURRENCY[entityCode]],
-            "unpaid_invoices_summary" to getUnPaidInvoiceSummary(invoiceDocuments),
-            "signatory" to signatory,
-            "bankDetails" to bankDetails,
-            "payment_summary" to getPaymentSummary(paymentDocuments),
-            "from_date" to LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-            "to_date" to LocalDate.now().plusDays(10).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-            "on_account" to formatMoney(outstanding.onAccount?.ledgerAmount)[LEDGER_CURRENCY[entityCode]],
-            "contactDetails" to contactDetails,
-            "add_user_url" to if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
-            "invoice_url" to if (isPartnerUser == true) partnerUrl else orgUrl,
-            "feedback_url" to "",
-            "ticket_url" to ticketUrl
+            ageingBucket6 = "123",
+            totalOutstanding = formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            unpaidInvoiceSummary = getUnPaidInvoiceSummary(invoiceDocuments),
+            signatory = signatory,
+            bankDetails = bankDetails,
+            paymentSummary = getPaymentSummary(paymentDocuments),
+            fromDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+            toDate = LocalDate.now().plusDays(10).format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
+            onAccount = formatMoney(outstanding.onAccount?.ledgerAmount)[LEDGER_CURRENCY[entityCode]],
+            contactDetails = contactDetails,
+            addUserUrl = if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
+            invoiceUrl = if (isPartnerUser == true) partnerUrl else orgUrl,
+            feedbackUrl = if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
+            ticketUrl = ticketUrl
         )
     }
 
@@ -538,69 +543,69 @@ class ScheduleServiceImpl(
         ticketToken: String?,
         isPartnerUser: Boolean?,
         paymentToken: String?,
-    ): HashMap<String, Any?> {
+    ): CommunicationVariables {
         val addUserUrl = "$orgUrl/add-dunning-relevant-user-v2/$userToken"
         val ticketUrl = "$orgUrl/create-ticket-v2/$ticketToken?source=dunning&type="
         val paymentUrl = "$orgUrl/dunning-payment-v2/$paymentToken"
 
-        val openInvoiceOne = outstanding.openInvoiceAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("thirty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val onAccountOne = outstanding.onAccountAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("thirty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val openInvoiceTwo = outstanding.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("sixty")!!.ledgerAmount) ?: 0.toBigDecimal()
-        val onAccountTwo = outstanding.onAccountAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("sixty")!!.ledgerAmount) ?: 0.toBigDecimal()
+        val openInvoiceOne = outstanding.openInvoiceAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("thirty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val onAccountOne = outstanding.onAccountAgeingBucket?.get("notDue")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("thirty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val openInvoiceTwo = outstanding.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.openInvoiceAgeingBucket?.get("sixty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
+        val onAccountTwo = outstanding.onAccountAgeingBucket?.get("fortyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("sixty")?.ledgerAmount ?: 0.toBigDecimal()) ?: 0.toBigDecimal()
         val entityCode = outstanding.entityCode
-        return hashMapOf(
-            "customerName" to outstanding.businessName,
-            "ageing_bracket_I" to formatMoney(openInvoiceOne.plus(onAccountOne))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_II" to formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_III" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_IV" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
-            "ageing_bracket_V" to formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")!!.ledgerAmount))[LEDGER_CURRENCY[entityCode]],
+        return CommunicationVariables(
+            customerName = outstanding.businessName,
+            ageingBucket1 = formatMoney(openInvoiceOne.plus(onAccountOne))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket2 = formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket3 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket4 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             // ageing_bracket_VI is still pending to put here
-            "ageing_bracket_VI" to 123, // dummy data
-            "total_outstanding" to formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount!!))[LEDGER_CURRENCY[entityCode]],
-            "unpaid_invoices_summary" to getUnPaidInvoiceSummary(invoiceDocuments),
-            "signatory" to signatory,
-            "bankDetails" to bankDetails,
-            "payment_summary" to getPaymentSummary(paymentDocuments),
-            "on_account" to formatMoney(outstanding.onAccount?.ledgerAmount)[LEDGER_CURRENCY[entityCode]],
-            "contactDetails" to contactDetails,
-            "severity_mail" to severityTemplate,
-            "add_user_url" to if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
-            "invoice_url" to if (isPartnerUser == true) partnerUrl else orgUrl,
-            "payment_url" to if (outstanding.entityCode == ENTITY_101) getPaymentLink(paymentUrl) else "",
-            "feedback_url" to "",
-            "ticket_url" to ticketUrl
+            ageingBucket6 = "123",
+            totalOutstanding = formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            unpaidInvoiceSummary = getUnPaidInvoiceSummary(invoiceDocuments),
+            signatory = signatory,
+            bankDetails = bankDetails,
+            paymentSummary = getPaymentSummary(paymentDocuments),
+            onAccount = formatMoney(outstanding.onAccount?.ledgerAmount)[LEDGER_CURRENCY[entityCode]],
+            contactDetails = contactDetails,
+            severityMail = severityTemplate,
+            addUserUrl = if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
+            invoiceUrl = if (isPartnerUser == true) partnerUrl else orgUrl,
+            paymentUrl = if (outstanding.entityCode == ENTITY_101) getPaymentLink(paymentUrl) else "",
+            feedbackUrl = if (outstanding.tradePartyType?.contains("self") == true) addUserUrl else orgUrl,
+            ticketUrl = ticketUrl
         )
     }
 
-    private fun getUnPaidInvoiceSummary(invoiceDocuments: List<DunningInvoices>): MutableList<HashMap<String, String?>> {
-        val unpaidInvoiceSummary = mutableListOf<HashMap<String, String?>>()
+    private fun getUnPaidInvoiceSummary(invoiceDocuments: List<DunningInvoices>): MutableList<UnPaidInvoiceSummary> {
+        val unpaidInvoiceSummary = mutableListOf<UnPaidInvoiceSummary>()
         invoiceDocuments.forEach {
             unpaidInvoiceSummary.add(
-                hashMapOf(
-                    "shipment_serial_id" to it.jobNumber,
-                    "invoice_id" to it.documentValue,
-                    "pdf_url" to it.pdfUrl,
-                    "invoice_sub_type" to it.invoiceType,
-                    "grand_total" to it.amountLoc.toString(),
-                    "balance" to (it.amountLoc - it.payLoc).toString(),
-                    "due_date" to it.dueDate.toString(),
-                    "relative_duration" to it.relativeDuration
+                UnPaidInvoiceSummary(
+                    sid = it.jobNumber,
+                    invoiceNumber = it.documentValue,
+                    pdfUrl = it.pdfUrl,
+                    invoiceType = it.invoiceType,
+                    grandTotal = it.amountLoc.toString(),
+                    balance = (it.amountLoc - it.payLoc).toString(),
+                    dueDate = it.dueDate.toString(),
+                    relativeDuration = it.relativeDuration
                 )
             )
         }
         return unpaidInvoiceSummary
     }
 
-    private fun getPaymentSummary(paymentDocuments: List<DunningPayments>): MutableList<HashMap<String, Any>> {
-        val paymentSummary = mutableListOf<HashMap<String, Any>>()
+    private fun getPaymentSummary(paymentDocuments: List<DunningPayments>): MutableList<PaymentSummary> {
+        val paymentSummary = mutableListOf<PaymentSummary>()
         paymentDocuments.forEach {
             paymentSummary.add(
-                hashMapOf(
-                    "payment_num" to it.documentValue,
-                    "account_util_amt_led" to it.amountLoc,
-                    "sign_flag" to it.signFlag,
-                    "transaction_date" to it.transactionDate.toString()
+                PaymentSummary(
+                    paymentNum = it.documentValue,
+                    ledAmount = it.amountLoc,
+                    signFlag = it.signFlag,
+                    transactionDate = it.transactionDate.toString()
                 )
             )
         }
@@ -684,9 +689,14 @@ class ScheduleServiceImpl(
     }
 
     private fun formatMoney(amount: BigDecimal?): Map<String, String> {
+        val symbols = DecimalFormatSymbols().apply {
+            groupingSeparator = '.'
+            decimalSeparator = ','
+        }
         return mapOf(
-            "INR" to "INR ${"%.2f".format(amount).replace(",", ".")}",
-            "USD" to "USD ${"%.2f".format(amount).replace(",", ".")}"
+            "INR" to "INR ${DecimalFormat("#,##,##0.00").format(amount)}",
+            "USD" to "USD ${DecimalFormat("#,##,##0.00").format(amount)}",
+            "VND" to "VND ${DecimalFormat("#,##0.00", symbols).format(amount)}"
         )
     }
 

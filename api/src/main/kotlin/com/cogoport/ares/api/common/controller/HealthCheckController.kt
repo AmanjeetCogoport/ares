@@ -16,7 +16,7 @@ class HealthCheckController(
         val a = railsClient.sendPaymentReminderToTradeParty(
             PaymentReminderReq(
                 cycleExecutionId = 1,
-                tradePartyDetailId = UUID.fromString("1aca1260-9813-4fa1-9af3-fb1db2a63b22")
+                tradePartyDetailId = UUID.fromString("13637b93-fe15-44d5-a979-3c7dc3c2403f")
             )
         )
 

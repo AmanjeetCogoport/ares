@@ -17,6 +17,7 @@ data class DunningCycleExecutionResponse(
     @MappedProperty(type = DataType.JSON)
     var scheduleRule: DunningScheduleRule,
     var frequency: String,
+    var serviceId: String?,
     var scheduledAt: Timestamp,
     var triggerType: String,
     var createdAt: Timestamp,

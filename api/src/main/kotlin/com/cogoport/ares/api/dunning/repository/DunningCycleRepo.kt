@@ -76,8 +76,8 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
         """
     )
     suspend fun totalCountDunningCycle(
-        query: String?,
-        status: Boolean?,
+        query: String? = null,
+        status: Boolean? = null,
     ): Long
 
     @NewSpan
@@ -117,7 +117,8 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 frequency,
                 scheduled_at,
                 trigger_type,
-                created_at AS created_at
+                created_at AS created_at,
+                service_id
             FROM dunning_cycle_executions
             WHERE 
             (:dunningCycleId IS NULL OR dunning_cycle_id = :dunningCycleId)

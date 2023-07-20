@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.model.common.CommunicationRequest
+import com.cogoport.ares.model.common.CommunicationResp
 import com.cogoport.ares.model.common.GetPartnerRequest
 import com.cogoport.ares.model.dunning.request.UserInvitationRequest
 import com.cogoport.ares.model.settlement.ListCogoEntities
@@ -37,7 +38,7 @@ interface RailsClient {
     @Get("/partner/get_partner{?request*}")
     suspend fun getPartnerDetails(@QueryValue request: GetPartnerRequest): Any?
 
-    @Get("/list_communication_templates?filters%5Bid%5D={id}")
+    @Get("/communication/list_communication_templates?filters%5Bid%5D={id}")
     suspend fun listCommunicationTemplate(id: UUID): ListOrganizationTradePartyDetailsResponse
 
     @Get("/list_partners?filters%5Btwin_importer_exporter_id%5D={organizationId}")
@@ -56,7 +57,7 @@ interface RailsClient {
     suspend fun listCommunication(email: String): ListOrganizationTradePartyDetailsResponse
 
     @Post("/create_communication")
-    suspend fun createCommunication(@Body communicationRequest: CommunicationRequest?): UUID?
+    suspend fun createCommunication(@Body communicationRequest: CommunicationRequest?): CommunicationResp?
 
     @Post("/create_organization_user_invitation")
     suspend fun createOrgUserInvitation(@Body request: UserInvitationRequest): HashMap<String, String>?

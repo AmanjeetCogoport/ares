@@ -9,6 +9,7 @@ import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCardData
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
 import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.AccMode
@@ -1394,4 +1395,19 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         serviceTypes: List<String>?,
         entityCodes: List<Int>?
     ): List<MonthWiseStatisticsOfAccountUtilizationResponse>
+
+    @NewSpan
+    @Query(
+        """
+     SELECT COUNT(DISTINCT organization_id) AS total_customers , 
+        COALESCE(SUM(sign_flag * (amount_loc - pay_loc)),0) as  total_outstanding_amount
+        FROM account_utilizations WHERE acc_mode = 'AR' AND document_status = 'FINAL' AND deleted_at IS NULL
+        AND acc_type IN ('SINV', 'SCN','SREIMB', 'SREIMBCN')
+        AND due_date < now()::date 
+        AND due_date IS NOT NULL
+        AND (COALESCE(:defaultedOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultedOrgIds))
+        AND (COALESCE(:entityCode) IS NULL OR entity_code  IN (:entityCode))
+    """
+    )
+    suspend fun getCustomerWithOutStanding(entityCode: List<Int>?, defaultedOrgIds: List<UUID>?): DunningCardData
 }

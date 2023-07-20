@@ -22,6 +22,7 @@ import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCardData
 import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
@@ -191,7 +192,7 @@ class DunningController(
         )
     }
 
-    @Get("create-dunning-payment-link")
+    @Get("create-payment-link")
     suspend fun createDunningPaymentLink(@QueryValue("token") token: String): String {
         return dunningService.createDunningPaymentLink(token)
     }
@@ -199,5 +200,9 @@ class DunningController(
     @Post("create-dunning-relevant-user")
     suspend fun createRelevantUser(@Body request: CreateUserRequest): String? {
         return dunningService.createRelevantUser(request)
+    }
+    @Get("card-data")
+    suspend fun dunningCardData(@QueryValue("entityCode") entityCode: MutableList<Int>?): DunningCardData {
+        return dunningService.dunningCardData(entityCode)
     }
 }
