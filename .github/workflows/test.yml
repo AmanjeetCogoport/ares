@@ -12,7 +12,7 @@ permissions:
 env:
   POSTGRES_USER: cogoport
   POSTGRES_PASSWORD: cogoport123
-  POSTGRES_DB: kuber
+  POSTGRES_DB: ares
   MICRONAUT_ENVIRONMENT: "test"
   OPENSEARCH_HOST: localhost
   OPENSEARCH_PORT: 9200
