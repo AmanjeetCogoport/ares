@@ -15,14 +15,6 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
     @NewSpan
     @Query(
         """
-            SELECT * FROM organization_stakeholders WHERE organizationId IN (:organizationIds);
-        """
-    )
-    suspend fun listOrganizationStakeholderUsingOrgId(organizationIds: List<UUID>): List<OrganizationStakeholder>
-
-    @NewSpan
-    @Query(
-        """
                 SELECT
                     DISTINCT ON (organization_stakeholder_id) organization_stakeholder_id,
                     organization_stakeholder_name
@@ -34,7 +26,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
                     organization_stakeholder_id
             """
     )
-    suspend fun listDistinctlistOnorganizationStakeholders(
+    suspend fun listDistinctOrganizationStakeholders(
         query: String?
     ): List<CreditControllerResponse>
 
@@ -49,7 +41,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
                 organization_stakeholder_id :: UUID in (:organizationStakeholderIds)
         """
     )
-    suspend fun listOrganizationIdBasedOnorganizationStakeholderIds(organizationStakeholderIds: List<UUID>?): List<UUID>
+    suspend fun listOrganizationIdBasedOnOrganizationStakeholderIds(organizationStakeholderIds: List<UUID>?): List<UUID>
 
     @NewSpan
     @Query(

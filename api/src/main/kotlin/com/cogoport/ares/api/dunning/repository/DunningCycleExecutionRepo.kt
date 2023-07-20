@@ -14,22 +14,6 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-            UPDATE dunning_cycle_executions
-            SET 
-                deleted_at = NOW(),
-                status = 'CANCELLED',
-                updated_at = NOW(),
-                updated_by = :updatedBy
-             WHERE id = :id
-        """
-    )
-    suspend fun deleteCycleExecution(
-        id: Long,
-        updatedBy: UUID
-    )
-    @NewSpan
-    @Query(
-        """
             UPDATE dunning_cycle_executions SET status = :status WHERE id = :id
         """
     )

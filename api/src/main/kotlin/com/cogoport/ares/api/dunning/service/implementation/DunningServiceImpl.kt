@@ -340,7 +340,7 @@ open class DunningServiceImpl(
 
         var taggedOrganizationIds: List<UUID>? = listOf()
         if (request.organizationStakeholderIds != null) {
-            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnorganizationStakeholderIds(
+            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnOrganizationStakeholderIds(
                 organizationStakeholderIds = request.organizationStakeholderIds
             )
         }
@@ -646,7 +646,7 @@ open class DunningServiceImpl(
         if (request.query != null)
             query = "%${request.query}%"
 
-        return organizationStakeholderRepo.listDistinctlistOnorganizationStakeholders(query)
+        return organizationStakeholderRepo.listDistinctOrganizationStakeholders(query)
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {

@@ -238,13 +238,13 @@ class ScheduleServiceImpl(
                 pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
             } catch (err: Exception) {
                 recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list_sids_and_pdfs_from_plutus")
-//                throw err
+                throw err
             }
 
             invoiceDocuments.forEach { t ->
-                val data = pdfAndSids?.firstOrNull { it.invoiceId == t.documentNo }
-                t.pdfUrl = data?.invoicePdfUrl ?: "abc"
-                t.jobNumber = data?.jobNumber ?: "123"
+                val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
+                t.pdfUrl = data?.invoicePdfUrl
+                t.jobNumber = data?.jobNumber
             }
 
             val creditControllerData = outstandingData.list[0]?.creditController
