@@ -1222,9 +1222,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.document_value,
             p.trans_ref_number AS transaction_ref_number,
             au.led_currency AS ledger_currency,
-            CASE WHEN au.sign_flag < 0 THEN (au.amount_loc - au.pay_loc) ELSE 0 END AS credit,
-            CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc) ELSE 0 END AS debit,
-            au.sign_flag * (au.amount_loc - au.pay_loc) AS balance 
+            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS credit,
+            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS debit,
+            au.sign_flag * au.amount_loc AS balance 
             FROM account_utilizations au 
             LEFT JOIN payments p ON p.payment_num = au.document_no
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
