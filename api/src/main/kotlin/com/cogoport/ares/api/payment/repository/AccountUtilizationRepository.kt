@@ -547,6 +547,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.led_currency, 
             au.sign_flag,
             au.acc_mode,
+            au.migrated,
             CASE WHEN 
             	au.id in (select id from MAPPINGS) 
         	THEN

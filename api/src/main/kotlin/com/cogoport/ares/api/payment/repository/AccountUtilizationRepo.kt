@@ -649,6 +649,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             au.led_currency, 
             au.sign_flag,
             au.acc_mode,
+            au.migrated,
             CASE WHEN 
             	au.id in (select id from MAPPINGS) 
         	THEN
@@ -876,12 +877,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 WHERE acc_type::varchar in (:accType)
                 AND acc_mode = 'AP'
                 AND document_status in ('FINAL', 'PROFORMA')
-                AND abs(amount_curr - pay_curr) > 0
                 AND organization_id IS NOT NULL
                 AND due_date IS NOT NULL
                 AND organization_id = :orgId::uuid AND deleted_at IS NULL AND is_void = false
                 AND (:entityCode IS NULL OR entity_code = :entityCode)
                 AND (:startDate is null or :endDate is null or transaction_date::DATE BETWEEN :startDate::DATE AND :endDate::DATE)
+                AND
+                (
+                    CASE 
+                        WHEN acc_type IN ('PINV','PREIMB','PCN') THEN abs(amount_loc - pay_loc) > 0
+                        ELSE amount_loc > 0
+                    END
+                )
             """
     )
     suspend fun getDocumentsForLSP(orgId: String, entityCode: Int?, startDate: String?, endDate: String?, accType: List<String>): List<DocumentResponse?>
@@ -911,7 +918,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             AND acc_type::varchar IN (:accTypes)
             AND deleted_at IS NULL
             AND is_void = false
-        ORDER BY transaction_date
+        ORDER BY transaction_date, document_no
         OFFSET GREATEST(0, ((:pageIndex - 1) * :pageLimit))
         LIMIT :pageLimit
     """
