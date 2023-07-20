@@ -181,24 +181,17 @@ open class DunningServiceImpl(
         if (createDunningCycleRequest.name.length < 5) throw AresException(AresError.ERR_1544, "")
         if (createDunningCycleRequest.scheduleRule.scheduleTime.length != 5) throw AresException(AresError.ERR_1547, "")
 
-        if (
-            TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.ONE_TIME &&
-            FREQUENCY.valueOf(createDunningCycleRequest.frequency) != FREQUENCY.ONE_TIME
-        ) {
+        if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.ONE_TIME && FREQUENCY.valueOf(createDunningCycleRequest.frequency) != FREQUENCY.ONE_TIME) {
             throw AresException(AresError.ERR_1003, "")
-        } else if (
-            TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME
+        } else if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC && FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
 
-        if (
-            TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
+        if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.MONTHLY &&
             (
-                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
-                    != DunningExecutionFrequency.MONTHLY ||
+                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency) != DunningExecutionFrequency.MONTHLY ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth == null ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth!! > AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
@@ -211,8 +204,7 @@ open class DunningServiceImpl(
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
             FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.WEEKLY &&
             (
-                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency)
-                    != DunningExecutionFrequency.WEEKLY ||
+                DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency) != DunningExecutionFrequency.WEEKLY ||
                     createDunningCycleRequest.scheduleRule.week == null
                 )
         ) {
