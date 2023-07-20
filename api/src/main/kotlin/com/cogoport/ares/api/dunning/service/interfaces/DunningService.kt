@@ -18,7 +18,7 @@ import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountReq
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
-import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
+import com.cogoport.ares.model.dunning.request.UpdateDunningCycleStatusReq
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCardData
@@ -45,7 +45,7 @@ interface DunningService {
 
     suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean
 
-    suspend fun updateStatusDunningCycle(updateDunningCycleExecutionStatusReq: UpdateDunningCycleExecutionStatusReq): Boolean
+    suspend fun updateStatusDunningCycle(updateDunningCycleExecutionStatusReq: UpdateDunningCycleStatusReq): Boolean
 
     suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse>
 

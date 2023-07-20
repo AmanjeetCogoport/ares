@@ -4,7 +4,7 @@ import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
 @Introspected
-data class UpdateDunningCycleExecutionStatusReq(
+data class UpdateDunningCycleStatusReq(
     var id: String,
     var updatedBy: UUID,
     var isDunningCycleActive: Boolean

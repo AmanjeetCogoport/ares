@@ -22,4 +22,5 @@ data class DunningCycleResponse(
     var cycleType: String,
     var createdAt: Timestamp?,
     var updatedAt: Timestamp?,
+    var isDunningCycleActive: Boolean
 )

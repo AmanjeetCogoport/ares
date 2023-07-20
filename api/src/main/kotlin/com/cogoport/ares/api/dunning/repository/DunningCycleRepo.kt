@@ -18,8 +18,9 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             UPDATE 
                 dunning_cycles 
             SET 
-                is_active = :status 
-            WHERE 
+                is_active = :status ,
+                updated_at = now()
+            WHERE
                 id = :id
         """
     )
@@ -37,7 +38,8 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
                 cycle_type::varchar,
                 trigger_type,
                 created_at::timestamp,
-                updated_at::timestamp
+                updated_at::timestamp,
+                is_active AS is_dunning_cycle_active
             FROM
                 dunning_cycles
             WHERE

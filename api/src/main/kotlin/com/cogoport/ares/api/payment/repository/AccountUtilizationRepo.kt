@@ -934,7 +934,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
         query: String?,
-        serviceTypes: List<String>?,
+        serviceTypes: List<String>? = null,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,

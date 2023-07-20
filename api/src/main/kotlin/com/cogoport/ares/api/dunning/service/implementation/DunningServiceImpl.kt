@@ -70,7 +70,7 @@ import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountReq
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
-import com.cogoport.ares.model.dunning.request.UpdateDunningCycleExecutionStatusReq
+import com.cogoport.ares.model.dunning.request.UpdateDunningCycleStatusReq
 import com.cogoport.ares.model.dunning.request.UserInvitationRequest
 import com.cogoport.ares.model.dunning.response.CreditControllerResponse
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
@@ -387,7 +387,7 @@ open class DunningServiceImpl(
                 query = dunningCycleFilterRequest.query,
                 totalDueOutstanding = dunningCycleFilterRequest.totalDueOutstanding,
                 entityCode = dunningCycleFilterRequest.entityCode,
-                serviceTypes = if (serviceTypeString.isNullOrEmpty()) null else serviceTypeString,
+//                serviceTypes = if (serviceTypeString.isNullOrEmpty()) null else serviceTypeString,
                 ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
                 ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
                 pageSize = dunningCycleFilterRequest.pageSizeData ?: dunningCycleFilterRequest.pageSize,
@@ -395,8 +395,6 @@ open class DunningServiceImpl(
                 taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds,
                 exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
             )
-
-        val response = customerOutstandingAndOnAccountResponses
 
         val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
             query = dunningCycleFilterRequest.query,
@@ -409,12 +407,13 @@ open class DunningServiceImpl(
             exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
         )
 
-        val responseList: List<CustomerOutstandingAndOnAccountResponse> = if (dunningCycleFilterRequest.exceptionTradePartyDetailId != null) {
-            val customerToRemove = dunningCycleFilterRequest.exceptionTradePartyDetailId!!.map { it }
-            response.filter { customer -> customer.tradePartyDetailId !in customerToRemove }
-        } else {
-            response
-        }
+        val responseList: List<CustomerOutstandingAndOnAccountResponse> =
+            if (dunningCycleFilterRequest.exceptionTradePartyDetailId != null) {
+                val customerToRemove = dunningCycleFilterRequest.exceptionTradePartyDetailId!!.map { it }
+                customerOutstandingAndOnAccountResponses.filter { customer -> customer.tradePartyDetailId !in customerToRemove }
+            } else {
+                customerOutstandingAndOnAccountResponses
+            }
 
         val totalPages = Utilities.getTotalPages(totalCount, dunningCycleFilterRequest.pageSize)
         return ResponseList(
@@ -547,72 +546,30 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean {
-        val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(id)[0])
-            ?: throw AresException(AresError.ERR_1545, "")
-        if (
-            dunningCycleExecution.deletedAt != null
-        ) {
+        val dunningId = Hashids.decode(id)[0]
+        val isScheduledExecutionExist = dunningExecutionRepo.isisScheduledExecutionExist(dunningId) > 0
+        if (isScheduledExecutionExist) {
             throw AresException(AresError.ERR_1548, "")
+        } else {
+            dunningCycleRepo.deleteCycle(dunningId, updatedBy)
         }
-
-        if (dunningCycleExecution.status == CycleExecutionStatus.SCHEDULED.toString() &&
-            dunningCycleExecution.deletedAt != null
-        ) {
-            throw AresException(AresError.ERR_1546, "")
-        }
-
-        dunningCycleRepo.deleteCycle(dunningCycleExecution.dunningCycleId!!, updatedBy)
-        dunningExecutionRepo.deleteCycleExecution(dunningCycleExecution.id!!, updatedBy)
-
         return true
     }
 
     @Transactional
-    override suspend fun updateStatusDunningCycle(updateDunningCycleExecutionStatusReq: UpdateDunningCycleExecutionStatusReq): Boolean {
-        val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(updateDunningCycleExecutionStatusReq.id)[0])
-            ?: throw AresException(AresError.ERR_1545, "")
-
-        if (CycleExecutionStatus.valueOf(dunningCycleExecution.status) == CycleExecutionStatus.SCHEDULED) {
-            dunningExecutionRepo.cancelCycleExecution(
-                id = dunningCycleExecution.id!!,
-                updatedBy = updateDunningCycleExecutionStatusReq.updatedBy,
-                updatedAt = Timestamp(System.currentTimeMillis())
-            )
-        }
-
-        val dunningCycle = dunningCycleRepo.findById(dunningCycleExecution.dunningCycleId)
-            ?: throw AresException(AresError.ERR_1545, "")
+    override suspend fun updateStatusDunningCycle(updateDunningCycleExecutionStatusReq: UpdateDunningCycleStatusReq): Boolean {
+        val dunningId = Hashids.decode(updateDunningCycleExecutionStatusReq.id)[0]
+        val dunningCycles = dunningCycleRepo.findById(dunningId) ?: throw AresException(AresError.ERR_1545, "")
 
         dunningCycleRepo.updateStatus(
-            id = dunningCycle.id!!,
+            id = dunningId,
             status = updateDunningCycleExecutionStatusReq.isDunningCycleActive
         )
-
-        if (updateDunningCycleExecutionStatusReq.isDunningCycleActive) {
-            val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycle.scheduleRule)
-
-            dunningExecutionRepo.save(
-                DunningCycleExecution(
-                    id = null,
-                    dunningCycleId = dunningCycle.id!!,
-                    templateId = dunningCycle.templateId!!,
-                    status = CycleExecutionStatus.SCHEDULED.toString(),
-                    filters = dunningCycle.filters,
-                    entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[dunningCycle.filters.cogoEntityId.toString()]!!,
-                    scheduleRule = dunningCycle.scheduleRule,
-                    frequency = dunningCycle.frequency,
-                    scheduledAt = Timestamp(dunningCycleScheduledAt.time),
-                    triggerType = dunningCycle.triggerType,
-                    deletedAt = dunningCycle.deletedAt,
-                    createdBy = dunningCycle.createdBy,
-                    updatedBy = dunningCycle.updatedBy,
-                    createdAt = null,
-                    updatedAt = null,
-                    serviceId = null
-                )
-            )
+        if (!updateDunningCycleExecutionStatusReq.isDunningCycleActive) {
+            dunningExecutionRepo.cancelExecutions(dunningId, updateDunningCycleExecutionStatusReq.updatedBy)
+        } else {
+            saveAndScheduleExecution(dunningCycles)
         }
-
         return true
     }
 
@@ -650,18 +607,17 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun updateCycleExecution(request: UpdateCycleExecutionRequest): Long {
-        val dunningCycleExecution = dunningExecutionRepo.findById(Hashids.decode(request.id)[0])
+        val dunningCycle = dunningCycleRepo.findById(Hashids.decode(request.id)[0])
             ?: throw AresException(AresError.ERR_1545, "")
 
-        if (dunningCycleExecution.deletedAt != null ||
-            dunningCycleExecution.status != CycleExecutionStatus.SCHEDULED.toString()
+        if (dunningCycle.deletedAt != null || dunningCycle.isActive != false
         ) {
             throw AresException(AresError.ERR_1546, "")
         }
 
         if (
-            TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.MONTHLY &&
+            TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
+            FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.MONTHLY &&
             request.scheduleRule.dayOfMonth == null &&
             request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.MONTHLY
@@ -670,42 +626,19 @@ open class DunningServiceImpl(
         }
 
         if (
-            TriggerType.valueOf(dunningCycleExecution.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(dunningCycleExecution.frequency) == FREQUENCY.WEEKLY &&
+            TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
+            FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.WEEKLY &&
             request.scheduleRule.week == null &&
             request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
             != DunningExecutionFrequency.WEEKLY
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
-
-        dunningExecutionRepo.cancelCycleExecution(
-            dunningCycleExecution.id!!,
+        dunningExecutionRepo.cancelExecutions(
+            dunningCycle.id!!,
             request.updatedBy,
-            Timestamp(System.currentTimeMillis())
         )
-
-        val dunningCycleResp: DunningCycle = dunningCycleRepo.findById(dunningCycleExecution.dunningCycleId)
-            ?: throw AresException(AresError.ERR_1003, "")
-
-        dunningCycleResp.scheduleRule = request.scheduleRule
-        dunningCycleResp.updatedBy = request.updatedBy
-
-        dunningCycleRepo.update(dunningCycleResp)
-
-        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycleResp.scheduleRule)
-
-        dunningCycleExecution.id = null
-        dunningCycleExecution.triggerType = TriggerType.valueOf(request.triggerType).toString()
-        dunningCycleExecution.status = CycleExecutionStatus.SCHEDULED.toString()
-        dunningCycleExecution.createdBy = request.updatedBy
-        dunningCycleExecution.updatedBy = request.updatedBy
-        dunningCycleExecution.createdAt = Timestamp(System.currentTimeMillis())
-        dunningCycleExecution.updatedAt = Timestamp(System.currentTimeMillis())
-        dunningCycleExecution.scheduleRule = request.scheduleRule
-        dunningCycleExecution.scheduledAt = Timestamp(dunningCycleScheduledAt.time)
-
-        return dunningExecutionRepo.save(dunningCycleExecution).id!!
+        return saveAndScheduleExecution(dunningCycle)
     }
 
     override suspend fun listDistinctCreditControllers(request: ListOrganizationStakeholderRequest): List<CreditControllerResponse> {
