@@ -627,7 +627,17 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             au.id,
             s.source_id,
             s.source_type,
-            coalesce(s.amount,0) as settled_tds,
+            COALESCE(
+            CASE 
+                WHEN au.acc_mode = 'AR' THEN s.amount
+                ELSE COALESCE(
+                        (SELECT SUM(amount_curr) FROM account_utilizations WHERE document_value = au.document_value AND acc_type::VARCHAR = 'JVTDS'),
+                        s.amount,
+                        0
+                     )
+                END,
+                0
+            ) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
             au.trade_party_mapping_id as mapping_id,

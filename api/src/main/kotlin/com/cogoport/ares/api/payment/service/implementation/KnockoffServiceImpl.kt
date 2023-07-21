@@ -46,7 +46,6 @@ import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedE
 import io.micronaut.rabbitmq.exception.RabbitClientException
 import io.sentry.Sentry
 import jakarta.inject.Inject
-import kotlinx.coroutines.flow.toList
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
@@ -135,13 +134,25 @@ open class KnockoffServiceImpl : KnockoffService {
         val currTotalAmtPaid = knockOffRecord.currencyAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount
 
-        val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
+        val amountCurrToBeUtilized = accountUtilization.amountCurr - accountUtilization.payCurr - knockOffRecord.currTdsAmount
+        val amountLocToBeUtilized = accountUtilization.amountLoc - accountUtilization.payLoc - knockOffRecord.ledTdsAmount
 
-        if (isOverPaid) {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr), (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc))
+        val amount = if (amountCurrToBeUtilized < knockOffRecord.currencyAmount) {
+            amountCurrToBeUtilized
+        }else if  (amountCurrToBeUtilized == knockOffRecord.currencyAmount) {
+            amountCurrToBeUtilized
         } else {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+            knockOffRecord.currencyAmount
         }
+
+        val ledAmount = if (amountLocToBeUtilized < knockOffRecord.ledgerAmount) {
+            amountLocToBeUtilized
+        }else if  (amountLocToBeUtilized == knockOffRecord.ledgerAmount) {
+            amountLocToBeUtilized
+        } else {
+            knockOffRecord.ledgerAmount
+        }
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -153,22 +164,13 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
 
-        val settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization, false)
-        val settlementNum2 = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization, true)
-        /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
+        var settlementNum: String? = null
 
-        if (isOverPaid) {
-            saveAccountUtilization(
-                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr),
-                (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc), AccountType.PAY
-            )
-        } else {
-            saveAccountUtilization(
-                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid, AccountType.PAY
-            )
+        if (amount > BigDecimal.ZERO && ledAmount > BigDecimal.ZERO) {
+            settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, false, amount, ledAmount)
         }
+
+
         /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
         if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
             paymentEntity.amount = knockOffRecord.currTdsAmount
@@ -196,12 +198,20 @@ open class KnockoffServiceImpl : KnockoffService {
                 knockOffRecord,
                 destinationId = jvRecord.id,
                 sourceId = savedPaymentRecord.paymentNum,
-                false,
-                accountUtilization,
-                false
+                true,
+                amount = jvRecord.amount!!,
+                ledAmount = jvRecord.ledAmount!!
             )
             saveInvoicePaymentMapping(savedTDSPaymentRecord.id!!, knockOffRecord, isTDSEntry = true, jvRecord.id!!)
         }
+
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, amount + knockOffRecord.currTdsAmount, ledAmount + knockOffRecord.ledTdsAmount)
+        /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
+        saveAccountUtilization(
+            savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+            currTotalAmtPaid, ledTotalAmtPaid, amount + knockOffRecord.currTdsAmount,
+            ledAmount + knockOffRecord.ledTdsAmount, AccountType.PAY
+        )
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
         saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, false, knockOffRecord.documentNo) // TODO(LED AMOUNT)
@@ -245,12 +255,15 @@ open class KnockoffServiceImpl : KnockoffService {
         paymentEntity.createdAt = Timestamp.from(Instant.now())
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
         paymentEntity.signFlag = SignSuffix.PAY.sign
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
 
         /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
         if (!isTDSEntry) {
             paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-            val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
             paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + paymentEntity.paymentNum
+        }else {
+            paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.VTDS.prefix)
+            paymentEntity.paymentNumValue = SequenceSuffix.VTDS.prefix + financialYearSuffix + paymentEntity.paymentNum
         }
         paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
@@ -370,12 +383,12 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         destinationId: Long?,
         sourceId: Long?,
-        isOverPaid: Boolean,
-        accountUtilization: AccountUtilization,
-        isTDSEntry: Boolean
+        isTDSEntry: Boolean,
+        amount: BigDecimal,
+        ledAmount: BigDecimal
     ): String? {
 
-        val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isTDSEntry)
+        val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isTDSEntry, amount, ledAmount)
         settlement.settlementNum = sequenceGeneratorImpl.getSettlementNumber()
         val settleObj = settlementRepository.save(settlement)
         auditService.createAudit(
@@ -395,8 +408,20 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         destinationId: Long?,
         sourceId: Long?,
-        isTDSEntry: Boolean
+        isTDSEntry: Boolean,
+        amount: BigDecimal,
+        ledAmount: BigDecimal
     ): Settlement {
+//        val ledAmount: BigDecimal
+//        val amount: BigDecimal
+//        if (isOverPaid) {
+//            ledAmount = accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc
+//            amount = accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr
+//        } else {
+//            ledAmount = knockOffRecord.ledgerAmount
+//            amount = knockOffRecord.currencyAmount
+//        }
+
         return Settlement(
             id = null,
             sourceId = sourceId,
@@ -404,9 +429,9 @@ open class KnockoffServiceImpl : KnockoffService {
             destinationId = destinationId!!,
             destinationType = if (isTDSEntry) SettlementType.JVTDS else SettlementType.PINV,
             ledCurrency = knockOffRecord.ledgerCurrency,
-            ledAmount = if (isTDSEntry) knockOffRecord.ledTdsAmount else knockOffRecord.ledgerAmount,
+            ledAmount = ledAmount,
             currency = knockOffRecord.currency,
-            amount = if (isTDSEntry) knockOffRecord.currTdsAmount else knockOffRecord.currencyAmount,
+            amount = amount,
             signFlag = if (isTDSEntry) -1 else 1,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
@@ -654,16 +679,12 @@ open class KnockoffServiceImpl : KnockoffService {
                 "accMode" to "AP",
                 "glCode" to "321000",
                 "type" to "DEBIT",
-                "tradePartyId" to knockOffRecord.organizationId.toString(),
-                "tradePartyName" to knockOffRecord.organizationName,
                 "signFlag" to -1
             ),
             hashMapOf(
                 "accMode" to null,
                 "glCode" to "324001",
                 "type" to "CREDIT",
-                "tradePartyId" to null,
-                "tradePartyName" to null,
                 "signFlag" to 1
             )
         )
@@ -688,8 +709,8 @@ open class KnockoffServiceImpl : KnockoffService {
                 updatedBy = parentJvData.createdBy,
                 currency = parentJvData.currency,
                 ledCurrency = knockOffRecord.ledgerCurrency,
-                amount = knockOffRecord.currencyAmount,
-                ledAmount = knockOffRecord.ledgerAmount,
+                amount = knockOffRecord.currTdsAmount,
+                ledAmount = knockOffRecord.ledTdsAmount,
                 description = parentJvData.description,
                 entityCode = knockOffRecord.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
@@ -699,17 +720,17 @@ open class KnockoffServiceImpl : KnockoffService {
                 type = lineItem["type"].toString(),
                 signFlag = lineItem["signFlag"]?.toString()?.toShort(),
                 status = JVStatus.APPROVED,
-                tradePartyId = UUID.fromString(lineItem["tradePartyId"].toString()),
-                tradePartyName = lineItem["tradePartyName"].toString(),
+                tradePartyId = knockOffRecord.organizationId,
+                tradePartyName = knockOffRecord.organizationName,
                 validityDate = parentJvData.transactionDate,
                 migrated = false,
                 deletedAt = null
             )
         }
 
-        val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData).toList()
+        val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
 
-        jvLineItems.filter { it.accMode != null && it.tradePartyId != null }.map {
+        jvLineItems.filter { it.accMode != null && it.accMode != AccMode.OTHER}.map {
             saveAccountUtilization(
                 paymentNum = it.id!!,
                 paymentNumValue = it.jvNum,

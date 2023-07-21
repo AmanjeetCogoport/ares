@@ -99,4 +99,6 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             """
     )
     suspend fun deletingLineItemsWithParentJvId(parentJVId: Long)
+
+    suspend fun saveAll(req: List<JournalVoucher>): List<JournalVoucher>
 }
