@@ -16,6 +16,8 @@ data class CustomerOutstandingAgeing(
     val ninetyLedAmount: BigDecimal,
     val oneEightyLedAmount: BigDecimal,
     val oneEightyPlusLedAmount: BigDecimal,
+    val threeSixtyFiveLedAmount: BigDecimal,
+    val threeSixtyFivePlusLedAmount: BigDecimal,
     val totalLedOutstanding: BigDecimal,
     val notDueCurrAmount: BigDecimal,
     val thirtyCurrAmount: BigDecimal,
@@ -24,6 +26,8 @@ data class CustomerOutstandingAgeing(
     val ninetyCurrAmount: BigDecimal,
     val oneEightyCurrAmount: BigDecimal,
     val oneEightyPlusCurrAmount: BigDecimal,
+    val threeSixtyFiveCurrAmount: BigDecimal,
+    val threeSixtyFivePlusCurrAmount: BigDecimal,
     val totalCurrOutstanding: BigDecimal,
     val notDueCount: Int,
     val thirtyCount: Int,
@@ -31,5 +35,7 @@ data class CustomerOutstandingAgeing(
     val sixtyCount: Int,
     val ninetyCount: Int,
     val oneEightyCount: Int,
-    val oneEightyPlusCount: Int
+    val oneEightyPlusCount: Int,
+    val threeSixtyFiveCount: Int,
+    val threeSixtyFivePlusCount: Int
 )

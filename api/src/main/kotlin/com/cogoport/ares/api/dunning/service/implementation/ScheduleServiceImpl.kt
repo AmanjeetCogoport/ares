@@ -159,7 +159,6 @@ class ScheduleServiceImpl(
             dunningEmailAuditObject.executionId = executionId
             dunningEmailAuditObject.tradePartyDetailId = tradePartyDetailId
             dunningEmailAuditObject.isSuccess = false
-            // remember to consider logic ,in case of 101 or 301 , data from both indexes i.e 101_301
             val outstandingData: ResponseList<CustomerOutstandingDocumentResponse?>
             try {
                 val request = CustomerOutstandingRequest(
@@ -238,13 +237,13 @@ class ScheduleServiceImpl(
                 pdfAndSids = plutusClient.getDataFromDunning(invoiceIds)
             } catch (err: Exception) {
                 recordFailedThirdPartyApiAudits(executionId, invoiceIds.toString(), err.toString(), "list_sids_and_pdfs_from_plutus")
-//                throw err
+                throw err
             }
 
             invoiceDocuments.forEach { t ->
-                val data = pdfAndSids?.firstOrNull { it.invoiceId == t.documentNo }
-                t.pdfUrl = data?.invoicePdfUrl ?: "abcd"
-                t.jobNumber = data?.jobNumber ?: "1234"
+                val data = pdfAndSids.firstOrNull { it.invoiceId == t.documentNo }
+                t.pdfUrl = data?.invoicePdfUrl
+                t.jobNumber = data?.jobNumber
             }
 
             val creditControllerData = outstandingData.list[0]?.creditController
@@ -414,7 +413,7 @@ class ScheduleServiceImpl(
             logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId} with $err")
             dunningEmailAuditObject.communicationId = null
             dunningEmailAuditObject.isSuccess = false
-            dunningEmailAuditObject.errorReason = "dunning could'nt process"
+            dunningEmailAuditObject.errorReason = "dunning could'nt process $err"
             createDunningAudit(dunningEmailAuditObject)
         }
     }
