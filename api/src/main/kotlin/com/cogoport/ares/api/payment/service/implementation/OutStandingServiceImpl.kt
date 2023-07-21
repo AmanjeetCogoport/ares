@@ -297,7 +297,7 @@ class OutStandingServiceImpl : OutStandingService {
                     val outstandingForEntity = getSupplierOutstandingList(OutstandingListRequest(orgId = id, entityCode = it))
                     if (!outstandingForEntity.list.isNullOrEmpty()) {
                         outstandingResponse = supplierOutstandingResponseMapper(outstandingForEntity, supplierOutstanding)
-                        val index = "supplier_outstanding_501"
+                        val index = "supplier_outstanding_$it"
                         Client.updateDocument(index, id, outstandingResponse, true)
                     }
                 }

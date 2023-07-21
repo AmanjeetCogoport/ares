@@ -1073,6 +1073,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT DISTINCT organization_id
         FROM account_utilizations
         WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
+        AND entity_code = :entityCode
         AND deleted_at IS NULL and is_void = false
         """
     )
