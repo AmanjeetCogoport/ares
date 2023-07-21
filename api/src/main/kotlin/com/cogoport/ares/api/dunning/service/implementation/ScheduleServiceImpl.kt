@@ -511,9 +511,8 @@ class ScheduleServiceImpl(
             ageingBucket2 = formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
             ageingBucket3 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             ageingBucket4 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
-            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
-            // ageing_bracket_VI is still pending to put here
-            ageingBucket6 = "123",
+            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("threeSixtyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("threeSixtyFive")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket6 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("threeSixtyFivePlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("threeSixtyFivePlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             totalOutstanding = formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             unpaidInvoiceSummary = getUnPaidInvoiceSummary(invoiceDocuments),
             signatory = signatory,
@@ -558,9 +557,8 @@ class ScheduleServiceImpl(
             ageingBucket2 = formatMoney(openInvoiceTwo.plus(onAccountTwo))[LEDGER_CURRENCY[entityCode]],
             ageingBucket3 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("ninety")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("ninety")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             ageingBucket4 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEighty")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
-            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("oneEightyPlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
-            // ageing_bracket_VI is still pending to put here
-            ageingBucket6 = "123",
+            ageingBucket5 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("threeSixtyFive")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("threeSixtyFive")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
+            ageingBucket6 = formatMoney(outstanding.openInvoiceAgeingBucket?.get("threeSixtyFivePlus")?.ledgerAmount?.plus(outstanding.onAccountAgeingBucket?.get("threeSixtyFivePlus")?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             totalOutstanding = formatMoney(outstanding.openInvoice?.ledgerAmount?.plus(outstanding.onAccount?.ledgerAmount ?: 0.toBigDecimal()))[LEDGER_CURRENCY[entityCode]],
             unpaidInvoiceSummary = getUnPaidInvoiceSummary(invoiceDocuments),
             signatory = signatory,
@@ -716,7 +714,7 @@ class ScheduleServiceImpl(
             ThirdPartyApiAudit(
                 null,
                 apiName,
-                "dunning", // here we will put trade party detail id of customer
+                "dunning",
                 executionId,
                 "DUNNING_EXECUTION",
                 "500",

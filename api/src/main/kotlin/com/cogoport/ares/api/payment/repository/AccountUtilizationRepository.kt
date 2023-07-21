@@ -1073,11 +1073,10 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         SELECT DISTINCT organization_id
         FROM account_utilizations
         WHERE acc_mode = :accMode::account_mode AND organization_id IS NOT NULL 
-        AND entity_code = :entityCode
         AND deleted_at IS NULL and is_void = false
         """
     )
-    suspend fun getTradePartyOrgIds(accMode: AccMode?, entityCode: Int? = 501): List<UUID>
+    suspend fun getTradePartyOrgIds(accMode: AccMode?): List<UUID>
 
     @NewSpan
     @Query(
