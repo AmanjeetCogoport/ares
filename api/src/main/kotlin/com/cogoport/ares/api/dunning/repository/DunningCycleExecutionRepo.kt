@@ -45,5 +45,5 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
         SELECT COUNT(*) FROM dunning_cycle_executions where dunning_cycle_id = :dunningId AND status = 'SCHEDULED'
     """
     )
-    suspend fun isisScheduledExecutionExist(dunningId: Long): Long
+    suspend fun isScheduledExecutionExist(dunningId: Long): Long
 }

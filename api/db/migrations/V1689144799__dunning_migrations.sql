@@ -132,7 +132,7 @@ email_recipients        VARCHAR(50),
 user_id                 UUID,
 trade_party_detail_id 	UUID 		NOT NULL,
 organization_id         UUID,
-is_success              BOOLEAN     NOT NULL,
+is_success              BOOLEAN     DEFAULT FALSE,
 error_reason            TEXT,
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP
 );

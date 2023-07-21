@@ -118,8 +118,7 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
         val organizationStakeholderType = OrganizationStakeholderType.valueOf(
-            syncOrgStakeholderRequest.organizationStakeholderType
-                .replace("_", " ").uppercase().replace(" ", "_")
+            replaceUnderScore(syncOrgStakeholderRequest.organizationStakeholderType)
         ).toString()
 
         var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
@@ -129,9 +128,7 @@ open class DunningServiceImpl(
 
         if (organizationStakeholder == null) {
 
-            val organizationSegment = syncOrgStakeholderRequest.organizationSegment!!
-                .replace("_", " ").uppercase().replace(" ", "_")
-
+            val organizationSegment = replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
             val organizationStakeholderEntity = OrganizationStakeholder(
                 id = null,
                 organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
@@ -149,8 +146,7 @@ open class DunningServiceImpl(
             var organizationSegment = organizationStakeholder.organizationSegment
             if (syncOrgStakeholderRequest.organizationSegment != null) {
                 organizationSegment = OrganizationSegment.valueOf(
-                    syncOrgStakeholderRequest.organizationSegment!!
-                        .replace("_", " ").uppercase().replace(" ", "_")
+                    replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
                 ).toString()
             }
 
@@ -542,7 +538,7 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean {
         val dunningId = Hashids.decode(id)[0]
-        val isScheduledExecutionExist = dunningExecutionRepo.isisScheduledExecutionExist(dunningId) > 0
+        val isScheduledExecutionExist = dunningExecutionRepo.isScheduledExecutionExist(dunningId) > 0
         if (isScheduledExecutionExist) {
             throw AresException(AresError.ERR_1548, "")
         } else {
@@ -1066,6 +1062,10 @@ open class DunningServiceImpl(
         response.totalOutstandingAmount = response.totalOutstandingAmount?.minus(onAccount ?: 0.toBigDecimal())
         response.activeCycles = dunningCycleRepo.totalCountDunningCycle(status = true)
         return response
+    }
+
+    private fun replaceUnderScore(request: String): String {
+        return request.replace("_", " ").uppercase().replace(" ", "_")
     }
 
     private suspend fun recordFailedThirdPartyApiAudits(objectId: Long, request: String, response: String, apiName: String, objectName: String, apiType: String) {

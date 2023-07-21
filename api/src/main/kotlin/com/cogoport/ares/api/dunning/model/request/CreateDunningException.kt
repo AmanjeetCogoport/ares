@@ -9,8 +9,8 @@ import java.util.UUID
 data class CreateDunningException(
     var exceptionFile: String? = null,
     var excludedRegistrationNos: MutableList<String>? = mutableListOf(),
-    @NotNull var exceptionType: DunningExceptionType,
-    @NotNull var createdBy: UUID,
+    @field: NotNull var exceptionType: DunningExceptionType,
+    @field: NotNull var createdBy: UUID,
     var entityCode: Long?,
     var cycleId: String? = null,
     var actionType: String?

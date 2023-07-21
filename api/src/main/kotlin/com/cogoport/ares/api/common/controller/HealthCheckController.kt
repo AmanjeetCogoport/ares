@@ -4,7 +4,7 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 
 @Controller("/health")
-class HealthCheckController() {
+class HealthCheckController {
 
     @Get
     fun healthCheck(): HttpResponse<Map<String, String>> {
