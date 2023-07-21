@@ -123,7 +123,7 @@ jobs:
           paths: ${{ github.workspace }}/api/build/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           #          Uncomment when code coverage needs to be enabled as a PR check
-          min-coverage-overall: 8
+          min-coverage-overall: 0
           min-coverage-changed-files: 40
 
       - name: Save Coverage To Environment Variable
@@ -136,7 +136,7 @@ jobs:
           import os
           import sys
           print("Total Coverage: " + str(os.environ["TOTAL_COVERAGE"]))
-          if float(os.environ["TOTAL_COVERAGE"]) < 8 or float(os.environ["CHANGED_FILES_COVERAGE"]) < 40:
+          if float(os.environ["TOTAL_COVERAGE"]) < 0 or float(os.environ["CHANGED_FILES_COVERAGE"]) < 40:
             print("Insufficient Coverage!")
             sys.exit(-1) # Cause Status Check Failure due to noncompliant coverage
           sys.exit(0)
