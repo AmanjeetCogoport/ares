@@ -344,6 +344,7 @@ object AresConstants {
         "7d5b07b7-c2b3-4225-ace4-f28b0d4f769e",
         "c29058ae-4360-4dd2-b06f-a1f085ea3602",
         "c632ef94-0253-4f53-9173-cd2c0a4102e4",
+
         "e38fe18c-7880-4989-8769-35b095f25b7e"
     )
 
@@ -358,6 +359,10 @@ object AresConstants {
     const val ENTITY_301 = 301
     const val ENTITY_401 = 401
     const val ENTITY_501 = 501
+
+    const val OPENING_BALANCE = "Opening Balance"
+    const val CLOSING_BALANCE = "Closing Balance"
+    const val DOCUMENT_DATE = "Document Date"
 
     val DUNNING_SEVERITY_LEVEL = mapOf(
         SeverityEnum.LOW to 1,

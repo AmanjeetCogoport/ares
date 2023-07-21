@@ -73,6 +73,7 @@ import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
@@ -1872,5 +1873,18 @@ open class OnAccountServiceImpl : OnAccountService {
             // marking settlement deleted for utilized payments
             settlementRepository.markingSettlementAsDeleted(paymentsData.map { it.paymentNum!! }, paymentsData.map { it.paymentCode.toString() })
         }
+    }
+
+    override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
+        val ledgerSelectedDateWise = accountUtilizationRepository.getARLedger(
+            AccMode.AR,
+            req.orgId,
+            req.entityCodes!!,
+            req.startDate!!,
+            req.endDate!!
+        )
+        val previousLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        val currentLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.endDate, AresConstants.CLOSING_BALANCE)
+        return previousLedger + ledgerSelectedDateWise + currentLedger
     }
 }

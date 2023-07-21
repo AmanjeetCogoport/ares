@@ -3,7 +3,6 @@ micronaut:
   application:
     name: ares
   server:
-    base-url: http://127.0.0.1:8086
     port: 8086
     context-path: /payments
     cors:
@@ -21,6 +20,9 @@ micronaut:
       type: FIXED
     consumer:
       type: FIXED
+
+server:
+  base-url: http://127.0.0.1:8086
 
 netty:
   default:
@@ -113,3 +115,7 @@ aws:
 rabbitmq:
   uri: amqp://${RABBITMQ_USER:guest}:${RABBITMQ_PASS:guest}@${RABBITMQ_HOST:localhost}:${RABBITMQ_PORT:5672}
   consumer-executor: rabbit
+
+lsp:
+  coming_soon_banner:
+    enabled: false
