@@ -44,7 +44,7 @@ r2dbc:
 services:
   service:
     - id: bf-rails
-      url: https://api-spark2.dev.cogoport.io
+      url: https://api-spark4.dev.cogoport.io
       enabledLocally: true
   staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
