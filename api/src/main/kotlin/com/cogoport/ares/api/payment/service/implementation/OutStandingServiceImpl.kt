@@ -14,6 +14,7 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
@@ -85,6 +86,9 @@ class OutStandingServiceImpl : OutStandingService {
     lateinit var openSearchServiceImpl: OpenSearchServiceImpl
 
     @Inject private lateinit var openSearchConfig: OpenSearchConfig
+
+    @Inject
+    lateinit var ledgerSummaryRepo: LedgerSummaryRepo
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -986,5 +990,11 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
         return accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, request.entities!!)
+    }
+
+    override suspend fun createLedgerSummary() {
+        ledgerSummaryRepo.deleteAll()
+        val outstandingData = accountUtilizationRepo.getLedgerSummaryForAp()
+        ledgerSummaryRepo.saveAll(outstandingData)
     }
 }
