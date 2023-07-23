@@ -18,7 +18,7 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
              
         """
     )
-    suspend fun findByPaymentId(documentNo: Long?, paymentId: Long?): PaymentMapResponse
+    suspend fun findByPaymentId(documentNo: Long, paymentId: Long?): PaymentMapResponse
 
     @NewSpan
     @Query(

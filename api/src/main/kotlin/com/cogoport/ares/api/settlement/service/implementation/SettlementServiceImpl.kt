@@ -1326,11 +1326,7 @@ open class SettlementServiceImpl : SettlementService {
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
-        val sourceCurr =
-            fetchedDoc.sumOf {
-                it?.amount
-                    ?: BigDecimal.ZERO
-            }
+        val sourceCurr = fetchedDoc.sumOf { it?.amount ?: BigDecimal.ZERO }
         reduceAccountUtilization(
             docId = documentNo,
             accType = AccountType.valueOf(settlementType.toString()),
