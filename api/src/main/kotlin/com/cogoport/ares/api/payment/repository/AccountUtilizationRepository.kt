@@ -78,7 +78,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 and deleted_at is null and document_status != 'DELETED'::document_status
             """
     )
-    suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): List<AccountUtilization>?
+    suspend fun findRecordByDocumentValue(documentValue: String, accType: String? = null, accMode: String? = null): AccountUtilization?
 
     @NewSpan
     @Query("delete from account_utilizations where id=:id")
@@ -357,8 +357,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             '' as status,
             pay_curr as settled_amount,
             au.updated_at as last_edited_date,
-            COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS') then s.amount end), 0) as tds,
-            COALESCE(sum(case when s.source_type in ('CTDS','VTDS') then s.amount end), 0) as settled_tds,
+            COALESCE(sum(case when s.source_id = au.document_no and s.source_type in ('CTDS','VTDS','JVTDS') then s.amount end), 0) as tds,
+            COALESCE(sum(case when s.source_type in ('CTDS','VTDS', 'JVTDS') then s.amount end), 0) as settled_tds,
             COALESCE((ARRAY_AGG(s1.supporting_doc_url))[1], (ARRAY_AGG(s1.supporting_doc_url))[1]) as supporting_doc_url,
             COALESCE((ARRAY_AGG( CASE WHEN s1.settlement_status IN ('CREATED','POSTING_FAILED') THEN s1.id ELSE NULL END)), null) as not_posted_settlement_ids
             FROM account_utilizations au

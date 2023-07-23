@@ -52,5 +52,5 @@ data class AccountUtilization(
     var tdsAmount: BigDecimal? = BigDecimal.ZERO,
     var settlementEnabled: Boolean? = false,
     var deletedAt: Timestamp? = null,
-    var isProforma: Boolean?
+    var isProforma: Boolean? = false
 )

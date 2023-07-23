@@ -122,18 +122,13 @@ class CpSettlementServiceImpl : CpSettlementService {
         }
 
         logger().info(cogoEntities.toString())
-        val invoiceUtilizationList =
+
+        val invoiceUtilization =
             accountUtilizationRepository.findRecordByDocumentValue(
                 documentValue = request.invoiceNumber,
                 accType = AccountType.SINV.toString(),
                 accMode = AccMode.AR.toString()
-            )
-
-        if (invoiceUtilizationList.isNullOrEmpty()) {
-            throw AresException(AresError.ERR_1002, AresConstants.ZONE)
-        }
-
-        val invoiceUtilization = invoiceUtilizationList.first { it.accType == AccountType.SINV }
+            ) ?: throw AresException(AresError.ERR_1002, AresConstants.ZONE)
 
         val payment = settledInvoiceConverter.convertKnockoffRequestToEntity(request)
         payment.organizationId = invoiceUtilization.organizationId

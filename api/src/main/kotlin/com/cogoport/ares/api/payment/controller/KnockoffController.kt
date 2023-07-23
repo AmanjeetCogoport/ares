@@ -2,7 +2,6 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.model.payment.AccountPayablesFile
-import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -21,9 +20,5 @@ class KnockoffController {
     @Post("/payables")
     suspend fun knockOffPayables(@Valid @Body payableList: AccountPayablesFile): AccountPayableFileResponse {
         return knockoffService.uploadBillPayment(payableList)
-    }
-    @Post("/reverse")
-    suspend fun reverse(@Valid @Body payableList: ReverseUtrRequest) {
-        return knockoffService.reverseUtr(payableList)
     }
 }

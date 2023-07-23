@@ -198,17 +198,17 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) and is_void = false
         """
     )
-    suspend fun deleleSettlement(id: List<Long>, updatedBy: UUID? = null)
+    suspend fun deleleSettlement(id: List<Long?>, updatedBy: UUID? = null)
 
     @NewSpan
     @Query(
         """
-          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
+          SELECT * FROM settlements WHERE source_id in (:sourceIds) AND destination_id = :destinationId AND 
           deleted_at is null and is_void = false
               
         """
     )
-    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
+    suspend fun getSettlementByDestinationId(destinationId: Long, sourceIds: List<Long?>): List<Settlement>
 
     @NewSpan
     @Query(
@@ -438,7 +438,7 @@ ORDER BY
                 WHERE settlement_status::varchar = 'CREATED'
                 AND s.deleted_at IS NULL
                 AND s.led_currency != 'VND'
-                AND s.source_type not in ('SECH')
+                AND s.source_type not in ('SECH', 'PECH')
                 AND s.created_at >= :date
                 AND CASE WHEN aau.acc_mode = 'AR' THEN created_at <= now() else created_at <= CURRENT_DATE - INTERVAL '7 days' end 
             """

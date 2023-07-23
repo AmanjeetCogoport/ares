@@ -6,7 +6,6 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
-import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresMessagePublisher
@@ -30,8 +29,6 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.interfaces.SageService
 import com.cogoport.ares.api.settlement.entity.IncidentMappings
-import com.cogoport.ares.api.settlement.entity.JournalVoucher
-import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.SettledInvoice
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.entity.SettlementListDoc
@@ -44,10 +41,9 @@ import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
-import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
-import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Util
@@ -57,7 +53,6 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.DocType
@@ -87,7 +82,6 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
-import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -227,10 +221,7 @@ open class SettlementServiceImpl : SettlementService {
     lateinit var util: Util
 
     @Inject
-    lateinit var parentJVRepository: ParentJVRepository
-
-    @Inject
-    lateinit var journalVoucherRepository: JournalVoucherRepository
+    lateinit var parentJvService: ParentJVService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -539,7 +530,10 @@ open class SettlementServiceImpl : SettlementService {
                             listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV, SettlementType.CTDS)
                         )
                         SettlementType.VTDS -> tdsType.addAll(
-                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS, SettlementType.JVTDS)
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
+                        )
+                        SettlementType.JVTDS -> tdsType.addAll(
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
                         )
                         else -> tdsType.add(it1)
                     }
@@ -1306,8 +1300,8 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        if (settlementType.name == PaymentCode.PAY.name) {
-            val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+        if (settlementType in listOf(SettlementType.PAY, SettlementType.JVTDS)) {
+            val paymentId = if (settlementType == SettlementType.PAY) paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY) else documentNo
             if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
                 throw AresException(AresError.ERR_1515, "")
             }
@@ -1334,7 +1328,7 @@ open class SettlementServiceImpl : SettlementService {
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
         val sourceCurr =
             fetchedDoc.sumOf {
-                it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong()))
+                it?.amount
                     ?: BigDecimal.ZERO
             }
         reduceAccountUtilization(
@@ -1760,7 +1754,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         // Create TDS Entry
-        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv)  && (invoice.ledCurrency != AresConstants.VND)) {
+        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && (invoice.ledCurrency != AresConstants.VND)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
@@ -1875,11 +1869,11 @@ open class SettlementServiceImpl : SettlementService {
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
 
-        var updatedDestId = destId
-        var updatedDestType = destType
+        var updatedSourceId = sourceId
+        var updatedSourceType: SettlementType?
 
-        if(invoiceAndBillData?.accMode == AccMode.AP){
-            updatedDestId = createTdsAsJv(
+        if (invoiceAndBillData?.accMode == AccMode.AP) {
+            updatedSourceId = createTdsAsJv(
                 currency,
                 ledCurrency,
                 tdsAmount,
@@ -1888,37 +1882,33 @@ open class SettlementServiceImpl : SettlementService {
                 createdByUserType,
                 invoiceAndBillData,
                 exchangeRate,
+                paymentTransactionDate,
+                utr = "TDS AGAINST $destId"
+            )
+            updatedSourceType = SettlementType.JVTDS
+        } else {
+            updatedSourceId = createTdsAsPaymentEntry(
+                destId,
+                destType,
+                currency,
+                ledCurrency,
+                tdsAmount,
+                tdsLedAmount,
+                createdBy,
+                createdByUserType,
+                SettlementType.CTDS,
+                invoiceAndBillData,
+                exchangeRate,
                 paymentTransactionDate
             )
-
-            updatedDestType = SettlementType.JVTDS
+            updatedSourceType = SettlementType.CTDS
         }
-        val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
-            SettlementType.CTDS
-        } else {
-            SettlementType.VTDS
-        }
-
-        val tdsAsPaymentNum = createTdsAsPaymentEntry(
-            destId,
-            destType,
-            currency,
-            ledCurrency,
-            tdsAmount,
-            tdsLedAmount,
-            createdBy,
-            createdByUserType,
-            tdsType,
-            invoiceAndBillData,
-            exchangeRate,
-            paymentTransactionDate
-        )
 
         createSettlement(
-            tdsAsPaymentNum,
-            tdsType,
-            updatedDestId,
-            updatedDestType,
+            updatedSourceId,
+            updatedSourceType,
+            destId,
+            destType,
             currency,
             tdsAmount,
             ledCurrency,
@@ -1959,7 +1949,7 @@ open class SettlementServiceImpl : SettlementService {
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
 //        if (paymentUtilization.accMode == AccMode.AR) {
 //            paymentUtilization.tdsAmount = paymentUtilization.tdsAmount!! + paidTds
-////            paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
+// //            paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
 //        }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
 
@@ -2635,7 +2625,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.JVTDS)
         try {
             // Fetch source and destination details
             val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
@@ -2648,6 +2638,10 @@ open class SettlementServiceImpl : SettlementService {
 
             // Fetch destination details
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
+
+            if (destinationDocument.isProforma == true) {
+                throw AresException(AresError.ERR_1543, "")
+            }
 
             val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
             val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
@@ -3009,7 +3003,7 @@ open class SettlementServiceImpl : SettlementService {
         return settlementDocs
     }
 
-    private suspend fun createTdsAsJv (
+    private suspend fun createTdsAsJv(
         currency: String?,
         ledCurrency: String,
         tdsAmount: BigDecimal,
@@ -3018,40 +3012,9 @@ open class SettlementServiceImpl : SettlementService {
         createdByUserType: String?,
         invoiceAndBillData: AccountUtilization?,
         exchangeRate: BigDecimal?,
-        paymentTransactionDate: Date
-    ): Long {
-        var parentJournalVoucher = ParentJournalVoucher(
-            id = null,
-            status = JVStatus.POSTED,
-            category = "JVTDS",
-            jvNum = invoiceAndBillData?.documentValue,
-            //picking date of payments
-            transactionDate = paymentTransactionDate,
-            validityDate = invoiceAndBillData?.transactionDate,
-            currency = currency,
-            ledCurrency = ledCurrency,
-            entityCode = invoiceAndBillData?.entityCode,
-            exchangeRate = exchangeRate?.setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
-            description = "TDS AGAINST ${invoiceAndBillData?.documentValue}",
-            createdBy = createdBy,
-            updatedBy = createdBy,
-            jvCodeNum = "VTDS",
-            isUtilized = true
-        )
-
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
-                objectId = parentJournalVoucher.id,
-                actionName = AresConstants.CREATE,
-                data = parentJournalVoucher,
-                performedBy = createdBy.toString(),
-                performedByUserType = createdByUserType
-            )
-        )
-
-        parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
-
+        paymentTransactionDate: Date,
+        utr: String?
+    ): Long? {
         val lineItemProps: MutableList<HashMap<String, Any?>> = mutableListOf(
             hashMapOf(
                 "accMode" to "AP",
@@ -3066,109 +3029,18 @@ open class SettlementServiceImpl : SettlementService {
                 "signFlag" to 1
             )
         )
-        return saveJvLineItem(parentJournalVoucher, invoiceAndBillData, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType)
-    }
-
-    private suspend fun saveJvLineItem(
-        parentJvData: ParentJournalVoucher,
-        invoiceAndBillData: AccountUtilization?,
-        jvLineItems: MutableList<HashMap<String, Any?>>,
-        tdsAmount:BigDecimal?,
-        tdsLedAmount: BigDecimal?,
-        createdByUserType: String?,
-    ): Long {
-        val jvLineItemData = jvLineItems.map { lineItem ->
-            JournalVoucher(
-                id = null,
-                jvNum = parentJvData.jvNum!!,
-                accMode = if (lineItem["accMode"] != null) AccMode.valueOf(lineItem["accMode"]!!.toString()) else AccMode.OTHER,
-                category = parentJvData.category,
-                createdAt = parentJvData.createdAt,
-                createdBy = parentJvData.createdBy,
-                updatedAt = parentJvData.createdAt,
-                updatedBy = parentJvData.createdBy,
-                currency = parentJvData.currency,
-                ledCurrency = parentJvData.ledCurrency!!,
-                amount = tdsAmount,
-                ledAmount = tdsLedAmount,
-                description = parentJvData.description,
-                entityCode = parentJvData.entityCode,
-                entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
-                exchangeRate = parentJvData.exchangeRate,
-                glCode = lineItem["glCode"].toString(),
-                parentJvId = parentJvData.id,
-                type = lineItem["type"].toString(),
-                signFlag = lineItem["signFlag"]?.toString()?.toShort(),
-                status = JVStatus.APPROVED,
-                tradePartyId = invoiceAndBillData?.organizationId,
-                tradePartyName = invoiceAndBillData?.organizationName,
-                validityDate = parentJvData.transactionDate,
-                migrated = false,
-                deletedAt = null
-            )
-        }
-
-        val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
-        val jvLineItemWithAccMode = jvLineItems.first { it.accMode != null && it.accMode != AccMode.OTHER}
-
-        createJvAccUtil(jvLineItemWithAccMode, invoiceAndBillData, createdBy = parentJvData.createdBy, createdByUserType)
-
-        return jvLineItemWithAccMode.id!!
-    }
-
-    private suspend fun createJvAccUtil (
-        journalVoucher: JournalVoucher,
-        invoiceAndBillData: AccountUtilization?,
-        createdBy: UUID?,
-        createdByUserType: String?
-    ) {
-        val accountUtilEntity = AccountUtilization(
-            id = null,
-            documentNo = journalVoucher.id!!,
-            documentValue = journalVoucher.jvNum,
-            zoneCode = invoiceAndBillData?.zoneCode.toString(),
-            serviceType = invoiceAndBillData?.serviceType!!,
-            documentStatus = DocumentStatus.FINAL,
-            entityCode = invoiceAndBillData.entityCode,
-            category = invoiceAndBillData.category,
-            sageOrganizationId = null,
-            organizationId = invoiceAndBillData.organizationId!!,
-            taggedOrganizationId = invoiceAndBillData.taggedOrganizationId,
-            tradePartyMappingId = invoiceAndBillData.tradePartyMappingId,
-            organizationName = invoiceAndBillData.organizationName,
-            accCode = AresModelConstants.TDS_AP_ACCOUNT_CODE,
-            accType = AccountType.JVTDS,
-            accMode = invoiceAndBillData.accMode,
-            signFlag = SignSuffix.JVTDS.sign,
-            currency = journalVoucher.currency!!,
-            ledCurrency = journalVoucher.ledCurrency,
-            amountCurr = journalVoucher.amount!!,
-            amountLoc = journalVoucher.ledAmount!!,
-            payCurr = journalVoucher.amount,
-            payLoc = journalVoucher.ledAmount,
-            taxableAmount = BigDecimal.ZERO,
-            tdsAmountLoc = BigDecimal.ZERO,
-            tdsAmount = BigDecimal.ZERO,
-            dueDate = invoiceAndBillData.dueDate,
-            transactionDate = journalVoucher.validityDate,
-            createdAt = Timestamp.from(Instant.now()),
-            updatedAt = Timestamp.from(Instant.now()),
-            orgSerialId = invoiceAndBillData.orgSerialId,
-            migrated = false,
-            settlementEnabled = true,
-            isProforma = false
-        )
-        val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
-
-        auditService.createAudit(
-            AuditRequest(
-                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
-                objectId = accUtilObj.id,
-                actionName = AresConstants.CREATE,
-                data = accUtilObj,
-                performedBy = createdBy.toString(),
-                performedByUserType = createdByUserType
-            )
+        return parentJvService.createTdsAsJvForBills(
+            currency,
+            ledCurrency,
+            tdsAmount,
+            tdsLedAmount,
+            createdBy,
+            createdByUserType,
+            invoiceAndBillData,
+            exchangeRate,
+            paymentTransactionDate,
+            lineItemProps,
+            utr
         )
     }
 }

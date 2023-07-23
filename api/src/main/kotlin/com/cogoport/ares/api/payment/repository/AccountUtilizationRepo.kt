@@ -601,7 +601,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'JVTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
@@ -616,28 +616,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
-        ), 
-         MAPPINGS AS (
-        	select jsonb_array_elements(account_utilization_ids)::int as id 
-        	from incident_mappings
-        	where incident_status = 'REQUESTED'
-        	and incident_type = 'SETTLEMENT_APPROVAL'
         )
         SELECT 
             au.id,
             s.source_id,
             s.source_type,
-            COALESCE(
-            CASE 
-                WHEN au.acc_mode = 'AR' THEN s.amount
-                ELSE COALESCE(
-                        (SELECT SUM(amount_curr) FROM account_utilizations WHERE document_value = au.document_value AND acc_type::VARCHAR = 'JVTDS'),
-                        s.amount,
-                        0
-                     )
-                END,
-                0
-            ) as settled_tds,
+            COALESCE(s.amount, 0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
             au.trade_party_mapping_id as mapping_id,
@@ -660,13 +644,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             au.sign_flag,
             au.acc_mode,
             au.migrated,
-            CASE WHEN 
-            	au.id in (select id from MAPPINGS) 
-        	THEN
-        		false
-        	ELSE
-        		true
-        	END as approved,
+            true as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 
@@ -680,7 +658,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS', 'JVTDS')
             WHERE au.id in (
                 SELECT id from FILTERS
             )
