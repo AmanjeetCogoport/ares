@@ -123,7 +123,7 @@ open class KnockoffServiceImpl : KnockoffService {
         } else {
             mutableListOf()
         }
-        val tdsAmountPaid = previousSettlements.filter { it?.sourceType == SettlementType.JVTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
+        val tdsAmountPaid = previousSettlements.filter { it?.sourceType in listOf(SettlementType.JVTDS, SettlementType.VTDS) }.sumOf { it?.amount ?: BigDecimal.ZERO }
         if (tdsAmountPaid != BigDecimal.ZERO) {
             val ledgerTotal = (accountUtilization.amountLoc.setScale(6, RoundingMode.UP))
             val grandTotal = (accountUtilization.amountCurr.setScale(6, RoundingMode.UP))
