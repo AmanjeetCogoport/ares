@@ -60,4 +60,6 @@ interface OutStandingService {
     suspend fun getCustomerMonthlyPayment(request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment
 
     suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>?
+
+    suspend fun createLedgerSummary()
 }
