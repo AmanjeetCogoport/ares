@@ -4,16 +4,7 @@ CREATE TYPE public."organization_segment" AS ENUM (
 	'MID_SIZE',
 	'ENTERPRISE'
 	);
-CREATE TYPE PUBLIC."stakeholder_type" AS ENUM (
-    'TRADE_FINANCE_AGENT',
-    'ENTITY_MANAGER',
-    'SUPPLY_AGENT',
-    'SALES_AGENT',
-    'BOOKING_AGENT',
-    'PORTFOLIO_MANAGER',
-    'CKAM',
-    'CREDIT_CONTROLLER'
-);
+CREATE TYPE PUBLIC."stakeholder_type" AS ENUM ('CREDIT_CONTROLLER');
 CREATE TYPE CYCLE_TYPE AS ENUM ('SOA', 'WIS', 'BALANCE_CONFIRMATION');
 CREATE TYPE TRIGGER_TYPE AS ENUM ('ONE_TIME', 'PERIODIC');
 CREATE TYPE FREQUENCY AS ENUM ('ONE_TIME', 'DAILY', 'MONTHLY', 'WEEKLY', 'BI_WEEKLY');
@@ -44,8 +35,8 @@ CREATE TYPE TOKEN_TYPE AS ENUM ('RELEVANT_USER', 'DUNNING_PAYMENT');
     created_by                        UUID                    NOT NULL,
     updated_by                        UUID                    NOT NULL,
     is_active                         BOOLEAN 		          NOT NULL   DEFAULT TRUE,
- 	created_at                        TIMESTAMP               NOT NULL   DEFAULT now(),
- 	updated_at                        TIMESTAMP               NOT NULL   DEFAULT now(),
+ 	created_at                        TIMESTAMP               NOT NULL   DEFAULT CURRENT_TIMESTAMP,
+ 	updated_at                        TIMESTAMP               NOT NULL   DEFAULT CURRENT_TIMESTAMP,
  	CONSTRAINT org_stakeholder_uniqueness UNIQUE (organization_id, organization_stakeholder_type)
  );
 

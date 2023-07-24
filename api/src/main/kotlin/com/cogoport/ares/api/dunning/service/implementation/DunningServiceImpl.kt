@@ -43,6 +43,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditSer
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AuditActionName
 import com.cogoport.ares.model.common.AuditObjectType
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
@@ -236,6 +237,8 @@ open class DunningServiceImpl(
                 organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(request)
             } catch (err: Exception) {
                 recordFailedThirdPartyApiAudits(dunningCycleResponse.id!!, request.toString(), err.toString(), "list_organization_trade_party_business_finance", "dunning_cycle", "organization")
+                logger().error(err.toString())
+                throw err
             }
 
             val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
@@ -272,6 +275,7 @@ open class DunningServiceImpl(
         return dunningCycleResponse.id!!
     }
 
+    @Transactional
     override suspend fun saveAndScheduleExecution(dunningCycle: DunningCycle): Long {
 
         val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycle.scheduleRule)
@@ -601,26 +605,14 @@ open class DunningServiceImpl(
         val dunningCycle = dunningCycleRepo.findById(Hashids.decode(request.id)[0])
             ?: throw AresException(AresError.ERR_1545, "")
 
-        if (
-            TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.MONTHLY &&
-            (
-                request.scheduleRule.dayOfMonth == null ||
-                    request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
-                    != DunningExecutionFrequency.MONTHLY
-                )
-        ) {
-            throw AresException(AresError.ERR_1003, "")
+        if (request.scheduleRule.dunningExecutionFrequency == DunningExecutionFrequency.ONE_TIME.name && request.scheduleRule.oneTimeDate == null) {
+            throw AresException(AresError.ERR_1003, "oneTimeDate")
         }
 
         if (
-            TriggerType.valueOf(dunningCycle.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(dunningCycle.frequency) == FREQUENCY.WEEKLY &&
-            (
-                request.scheduleRule.week == null ||
-                    request.scheduleRule.dunningExecutionFrequency.let { DunningExecutionFrequency.valueOf(it) }
-                    != DunningExecutionFrequency.WEEKLY
-                )
+            request.triggerType == TriggerType.PERIODIC.name &&
+            (request.scheduleRule.dunningExecutionFrequency == DunningExecutionFrequency.MONTHLY.name && request.scheduleRule.dayOfMonth == null) ||
+            (request.scheduleRule.dunningExecutionFrequency == DunningExecutionFrequency.WEEKLY.name && request.scheduleRule.week == null)
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
