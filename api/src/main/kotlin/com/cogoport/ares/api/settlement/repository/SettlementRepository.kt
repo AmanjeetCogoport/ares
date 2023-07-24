@@ -517,7 +517,6 @@ ORDER BY
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
                 and s.deleted_at is null
-                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
             ORDER BY
                 s.created_at DESC
 

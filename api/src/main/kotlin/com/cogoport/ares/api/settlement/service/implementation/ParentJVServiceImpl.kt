@@ -839,7 +839,9 @@ open class ParentJVServiceImpl : ParentJVService {
         exchangeRate: BigDecimal?,
         paymentTransactionDate: Date,
         lineItemProps: MutableList<HashMap<String, Any?>>,
-        utr: String?
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long? {
         var parentJournalVoucher = ParentJournalVoucher(
             id = null,
@@ -873,6 +875,6 @@ open class ParentJVServiceImpl : ParentJVService {
 
         parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
 
-        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType)
+        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds)
     }
 }

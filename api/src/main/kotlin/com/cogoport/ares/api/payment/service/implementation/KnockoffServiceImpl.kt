@@ -123,7 +123,7 @@ open class KnockoffServiceImpl : KnockoffService {
         } else {
             mutableListOf()
         }
-        val tdsAmountPaid = previousSettlements.filter { it?.sourceType == SettlementType.VTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
+        val tdsAmountPaid = previousSettlements.filter { it?.sourceType == SettlementType.JVTDS }.sumOf { it?.amount ?: BigDecimal.ZERO }
         if (tdsAmountPaid != BigDecimal.ZERO) {
             val ledgerTotal = (accountUtilization.amountLoc.setScale(6, RoundingMode.UP))
             val grandTotal = (accountUtilization.amountCurr.setScale(6, RoundingMode.UP))
@@ -134,20 +134,62 @@ open class KnockoffServiceImpl : KnockoffService {
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
         val currTotalAmtPaid = knockOffRecord.currencyAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount
+        var amount = BigDecimal(0)
+        var ledgerAmount = BigDecimal(0)
+        var payCurrTds = BigDecimal.ZERO
+        var payLocTds = BigDecimal.ZERO
 
-        val amountCurrToBeUtilized = accountUtilization.amountCurr - accountUtilization.payCurr - knockOffRecord.currTdsAmount
-        val amountLocToBeUtilized = accountUtilization.amountLoc - accountUtilization.payLoc - knockOffRecord.ledTdsAmount
+        val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount, knockOffRecord.currTdsAmount, knockOffRecord.ledTdsAmount)
 
-        val amount = if (amountCurrToBeUtilized <= knockOffRecord.currencyAmount) {
-            amountCurrToBeUtilized
-        } else {
-            knockOffRecord.currencyAmount
+        /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
+        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
+            paymentEntity.amount = knockOffRecord.currTdsAmount
+            paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
+
+            if ((accountUtilization.tdsAmount?.minus(tdsAmountPaid)!! < knockOffRecord.currTdsAmount) && (accountUtilization.tdsAmountLoc?.minus(tdsAmountPaid * (accountUtilization.amountLoc.divide(accountUtilization.amountCurr)))!! < knockOffRecord.ledTdsAmount)) {
+                payCurrTds = accountUtilization.tdsAmount!! - tdsAmountPaid
+                payLocTds = accountUtilization.tdsAmountLoc!! - tdsAmountPaid * (accountUtilization.amountLoc.divide(accountUtilization.amountCurr))
+            } else {
+                payCurrTds = knockOffRecord.currTdsAmount
+                payLocTds = knockOffRecord.ledTdsAmount
+            }
+
+            // creating jv for tds on invoice
+            val jvIdAsSourceId = saveTdsAsJv(
+                knockOffRecord.currency,
+                knockOffRecord.ledgerCurrency,
+                tdsAmount = knockOffRecord.currTdsAmount,
+                tdsLedAmount = knockOffRecord.ledTdsAmount,
+                createdBy = knockOffRecord.createdBy,
+                knockOffRecord.performedByType,
+                accountUtilization,
+                exchangeRate = knockOffRecord.ledgerAmount.divide(knockOffRecord.currencyAmount)
+                    .setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
+                paymentTransactionDate = knockOffRecord.transactionDate,
+                utr = knockOffRecord.transRefNumber,
+                payCurrTds,
+                payLocTds
+            )
+
+            saveSettlements(
+                knockOffRecord,
+                destinationId = knockOffRecord.documentNo,
+                sourceId = jvIdAsSourceId,
+                true,
+                amount = payCurrTds,
+                ledAmount = payLocTds
+            )
+            saveInvoicePaymentMapping(jvIdAsSourceId!!, knockOffRecord, isTDSEntry = true, knockOffRecord.documentNo, payCurrTds, payLocTds)
         }
 
-        val ledAmount = if (amountLocToBeUtilized <= knockOffRecord.ledgerAmount) {
-            amountLocToBeUtilized
+        if (isOverPaid) {
+            amount = accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr
+            ledgerAmount = accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, amount + payCurrTds, ledgerAmount + payLocTds)
         } else {
-            knockOffRecord.ledgerAmount
+            amount = currTotalAmtPaid
+            ledgerAmount = ledTotalAmtPaid
+            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, amount + payCurrTds, ledgerAmount + payLocTds)
         }
 
         auditService.createAudit(
@@ -163,51 +205,18 @@ open class KnockoffServiceImpl : KnockoffService {
 
         var settlementNum: String? = null
 
-        if (amount > BigDecimal.ZERO && ledAmount > BigDecimal.ZERO) {
-            settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, false, amount, ledAmount)
+        if (amount > BigDecimal.ZERO && ledgerAmount > BigDecimal.ZERO) {
+            settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, false, amount, ledgerAmount)
         }
 
-        /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
-        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO) {
-            paymentEntity.amount = knockOffRecord.currTdsAmount
-            paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
-
-            // creating jv for tds on invoice
-            val jvIdAsSourceId = saveTdsAsJv(
-                knockOffRecord.currency,
-                knockOffRecord.ledgerCurrency,
-                tdsAmount = knockOffRecord.currTdsAmount,
-                tdsLedAmount = knockOffRecord.ledTdsAmount,
-                createdBy = knockOffRecord.createdBy,
-                knockOffRecord.performedByType,
-                accountUtilization,
-                exchangeRate = knockOffRecord.ledgerAmount.divide(knockOffRecord.currencyAmount)
-                    .setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
-                paymentTransactionDate = knockOffRecord.transactionDate,
-                utr = knockOffRecord.transRefNumber
-            )
-
-            saveSettlements(
-                knockOffRecord,
-                destinationId = knockOffRecord.documentNo,
-                sourceId = jvIdAsSourceId,
-                true,
-                amount = knockOffRecord.currTdsAmount,
-                ledAmount = knockOffRecord.ledTdsAmount
-            )
-            saveInvoicePaymentMapping(jvIdAsSourceId!!, knockOffRecord, isTDSEntry = true, knockOffRecord.documentNo)
-        }
-
-        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, amount + knockOffRecord.currTdsAmount, ledAmount + knockOffRecord.ledTdsAmount)
-        /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
         saveAccountUtilization(
             savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
             currTotalAmtPaid, ledTotalAmtPaid, amount,
-            ledAmount
+            ledgerAmount
         )
 
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
-        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, false, knockOffRecord.documentNo) // TODO(LED AMOUNT)
+        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, false, knockOffRecord.documentNo, amount, ledgerAmount) // TODO(LED AMOUNT)
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) - (accountUtilization.payLoc + ledTotalAmtPaid)
@@ -228,8 +237,8 @@ open class KnockoffServiceImpl : KnockoffService {
         return accPayResponse
     }
 
-    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
-        if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid)
+    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal, currTdsAmount: BigDecimal, ledTdsAmount: BigDecimal): Boolean {
+        if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid + currTdsAmount && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid + ledTdsAmount)
             return true
         return false
     }
@@ -271,7 +280,7 @@ open class KnockoffServiceImpl : KnockoffService {
         return paymentObj
     }
 
-    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean, documentNo: Long) {
+    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean, documentNo: Long, payCurrTds: BigDecimal?, payLocTds: BigDecimal?) {
         val invoicePayMap = PaymentInvoiceMapping(
             id = null,
             accountMode = AccMode.AP,
@@ -281,8 +290,8 @@ open class KnockoffServiceImpl : KnockoffService {
             currency = knockOffRecord.currency,
             ledCurrency = knockOffRecord.ledgerCurrency,
             signFlag = SignSuffix.PAY.sign,
-            amount = if (!isTDSEntry) knockOffRecord.currencyAmount else knockOffRecord.currTdsAmount,
-            ledAmount = if (!isTDSEntry) knockOffRecord.ledgerAmount else knockOffRecord.ledTdsAmount,
+            amount = payCurrTds!!,
+            ledAmount = payLocTds!!,
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now())
@@ -443,15 +452,15 @@ open class KnockoffServiceImpl : KnockoffService {
         if (tdsJvRecord != null) {
             val tdsJvMappingData = invoicePayMappingRepo.findByPaymentId(reverseUtrRequest.documentNo, tdsJvRecord.id)
             val tdsJvAccountUtilRecord = accountUtilizationRepository.findRecord(tdsJvRecord.id!!, tdsJvRecord.category, tdsJvRecord.accMode?.name)
-            tdsPaid = tdsJvRecord.amount!!
-            ledTdsPaid = tdsJvRecord.ledAmount!!
+            tdsPaid = tdsJvAccountUtilRecord?.payCurr!!
+            ledTdsPaid = tdsJvAccountUtilRecord.payLoc
             invoicePayMappingRepo.deletePaymentMappings(tdsJvMappingData.id)
             createAudit("payment_invoice_map", tdsJvMappingData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
             parentJVRepository.deleteJournalVoucherById(tdsJvRecord.parentJvId!!, reverseUtrRequest.updatedBy!!)
             createAudit("parent_journal_vouchers", tdsJvRecord.parentJvId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
             journalVoucherRepository.deleteJvLineItemByParentJvId(tdsJvRecord.parentJvId!!, reverseUtrRequest.updatedBy!!)
             createAudit("journal_vouchers", tdsJvRecord.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-            accountUtilizationRepository.deleteAccountUtilization(tdsJvAccountUtilRecord?.id!!)
+            accountUtilizationRepository.deleteAccountUtilization(tdsJvAccountUtilRecord.id!!)
             createAudit("account_utillizations", tdsJvAccountUtilRecord.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         }
 
@@ -622,7 +631,9 @@ open class KnockoffServiceImpl : KnockoffService {
         accountUtilization: AccountUtilization?,
         exchangeRate: BigDecimal?,
         paymentTransactionDate: Date,
-        utr: String?
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long? {
         val lineItemProps: MutableList<HashMap<String, Any?>> = mutableListOf(
             hashMapOf(
@@ -649,7 +660,9 @@ open class KnockoffServiceImpl : KnockoffService {
             exchangeRate,
             paymentTransactionDate,
             lineItemProps,
-            utr
+            utr,
+            payCurrTds,
+            payLocTds
         )
     }
 }

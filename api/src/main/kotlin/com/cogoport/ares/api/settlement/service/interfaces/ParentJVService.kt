@@ -50,6 +50,8 @@ interface ParentJVService {
         exchangeRate: BigDecimal?,
         paymentTransactionDate: Date,
         lineItemProps: MutableList<HashMap<String, Any?>>,
-        utr: String?
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long?
 }

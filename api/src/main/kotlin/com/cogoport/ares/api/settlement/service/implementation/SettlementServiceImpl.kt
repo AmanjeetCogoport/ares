@@ -1879,7 +1879,9 @@ open class SettlementServiceImpl : SettlementService {
                 invoiceAndBillData,
                 exchangeRate,
                 paymentTransactionDate,
-                utr = "TDS AGAINST $destId"
+                utr = "TDS AGAINST $destId",
+                tdsAmount,
+                tdsLedAmount
             )
             updatedSourceType = SettlementType.JVTDS
         } else {
@@ -3009,7 +3011,9 @@ open class SettlementServiceImpl : SettlementService {
         invoiceAndBillData: AccountUtilization?,
         exchangeRate: BigDecimal?,
         paymentTransactionDate: Date,
-        utr: String?
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long? {
         val lineItemProps: MutableList<HashMap<String, Any?>> = mutableListOf(
             hashMapOf(
@@ -3036,7 +3040,9 @@ open class SettlementServiceImpl : SettlementService {
             exchangeRate,
             paymentTransactionDate,
             lineItemProps,
-            utr
+            utr,
+            payCurrTds,
+            payLocTds
         )
     }
 }

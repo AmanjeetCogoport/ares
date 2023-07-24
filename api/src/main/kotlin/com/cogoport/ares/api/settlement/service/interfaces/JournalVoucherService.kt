@@ -23,5 +23,7 @@ interface JournalVoucherService {
         tdsAmount: BigDecimal?,
         tdsLedAmount: BigDecimal?,
         createdByUserType: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long?
 }

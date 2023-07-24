@@ -171,6 +171,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         tdsAmount: BigDecimal?,
         tdsLedAmount: BigDecimal?,
         createdByUserType: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ): Long? {
         val jvLineItemData = jvLineItems.map { lineItem ->
             JournalVoucher(
@@ -206,7 +208,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
         val jvLineItemWithAccMode = jvLineItems.first { it.accMode != null && it.accMode != AccMode.OTHER }
 
-        createJvAccUtilForTds(jvLineItemWithAccMode, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType)
+        createJvAccUtilForTds(jvLineItemWithAccMode, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
 
         return jvLineItemWithAccMode.id!!
     }
@@ -215,7 +217,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         journalVoucher: JournalVoucher,
         accountUtilization: AccountUtilization?,
         createdBy: UUID?,
-        createdByUserType: String?
+        createdByUserType: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
     ) {
         val accountUtilEntity = AccountUtilization(
             id = null,
@@ -239,8 +243,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             ledCurrency = journalVoucher.ledCurrency,
             amountCurr = journalVoucher.amount!!,
             amountLoc = journalVoucher.ledAmount!!,
-            payCurr = journalVoucher.amount,
-            payLoc = journalVoucher.ledAmount,
+            payCurr = payCurrTds!!,
+            payLoc = payLocTds!!,
             taxableAmount = BigDecimal.ZERO,
             tdsAmountLoc = BigDecimal.ZERO,
             tdsAmount = BigDecimal.ZERO,
