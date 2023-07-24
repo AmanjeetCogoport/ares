@@ -50,6 +50,6 @@ CREATE TABLE ledger_summary (
     total_credit_note_amount NUMERIC(18, 4),
     total_on_account_amount NUMERIC(18, 4),
     total_outstanding NUMERIC(18, 4),
-    created_at TIMESTAMP,
+    created_at DATE NOT NULL DEFAULT CURRENT_DATE,
     CONSTRAINT unique_created_at_organization_id UNIQUE (created_at, organization_id)
 )

@@ -6,7 +6,7 @@ import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
-import java.sql.Timestamp
+import java.util.Date
 import java.util.UUID
 
 @MappedEntity
@@ -113,5 +113,5 @@ data class LedgerSummary(
     @JsonProperty("total_outstanding")
     val totalOutstanding: BigDecimal,
     @JsonProperty("created_at")
-    val createdAt: Timestamp
+    val createdAt: Date?
 )
