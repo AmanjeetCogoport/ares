@@ -16,8 +16,6 @@ data class MasterExceptions(
     val organizationId: UUID? = null,
     val registrationNumber: String,
     val organizationSegment: String? = null,
-    val creditDays: Long? = null,
-    val creditAmount: Long? = null,
     val isActive: Boolean?,
     val entityCode: Long,
     val deletedAt: Timestamp? = null,

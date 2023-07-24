@@ -1058,7 +1058,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     :pageSize
             """
     )
-    suspend fun listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
+    suspend fun listOnAccountAndOutstandingBasedOnDunningCycleFilters(
         query: String?,
         serviceTypes: List<String>? = null,
         totalDueOutstanding: BigDecimal? = null,
@@ -1159,9 +1159,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
             """
     )
-    suspend fun countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
+    suspend fun countOnAccountAndOutstandingBasedOnDunningCycleFilters(
         query: String?,
-        serviceTypes: List<String?>,
+        serviceTypes: List<String?>? = null,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,

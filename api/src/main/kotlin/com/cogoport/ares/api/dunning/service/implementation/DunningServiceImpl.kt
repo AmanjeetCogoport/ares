@@ -364,11 +364,7 @@ open class DunningServiceImpl(
         dunningCycleFilterRequest: DunningCycleFilterRequest
     ): ResponseList<CustomerOutstandingAndOnAccountResponse> {
 
-        val serviceTypes: List<ServiceType?>? = if (
-            dunningCycleFilterRequest.serviceTypes == null || dunningCycleFilterRequest.serviceTypes?.size == 0
-        ) null
-        else
-            dunningCycleFilterRequest.serviceTypes
+        val serviceTypes: List<ServiceType?>? = if (dunningCycleFilterRequest.serviceTypes == null || dunningCycleFilterRequest.serviceTypes?.size == 0) null else dunningCycleFilterRequest.serviceTypes
 
         val serviceTypeString: MutableList<String> = mutableListOf()
         if (!serviceTypes.isNullOrEmpty()) {
@@ -378,11 +374,10 @@ open class DunningServiceImpl(
         }
 
         val customerOutstandingAndOnAccountResponses: List<CustomerOutstandingAndOnAccountResponse> =
-            accountUtilizationRepo.listOnAccountAndOutstandingsBasedOnDunninCycleFilters(
+            accountUtilizationRepo.listOnAccountAndOutstandingBasedOnDunningCycleFilters(
                 query = dunningCycleFilterRequest.query,
                 totalDueOutstanding = dunningCycleFilterRequest.totalDueOutstanding,
                 entityCode = dunningCycleFilterRequest.entityCode,
-//                serviceTypes = if (serviceTypeString.isNullOrEmpty()) null else serviceTypeString,
                 ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
                 ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
                 pageSize = dunningCycleFilterRequest.pageSizeData ?: dunningCycleFilterRequest.pageSize,
@@ -391,11 +386,10 @@ open class DunningServiceImpl(
                 exceptionTradePartyDetailId = dunningCycleFilterRequest.exceptionTradePartyDetailId
             )
 
-        val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingsBasedOnDunninCycleFilters(
+        val totalCount = accountUtilizationRepo.countOnAccountAndOutstandingBasedOnDunningCycleFilters(
             query = dunningCycleFilterRequest.query,
             totalDueOutstanding = dunningCycleFilterRequest.totalDueOutstanding,
             entityCode = dunningCycleFilterRequest.entityCode,
-            serviceTypes = serviceTypeString,
             ageingStartDay = dunningCycleFilterRequest.ageingStartDay,
             ageingLastDay = dunningCycleFilterRequest.ageingLastDay,
             taggedOrganizationIds = dunningCycleFilterRequest.taggedOrganizationIds,
@@ -815,28 +809,22 @@ open class DunningServiceImpl(
         regNos: MutableList<String>
     ): MutableList<String> {
         val response = cogoBackLowLevelClient.getTradePartyDetailsByRegistrationNumber(regNos, "list_organization_trade_parties")
-//        val creditLimitDetailResponse = railsClient.getOrganizationCreditLimitDetail(
-//                OrganizationCreditLimitDetailReq(
-//                        orgId = response.
-//                )
-//        )
 
         val filteredList = response?.list?.distinctBy { it["organization_trade_party_detail_id"] }
         val masterExceptionList = masterExceptionRepo.getAllMasterExceptions()
         val exceptionEntity = mutableListOf<MasterExceptions>()
         filteredList?.forEach { t ->
             val tradePartyDetailId = UUID.fromString(t["organization_trade_party_detail_id"].toString())
+            val organizationId = UUID.fromString(t["organization_id"].toString())
             if (masterExceptionList?.firstOrNull { it.tradePartyDetailId == tradePartyDetailId } == null) {
                 exceptionEntity.add(
                     MasterExceptions(
                         id = null,
                         tradePartyDetailId = tradePartyDetailId,
                         tradePartyName = t["legal_business_name"].toString(),
-                        organizationId = UUID.fromString(t["organization_id"].toString()),
+                        organizationId = organizationId,
                         registrationNumber = t["registration_number"].toString(),
-                        organizationSegment = null,
-                        creditDays = 0,
-                        creditAmount = 0,
+                        organizationSegment = organizationStakeholderRepo.getOrgSegment(organizationId),
                         isActive = true,
                         entityCode = request.entityCode!!,
                         createdBy = request.createdBy,
@@ -1025,11 +1013,9 @@ open class DunningServiceImpl(
             userInvitationId = railsClient.createOrgUserInvitation(request)?.get("id")
         } catch (err: Exception) {
             recordFailedThirdPartyApiAudits(additionalData?.id!!, request.toString(), err.toString(), "create_organization_user_invitation", "dunning_user_invitation", "organization")
-            throw err
         }
         tokenDetails.data?.dunningUserInviteData?.userInvitationId = UUID.fromString(userInvitationId)
         aresTokenRepo.update(tokenDetails)
-//        aresMessagePublisher.emitUserInvitationSendPlatformNotification(additionalData) // in future we can send platform notification to kams
         return userInvitationId
     }
 

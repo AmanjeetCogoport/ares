@@ -60,4 +60,12 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
         organizationId: UUID,
         organizationStakeholderType: String?
     ): OrganizationStakeholder?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT COALESCE(organization_segment,null) FROM organization_stakeholders WHERE organization_id::UUID = :organizationId::UUID AND is_active = true
+    """
+    )
+    suspend fun getOrgSegment(organizationId: UUID): String?
 }
