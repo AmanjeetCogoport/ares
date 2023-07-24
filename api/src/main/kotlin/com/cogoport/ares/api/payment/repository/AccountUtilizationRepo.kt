@@ -956,216 +956,217 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             entity_code,
             led_currency,
             max(organization_name) as organization_name,
+            acc_mode,
             sum(
-                CASE WHEN (acc_type in ('PINV', 'PCN')
+                CASE WHEN (acc_type::varchar in (:invoiceAccType)
                     and(due_date >= now()::date)) THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_not_due_amount,
             sum(
-                CASE WHEN acc_type in('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
                     and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_today_amount,        
             sum(
-                CASE WHEN acc_type in ('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
                     and(now()::date - due_date) BETWEEN 1 AND 30 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_thirty_amount,
             sum(
-                CASE WHEN acc_type in ('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
                     and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_sixty_amount,
             sum(
-                CASE WHEN acc_type in ('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
                     and(now()::date - due_date) BETWEEN 61 AND 90 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_ninety_amount,
             sum(
-                CASE WHEN acc_type in('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
                     and(now()::date - due_date) BETWEEN 91 AND 180 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_one_eighty_amount,
             sum(
-                CASE WHEN acc_type in('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
                     and(now()::date - due_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_three_sixty_five_amount,
             sum(
-                CASE WHEN acc_type in('PINV', 'PCN')
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
                     and(now()::date - due_date) > 365 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS invoice_three_sixty_five_plus_amount,
             sum(
-                CASE WHEN due_date >= now()::date AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_not_due_count,
             sum(
-                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_today_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_thirty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_sixty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in('PINV','PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_ninety_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in('PINV','PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in(:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_one_eighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_three_sixty_five_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PINV', 'PCN') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in(:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS invoice_three_sixty_five_plus_count,
             sum(
-                CASE WHEN (acc_type in('PCN')) AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (acc_type::varchar in (:creditNoteAccType)) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS credit_note_count,
             sum(
-                CASE WHEN (acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN (acc_type::varchar in (:onAccountAccountType)
                     and(due_date >= now()::date)) THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_not_due_amount,
             sum(
-                CASE WHEN acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_today_amount,        
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) BETWEEN 1 AND 30 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_thirty_amount,
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_sixty_amount,
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) BETWEEN 61 AND 90 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_ninety_amount,
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) BETWEEN 91 AND 180 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_one_eighty_amount,
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_amount,
             sum(
-                CASE WHEN acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
                     and(now()::date - due_date) > 365 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_plus_amount,
             sum(
-                CASE WHEN due_date >= now()::date AND acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_not_due_count,
             sum(
-                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_today_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_thirty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_sixty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_ninety_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_one_eighty_count,
             sum(
-                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_count,
             sum(
-                CASE WHEN (now()::date - due_date) > 365 AND acc_type in('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
@@ -1219,30 +1220,38 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     0
                 END) AS three_sixty_five_plus_outstanding,
             sum(
-            CASE WHEN acc_type in ('PINV', 'PCN') THEN
+            CASE WHEN acc_type::varchar in (:invoiceAccType) THEN
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
             END) AS total_open_invoice_amount,
             sum(
-                CASE WHEN acc_type in ('PCN') THEN
+                CASE WHEN acc_type::varchar in (:creditNoteAccType) THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END) AS total_credit_note_amount,
             sum(
-            CASE WHEN acc_type in ('PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV') THEN
+            CASE WHEN acc_type::varchar in (:onAccountAccountType) THEN
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
             END) AS total_on_account_amount,
             sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
             (now() at time zone 'Asia/Kolkata') as created_at
-            FROM account_utilizations WHERE acc_mode = 'AP' AND deleted_at IS NULL
-            and acc_type in ('PINV', 'PCN', 'PAY', 'VTDS', 'OPDIV', 'MISC', 'BANK', 'CONTR', 'INTER', 'MTC', 'MTCCV')
+            FROM account_utilizations WHERE 
+            acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
+            AND acc_type::varchar in (:accTypes)
             AND document_status in ('FINAL')
-            group by organization_id, entity_code,led_currency
+            AND transaction_date >= '2023-08-01'
+            group by organization_id, entity_code,led_currency, acc_mode
         """
     )
-    suspend fun getLedgerSummaryForAp(): List<LedgerSummary>
+    suspend fun getLedgerSummaryForAp(
+        accTypes: List<String>,
+        accMode: String,
+        invoiceAccType: List<String>,
+        onAccountAccountType: List<String>,
+        creditNoteAccType: List<String>
+    ): List<LedgerSummary>?
 }

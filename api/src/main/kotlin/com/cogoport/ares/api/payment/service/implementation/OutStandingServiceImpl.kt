@@ -21,6 +21,7 @@ import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
@@ -994,7 +995,13 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun createLedgerSummary() {
         ledgerSummaryRepo.deleteAll()
-        val outstandingData = accountUtilizationRepo.getLedgerSummaryForAp()
-        ledgerSummaryRepo.saveAll(outstandingData)
+        val accTypesForAp = listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
+        val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name)
+        val onAccountAccountType = listOf(AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
+        val creditNoteAccType = listOf(AccountType.PCN.name)
+        val outstandingData = accountUtilizationRepo.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
+        if (!outstandingData.isNullOrEmpty()) {
+            ledgerSummaryRepo.saveAll(outstandingData)
+        }
     }
 }

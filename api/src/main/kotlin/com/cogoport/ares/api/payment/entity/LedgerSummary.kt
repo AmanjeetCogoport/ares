@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.entity
 
+import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
@@ -19,6 +20,8 @@ data class LedgerSummary(
     val ledCurrency: String,
     @JsonProperty("organization_name")
     val organizationName: String,
+    @JsonProperty("acc_mode")
+    val accMode: AccMode,
     @JsonProperty("invoice_not_due_amount")
     val invoiceNotDueAmount: BigDecimal,
     @JsonProperty("invoice_today_amount")

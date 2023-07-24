@@ -4,6 +4,7 @@ CREATE TABLE ledger_summary (
     entity_code INT,
     led_currency VARCHAR(50),
     organization_name VARCHAR(255),
+    acc_mode public."account_mode" NOT NULL,
     invoice_not_due_amount NUMERIC(19, 4),
     invoice_today_amount NUMERIC(19, 4),
     invoice_thirty_amount NUMERIC(19, 4),
@@ -50,4 +51,4 @@ CREATE TABLE ledger_summary (
     total_on_account_amount NUMERIC(19, 4),
     total_outstanding NUMERIC(19, 4),
     created_at TIMESTAMP
-);
+)
