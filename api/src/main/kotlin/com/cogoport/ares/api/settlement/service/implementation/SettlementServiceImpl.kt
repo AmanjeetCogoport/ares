@@ -1827,16 +1827,11 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         // Update Documents in Account Utilization
-
-        var utilizedTdsOfPaymentDoc =
+        val utilizedTdsOfPaymentDoc =
             if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
                 (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
             else BigDecimal.ZERO
 
-//        if (invoice.accountType in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
-//            utilizedTdsOfPaymentDoc = BigDecimal.ZERO
-//            invoiceTds = BigDecimal.ZERO
-//        }
         val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
@@ -1942,10 +1937,10 @@ open class SettlementServiceImpl : SettlementService {
 
         paymentUtilization.payCurr += utilizedAmount
         paymentUtilization.payLoc += getExchangeValue(utilizedAmount, document.exchangeRate)
-//        if (paymentUtilization.accMode == AccMode.AR) {
-//            paymentUtilization.tdsAmount = paymentUtilization.tdsAmount!! + paidTds
-// //            paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
-//        }
+        if (paymentUtilization.accMode == AccMode.AR) {
+            paymentUtilization.tdsAmount = paymentUtilization.tdsAmount!! + paidTds
+            paymentUtilization.tdsAmountLoc = paymentUtilization.tdsAmountLoc!! + getExchangeValue(paidTds, document.exchangeRate)
+        }
         paymentUtilization.updatedAt = Timestamp.from(Instant.now())
 
         if (paymentUtilization.amountCurr.subtract(paymentUtilization.payCurr).abs() <= BigDecimal(0.001)) {
@@ -2620,7 +2615,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.VTDS)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS)
         try {
             // Fetch source and destination details
             val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
@@ -2635,6 +2630,9 @@ open class SettlementServiceImpl : SettlementService {
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
             if (destinationDocument.isProforma == true) {
+                throw AresException(AresError.ERR_1543, "")
+            }
+            if (sourceDocument.isProforma == true) {
                 throw AresException(AresError.ERR_1543, "")
             }
 
