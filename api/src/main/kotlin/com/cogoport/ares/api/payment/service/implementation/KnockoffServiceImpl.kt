@@ -139,7 +139,7 @@ open class KnockoffServiceImpl : KnockoffService {
         var payCurrTds = BigDecimal.ZERO
         var payLocTds = BigDecimal.ZERO
 
-        val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount, knockOffRecord.currTdsAmount, knockOffRecord.ledTdsAmount)
+        val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
 
         /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
         if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO && (accountUtilization.isProforma == false)) {
@@ -237,8 +237,8 @@ open class KnockoffServiceImpl : KnockoffService {
         return accPayResponse
     }
 
-    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal, currTdsAmount: BigDecimal, ledTdsAmount: BigDecimal): Boolean {
-        if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid + currTdsAmount && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid + ledTdsAmount)
+    private fun isOverPaid(accountUtilization: AccountUtilization, currTotalAmtPaid: BigDecimal, ledTotalAmtPaid: BigDecimal): Boolean {
+        if ((accountUtilization.amountCurr - accountUtilization.tdsAmount!!) < accountUtilization.payCurr + currTotalAmtPaid && (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) < accountUtilization.payLoc + ledTotalAmtPaid)
             return true
         return false
     }
