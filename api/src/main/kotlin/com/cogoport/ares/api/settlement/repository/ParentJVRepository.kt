@@ -146,12 +146,4 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         """
     )
     suspend fun updateIsUtilizedColumn(id: Long, isUtilized: Boolean, performedBy: UUID, documentValue: String?)
-
-    @NewSpan
-    @Query(
-        """
-            select * from parent_journal_vouchers where jv_num = :jvNum
-        """
-    )
-    suspend fun getParentJvByJvNum(jvNum: String): ParentJournalVoucher
 }

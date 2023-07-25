@@ -456,7 +456,7 @@ open class SettlementServiceImpl : SettlementService {
     ): MutableList<com.cogoport.ares.model.settlement.SettledInvoice> {
         val settledDocuments = mutableListOf<com.cogoport.ares.model.settlement.SettledInvoice>()
         val possibleAccType = settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList() + mutableListOf(
-            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN, SettlementType.VTDS
+            SettlementType.REC, SettlementType.PCN, SettlementType.PAY, SettlementType.SINV, SettlementType.SCN
         )
         settlements.forEach { settlement ->
             if (possibleAccType.contains(request.settlementType)) {

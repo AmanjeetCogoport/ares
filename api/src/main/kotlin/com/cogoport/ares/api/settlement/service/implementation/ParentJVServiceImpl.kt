@@ -828,6 +828,7 @@ open class ParentJVServiceImpl : ParentJVService {
         return false
     }
 
+    @Transactional
     override suspend fun createTdsAsJvForBills(
         currency: String?,
         ledCurrency: String,
