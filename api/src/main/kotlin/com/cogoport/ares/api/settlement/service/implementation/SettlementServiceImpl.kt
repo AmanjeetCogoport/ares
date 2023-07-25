@@ -43,6 +43,7 @@ import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.Util
@@ -218,6 +219,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var util: Util
+
+    @Inject
+    lateinit var parentJvService: ParentJVService
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1061,6 +1065,7 @@ open class SettlementServiceImpl : SettlementService {
                 }
             }
         }
+
         return settledDocuments
     }
 
@@ -1292,8 +1297,8 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        if (settlementType.name == PaymentCode.PAY.name) {
-            val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)
+        if (settlementType in listOf(SettlementType.PAY, SettlementType.VTDS)) {
+            val paymentId = if (settlementType == SettlementType.PAY) paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY) else documentNo
             if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
                 throw AresException(AresError.ERR_1515, "")
             }
@@ -1318,11 +1323,7 @@ open class SettlementServiceImpl : SettlementService {
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
-        val sourceCurr =
-            fetchedDoc.sumOf {
-                it?.amount?.multiply(BigDecimal.valueOf(it.signFlag.toLong()))
-                    ?: BigDecimal.ZERO
-            }
+        val sourceCurr = fetchedDoc.sumOf { it?.amount ?: BigDecimal.ZERO }
         reduceAccountUtilization(
             docId = documentNo,
             accType = AccountType.valueOf(settlementType.toString()),
@@ -1560,7 +1561,7 @@ open class SettlementServiceImpl : SettlementService {
                         )
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
-                    payment.settledTds.compareTo(BigDecimal.ZERO) == 0 && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB) &&
+                    payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
                     performDbOperation
                 ) {
                     createTdsRecord(
@@ -1725,8 +1726,8 @@ open class SettlementServiceImpl : SettlementService {
 
         val isNotJv = payment.accountType !in jvList
 
-        val amount = paidAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostro else BigDecimal.ZERO
-        val ledAmount = paidLedAmount + if (isNotJv && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB)) paymentNostroLed else BigDecimal.ZERO
+        val amount = paidAmount + if (isNotJv) paymentNostro else BigDecimal.ZERO
+        val ledAmount = paidLedAmount + if (isNotJv) paymentNostroLed else BigDecimal.ZERO
         // Create Documents Settlement Entry
         if (amount.compareTo(BigDecimal.ZERO) != 0) {
             createSettlement(
@@ -1746,7 +1747,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         // Create TDS Entry
-        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && invoice.accountType !in listOf(SettlementType.PINV, SettlementType.PREIMB) && (invoice.ledCurrency != AresConstants.VND)) {
+        if (invoiceTds.compareTo(BigDecimal.ZERO) != 0 && (isNotJv) && (invoice.ledCurrency != AresConstants.VND)) {
             createTdsRecord(
                 sourceId = payment.documentNo.toLong(),
                 destId = invoice.documentNo.toLong(),
@@ -1826,16 +1827,11 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         // Update Documents in Account Utilization
-
-        var utilizedTdsOfPaymentDoc =
+        val utilizedTdsOfPaymentDoc =
             if (payment.accountType in listOf(SettlementType.SINV, SettlementType.PCN, SettlementType.SCN))
                 (payment.tds ?: BigDecimal.ZERO) - payment.settledTds
             else BigDecimal.ZERO
 
-        if (invoice.accountType in listOf(SettlementType.PINV, SettlementType.PREIMB)) {
-            utilizedTdsOfPaymentDoc = BigDecimal.ZERO
-            invoiceTds = BigDecimal.ZERO
-        }
         val paymentUtilized = (paidAmount + utilizedTdsOfPaymentDoc).setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
         val invoiceUtilized = toSettleAmount + if (isNotJv) invoiceTds + invoiceNostro else BigDecimal.ZERO
         updateAccountUtilization(payment, paymentUtilized, utilizedTdsOfPaymentDoc, request.createdBy!!, request.createdByUserType, isAutoKnockOff) // Update Payment
@@ -1860,30 +1856,47 @@ open class SettlementServiceImpl : SettlementService {
         paymentTransactionDate: Date
     ) {
         val invoiceAndBillData = accountUtilizationRepository.findRecord(destId, destType.toString())
-        val tdsType = if (invoiceAndBillData?.accMode == AccMode.AR) {
-            SettlementType.CTDS
+
+        var updatedSourceId = sourceId
+        var updatedSourceType: SettlementType?
+
+        if (invoiceAndBillData?.accMode == AccMode.AP) {
+            updatedSourceId = createTdsAsJv(
+                currency,
+                ledCurrency,
+                tdsAmount,
+                tdsLedAmount,
+                createdBy,
+                createdByUserType,
+                invoiceAndBillData,
+                exchangeRate,
+                paymentTransactionDate,
+                utr = "TDS AGAINST $destId",
+                tdsAmount,
+                tdsLedAmount
+            )
+            updatedSourceType = SettlementType.VTDS
         } else {
-            SettlementType.VTDS
+            updatedSourceId = createTdsAsPaymentEntry(
+                destId,
+                destType,
+                currency,
+                ledCurrency,
+                tdsAmount,
+                tdsLedAmount,
+                createdBy,
+                createdByUserType,
+                SettlementType.CTDS,
+                invoiceAndBillData,
+                exchangeRate,
+                paymentTransactionDate
+            )
+            updatedSourceType = SettlementType.CTDS
         }
 
-        val tdsAsPaymentNum = createTdsAsPaymentEntry(
-            destId,
-            destType,
-            currency,
-            ledCurrency,
-            tdsAmount,
-            tdsLedAmount,
-            createdBy,
-            createdByUserType,
-            tdsType,
-            invoiceAndBillData,
-            exchangeRate,
-            paymentTransactionDate
-        )
-
         createSettlement(
-            tdsAsPaymentNum,
-            tdsType,
+            updatedSourceId,
+            updatedSourceType,
             destId,
             destType,
             currency,
@@ -1916,9 +1929,9 @@ open class SettlementServiceImpl : SettlementService {
                     AresError.ERR_1503,
                     "${document.documentNo}_${document.accountType}"
                 )
-        if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN) && paymentUtilization.accType !in listOf(AccountType.PINV, AccountType.PREIMB)) {
+        if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
-        } else if (paymentUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB, AccountType.PCN) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
+        } else if (((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
 
@@ -2454,7 +2467,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType == AccountType.SINV.name && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
+                doc.tds = when (doc.accountType in listOf(AccountType.SINV.name, AccountType.PINV.name) && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
@@ -2615,6 +2628,13 @@ open class SettlementServiceImpl : SettlementService {
 
             // Fetch destination details
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
+
+            if (destinationDocument.isProforma == true) {
+                throw AresException(AresError.ERR_1543, "")
+            }
+            if (sourceDocument.isProforma == true) {
+                throw AresException(AresError.ERR_1543, "")
+            }
 
             val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
             val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
@@ -2974,5 +2994,50 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         return settlementDocs
+    }
+
+    private suspend fun createTdsAsJv(
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        invoiceAndBillData: AccountUtilization?,
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date,
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ): Long? {
+        val lineItemProps: MutableList<HashMap<String, Any?>> = mutableListOf(
+            hashMapOf(
+                "accMode" to "AP",
+                "glCode" to "321000",
+                "type" to "DEBIT",
+                "signFlag" to -1
+            ),
+            hashMapOf(
+                "accMode" to null,
+                "glCode" to "324001",
+                "type" to "CREDIT",
+                "signFlag" to 1
+            )
+        )
+        return parentJvService.createTdsAsJvForBills(
+            currency,
+            ledCurrency,
+            tdsAmount,
+            tdsLedAmount,
+            createdBy,
+            createdByUserType,
+            invoiceAndBillData,
+            exchangeRate,
+            paymentTransactionDate,
+            lineItemProps,
+            utr,
+            payCurrTds,
+            payLocTds
+        )
     }
 }

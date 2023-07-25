@@ -617,18 +617,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
-        ), 
-         MAPPINGS AS (
-        	select jsonb_array_elements(account_utilization_ids)::int as id 
-        	from incident_mappings
-        	where incident_status = 'REQUESTED'
-        	and incident_type = 'SETTLEMENT_APPROVAL'
         )
         SELECT 
             au.id,
             s.source_id,
             s.source_type,
-            coalesce(s.amount,0) as settled_tds,
+            COALESCE(s.amount, 0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
             au.trade_party_mapping_id as mapping_id,
@@ -651,13 +645,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             au.sign_flag,
             au.acc_mode,
             au.migrated,
-            CASE WHEN 
-            	au.id in (select id from MAPPINGS) 
-        	THEN
-        		false
-        	ELSE
-        		true
-        	END as approved,
+            true as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 

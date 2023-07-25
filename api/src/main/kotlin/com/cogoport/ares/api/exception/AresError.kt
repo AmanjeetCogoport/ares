@@ -63,7 +63,10 @@ enum class AresError(
     ERR_1537("ERR_1537", "UTR Number already exit with same UTR number:", HttpStatus.BAD_REQUEST),
     ERR_1538("ERR_1538", "You have selected Invalid Bank.", HttpStatus.BAD_REQUEST),
     ERR_1539("ERR_1539", "Payment not found.", HttpStatus.BAD_REQUEST),
-    ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE);
+    ERR_1540("ERR_1540", "You can not delete it.", HttpStatus.NOT_ACCEPTABLE),
+    ERR_1541("ERR_1541", "Settlement has already been post to sage. You have to delete matching on sage.", HttpStatus.FORBIDDEN),
+    ERR_1542("ERR_1542", "No payment with this utr exists.", HttpStatus.NOT_FOUND),
+    ERR_1543("ERR_1543", "You can not post this settlement.", HttpStatus.FORBIDDEN);
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
             return "$message $param"
