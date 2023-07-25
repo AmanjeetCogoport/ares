@@ -77,8 +77,7 @@ enum class SettlementType(val dbValue: String) {
     CSMEM("CSMEM"),
     ZSMEM("ZSMEM"),
     RECJV("RECJV"),
-    PAYJV("PAYJV"),
-    JVTDS("JVTDS");
+    PAYJV("PAYJV");
 
     open operator fun contains(value: String?): Boolean {
         for (c in SettlementType.values()) {

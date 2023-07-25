@@ -190,7 +190,7 @@ class SettlementServiceHelper {
                 SettlementType.PAYJV,
                 SettlementType.RECJV,
                 SettlementType.CTDS,
-                SettlementType.JVTDS
+                SettlementType.VTDS
             ) as List<T>
         } else {
             listOf(
@@ -256,7 +256,7 @@ class SettlementServiceHelper {
                 AccountType.ZSMEM,
                 AccountType.PAYJV,
                 AccountType.RECJV,
-                AccountType.JVTDS,
+                AccountType.VTDS,
                 AccountType.CTDS,
             ) as List<T>
         }

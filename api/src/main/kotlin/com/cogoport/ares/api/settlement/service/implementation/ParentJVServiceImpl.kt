@@ -845,8 +845,8 @@ open class ParentJVServiceImpl : ParentJVService {
     ): Long? {
         var parentJournalVoucher = ParentJournalVoucher(
             id = null,
-            status = JVStatus.POSTED,
-            category = "JVTDS",
+            status = JVStatus.APPROVED,
+            category = "VTDS",
             jvNum = accountUtilization?.documentValue,
             // picking date of payments
             transactionDate = paymentTransactionDate,

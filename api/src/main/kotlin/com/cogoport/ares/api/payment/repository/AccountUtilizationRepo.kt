@@ -601,7 +601,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'JVTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND acc_type::varchar in (:accType)
@@ -658,7 +658,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS', 'JVTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS')
             WHERE au.id in (
                 SELECT id from FILTERS
             )
@@ -730,7 +730,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'JVTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND acc_type::varchar in (:accType)

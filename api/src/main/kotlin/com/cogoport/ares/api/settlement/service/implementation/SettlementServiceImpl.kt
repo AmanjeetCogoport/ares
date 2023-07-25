@@ -532,9 +532,6 @@ open class SettlementServiceImpl : SettlementService {
                         SettlementType.VTDS -> tdsType.addAll(
                             listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
                         )
-                        SettlementType.JVTDS -> tdsType.addAll(
-                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
-                        )
                         else -> tdsType.add(it1)
                     }
                 }
@@ -1300,7 +1297,7 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        if (settlementType in listOf(SettlementType.PAY, SettlementType.JVTDS)) {
+        if (settlementType in listOf(SettlementType.PAY, SettlementType.VTDS)) {
             val paymentId = if (settlementType == SettlementType.PAY) paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY) else documentNo
             if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
                 throw AresException(AresError.ERR_1515, "")
@@ -1883,7 +1880,7 @@ open class SettlementServiceImpl : SettlementService {
                 tdsAmount,
                 tdsLedAmount
             )
-            updatedSourceType = SettlementType.JVTDS
+            updatedSourceType = SettlementType.VTDS
         } else {
             updatedSourceId = createTdsAsPaymentEntry(
                 destId,
@@ -2623,7 +2620,7 @@ open class SettlementServiceImpl : SettlementService {
 
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
 
-        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.JVTDS)
+        val listOfRecOrPayCode = listOf(AccountType.PAY, AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.VTDS)
         try {
             // Fetch source and destination details
             val settlement = settlementRepository.findById(settlementId) ?: throw AresException(AresError.ERR_1002, "Settlement for this Id")
